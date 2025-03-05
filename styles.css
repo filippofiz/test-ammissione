@@ -495,3 +495,150 @@ Spaziatura nell'albero di avanzamento
 #testTree .section button {
   margin-right: 0.3rem;
 }
+
+/* ===================================
+Header (Portale) – per Tutor Dashboard
+=================================== */
+.portale-header {
+  background-color: #fff;
+  border-bottom: 2px solid #e5e5e5;
+  padding: 1rem 2rem;
+}
+
+.portale-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* distribuisce spazio tra logo e header-right */
+}
+
+.portale-logo {
+  max-height: 50px;
+}
+
+/* Header right: saluto e logout */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.greeting {
+  font-size: 1.2rem;
+  color: #1C2545;
+}
+
+.logout-btn {
+  padding: 0.5rem 1rem;
+  background-color: #23AC75;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.logout-btn:hover {
+  opacity: 0.9;
+}
+
+/* ===================================
+Container Principale
+=================================== */
+.container {
+  background-color: #fff;
+  max-width: 800px; /* Puoi modificare la larghezza se necessario */
+  margin: 3rem auto;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+.container h2 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #23AC75;
+  border-bottom: 1px solid #ddd;  /* linea sottile sotto il titolo */
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* ===================================
+Dashboard Buttons – Modify Tests (separato dal logout ora in header)
+=================================== */
+.dashboard-buttons {
+  margin-bottom: 2rem;
+}
+
+.dashboard-buttons button {
+  padding: 0.8rem 1rem;
+  background-color: #23AC75;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-right: 1rem;
+}
+
+.dashboard-buttons button:hover {
+  opacity: 0.9;
+}
+
+/* ===================================
+Student List – Singolo Studente
+=================================== */
+.student-progress {
+  border: 1px solid #ccc;
+  padding: 10px;
+  margin-bottom: 15px;
+  margin-top: 15px;
+  background: #f9f9f9;
+}
+
+.student-progress h3 {
+  margin-bottom: 0.8rem;
+}
+
+/* ===================================
+Progress Tree per Studente
+=================================== */
+.testTree {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;  /* spazio orizzontale e verticale */
+  margin-top: 10px;
+}
+
+/* Bottone all'interno dell'albero (se presente) */
+.testTree button {
+  margin-right: 0.3rem;
+}
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.5rem;}
+
+.dashboard-header h2 {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #23AC75;
+  border-bottom: 0px solid #ddd; /* linea sottile sotto il titolo */
+}
+
+.modify-btn {
+  padding: 0.8rem 1rem;
+  background-color: #23AC75;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.modify-btn:hover {
+  opacity: 0.9;
+}
