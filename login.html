@@ -1,80 +1,165 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Login | Preparazione Test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Autenticazione | Università</title>
   <!-- Include Poppins font -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="login-wrapper">
-    <div class="logo-container">
-      <!-- Replace with your actual logo URL -->
-      <img src="https://elrwpaezjnemmiegkyin.supabase.co/storage/v1/object/public/images//6_Logo_trasparente.png" alt="Logo" class="logo" />
+  <!-- Header con logo e testo a destra -->
+  <header class="portale-header">
+    <div class="portale-header-content">
+      <img src="https://elrwpaezjnemmiegkyin.supabase.co/storage/v1/object/public/images//6_Logo_trasparente.png" alt="Logo" class="portale-logo" />
+      <h1 class="portale-title">Portale Test d'Ingresso</h1>
     </div>
-    <div class="form-container">
-      <div class="container">
-        <h2>Preparazione Test</h2>
-        <!-- Email input -->
-        <input type="email" id="email" placeholder="Enter Email" class="rounded-input" />
-        <!-- Password input -->
-        <input type="password" id="password" placeholder="Enter Password" class="rounded-input" />
-        <!-- User type dropdown -->
-        <select id="userType" class="user-dropdown">
-          <option value="student" selected>Student</option>
-          <option value="tutor">Tutor</option>
-        </select>
-        <!-- Forgot password link aligned right -->
-        <div class="forgot-container">
-          <a href="#" id="resetPassword">Forgot password? Reset it</a>
-        </div>
-        <!-- Big Sign-In button -->
-        <button id="loginBtn" class="sign-in-btn">Sign In</button>
-        <p id="errorMessage" style="color: red;"></p>
+  </header>
+
+  <!-- Main login container -->
+  <main class="login-main">
+    <div class="login-box">
+      <!-- Titolo con linea sottile sotto -->
+      <h2 class="login-title">Autenticazione</h2>
+      <p class="login-info">Inserisci le tue credenziali per accedere al portale.</p>
+
+      <!-- Email -->
+      <label for="email" class="login-label">Email</label>
+      <input type="email" id="email" placeholder="Inserisci la tua email" class="rounded-input" />
+
+      <!-- Password con icona occhio -->
+      <label for="password" class="login-label">Password</label>
+      <div class="password-wrapper">
+        <input type="password" id="password" placeholder="Inserisci la password" class="rounded-input" />
+        <button type="button" id="togglePassword" class="show-password-btn" aria-label="Mostra password">
+          <!-- L'icona verrà inserita via JS -->
+        </button>
+      </div>
+
+      <!-- Tipo utente -->
+      <label for="userType" class="login-label">Tipo Utente</label>
+      <select id="userType" class="user-dropdown">
+        <option value="student" selected>Studente</option>
+        <option value="tutor">Tutor</option>
+      </select>
+
+      <!-- Messaggio di errore -->
+      <p id="errorMessage" class="error-message"></p>
+
+      <!-- Pulsante di accesso -->
+      <button id="loginBtn" class="sign-in-btn">Accedi</button>
+
+      <!-- Link "Password dimenticata?" allineato a sinistra -->
+      <div class="forgot-container">
+        <a href="#" id="resetPassword">Password dimenticata?</a>
       </div>
     </div>
-  </div>
+  </main>
 
+  <!-- Footer con linea separatrice e link -->
+  <footer class="portale-footer">
+    <hr class="footer-divider" />
+    <div class="footer-links">
+      <a href="cookie.html">Cookie Policy</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="terms.html">Termini</a>
+    </div>
+    <p>Up to Ten s.r.l. 
+      <br> Via G. Frua 21/6 – 20146 Milano</p>
+  </footer>
+
+  <!-- Script di autenticazione -->
   <script type="module">
     import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
     const SUPABASE_URL = "https://elrwpaezjnemmiegkyin.supabase.co";
     const SUPABASE_KEY =
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVscndwYWV6am5lbW1pZWdreWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzAyMDUsImV4cCI6MjA1MzY0NjIwNX0.p6R2S1HK8kPFYiEAYtYaxIAH8XSmzjQBWQ_ywy3akdI";
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+   // SVG per occhio "aperto" (password nascosta)
+const eyeOpen = `
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    fill="#00a666"
+    viewBox="0 0 24 24"
+  >
+    <path d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13.2A5.2 5.2 0 1 1 17.2 12 5.2 5.2 0 0 1 12 17.2zM12 8a4 4 0 0 0 0 8 4 4 0 0 0 0-8z"/>
+  </svg>
+`;
+
+// Occhio barrato (password visibile)
+const eyeSlash = `
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+  >
+    <path fill="#00a666"
+      d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 
+         11-8c-1.73-4.89-6-8-11-8zm0 13.2A5.2 5.2 0 1 1 
+         17.2 12 5.2 5.2 0 0 1 12 17.2zM12 8a4 4 0 0 0 
+         0 8 4 4 0 0 0 0-8z"/>
+    <path
+      d="M5 7l14 10"
+      fill="none"
+      stroke="#ffffff"
+      stroke-width="3"
+      stroke-linecap="round"
+    />
+  </svg>
+`;
+
+
+    const togglePasswordBtn = document.getElementById("togglePassword");
+    const passwordInput = document.getElementById("password");
+    // Icona iniziale: password nascosta
+    togglePasswordBtn.innerHTML = eyeOpen;
+
+    togglePasswordBtn.addEventListener("click", () => {
+      const isHidden = passwordInput.type === "password";
+      if (isHidden) {
+        passwordInput.type = "text";
+        togglePasswordBtn.innerHTML = eyeSlash;
+      } else {
+        passwordInput.type = "password";
+        togglePasswordBtn.innerHTML = eyeOpen;
+      }
+    });
+
     document.addEventListener("DOMContentLoaded", () => {
       const loginBtn = document.getElementById("loginBtn");
       const resetPasswordLink = document.getElementById("resetPassword");
       const userTypeSelect = document.getElementById("userType");
+      const errorMessage = document.getElementById("errorMessage");
 
       loginBtn.addEventListener("click", async () => {
+        errorMessage.textContent = "";
         const email = document.getElementById("email").value.trim();
-        const password = document.getElementById("password").value.trim();
-        const userType = userTypeSelect.value; // "student" or "tutor"
+        const password = passwordInput.value.trim();
+        const userType = userTypeSelect.value;
 
         if (!email || !password) {
-          alert("Please enter both email and password.");
+          errorMessage.textContent = "Inserisci email e password.";
           return;
         }
 
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
           console.error("Login failed:", error.message);
-          alert("Login failed: " + error.message);
+          errorMessage.textContent = "Credenziali non valide.";
           return;
         }
 
-        console.log("Logged in successfully!", data);
         const user = data.user;
         if (!user || !user.id) {
-          alert("Login error. Please try again.");
+          errorMessage.textContent = "Si è verificato un errore. Riprova.";
           return;
         }
 
-        // Redirect based on the selected user type
         if (userType === "student") {
           sessionStorage.setItem("studentId", user.id);
           await supabase.auth.setSession(data.session);
@@ -85,26 +170,24 @@
         }
       });
 
-      resetPasswordLink.addEventListener("click", async () => {
-        const email = prompt("Enter your email to reset your password:");
+      resetPasswordLink.addEventListener("click", async (e) => {
+        e.preventDefault();
+        const email = prompt("Inserisci la tua email per resettare la password:");
         if (!email) return;
-
         const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: "http://localhost:5000"
+          redirectTo: "http://localhost:5000",
         });
-
         if (error) {
           console.error("Password reset failed:", error.message);
-          alert("Password reset failed: " + error.message);
+          alert("Errore nel reset: " + error.message);
         } else {
-          alert("A password reset link has been sent to your email.");
+          alert("Link di reset inviato alla tua email.");
         }
       });
 
       (async () => {
         const { data: user, error } = await supabase.auth.getUser();
         if (user && user.id) {
-          console.log("User already logged in. Redirecting...");
           window.location.href = "test_selection.html";
         }
       })();

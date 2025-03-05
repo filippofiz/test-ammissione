@@ -1,27 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test Progress</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Progress</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
-        <h2>Test Progress</h2>
-        <div id="testTree"></div>  <!-- ✅ The progress tree -->
+  <!-- Header con logo a sinistra e saluto in alto a destra -->
+  <header class="portale-header">
+    <div class="portale-header-content">
+      <img src="https://elrwpaezjnemmiegkyin.supabase.co/storage/v1/object/public/images//6_Logo_trasparente.png" alt="Logo" class="portale-logo">
+      <!-- Il saluto verrà aggiornato dinamicamente -->
+      <span class="greeting">Ciao, Utente</span>
     </div>
+  </header>
 
-    <!-- Include Supabase -->
-    <script type="module">
-        import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+  <!-- Contenitore principale per il Test Progress -->
+  <div class="container">
+    <h2>Avanzamento preparazione</h2>
+    <div id="testTree"></div>  <!-- ✅ The progress tree -->
+  </div>
 
-        const SUPABASE_URL = "https://elrwpaezjnemmiegkyin.supabase.co"; 
-        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVscndwYWV6am5lbW1pZWdreWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzAyMDUsImV4cCI6MjA1MzY0NjIwNX0.p6R2S1HK8kPFYiEAYtYaxIAH8XSmzjQBWQ_ywy3akdI";  
+  <!-- Include Supabase e script per il test progress -->
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-        window.supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-    </script>
+    const SUPABASE_URL = "https://elrwpaezjnemmiegkyin.supabase.co"; 
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVscndwYWV6am5lbW1pZWdreWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzAyMDUsImV4cCI6MjA1MzY0NjIwNX0.p6R2S1HK8kPFYiEAYtYaxIAH8XSmzjQBWQ_ywy3akdI";  
 
-    <script type="module" src="test_selection.js"></script>
+    window.supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Una volta caricato il documento, aggiorna il saluto in base alla sessione (email)
+    document.addEventListener("DOMContentLoaded", async () => {
+      const { data: sessionData, error } = await supabase.auth.getSession();
+      if (sessionData && sessionData.session) {
+        const userEmail = sessionData.session.user.email;
+        const userName = userEmail.split('@')[0];
+        document.querySelector('.greeting').textContent = `Ciao, ${userName}`;
+      } else {
+        document.querySelector('.greeting').textContent = "Ciao, Utente";
+      }
+    });
+  </script>
+
+  <script type="module" src="test_selection.js"></script>
 </body>
 </html>

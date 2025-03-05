@@ -1,143 +1,162 @@
-/* Remove margin/padding, allow full usage of screen */
+/* 
+===================================
+Reset e Body
+===================================
+*/
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
 body {
-    margin: 0;
-    padding: 0;
-    background-color: #f4f4f4;
-    font-family: Arial, sans-serif;
-  }
-  
-  /* Main container: full width & height, flex for 3 columns */
-  .test-container {
-    display: flex;
-    width: 100vw;
-    height: 100vh; /* Occupies the full browser height */
-  }
-  
-  /* Left Column: PDF Viewer */
-  .pdf-viewer {
-    width: 50%;               /* or flex: 0 0 50% */
-    height: 100%;
-    overflow: auto;           /* scroll if zoomed in */
-    position: relative;       /* so .pdf-controls can be absolutely positioned inside */
-    background: #f5f5f5;
-    display: flex;
-    align-items: flex-start;  /* PDF canvas pinned to top */
-    justify-content: flex-start;
-    cursor: grab;             /* indicates drag to scroll */
-  }
-  
-  .pdf-viewer:active {
-    cursor: grabbing;
-  }
-  
-  /* The PDF canvas itself */
-  canvas {
-    display: block;
-    transform-origin: top left; /* ensures zoom from top-left */
-    margin: 10px;               /* some space around the canvas */
-  }
-  
-  /* PDF Controls: top-left inside .pdf-viewer */
-  .pdf-controls {
-    position: absolute;
-    top: 10px;
-    left: 10px;    /* changed from right: to left: so it doesn't overlap nav */
-    z-index: 10;
-    background: rgba(255, 255, 255, 0.8);
-    padding: 5px;
-    border-radius: 5px;
-    display: flex;
-    gap: 5px;
-  }
-  
+  margin: 0;
+  padding: 0;
+  background-color: #f4f4f4;
+  font-family: Arial, sans-serif;
+}
+
+/*
+===================================
+Test Container (3 columns layout)
+===================================
+*/
+.test-container {
+  display: flex;
+  width: 100vw;
+  height: 100vh; /* Occupies the full browser height */
+}
+
+/* Left Column: PDF Viewer */
+.pdf-viewer {
+  width: 50%; /* or flex: 0 0 50% */
+  height: 100%;
+  overflow: auto; /* scroll if zoomed in */
+  position: relative; /* so .pdf-controls can be absolutely positioned inside */
+  background: #f5f5f5;
+  display: flex;
+  align-items: flex-start; /* PDF canvas pinned to top */
+  justify-content: flex-start;
+  cursor: grab; /* indicates drag to scroll */
+}
+
+.pdf-viewer:active {
+  cursor: grabbing;
+}
+
+/* The PDF canvas itself */
+canvas {
+  display: block;
+  transform-origin: top left; /* ensures zoom from top-left */
+  margin: 10px; /* some space around the canvas */
+}
+
+/* PDF Controls: top-left inside .pdf-viewer */
+.pdf-controls {
+  position: absolute;
+  top: 10px;
+  left: 10px; /* changed from right to left so it doesn't overlap nav */
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 5px;
+  border-radius: 5px;
+  display: flex;
+  gap: 5px;
+}
+
 /* Middle Column: Question Section */
 .question-section {
-  width: 35%;      /* or flex: 0 0 35% */
+  width: 35%; /* or flex: 0 0 35% */
   height: 100%;
-  overflow-y: auto; 
-  padding: 20px;   /* spacing around content */
+  overflow-y: auto;
+  padding: 20px; /* spacing around content */
   box-sizing: border-box;
   background: white;
 }
 
 /* Right Column: Navigation Container */
 .nav-container {
-  width: 15%;       /* or flex: 0 0 15% */
+  width: 15%; /* or flex: 0 0 15% */
   height: 100%;
-  overflow-y: auto; 
+  overflow-y: auto;
   padding: 20px;
   box-sizing: border-box;
   background: #fafafa;
   border-left: 1px solid #ddd; /* small divider line */
 }
-  
-  /* The question grid inside nav-container */
-  #questionNav {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px; /* spacing between cells */
-  }
-  
-  .question-cell {
-    width: 32px;
-    height: 32px;
-    background-color: #ccc;
-    border: none;
-    cursor: pointer;
-  }
-  
-  .question-cell:hover {
-    background-color: #999;
-  }
-  
-  .answered {
-    background-color: green;
-    color: white;
-  }
-  
-  .current-question {
-    outline: 2px solid red; /* highlight current page's question */
-  }
-  
-  /* Buttons, etc. */
-  .navigation, .submit-section {
-    margin-top: 10px;
-  }
-  
-  button {
-    padding: 6px 10px;
-    cursor: pointer;
-  }
 
-  .bocconi-question {
-    padding: 10px;
-    margin-bottom: 10px;
-    border-bottom: 2px solid blue;
-  }
-  
-  .question-text {
-    font-size: 1.1em;
-    margin-bottom: 5px;
-  }
-  
-  .question-image {
-    max-width: 100%;
-    display: block;
-    margin-bottom: 10px;
-  }
-  
-  .choices {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-  
-  .choice-btn {
-    padding: 5px 10px;
-    cursor: pointer;
-  }
+/* The question grid inside nav-container */
+#questionNav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px; /* spacing between cells */
+}
 
-/* Fullscreen layout for Bocconi test */
+.question-cell {
+  width: 32px;
+  height: 32px;
+  background-color: #ccc;
+  border: none;
+  cursor: pointer;
+}
+
+.question-cell:hover {
+  background-color: #999;
+}
+
+.answered {
+  background-color: green;
+  color: white;
+}
+
+.current-question {
+  outline: 2px solid red; /* highlight current page's question */
+}
+
+/* Buttons, etc. */
+.navigation,
+.submit-section {
+  margin-top: 10px;
+}
+
+button {
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.bocconi-question {
+  padding: 10px;
+  margin-bottom: 10px;
+  border-bottom: 2px solid blue;
+}
+
+.question-text {
+  font-size: 1.1em;
+  margin-bottom: 5px;
+}
+
+.question-image {
+  max-width: 100%;
+  display: block;
+  margin-bottom: 10px;
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.choice-btn {
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+/*
+===================================
+Fullscreen layout for Bocconi test
+===================================
+*/
 .test-bocconi-container {
   display: flex;
   width: 100vw;
@@ -187,7 +206,8 @@ body {
 }
 
 /* Navigation and Submission Section */
-.bocconi-navigation, .bocconi-submit-section {
+.bocconi-navigation,
+.bocconi-submit-section {
   margin-top: 15px;
   text-align: center;
 }
@@ -218,47 +238,80 @@ body {
 .current-question {
   outline: 2px solid red;
 }
-
-/* New styles for the merged login layout */
-.login-wrapper {
-  display: flex;
-  min-height: 100vh;
+/*
+===================================
+Header (Portale)
+===================================
+*/
+.portale-header {
+  background-color: #fff;
+  border-bottom: 2px solid #e5e5e5;
+  padding: 1rem 2rem;
 }
 
-.logo-container {
-  flex: 1;
-  background-color: #f4f4f4; /* Adjust background if needed */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-
-.logo-container .logo {
-  max-width: 80%;
-  height: auto;
-}
-
-.form-container {
-  flex: 1;
+.portale-header-content {
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 20px;
+  justify-content: flex-start;
 }
 
-.form-container .container {
+.portale-logo {
+  max-height: 50px;
+;
+}
+
+.portale-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-left: auto; /* per separare il testo dal logo */
+color: #1C2545;
+}
+
+/*
+===================================
+Main Login
+===================================
+*/
+.login-main {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 160px); /* Spazio per header e footer */
+}
+
+.login-box {
+  background-color: #fff;
+  padding: 2rem;
+  border-radius: 8px;
   width: 100%;
   max-width: 400px;
-  background: #fff;
-  padding: 2rem;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
 }
 
-/* Larger rounded inputs for email and password */
+.login-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #23AC75;
+  border-bottom: 1px solid #ddd; /* linea sottile sotto "Autenticazione" */
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.login-info {
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+  color: #666;
+}
+
+.login-label {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-weight: 500;
+}
+
+/* Input e Dropdown */
 .rounded-input {
-  width: 91%;
+  width: 100%;
   padding: 1rem;
   margin-bottom: 1rem;
   border: 2px solid #ccc;
@@ -266,21 +319,62 @@ body {
   font-size: 1rem;
 }
 
-/* Rounded dropdown for user type */
+.password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.show-password-btn {
+  margin-left: -40px; /* posiziona il bottone sopra l'input, regola questo valore in base all'input */
+  margin-bottom: 9px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  
+}
+
+
 .user-dropdown {
   width: 100%;
   padding: 0.75rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem; /* meno spazio */
   border: 2px solid #ccc;
   border-radius: 12px;
   font-size: 1rem;
   background: #fff;
 }
 
-/* Forgot password link aligned to bottom right */
-.forgot-container {
-  text-align: right;
+/* Messaggio di errore */
+#errorMessage {
+  color: red;
   margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+/* Pulsante "Accedi" */
+.sign-in-btn {
+  width: 100%;
+  padding: 0.8rem;
+  background-color: #23AC75;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.2rem;
+  font-family: 'Poppins', sans-serif;
+  color: #fff;
+  cursor: pointer;
+  margin-top: 0.5rem; /* meno spazio sopra */
+  font-weight: 700;
+}
+
+.sign-in-btn:hover {
+  opacity: 0.9;
+}
+
+/* Link "Password dimenticata?" allineato a sinistra */
+.forgot-container {
+  text-align: left;
+  margin-top: 1.5rem;
 }
 
 .forgot-container a {
@@ -289,28 +383,109 @@ body {
   font-size: 0.9rem;
 }
 
-/* Big Sign-In button with specified colors and Poppins font */
-.sign-in-btn {
+/*
+===================================
+Footer (Portale)
+===================================
+*/
+.portale-footer {
+  text-align: center;
+  padding: 1rem 2rem;
+  font-size: 0.9rem;
+  color: #666;
+  position: fixed;
+  bottom: 0;
+  left: 0;
   width: 100%;
-  padding: 1rem;
-  background-color: #23AC75;
+}
+
+
+.footer-divider {
   border: none;
-  border-radius: 12px;
+  border-top: 1px solid #ddd;
+  margin-bottom: 10px;
+}
+
+.footer-links {
+  margin-bottom: 10px;
+}
+
+.footer-links a {
+  font-size: 0.8rem;
+  color: #007BFF;
+  text-decoration: none;
+  margin: 0 5px;
+}
+
+.footer-links a:hover {
+  text-decoration: underline;
+}
+
+/* ===================================
+Header (Portale) – stile simile alla pagina di login
+=================================== */
+.portale-header {
+  background-color: #fff;
+  border-bottom: 2px solid #e5e5e5;
+  padding: 1rem 2rem;
+}
+
+.portale-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* logo a sinistra e saluto a destra */
+}
+
+.portale-logo {
+  max-height: 50px;
+}
+
+.greeting {
   font-size: 1.2rem;
-  font-family: 'Poppins', sans-serif;
   color: #1C2545;
-  cursor: pointer;
-  margin-top: 1rem;
-  font-weight: 700;
+  /* Non serve margin-bottom qui, visto che ora è nell'header */
 }
 
-.sign-in-btn:hover {
-  opacity: 0.9;
+/* ===================================
+Container per Test Progress (area bianca)
+=================================== */
+.container {
+  background-color: #fff;
+  max-width: 600px;
+  margin: 3rem auto;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
+/* Titolo principale per Test Progress */
 .container h2 {
-  font-family: 'Poppins', sans-serif;
-  font-weight: 700;
-  font-size: 2rem; /* Adjust the size as needed */
+  font-size: 1.5rem;
+  font-weight: 600;
   color: #23AC75;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+/* ===================================
+Spaziatura nell'albero di avanzamento
+=================================== */
+#testTree {
+  margin-top: 1rem;
+}
+
+/* Spazio tra le sezioni dell'albero */
+#testTree .section {
+  margin-bottom: 2rem;
+}
+
+/* Spazio extra tra il titolo della sezione e i bottoni */
+#testTree .section h3 {
+  margin-bottom: 0.6rem;
+}
+
+/* Spazio orizzontale tra i bottoni all'interno di ogni sezione */
+#testTree .section button {
+  margin-right: 0.3rem;
 }
