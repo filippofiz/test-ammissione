@@ -80,7 +80,7 @@ async function initializeStudentTests(authUid, testType) {
     const { data: tests, error } = await supabase
         .from(tableName)
         .select("section, test_number, progressivo")
-        .order("section, progressivo");
+        .order("section, test_number, progressivo");
 
     if (error) {
         console.error("❌ Error fetching test structure:", error.message);
@@ -101,10 +101,12 @@ async function initializeStudentTests(authUid, testType) {
         section: test.section,
         test_number: test.test_number,
         progressivo: test.progressivo,
-        status: test.progressivo === 1 ? "unlocked" : "locked"
+        status: (test.section === 1 && test.progressivo === 1) ? "unlocked" : "locked"
     }));
 
-    const { error: insertError } = await supabase.from("student_tests").insert(testEntries);
+    const { error: insertError } = await supabase
+    .from("student_tests")
+    .insert(testEntries);
 
     if (insertError) {
         console.error("❌ Error initializing student tests:", insertError.message);

@@ -224,7 +224,7 @@ function displayBocconiTree(tests, studentTests) {
 
     tests.forEach(test => {
         const testBtn = document.createElement("button");
-        testBtn.textContent = `Test ${test.test_number}`;
+        testBtn.textContent = `Simulazione ${test.test_number}`;
         
         const studentTest = studentTests.find(t => t.section === test.section && t.test_number === test.test_number);
         const status = studentTest ? studentTest.status : "locked";

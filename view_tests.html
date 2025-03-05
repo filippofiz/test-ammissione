@@ -274,13 +274,14 @@
           const status = studentTest ? studentTest.status : "locked";
           
           if (status === "completed") {
-            testBtn.classList.add("completed");
-          } else if (status === "locked") {
-            testBtn.disabled = true;
-            testBtn.classList.add("locked");
-          } else {
-            testBtn.onclick = () => startBocconiTest(test.section, test.test_number);
-          }
+                testBtn.classList.add("completed");
+                testBtn.onclick = () =>
+                  confirmResetTest(test.section, test.test_number, test.progressivo, studentTestType);
+              } else {
+                testBtn.classList.add(status);
+                testBtn.onclick = () =>
+                  toggleTestLockBocconi(test.section, test.test_number, status);
+              }
           
           sectionDiv.appendChild(testBtn);
         });
@@ -371,34 +372,27 @@
       loadTestTree();
     }
 
-    async function startTolcTest(section, testNumber, testProgressivo) {
-      const { data: testQuestion, error } = await supabase
-          .from("questions")
-          .select("pdf_url")
+    async function toggleTestLockBocconi(section, testNumber, currentStatus) {
+      const newStatus = currentStatus === "locked" ? "unlocked" : "locked";
+      console.log(`🔄 Toggling Test: Section ${section}, Test ${testNumber}`);
+
+      const { error } = await supabase
+          .from("student_tests")
+          .update({ status: newStatus, tutor_unlocked: newStatus === "unlocked" })
+          .eq("auth_uid", studentId)
           .eq("section", section)
           .eq("test_number", testNumber)
-          .eq("progressivo", testProgressivo)
-          .limit(1)
-          .single();
 
-      if (error || !testQuestion) {
-          console.error("❌ Error fetching PDF URL:", error?.message);
-          alert("Error loading test. Please try again.");
+      if (error) {
+          console.error("❌ Error toggling test:", error);
+          alert("Failed to update test status.");
           return;
       }
 
-      sessionStorage.setItem("testPdf", testQuestion.pdf_url);
-      sessionStorage.setItem("currentSection", section);
-      sessionStorage.setItem("currentTestNumber", testNumber);
-      sessionStorage.setItem("currentTestProgressivo", testProgressivo);
-      window.location.href = "test.html";
-    }
+      alert(`✅Simulazione ${testNumber} is now ${newStatus}!`);
+      loadTestTree();
+    }    
 
-    async function startBocconiTest(section, testNumber) {
-      sessionStorage.setItem("currentSection", section);
-      sessionStorage.setItem("currentTestNumber", testNumber);
-      window.location.href = "test_bocconi.html";
-    }
 
     loadTestTree();
   </script>
