@@ -152,6 +152,12 @@ button {
   cursor: pointer;
 }
 
+.completed {
+  border-radius: 3px;
+  background-color: #90EE90;
+  color: black;
+}
+
 /*
 ===================================
 Fullscreen layout for Bocconi test

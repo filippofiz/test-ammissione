@@ -11,7 +11,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const password = document.getElementById("password").value.trim();
         const fullName = document.getElementById("fullName").value.trim();
         const tutorId = document.getElementById("tutorDropdown").value;
-        const testType = document.getElementById("testDropdown").value; // New test selection
+        const testType = document.getElementById("testDropdown").value;
   
         if (!email || !password || !fullName || !tutorId || !testType) {
             alert("Please fill in all fields, including test type.");
@@ -22,7 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
   
-  // ✅ Function to Sign Up a Student and Store in Database
+  // Function to Sign Up a Student and Store in Database
 async function signUpStudent(email, password, fullName, tutorId, testType) {
     const { data, error } = await supabase.auth.signUp({ email, password });
 
@@ -35,7 +35,7 @@ async function signUpStudent(email, password, fullName, tutorId, testType) {
     const user = data.user;
     console.log("✅ Signup successful! Auth UID:", user.id);
 
-    // ✅ Wait until the user exists in `auth.users`
+    //Wait until the user exists in `auth.users`
     await new Promise(resolve => setTimeout(resolve, 3000));  // Wait 3 seconds
 
     if (!tutorId) {
@@ -61,7 +61,6 @@ async function signUpStudent(email, password, fullName, tutorId, testType) {
     window.location.href = "login.html"; // Redirect to login
 }
   
-// Function to initialize test progress remains unchanged...
 // Function to initialize test progress for a new student based on their test type
 async function initializeStudentTests(authUid, testType) {
     console.log("📌 Initializing tests for user:", authUid, "with test type:", testType);
@@ -77,32 +76,32 @@ async function initializeStudentTests(authUid, testType) {
         return;
     }
 
-    // Query the chosen questions table to get unique tests
+    // Fetch unique tests with `test_number` and `progressivo`
     const { data: tests, error } = await supabase
         .from(tableName)
-        .select("section, test_number")
-        .order("section, test_number");
+        .select("section, test_number, progressivo")
+        .order("section, progressivo");
 
     if (error) {
         console.error("❌ Error fetching test structure:", error.message);
         return;
     }
 
-    // Remove duplicates manually:
+    // Remove duplicates manually
     const uniqueTests = Array.from(
-        new Set(tests.map(test => `${test.section}-${test.test_number}`))
+        new Set(tests.map(test => `${test.section}-${test.test_number}-${test.progressivo}`))
     ).map(key => {
-        const [section, test_number] = key.split("-").map(Number);
-        return { section, test_number };
+        const [section, test_number, progressivo] = key.split("-").map(Number);
+        return { section, test_number, progressivo };
     });
 
-    // Prepare test progress entries for the student_tests table:
+    // Prepare test progress entries for `student_tests`
     const testEntries = uniqueTests.map(test => ({
         auth_uid: authUid,
         section: test.section,
         test_number: test.test_number,
-        // Only unlock the first test (section 1, test 1) by default:
-        status: (test.section === 1 && test.test_number === 1) ? "unlocked" : "locked"
+        progressivo: test.progressivo,
+        status: test.progressivo === 1 ? "unlocked" : "locked"
     }));
 
     const { error: insertError } = await supabase.from("student_tests").insert(testEntries);

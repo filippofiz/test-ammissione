@@ -33,14 +33,28 @@
 
     // Una volta caricato il documento, aggiorna il saluto in base alla sessione (email)
     document.addEventListener("DOMContentLoaded", async () => {
-      const { data: sessionData, error } = await supabase.auth.getSession();
-      if (sessionData && sessionData.session) {
-        const userEmail = sessionData.session.user.email;
-        const userName = userEmail.split('@')[0];
-        document.querySelector('.greeting').textContent = `Ciao, ${userName}`;
-      } else {
-        document.querySelector('.greeting').textContent = "Ciao, Utente";
-      }
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError || !sessionData || !sessionData.session) {
+            console.log("🔄 No active session found. Redirecting to login...");
+            document.querySelector('.greeting').textContent = "Ciao, Utente";
+            return;
+        }
+
+        const userId = sessionData.session.user.id;
+
+        // ✅ Query the "students" table to get the student's name
+        const { data: student, error: studentError } = await supabase
+            .from("students")
+            .select("name")
+            .eq("auth_uid", userId)
+            .single();
+
+        if (studentError || !student) {
+            console.error("❌ Error fetching student name:", studentError?.message);
+            document.querySelector('.greeting').textContent = "Ciao, Utente";
+        } else {
+            document.querySelector('.greeting').textContent = `Ciao, ${student.name}`;
+        }
     });
   </script>
 

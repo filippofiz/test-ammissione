@@ -128,6 +128,7 @@ async function loadTest() {
         .eq("auth_uid", studentId)
         .eq("section", currentSection)
         .eq("test_number", sessionStorage.getItem("currentTestNumber"))
+        .eq("progressivo", sessionStorage.getItem("currentTestProgressivo"))
         .single();
 
     if (testError || !testData) {
@@ -506,7 +507,8 @@ async function submitAnswers() {
         .update({ status: "completed" })
         .eq("auth_uid", studentId)
         .eq("section", sessionStorage.getItem("currentSection"))
-        .eq("test_number", sessionStorage.getItem("currentTestNumber"));
+        .eq("test_number", sessionStorage.getItem("currentTestNumber"))
+        .eq("progressivo", sessionStorage.getItem("currentTestProgressivo"));
 
     console.log("✅ Test marked as completed!");
 

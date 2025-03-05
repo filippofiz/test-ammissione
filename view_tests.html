@@ -1,293 +1,428 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>View Student Tests</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>View Student Tests</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* Legend styles */
+    #legend {
+      margin: 1rem 0;
+      padding: 0.5rem;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background-color: #fafafa;
+    }
+    #legend h4 {
+      margin-bottom: 0.5rem;
+      font-size: 1rem;
+    }
+    #legend ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      gap: 20px;
+    }
+    #legend li {
+      display: flex;
+      align-items: center;
+      font-size: 0.9rem;
+    }
+    .legend-box {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      margin-right: 5px;
+      border-radius: 3px;
+      border: 1px solid #ccc;
+    }
+    .legend-box.completed {
+      background-color: #90EE90;
+    }
+    .legend-box.unlocked {
+      background-color: blue;
+    }
+    .legend-box.locked {
+      background-color: gray;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h2 id="studentTestProgressTitle"></h2>
-        <div id="testTree">
-            <!-- ✅ Test progress tree will be loaded dynamically -->
-        </div>
-        <button id="backButton">⬅ Back to Tutor Dashboard</button>
+  <div class="container">
+    <h2 id="studentTestProgressTitle"></h2>
+    
+    <!-- NEW LEGEND SECTION -->
+    <div id="legend">
+      <h4>Legend:</h4>
+      <ul>
+        <li><span class="legend-box completed"></span> Completed</li>
+        <li><span class="legend-box unlocked"></span> Unlocked</li>
+        <li><span class="legend-box locked"></span> Locked</li>
+      </ul>
     </div>
+    
+    <div id="testTree">
+      <!-- ✅ Test progress tree will be loaded dynamically -->
+    </div>
+    <button id="backButton">⬅ Back to Tutor Dashboard</button>
+  </div>
 
-    <script type="module">
-        import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-        const SUPABASE_URL = "https://elrwpaezjnemmiegkyin.supabase.co"; 
-        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVscndwYWV6am5lbW1pZWdreWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzAyMDUsImV4cCI6MjA1MzY0NjIwNX0.p6R2S1HK8kPFYiEAYtYaxIAH8XSmzjQBWQ_ywy3akdI";  
+    const SUPABASE_URL = "https://elrwpaezjnemmiegkyin.supabase.co"; 
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVscndwYWV6am5lbW1pZWdreWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzAyMDUsImV4cCI6MjA1MzY0NjIwNX0.p6R2S1HK8kPFYiEAYtYaxIAH8XSmzjQBWQ_ywy3akdI";  
 
-        const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-        const studentId = sessionStorage.getItem("selectedStudentId"); // ✅ Already `auth_uid`
-        const studentName = sessionStorage.getItem("selectedStudentName") || "Student";
-        document.getElementById("studentTestProgressTitle").textContent = `${studentName}'s Test Progress`;
-        const exercises = ["Esercizi per casa", "Assessment", "Post Assessment"];
-        const sections = ["Logica e Insiemi", "Algebra", "Goniometria e Trigonometria", "Logaritmi e Esponenziali", "Geometria", "Probabilità, Combinatoria e Statistica", "Simulazioni"];
-        document.getElementById("studentTestProgressTitle").textContent = `${studentName}'s Test Progress`;
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    const studentId = sessionStorage.getItem("selectedStudentId"); // ✅ Already `auth_uid`
+    const studentName = sessionStorage.getItem("selectedStudentName") || "Student";
+    document.getElementById("studentTestProgressTitle").textContent = `Avanzamento preparazione di ${studentName}`;
+    const exercises = ["Esercizi per casa", "Assessment"];
+    const sections = ["Logica e Insiemi", "Algebra", "Goniometria e Trigonometria", "Logaritmi e Esponenziali", "Geometria", "Probabilità, Combinatoria e Statistica", "Simulazioni"];
+    document.getElementById("studentTestProgressTitle").textContent = `Avanzamento preparazione di ${studentName}`;
 
-        if (!studentId) {
-            alert("Error: No student selected.");
-            window.location.href = "tutor_dashboard.html";
-        }
-
-
-        async function loadTestTree() {
-        console.log("👤 Viewing tests for Student UID:", studentId);
-
-        // ✅ Fetch student's test type (tolc_i or bocconi)
-        const { data: student, error: studentError } = await supabase
-            .from("students")
-            .select("test")
-            .eq("auth_uid", studentId)
-            .single();
-
-        if (studentError || !student) {
-            console.error("❌ Error fetching student test type:", studentError?.message);
-            alert("Student data not found. Please contact support.");
-            return;
-        }
-
-        const studentTestType = student.test;
-        console.log(`📌 Student Test Type: ${studentTestType}`);
-
-        // ✅ Fetch student's test progress using `auth_uid`
-        const { data: studentTests, error: progressError } = await supabase
-            .from("student_tests")
-            .select("*")
-            .eq("auth_uid", studentId)
-            .order("section, test_number");
-
-        if (progressError) {
-            console.error("❌ Error fetching student progress:", progressError.message);
-            return;
-        }
-
-        console.log("📊 Student Progress Data:", studentTests);
-
-        // ✅ Fetch unique sections & tests based on test type
-        let tests = [];
-
-        if (studentTestType === "tolc_i") {
-            const { data, error } = await supabase
-                .from("questions")
-                .select("section, test_number")
-                .order("section, test_number");
-
-            if (error) {
-                console.error("❌ Error fetching TOLC-I test structure:", error.message);
-                return;
-            }
-            
-            // ✅ Remove duplicates manually
-            tests = Array.from(new Set(data.map(test => `${test.section}-${test.test_number}`)))
-                .map(key => {
-                    const [section, test_number] = key.split("-").map(Number);
-                    return { section, test_number };
-                });
-
-        } else if (studentTestType === "bocconi") {
-            const { data, error } = await supabase
-                .from("questions_bocconi")
-                .select("section, test_number")
-                .order("test_number");
-
-            if (error) {
-                console.error("❌ Error fetching Bocconi test structure:", error.message);
-                return;
-            }
-            
-            // ✅ Remove duplicates manually
-            tests = Array.from(new Set(data.map(test => `${test.section}-${test.test_number}`)))
-                .map(key => {
-                    const [section, test_number] = key.split("-").map(Number);
-                    return { section, test_number };
-                });
-        }
-
-        displayTestTree(tests, studentTests, studentTestType);
+    if (!studentId) {
+      alert("Error: No student selected.");
+      window.location.href = "tutor_dashboard.html";
     }
 
-        function displayTestTree(tests, studentTests, studentTestType) {
-            const testTree = document.getElementById("testTree");
-            testTree.innerHTML = "";
-            let currentSection = null;
-            let sectionDiv = null;
+    async function loadTestTree() {
+      console.log("👤 Viewing tests for Student UID:", studentId);
 
-            // Define section names for TOLC-I
-            const sections = [
-                "Logica e Insiemi", "Algebra", "Goniometria e Trigonometria",
-                "Logaritmi e Esponenziali", "Geometria",
-                "Probabilità, Combinatoria e Statistica", "Simulazioni"
-            ];
+      // ✅ Fetch student's test type (tolc_i or bocconi)
+      const { data: student, error: studentError } = await supabase
+          .from("students")
+          .select("test")
+          .eq("auth_uid", studentId)
+          .single();
 
-            if (studentTestType === "bocconi") {
-                // ✅ Bocconi test: Show only "Simulazioni"
-                sectionDiv = document.createElement("div");
-                sectionDiv.classList.add("section");
-                sectionDiv.innerHTML = `<h3>Simulazioni</h3>`;
-                testTree.appendChild(sectionDiv);
+      if (studentError || !student) {
+          console.error("❌ Error fetching student test type:", studentError?.message);
+          alert("Student data not found. Please contact support.");
+          return;
+      }
+
+      const studentTestType = student.test;
+      console.log(`📌 Student Test Type: ${studentTestType}`);
+
+      // ✅ Fetch student's test progress using `auth_uid`
+      const { data: studentTests, error: progressError } = await supabase
+          .from("student_tests")
+          .select("*")
+          .eq("auth_uid", studentId)
+          .order("section, test_number, progressivo");
+
+      if (progressError) {
+          console.error("❌ Error fetching student progress:", progressError.message);
+          return;
+      }
+
+      console.log("📊 Student Progress Data:", studentTests);
+
+      // ✅ Fetch unique sections & tests based on test type
+      let tests = [];
+
+      if (studentTestType === "tolc_i") {
+          const { data, error } = await supabase
+              .from("questions")
+              .select("section, test_number, progressivo")
+              .order("section, test_number, progressivo");
+
+          if (error) {
+              console.error("❌ Error fetching TOLC-I test structure:", error.message);
+              return;
+          }
+          
+          // ✅ Remove duplicates manually
+          tests = Array.from(new Set(data.map(test => `${test.section}-${test.test_number}-${test.progressivo}`)))
+                  .map(key => {
+                      const [section, test_number, progressivo] = key.split("-").map(Number);
+                      return { section, test_number, progressivo };
+                  });
+
+      } else if (studentTestType === "bocconi") {
+          const { data, error } = await supabase
+              .from("questions_bocconi")
+              .select("section, test_number")
+              .order("test_number");
+
+          if (error) {
+              console.error("❌ Error fetching Bocconi test structure:", error.message);
+              return;
+          }
+          
+          // ✅ Remove duplicates manually
+          tests = Array.from(new Set(data.map(test => `${test.section}-${test.test_number}`)))
+              .map(key => {
+                  const [section, test_number] = key.split("-").map(Number);
+                  return { section, test_number };
+              });
+      }
+
+      displayTestTree(tests, studentTests, studentTestType);
+    }
+
+    function displayTestTree(tests, studentTests, studentTestType) {
+      const testTree = document.getElementById("testTree");
+      testTree.innerHTML = "";
+      
+      if (studentTestType === "tolc_i") {
+        // Group tests by section first.
+        const sectionsMap = {};
+        tests.forEach(test => {
+          if (!sectionsMap[test.section]) {
+            sectionsMap[test.section] = [];
+          }
+          sectionsMap[test.section].push(test);
+        });
+        
+        // Define section names.
+        const sectionNames = [
+          "Logica e Insiemi", "Algebra", "Goniometria e Trigonometria",
+          "Logaritmi e Esponenziali", "Geometria", "Probabilità, Combinatoria e Statistica", "Simulazioni"
+        ];
+        
+        // For each section, create a container.
+        Object.keys(sectionsMap).forEach(sectionKey => {
+          const section = Number(sectionKey);
+          const sectionDiv = document.createElement("div");
+          sectionDiv.classList.add("section");
+          sectionDiv.innerHTML = `<h3>${sectionNames[section - 1]}</h3>`;
+          
+          // Group tests within this section by test_number.
+          const testsInSection = sectionsMap[section];
+          const groups = {};
+          testsInSection.forEach(test => {
+            if (!groups[test.test_number]) {
+              groups[test.test_number] = [];
             }
-
-            tests.forEach(test => {
-                if (studentTestType === "tolc_i") {
-                    // ✅ Standard TOLC-I behavior with multiple sections
-                    if (test.section !== currentSection) {
-                        currentSection = test.section;
-                        sectionDiv = document.createElement("div");
-                        sectionDiv.classList.add("section");
-                        sectionDiv.innerHTML = `<h3>${sections[currentSection - 1]}</h3>`;
-                        testTree.appendChild(sectionDiv);
-                    }
-                }
-
-                // ✅ Find student progress for this test
-                const studentTest = studentTests.find(t => t.section === test.section && t.test_number === test.test_number);
-                const status = studentTest ? studentTest.status : "locked";
-
-                // ✅ Create test button
-                const testBtn = document.createElement("button");
-
-                if (studentTestType === "tolc_i") {
-                    const exercises = ["Esercizi per casa", "Assessment", "Post Assessment"];
-                    testBtn.textContent = test.section < 7 ? `${exercises[test.test_number - 1]}` : `Simulazione ${test.test_number}`;
-                } else {
+            groups[test.test_number].push(test);
+          });
+          
+          // Create a flex container for the columns (one per test_number).
+          const groupsContainer = document.createElement("div");
+          groupsContainer.style.display = "flex";
+          groupsContainer.style.gap = "20px";
+          
+          // For each test_number group, sort by progressivo and create a column.
+          Object.keys(groups).forEach(testNumKey => {
+            const testNumber = Number(testNumKey);
+            const group = groups[testNumber];
+            group.sort((a, b) => a.progressivo - b.progressivo);
+            
+            const columnDiv = document.createElement("div");
+            columnDiv.style.display = "flex";
+            columnDiv.style.flexDirection = "column";
+            columnDiv.style.alignItems = "center";
+    
+            
+            // For each test in this group, create a button.
+            group.forEach(test => {
+              // Find student's progress for this test.
+              const studentTest = studentTests.find(t => 
+                t.section === test.section &&
+                t.test_number === test.test_number &&
+                t.progressivo === test.progressivo
+              );
+              const status = studentTest ? studentTest.status : "locked";
+              
+              const testBtn = document.createElement("button");
+              if (test.section === 7) {
                     testBtn.textContent = `Simulazione ${test.test_number}`;
-                }
-
-                // ✅ Apply styles based on status
-                if (status === "completed") {
-                    testBtn.textContent += " ✔ Done";
-                    testBtn.classList.add("completed");
-                    testBtn.onclick = () => confirmResetTest(test.section, test.test_number, studentTestType);
-                } else {
-                    testBtn.classList.add(status);
-                    testBtn.onclick = () => toggleTestLock(test.section, test.test_number, status);
-                }
-
-                sectionDiv.appendChild(testBtn);
+                    } else {
+                        if (test.test_number === 1) {
+                            testBtn.textContent = `Esercizi per casa ${test.progressivo}`;
+                        } else if (test.test_number === 2) {
+                            testBtn.textContent = `Assessment`;
+                        }
+                    } 
+              
+              // Apply status styling and actions (maintain existing functionality).
+              if (status === "completed") {
+                testBtn.classList.add("completed");
+                testBtn.onclick = () =>
+                  confirmResetTest(test.section, test.test_number, test.progressivo, studentTestType);
+              } else {
+                testBtn.classList.add(status);
+                testBtn.onclick = () =>
+                  toggleTestLock(test.section, test.test_number, test.progressivo, status);
+              }
+              
+              columnDiv.appendChild(testBtn);
             });
-        }
+            
+            groupsContainer.appendChild(columnDiv);
+          });
+          
+          sectionDiv.appendChild(groupsContainer);
+          testTree.appendChild(sectionDiv);
+        });
+      } else if (studentTestType === "bocconi") {
+        // Bocconi: use existing layout.
+        const sectionDiv = document.createElement("div");
+        sectionDiv.classList.add("section");
+        sectionDiv.innerHTML = `<h3>Simulazioni</h3>`;
+        testTree.appendChild(sectionDiv);
+        
+        tests.forEach(test => {
+          const testBtn = document.createElement("button");
+          testBtn.textContent = `Simulazione ${test.test_number}`;
+          
+          const studentTest = studentTests.find(t => t.section === test.section && t.test_number === test.test_number);
+          const status = studentTest ? studentTest.status : "locked";
+          
+          if (status === "completed") {
+            testBtn.classList.add("completed");
+          } else if (status === "locked") {
+            testBtn.disabled = true;
+            testBtn.classList.add("locked");
+          } else {
+            testBtn.onclick = () => startBocconiTest(test.section, test.test_number);
+          }
+          
+          sectionDiv.appendChild(testBtn);
+        });
+      }
+    }
 
-        async function confirmResetTest(section, testNumber, studentTestType) {
-            const confirmReset = confirm("⚠ This test is marked as completed. Do you want to reset it and remove all student answers?");
-            if (!confirmReset) return;
+    async function confirmResetTest(section, testNumber, testProgressivo, studentTestType) {
+      const confirmReset = confirm("⚠ This test is marked as completed. Do you want to reset it and remove all student answers?");
+      if (!confirmReset) return;
 
-            console.log(`🔄 Resetting Test: Section ${section}, Test ${testNumber}, Test Type: ${studentTestType}`);
+      console.log(`🔄 Resetting Test: Section ${section}, Test ${testNumber}, Test Type: ${studentTestType}`);
 
-            // ✅ Step 1: Find all question IDs linked to this test
-            const { data: questions, error: questionError } = await supabase
-                .from(studentTestType === "tolc_i" ? "questions" : "questions_bocconi")
-                .select("id")
-                .eq("section", section)
-                .eq("test_number", testNumber);
+      // Step 1: Find all question IDs linked to this test.
+      const { data: questions, error: questionError } = await supabase
+          .from(studentTestType === "tolc_i" ? "questions" : "questions_bocconi")
+          .select("id")
+          .eq("section", section)
+          .eq("test_number", testNumber)
+          .eq("progressivo", testProgressivo);
 
-            if (questionError) {
-                console.error("❌ Error fetching questions for reset:", questionError);
-                alert("Failed to reset test.");
-                return;
-            }
+      if (questionError) {
+          console.error("❌ Error fetching questions for reset:", questionError);
+          alert("Failed to reset test.");
+          return;
+      }
 
-            const questionIds = questions.map(q => q.id);
-            if (questionIds.length === 0) {
-                alert("No questions found for this test.");
-                return;
-            }
+      const questionIds = questions.map(q => q.id);
+      if (questionIds.length === 0) {
+          alert("No questions found for this test.");
+          return;
+      }
 
-            // ✅ Step 2: Delete student answers linked to these questions
-            const { error: deleteError } = await supabase
-                .from(studentTestType === "tolc_i" ? "student_answers" : "studentbocconi_answers")
-                .delete()
-                .in("question_id", questionIds)
-                .eq("auth_uid", studentId);
+      // Step 2: Delete student answers linked to these questions.
+      const { error: deleteError } = await supabase
+          .from(studentTestType === "tolc_i" ? "student_answers" : "studentbocconi_answers")
+          .delete()
+          .in("question_id", questionIds)
+          .eq("auth_uid", studentId);
 
-            if (deleteError) {
-                console.error("❌ Error deleting student answers:", deleteError);
-                alert("Failed to reset test.");
-                return;
-            }
+      if (deleteError) {
+          console.error("❌ Error deleting student answers:", deleteError);
+          alert("Failed to reset test.");
+          return;
+      }
 
-            // ✅ Step 3: Set test status back to "locked"
-            const { error: updateError } = await supabase
-                .from("student_tests")
-                .update({ status: "locked", tutor_unlocked: false })
-                .eq("auth_uid", studentId)
-                .eq("section", section)
-                .eq("test_number", testNumber);
+      // Step 3: Set test status back to "locked".
+      const { error: updateError } = await supabase
+          .from("student_tests")
+          .update({ status: "locked", tutor_unlocked: false })
+          .eq("auth_uid", studentId)
+          .eq("section", section)
+          .eq("test_number", testNumber)
+          .eq("progressivo", testProgressivo);
 
-            if (updateError) {
-                console.error("❌ Error resetting test status:", updateError);
-                alert("Failed to reset test.");
-                return;
-            }
+      if (updateError) {
+          console.error("❌ Error resetting test status:", updateError);
+          alert("Failed to reset test.");
+          return;
+      }
 
-            alert("✅ Test reset successfully. The student will have to retake it.");
-            loadTestTree(); // ✅ Reload progress tree
-        }        
+      alert("✅ Test reset successfully. The student will have to retake it.");
+      loadTestTree();
+    }
 
-        async function toggleTestLock(section, testNumber, currentStatus) {
-            const newStatus = currentStatus === "locked" ? "unlocked" : "locked"; // ✅ Toggle status
-            console.log(`🔄 Toggling Test: Section ${section}, Test ${testNumber} → ${newStatus}`);
+    async function toggleTestLock(section, testNumber, testProgressivo, currentStatus) {
+      const newStatus = currentStatus === "locked" ? "unlocked" : "locked";
+      console.log(`🔄 Toggling Test: Section ${section}, Test ${testNumber}, Progressivo ${testProgressivo} → ${newStatus}`);
 
-            const { error } = await supabase
-                .from("student_tests")
-                .update({ status: newStatus, tutor_unlocked: newStatus === "unlocked" })
-                .eq("auth_uid", studentId)
-                .eq("section", section)
-                .eq("test_number", testNumber);
+      const { error } = await supabase
+          .from("student_tests")
+          .update({ status: newStatus, tutor_unlocked: newStatus === "unlocked" })
+          .eq("auth_uid", studentId)
+          .eq("section", section)
+          .eq("test_number", testNumber)
+          .eq("progressivo", testProgressivo);
 
-            if (error) {
-                console.error("❌ Error toggling test:", error);
-                alert("Failed to update test status.");
-                return;
-            }
+      if (error) {
+          console.error("❌ Error toggling test:", error);
+          alert("Failed to update test status.");
+          return;
+      }
 
-            if (section < 7) {
-                alert(`✅${exercises[testNumber-1]} in ${sections[section-1]} is now ${newStatus}!`);
-            }
-            else {
-                alert(`✅Simulazione ${testNumber} is now ${newStatus}!`);
-            }
-            loadTestTree(); // ✅ Reload progress tree
-        }
+      if (section < 7) {
+          alert(`✅${exercises[testNumber-1]} ${testProgressivo} in ${sections[section-1]} is now ${newStatus}!`);
+      } else {
+          alert(`✅Simulazione ${testNumber} is now ${newStatus}!`);
+      }
+      loadTestTree();
+    }
 
-        loadTestTree();
-    </script>
+    async function startTolcTest(section, testNumber, testProgressivo) {
+      const { data: testQuestion, error } = await supabase
+          .from("questions")
+          .select("pdf_url")
+          .eq("section", section)
+          .eq("test_number", testNumber)
+          .eq("progressivo", testProgressivo)
+          .limit(1)
+          .single();
 
-    <!-- ✅ Fix: Add `goBack` function outside the module -->
-    <script>
-        function goBack() {
-            window.location.href = "tutor_dashboard.html";
-        }
+      if (error || !testQuestion) {
+          console.error("❌ Error fetching PDF URL:", error?.message);
+          alert("Error loading test. Please try again.");
+          return;
+      }
 
-        document.getElementById("backButton").addEventListener("click", goBack);
-    </script>
+      sessionStorage.setItem("testPdf", testQuestion.pdf_url);
+      sessionStorage.setItem("currentSection", section);
+      sessionStorage.setItem("currentTestNumber", testNumber);
+      sessionStorage.setItem("currentTestProgressivo", testProgressivo);
+      window.location.href = "test.html";
+    }
 
-    <style>
-        .section {
-            margin-bottom: 20px;
-        }
-        .completed {
-            background-color: green;
-            color: white;
-        }
-        .locked {
-            background-color: gray;
-            color: white;
-        }
-        .unlocked {
-            background-color: blue;
-            color: white;
-        }
-        button {
-            padding: 10px;
-            margin: 5px;
-            border: none;
-            cursor: pointer;
-        }
-    </style>
+    async function startBocconiTest(section, testNumber) {
+      sessionStorage.setItem("currentSection", section);
+      sessionStorage.setItem("currentTestNumber", testNumber);
+      window.location.href = "test_bocconi.html";
+    }
+
+    loadTestTree();
+  </script>
+
+  <!-- Go back function -->
+  <script>
+    function goBack() {
+      window.location.href = "tutor_dashboard.html";
+    }
+
+    document.getElementById("backButton").addEventListener("click", goBack);
+  </script>
+
+  <style>
+    .locked {
+      background-color: gray;
+      color: white;
+      border-radius: 3px;
+    }
+    .unlocked {
+      background-color: blue;
+      color: white;
+      border-radius: 3px;
+    }
+  </style>
 </body>
 </html>
