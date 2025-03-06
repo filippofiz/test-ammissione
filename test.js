@@ -45,15 +45,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (currentPage < totalPages) loadQuestionsForPage(currentPage + 1);
     });
 
-    /*jumpToPageBtn.addEventListener("click", () => {
-        const page = parseInt(document.getElementById("pageNumberInput").value);
-        if (page >= 1 && page <= totalPages) {
-            loadQuestionsForPage(page);
-        } else {
-            alert(`Invalid page number! Enter a number between 1 and ${totalPages}.`);
-        }
-    });*/
-
     //Load test and PDF
     await loadTest();
 });
@@ -73,7 +64,7 @@ async function loadTest() {
 
     let studentId = sessionStorage.getItem("studentId");
 
-    // ✅ If `studentId` is missing, fetch it again
+    // If `studentId` is missing, fetch it again
     if (!studentId) {
         console.log("🔄 Fetching student ID from Supabase...");
 
@@ -93,9 +84,9 @@ async function loadTest() {
 
     console.log("🎯 Student ID:", studentId);
     
-    // ✅ Load PDF first, but don't render yet
+    // Load PDF first, but don't render yet
     await loadPdf(pdfUrl);
-    // ✅ Fetch page numbers where question numbers 20, 30, and 40 appear
+    // Fetch page numbers where question numbers 20, 30, and 40 appear
     const { data: boundaries, error: boundaryError } = await supabase
         .from("questions")
         .select("question_number, page_number")
@@ -110,7 +101,7 @@ async function loadTest() {
 
     console.log("📌 Section Boundaries (Page Numbers):", boundaries);
 
-    // ✅ Store dynamically fetched page numbers
+    // Store dynamically fetched page numbers
     sectionPageBoundaries = {};
 
     boundaries.forEach(q => {
@@ -119,9 +110,9 @@ async function loadTest() {
         if (q.question_number === 40) sectionPageBoundaries[3] = q.page_number;
     });
 
-    console.log("✅ Section Boundaries Loaded:", sectionPageBoundaries);
+    console.log("Section Boundaries Loaded:", sectionPageBoundaries);
 
-    // ✅ Fetch test duration from Supabase
+    //Fetch test duration from Supabase
     const { data: testData, error: testError } = await supabase
         .from("student_tests")
         .select("duration")
