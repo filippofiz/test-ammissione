@@ -138,18 +138,30 @@ function loadQuestionsForPage(page) {
     const pageQuestions = questions.slice(startIndex, startIndex + 3);
   
     pageQuestions.forEach(q => {
+      // Create a container for the question.
       const qDiv = document.createElement("div");
       qDiv.classList.add("bocconi-question");
-  
-      // Render question text (with LaTeX and using MathJax)  
-      let content = `<p class="question-text latex">${q.question}</p>`;
-  
-      // Render image if provided (ensure URL is correct)
+    
+      // Create and append the question text.
+      const questionP = document.createElement("p");
+      questionP.classList.add("question-text", "latex");
+      questionP.textContent = q.question;
+      qDiv.appendChild(questionP);
+    
+      // If there is an image, create and append the image.
       if (q.image_url) {
-        content += `<img src="${q.image_url}" alt="Question Image" class="question-image" onerror="this.style.display='none'; console.warn('Image not found:', '${q.image_url}')">`;
+        const img = document.createElement("img");
+        img.src = q.image_url;
+        img.alt = "Question Image";
+        img.classList.add("question-image");
+        img.onerror = function() {
+          this.style.display = "none";
+          console.warn("Image not found:", q.image_url);
+        };
+        qDiv.appendChild(img);
       }
-  
-      // --- Assign choices with fixed A–E order ---
+    
+      // Prepare the choices.
       const letters = ["A", "B", "C", "D", "E"];
       const allChoices = [
         { text: q.correct_answer, isCorrect: true },
@@ -158,36 +170,36 @@ function loadQuestionsForPage(page) {
         { text: q.wrong_3, isCorrect: false },
         { text: q.wrong_4, isCorrect: false }
       ];
-  
-      // ✅ Shuffle the **correct answer position** while keeping choices in order
+      // Shuffle the choices.
       allChoices.sort(() => Math.random() - 0.5);
-  
-      // ✅ Map shuffled answers to letters for submission (but DO NOT DISPLAY letters)
-      const mappedChoices = allChoices.map((choice, idx) => ({
-        letter: letters[idx], 
-        text: choice.text, 
+      // Map the choices to an array of objects (without letters).
+      const mappedChoices = allChoices.map(choice => ({
+        text: choice.text,
         isCorrect: choice.isCorrect
       }));
-  
-      // ✅ Save correct answer's assigned letter
+      // Save the correct answer text.
       const correctChoice = mappedChoices.find(c => c.isCorrect);
-      correctMapping[q.id] = correctChoice ? correctChoice.letter : null;
-  
-      // ✅ Add "insicuro" (X) and "non ho idea" (Y) at the end (always the same)
-      mappedChoices.push({ letter: "X", text: "Insicuro", isCorrect: false });
-      mappedChoices.push({ letter: "Y", text: "Non ho idea", isCorrect: false });
-  
-      // ✅ Generate choices UI **WITHOUT LETTERS**
-      content += `<div class="choices">`;
+      correctMapping[q.id] = correctChoice ? correctChoice.text : null;
+      // Add extra choices.
+      mappedChoices.push({ text: "Insicuro", isCorrect: false });
+      mappedChoices.push({ text: "Non ho idea", isCorrect: false });
+    
+      // Create a container for choices.
+      const choicesDiv = document.createElement("div");
+      choicesDiv.classList.add("choices");
       mappedChoices.forEach(choice => {
-        content += `<button class="choice-btn" onclick="selectAnswerBocconi('${q.id}', '${choice.letter}', this)">
-                      ${choice.text}  <!-- Only text, no letter -->
-                    </button>`;
+        const btn = document.createElement("button");
+        btn.classList.add("choice-btn");
+        btn.textContent = choice.text;
+        btn.addEventListener("click", () => selectAnswerBocconi(q.id, choice.text, btn));
+        choicesDiv.appendChild(btn);
       });
-      content += `</div>`;
-  
-      qDiv.innerHTML = content;
-      qDiv.style.borderBottom = "2px solid blue"; // Blue separator
+      qDiv.appendChild(choicesDiv);
+    
+      // Optionally add a blue separator.
+      qDiv.style.borderBottom = "2px solid blue";
+    
+      // Append the fully built qDiv to the question container.
       questionContainer.appendChild(qDiv);
     });
   
@@ -201,18 +213,17 @@ function loadQuestionsForPage(page) {
     buildQuestionNavBocconi();
   }
 
-  function selectAnswerBocconi(questionId, selectedLetter, btn) {
-    // Toggle the answer: unselect if the same answer is clicked again
-    if (studentAnswers[questionId] === selectedLetter) {
+  function selectAnswerBocconi(questionId, selectedText, btn) {
+    // Toggle the answer using text.
+    if (studentAnswers[questionId] === selectedText) {
       delete studentAnswers[questionId];
     } else {
-      studentAnswers[questionId] = selectedLetter;
+      studentAnswers[questionId] = selectedText;
     }
     
     const parent = btn.parentElement;
     Array.from(parent.children).forEach(child => child.style.backgroundColor = "");
     
-    // If the answer remains selected after toggling, highlight it
     if (studentAnswers[questionId]) {
       btn.style.backgroundColor = "green";
     }

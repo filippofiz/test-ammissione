@@ -29,7 +29,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Ensure navigation buttons exist
     const prevPageBtn = document.getElementById("prevPage");
     const nextPageBtn = document.getElementById("nextPage");
-    //const jumpToPageBtn = document.getElementById("jumpToPage");
 
     if (!prevPageBtn || !nextPageBtn) {
         console.error("ERROR: One or more navigation buttons not found in HTML.");

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visualizza Risposte Studente</title>
+  <link rel="stylesheet" href="styles.css">
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']]
+      }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+  <style>
+    body { display: flex; margin: 0; font-family: sans-serif; }
+    /* Left column: PDF viewer (only if available) */
+    #pdfViewer { width: 50%; height: 100vh; border-right: 1px solid #ccc; }
+    /* If no PDF is available, you can hide this element via JS */
+    #answersContainer { width: 50%; height: 100vh; overflow-y: auto; padding: 20px; }
+    .questionItem { margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
+    .questionHeader { font-weight: bold; margin-bottom: 5px; }
+    .correctAnswer { background-color: #90EE90; padding: 3px; }
+    .studentAnswer { background-color: #FFCCCC; padding: 3px; }
+    .checkMark { color: green; font-weight: bold; margin-left: 10px; }
+  </style>
+</head>
+<body>
+  <!-- Left side: PDF viewer (if available) -->
+  <div id="pdfViewer">
+    <iframe id="pdfFrame" style="width:100%; height:100%;" frameborder="0"></iframe>
+  </div>
+  
+  <!-- Right side: Questions & Answers list -->
+  <div id="answersContainer">
+    <h2>Risposte dello studente</h2>
+    <div id="questionsList"></div>
+    <button onclick="goBack()">⬅ Torna al Dashboard Tutor</button>
+  </div>
+
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+    const SUPABASE_URL = "https://elrwpaezjnemmiegkyin.supabase.co"; 
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVscndwYWV6am5lbW1pZWdreWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzAyMDUsImV4cCI6MjA1MzY0NjIwNX0.p6R2S1HK8kPFYiEAYtYaxIAH8XSmzjQBWQ_ywy3akdI";  
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Retrieve test parameters and student info from sessionStorage.
+    const selectedStudentId = sessionStorage.getItem("selectedStudentId"); // auth_uid of student
+    const selectedSection = sessionStorage.getItem("selectedSection");
+    const selectedTipologiaEsercizi = sessionStorage.getItem("selectedTipologiaEsercizi");
+    const selectedProgressivo = sessionStorage.getItem("selectedTestProgressivo");
+    const selectedTestType = sessionStorage.getItem("selectedTestType");
+
+    console.log("Student ID:", selectedStudentId);
+    console.log("Section:", selectedSection);
+    console.log("Tipologia Esercizi:", selectedTipologiaEsercizi);
+    console.log("Progressivo:", selectedProgressivo);
+    console.log("Test Type:", selectedTestType);
+
+    if (!selectedStudentId || !selectedSection || !selectedTipologiaEsercizi || !selectedProgressivo || !selectedTestType) {
+      alert("Dati test mancanti. Riprova.");
+      window.location.href = "tutor_dashboard.html";
+    }
+
+    // Decide which questions and answers tables to use.
+    // If selectedTestType contains "PDF", use questions/student_answers; otherwise, use questions_bocconi/studentbocconi_answers.
+    const usePDF = selectedTestType.includes("PDF");
+    const questionsTable = usePDF ? "questions" : "questions_bocconi";
+    const answersTable = usePDF ? "student_answers" : "studentbocconi_answers";
+
+    async function loadTestAnswers() {
+      // 1. Fetch questions for the selected test.
+      const { data: questionsData, error: questionsError } = await supabase
+        .from(questionsTable)
+        .select("*")
+        .eq("section", selectedSection)
+        .eq("tipologia_esercizi", selectedTipologiaEsercizi)
+        .eq("progressivo", selectedProgressivo)
+        .eq("tipologia_test", selectedTestType)
+        .order("question_number");
+      if (questionsError) {
+        console.error("Errore nel recupero delle domande:", questionsError.message);
+        alert("Errore nel recupero delle domande.");
+        return;
+      }
+      if (!questionsData || questionsData.length === 0) {
+        alert("Nessuna domanda trovata per questo test.");
+        return;
+      }
+
+      // 2. If we are in PDF mode, try to get the PDF URL.
+      const pdfUrls = questionsData.map(q => q.pdf_url).filter(url => url);
+      const uniquePdfUrls = [...new Set(pdfUrls)];
+      if (usePDF && uniquePdfUrls.length > 0) {
+        document.getElementById("pdfFrame").src = uniquePdfUrls[0];
+      } else {
+        // If not in PDF mode, hide the pdfViewer.
+        document.getElementById("pdfViewer").style.display = "none";
+        // And expand the answersContainer.
+        document.getElementById("answersContainer").style.width = "100%";
+      }
+
+      // 3. Build an array of question IDs.
+      const questionIds = questionsData.map(q => q.id);
+
+      // 4. Fetch the student's answers for these questions.
+      const { data: answersData, error: answersError } = await supabase
+        .from(answersTable)
+        .select("*")
+        .in("question_id", questionIds)
+        .eq("auth_uid", selectedStudentId);
+      if (answersError) {
+        console.error("Errore nel recupero delle risposte dello studente:", answersError.message);
+        alert("Errore nel recupero delle risposte.");
+        return;
+      }
+      const studentAnswersMap = {};
+      if (answersData) {
+        answersData.forEach(ans => {
+          studentAnswersMap[ans.question_id] = ans.answer;
+        });
+      }
+
+      // 5. Display the questions and answers.
+      displayQuestionsAndAnswers(questionsData, studentAnswersMap);
+      // Trigger MathJax re-rendering in case LaTeX is used.
+      if (window.MathJax) {
+        MathJax.typesetPromise().catch(err => console.error("MathJax error:", err));
+      }
+    }
+
+    function displayQuestionsAndAnswers(questionsData, studentAnswersMap) {
+  const listContainer = document.getElementById("questionsList");
+  listContainer.innerHTML = "";
+  
+  questionsData.forEach((q, index) => {
+    const studentAnswerRaw = studentAnswersMap[q.id] || "";
+    let studentAnswer = studentAnswerRaw;
+    if (studentAnswerRaw === "x") {
+      studentAnswer = "Insicuro";
+    } else if (studentAnswerRaw === "y") {
+      studentAnswer = "Non ho idea";
+    } else if (studentAnswerRaw === "z") {
+      studentAnswer = "Tempo esaurito";
+    }
+    const isCorrect = studentAnswer === q.correct_answer;
+    
+    const questionDiv = document.createElement("div");
+    questionDiv.classList.add("questionItem");
+    
+    // Header with question number and check mark if correct.
+    const header = document.createElement("div");
+    header.classList.add("questionHeader");
+    header.innerHTML = `Domanda ${index + 1}` + (isCorrect ? ' <span class="checkMark">✔</span>' : '');
+    questionDiv.appendChild(header);
+    
+    // Display the question text (using innerHTML for LaTeX).
+    const qText = document.createElement("p");
+    qText.innerHTML = q.question;
+    questionDiv.appendChild(qText);
+    
+    // If image_url is not null, create and append an image element.
+    if (q.image_url) {
+      const img = document.createElement("img");
+      img.src = q.image_url;
+      img.alt = "Immagine della domanda";
+      img.style.maxWidth = "100%";
+      img.style.display = "block";
+      img.style.marginTop = "10px";
+      questionDiv.appendChild(img);
+    }
+    
+    // Display the correct answer in green.
+    const correctDiv = document.createElement("p");
+    correctDiv.innerHTML = `<strong>Risposta corretta:</strong> <span class="correctAnswer">${q.correct_answer}</span>`;
+    questionDiv.appendChild(correctDiv);
+    
+    // Display the student's answer.
+    const answerDiv = document.createElement("p");
+    if (studentAnswer) {
+      if (!isCorrect) {
+        answerDiv.innerHTML = `<strong>Risposta dello studente:</strong> <span class="studentAnswer">${studentAnswer}</span>`;
+      } else {
+        answerDiv.innerHTML = `<strong>Risposta dello studente:</strong> <span class="correctAnswer">${studentAnswer}</span>`;
+      }
+    } else {
+      answerDiv.innerHTML = `<strong>Risposta dello studente:</strong> Nessuna risposta`;
+    }
+    questionDiv.appendChild(answerDiv);
+    
+    // Compute "Altre risposte possibili" from the question's choices,
+    // excluding the correct answer and the student's answer.
+    let allChoices = [q.correct_answer, q.wrong_1, q.wrong_2, q.wrong_3, q.wrong_4];
+    // Remove duplicates, if any.
+    allChoices = [...new Set(allChoices)];
+    const otherChoices = allChoices.filter(choice => choice !== q.correct_answer && choice !== studentAnswer);
+    
+    if (otherChoices.length > 0) {
+      const otherDiv = document.createElement("div");
+      otherDiv.innerHTML = `<strong>Altre risposte possibili:</strong> ${otherChoices.join(", ")}`;
+      questionDiv.appendChild(otherDiv);
+    }
+    
+    listContainer.appendChild(questionDiv);
+  });
+}
+
+
+    // Load test answers when the page loads.
+    loadTestAnswers();
+  </script>
+
+    <script>
+    function goBack() {
+      window.location.href = "tutor_dashboard.html";
+    }
+    document.getElementById("questionsList").addEventListener("click", goBack);
+    </script>
+</body>
+</html>

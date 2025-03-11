@@ -62,6 +62,8 @@
         <li><span class="legend-box locked"></span> Locked</li>
       </ul>
     </div>
+    <!-- NEW TOGGLE BUTTON -->
+    <button id="toggleViewAnswers">Vedi risposte dello studente</button>
     
     <div id="testTree">
       <!-- ✅ Test progress tree will be loaded dynamically -->
@@ -83,6 +85,16 @@
     const sections = ["Logica e Insiemi", "Algebra", "Goniometria e Trigonometria", "Logaritmi e Esponenziali", "Geometria", "Probabilità, Combinatoria e Statistica", "Simulazioni"];
     document.getElementById("studentTestProgressTitle").textContent = `Avanzamento preparazione di ${studentName}`;
 
+    let viewAnswersMode = false; // global flag for toggle
+
+    document.getElementById("toggleViewAnswers").addEventListener("click", () => {
+      viewAnswersMode = !viewAnswersMode;
+      // Update button text based on mode
+      document.getElementById("toggleViewAnswers").textContent = 
+          viewAnswersMode ? "Nascondi risposte degli studenti" : "Vedi risposte degli studenti";
+      loadTestTree(); // Reload test tree to update the buttons’ appearance and behavior
+    });
+    
     if (!studentId) {
       alert("Error: No student selected.");
       window.location.href = "tutor_dashboard.html";
@@ -266,19 +278,31 @@
                     testBtn.textContent = `${tipologia} ${test.progressivo}`;
 
               
-              // Apply status styling and actions (maintain existing functionality).
-              if (status === "completed") {
-                testBtn.classList.add("completed");
-                testBtn.onclick = () =>
-                  confirmResetTest(test.section, test.progressivo, test.tipologia_esercizi, selectedTest);
-              } else {
-                testBtn.classList.add(status);
-                testBtn.onclick = () =>
-                  toggleTestLock(test.section, test.progressivo, test.tipologia_esercizi, status, selectedTest);
-              }
-              
-              columnDiv.appendChild(testBtn);
-            });
+                    if (viewAnswersMode) {
+                      // In view answers mode, if test is completed, make it clickable green.
+                      if (status === "completed") {
+                        testBtn.classList.add("view-answers"); // CSS class for green clickable button
+                        testBtn.onclick = () => viewStudentAnswers(test.section, test.progressivo, test.tipologia_esercizi, selectedTest, studentId);
+                      } else {
+                        // For tests not completed, still turn them green (but no click action)
+                        testBtn.classList.add("disabled-green");
+                        testBtn.onclick = null;
+                      }
+                    } else {
+                      // Original behavior: if completed, assign the reset functionality; otherwise, allow toggle.
+                      if (status === "completed") {
+                        testBtn.classList.add("completed");
+                        testBtn.onclick = () =>
+                          confirmResetTest(test.section, test.progressivo, test.tipologia_esercizi, selectedTest);
+                      } else {
+                        testBtn.classList.add(status);
+                        testBtn.onclick = () =>
+                          toggleTestLock(test.section, test.progressivo, test.tipologia_esercizi, status, selectedTest);
+                      }
+                    }
+
+                    columnDiv.appendChild(testBtn);
+                  });
             
             groupsContainer.appendChild(columnDiv);
           });
@@ -387,6 +411,16 @@
     }  
 
     loadTestTree();
+
+    async function viewStudentAnswers(section, testProgressivo, tipologiaEsercizi, selectedTest, studentId) {
+      console.log(`🚀 View Student Answers: ${section} - ${tipologiaEsercizi} - ${testProgressivo} - ${selectedTest}`);   
+      sessionStorage.setItem("selectedSection", section);
+      sessionStorage.setItem("selectedTipologiaEsercizi", tipologiaEsercizi);
+      sessionStorage.setItem("selectedTestProgressivo", testProgressivo);
+      sessionStorage.setItem("selectedTestType", selectedTest);
+      sessionStorage.setItem("selectedStudentId", studentId);
+      window.location.href = "view_answers.html";
+    }
   </script>
 
   <!-- Go back function -->

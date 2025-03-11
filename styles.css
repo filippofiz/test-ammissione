@@ -648,3 +648,19 @@ Progress Tree per Studente
   align-items: center;
   margin-bottom: 10px;
 }
+
+/* When in view answers mode */
+button.view-answers {
+  background-color: #23AC75; /* Green background */
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+button.disabled-green {
+  background-color: #989d9b;
+  color: white;
+  border: none;
+  opacity: 0.5;
+  cursor: default;
+}
