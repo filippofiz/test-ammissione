@@ -21,9 +21,11 @@
 
   <div class="container">
     <div class="dashboard-header">
-        <h2>Dashboard</h2>
-        <button id="modifyTestsBtn" class="modify-btn">Gestione test</button>
-      </div>
+      <h2>Dashboard</h2>
+      <button id="modifyTestsBtn" class="modify-btn">Gestione test</button>
+      <!-- New Button for Assigning New Tests -->
+      <button id="assignTestsBtn" class="modify-btn">Assegna nuovi test</button>
+    </div>
      
     <!-- Lista degli studenti -->
     <h3>I tuoi studenti</h3>
@@ -32,7 +34,6 @@
     </div>
   </div>
   
-
   <script type="module">
     import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -43,13 +44,21 @@
 
     // Aggiorna il saluto in header usando la parte prima della "@" dell'email
     document.addEventListener("DOMContentLoaded", async () => {
-      const { data: sessionData, error } = await supabase.auth.getSession();
-      if (sessionData && sessionData.session) {
-        const userEmail = sessionData.session.user.email;
-        const userName = userEmail.split('@')[0];
-        document.querySelector('.greeting').textContent = `Ciao, ${userName}`;
-      } else {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !sessionData || !sessionData.session) {
         document.querySelector('.greeting').textContent = "Ciao, Utente";
+      } else {
+        const userId = sessionData.session.user.id;
+        const { data: tutor, error: tutorError } = await supabase
+          .from("tutors")
+          .select("name")
+          .eq("auth_uid", userId)
+          .single();
+        if (tutorError || !tutor) {
+          document.querySelector('.greeting').textContent = "Ciao, Utente";
+        } else {
+          document.querySelector('.greeting').textContent = `Ciao, ${tutor.name}`;
+        }
       }
     });
 
@@ -78,10 +87,12 @@
     async function fetchStudents() {
       const tutorId = await getTutorId();
       if (!tutorId) return;
+      // Now select also the "tests" column.
       const { data: students, error: studentError } = await supabase
           .from("students")
-          .select("id, auth_uid, name")
+          .select("id, auth_uid, name, tests")
           .eq("tutor_id", tutorId);
+      
       if (studentError) {
           console.error("❌ Error fetching students:", studentError);
           return;
@@ -92,28 +103,61 @@
     async function displayStudentProgress(students) {
       const studentsContainer = document.getElementById("studentsContainer");
       studentsContainer.innerHTML = "";
+      // For each student, create a container.
       for (const student of students) {
-          const studentDiv = document.createElement("div");
-          studentDiv.classList.add("student-progress");
-          studentDiv.innerHTML = `
-              <h3>${student.name}</h3>
-              <div id="tree-${student.auth_uid}" class="testTree"></div>
-              <button class="viewTestsBtn" onclick="viewStudentTests('${student.auth_uid}', '${student.name}')">Visualizza test assegnati</button>
-              <button class="dashboardBtn" onclick="viewStudentDashboard('${student.auth_uid}', '${student.name}')">Visualizza i risultati</button>
-          `;
-          studentsContainer.appendChild(studentDiv);
+        const studentDiv = document.createElement("div");
+        studentDiv.classList.add("student-progress");
+        studentDiv.innerHTML = `<h3>${student.name}</h3>`;
+        
+        // For each test in the student's tests array, create a row with two buttons.
+        if (student.tests && student.tests.length > 0) {
+          student.tests.forEach(testOption => {
+            const rowDiv = document.createElement("div");
+            rowDiv.classList.add("test-row");
+            // Optionally, display the test name.
+            const testLabel = document.createElement("span");
+            testLabel.textContent = testOption;
+            testLabel.style.marginRight = "10px";
+            rowDiv.appendChild(testLabel);
+            
+            // Button for "Visualizza test assegnati"
+            const viewTestsBtn = document.createElement("button");
+            viewTestsBtn.classList.add("viewTestsBtn");
+            viewTestsBtn.textContent = "Visualizza test assegnati";
+            viewTestsBtn.onclick = () => viewStudentTests(student.auth_uid, student.name, testOption);
+            rowDiv.appendChild(viewTestsBtn);
+            
+            // Button for "Visualizza i risultati"
+            const dashboardBtn = document.createElement("button");
+            dashboardBtn.classList.add("dashboardBtn");
+            dashboardBtn.textContent = "Visualizza i risultati";
+            dashboardBtn.onclick = () => viewStudentDashboard(student.auth_uid, student.name, testOption);
+            rowDiv.appendChild(dashboardBtn);
+            
+            studentDiv.appendChild(rowDiv);
+          });
+        } else {
+          // If no tests are available.
+          const noTests = document.createElement("p");
+          noTests.textContent = "Nessun test disponibile";
+          studentDiv.appendChild(noTests);
+        }
+        studentsContainer.appendChild(studentDiv);
       }
     }
 
-    window.viewStudentTests = function (studentId, studentName) {
+    // Update the click handlers to also store the selected test.
+    window.viewStudentTests = function (studentId, studentName, selectedTest) {
       sessionStorage.setItem("selectedStudentId", studentId);
       sessionStorage.setItem("selectedStudentName", studentName);
+      sessionStorage.setItem("selectedTestType", selectedTest);
       window.location.href = "view_tests.html";
     };
 
-    window.viewStudentDashboard = function (studentId, studentName) {
+    window.viewStudentDashboard = function (studentId, studentName, selectedTest) {
       sessionStorage.setItem("selectedStudentId", studentId);
       sessionStorage.setItem("selectedStudentName", studentName);
+      sessionStorage.setItem("selectedTestType", selectedTest);
       window.location.href = "dashboard.html";
     };
 
@@ -124,6 +168,11 @@
 
     document.getElementById("modifyTestsBtn").addEventListener("click", () => {
       window.location.href = "modify_tests.html";
+    });
+
+    // New event listener to go to the "Assegna nuovi test" page.
+    document.getElementById("assignTestsBtn").addEventListener("click", () => {
+      window.location.href = "assign_tests.html";
     });
 
     fetchStudents();

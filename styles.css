@@ -642,3 +642,9 @@ Progress Tree per Studente
 .modify-btn:hover {
   opacity: 0.9;
 }
+
+.test-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}

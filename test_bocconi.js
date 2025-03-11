@@ -46,9 +46,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 async function loadTest() {
-  const currentSection = parseInt(sessionStorage.getItem("currentSection"));
-  const currentTestNumber = parseInt(sessionStorage.getItem("currentTestNumber"));
-  if (!currentSection || !currentTestNumber) {
+  const currentSection = sessionStorage.getItem("currentSection");
+  const currentTipologiaEsercizi = sessionStorage.getItem("currentTipologiaEsercizi");
+  const currentTestProgressivo = sessionStorage.getItem("currentTestProgressivo");
+  const selectedTestType = sessionStorage.getItem("selectedTestType");
+  if (!currentSection || !currentTipologiaEsercizi) {
     alert("Test data not found. Please contact your tutor.");
     window.location.href = "test_selection.html";
     return;
@@ -59,7 +61,9 @@ async function loadTest() {
     .from("questions_bocconi")
     .select("*")
     .eq("section", currentSection)
-    .eq("test_number", currentTestNumber)
+    .eq("tipologia_esercizi", currentTipologiaEsercizi)
+    .eq("tipologia_test", selectedTestType)
+    .eq("progressivo", currentTestProgressivo)
     .order("question_number");
   
   if (error) {
@@ -111,7 +115,6 @@ function loadQuestionsForPage(page) {
           Questo test prevede che vengano visualizzate 3 domande per pagina.
           Non potrai tornare indietro: la navigazione è solo in avanti.
           Il test va svolto a schermo intero: ogni tentativo di uscita annulla il test.
-          <br><br>Le domande possono contenere <b>formule LaTeX</b> e immagini.
         </p>
         <button id="startTestBtn">Inizia Test</button>
       `;
@@ -287,7 +290,9 @@ async function submitAnswersBocconi() {
     .update({ status: "completed" })
     .eq("auth_uid", studentId)
     .eq("section", sessionStorage.getItem("currentSection"))
-    .eq("test_number", sessionStorage.getItem("currentTestNumber"));
+    .eq("tipologia_esercizi", sessionStorage.getItem("currentTipologiaEsercizi"))
+    .eq("progressivo", sessionStorage.getItem("currentTestProgressivo"))
+    .eq("tipologia_test", sessionStorage.getItem("selectedTestType"));
   window.location.href = "test_selection.html";
 }
 
@@ -307,14 +312,18 @@ async function startTimerBocconi() {
   console.log("Student ID:", studentId);
   
   const currentSection = sessionStorage.getItem("currentSection");
-  const currentTestNumber = sessionStorage.getItem("currentTestNumber");
+  const currentTipologiaEsercizi = sessionStorage.getItem("currentTipologiaEsercizi");
+  const currentTestProgressivo = sessionStorage.getItem("currentTestProgressivo");
+  const selectedTestType = sessionStorage.getItem("selectedTestType");
   
   const { data: testData, error } = await supabase
     .from("student_tests")
     .select("duration")
     .eq("auth_uid", studentId)
     .eq("section", currentSection)
-    .eq("test_number", currentTestNumber)
+    .eq("tipologia_esercizi", currentTipologiaEsercizi)
+    .eq("progressivo", currentTestProgressivo)
+    .eq("tipologia_test", selectedTestType)
     .single();
   
   if (error || !testData) {

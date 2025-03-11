@@ -1,43 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign Up | Mock Test</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Up | Mock Test</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
-        <h2>Sign Up</h2>
-        <input type="text" id="fullName" placeholder="Enter Full Name">
-        <input type="email" id="email" placeholder="Enter Email">
-        <input type="password" id="password" placeholder="Enter Password">
-        <select id="tutorDropdown">
-            <option value="">Select Your Tutor</option>
-        </select>
+  <div class="container">
+    <h2>Sign Up</h2>
+    <input type="text" id="fullName" placeholder="Enter Full Name">
+    <input type="email" id="email" placeholder="Enter Email">
+    <input type="password" id="password" placeholder="Enter Password">
+    <select id="tutorDropdown">
+      <option value="">Select Your Tutor</option>
+    </select>
 
-        <!-- New dropdown for test selection -->
-        <select id="testDropdown">
-        <option value="">Select Test</option>
-        <option value="tolc_i">TOLC-I</option>
-        <option value="bocconi">BOCCONI</option>
-        </select>        
-        
-        <button id="refreshTutors">🔄 Refresh List</button>
-        <button id="signupBtn">Sign Up</button>
-        <p>Already have an account? <a href="login.html">Login</a></p>
-    </div>
+    <!-- New multi-select for test selection -->
+    <label for="testsDropdown">Select Tests (you can choose more than one):</label>
+    <select id="testsDropdown" multiple size="4">
+      <!-- Options will be populated dynamically -->
+    </select>        
 
-    <!-- Include Supabase -->
-    <script type="module">
-        import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+    <button id="refreshTutors">🔄 Refresh List</button>
+    <button id="signupBtn">Sign Up</button>
+    <p>Already have an account? <a href="login.html">Login</a></p>
+  </div>
 
-        const SUPABASE_URL = "https://elrwpaezjnemmiegkyin.supabase.co"; 
-        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVscndwYWV6am5lbW1pZWdreWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzAyMDUsImV4cCI6MjA1MzY0NjIwNX0.p6R2S1HK8kPFYiEAYtYaxIAH8XSmzjQBWQ_ywy3akdI";  
+  <!-- Include Supabase -->
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+    const SUPABASE_URL = "https://elrwpaezjnemmiegkyin.supabase.co"; 
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVscndwYWV6am5lbW1pZWdreWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzAyMDUsImV4cCI6MjA1MzY0NjIwNX0.p6R2S1HK8kPFYiEAYtYaxIAH8XSmzjQBWQ_ywy3akdI";  
+    window.supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+  </script>
 
-        window.supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-    </script>
-
-    <script type="module" src="signup.js"></script>
+  <script type="module" src="signup.js"></script>
 </body>
 </html>

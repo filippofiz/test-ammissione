@@ -2,32 +2,23 @@ document.addEventListener("DOMContentLoaded", async () => {
     await loadTestTree();
 });
 
-document.addEventListener("DOMContentLoaded", async () => {
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (!sessionData || !sessionData.session) {
-        console.log("🔄 No active session found. Redirecting to login...");
-        window.location.href = "login.html";
-        return;
-    }
-});
-
-document.addEventListener("DOMContentLoaded", async () => {
-    await loadTestTree();
-});
-
-document.addEventListener("DOMContentLoaded", async () => {
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (!sessionData || !sessionData.session) {
-        console.log("🔄 No active session found. Redirecting to login...");
-        window.location.href = "login.html";
-        return;
-    }
-});
-
 async function loadTestTree() {
-    // ✅ Get active session
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    const selectedTest = sessionStorage.getItem("selectedTestType");
 
+    if (!selectedTest) {
+        alert("No test selected. Redirecting to test selection...");
+        window.location.href = "choose_test.html";
+        return;
+    }
+
+    console.log(`🎯 Selected Test: ${selectedTest}`);
+
+    // Determine test type based on "PDF"
+    const testType = selectedTest.includes("PDF") ? "pdf" : "banca_dati";
+    console.log(`📌 Determined Test Type: ${testType}`);
+
+    // Get active session
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     if (sessionError || !sessionData || !sessionData.session) {
         console.error("❌ No active session:", sessionError?.message);
         alert("Session expired. Please log in again.");
@@ -38,220 +29,190 @@ async function loadTestTree() {
     const user = sessionData.session.user;
     console.log("👤 Logged-in User ID:", user.id);
 
-    // ✅ Fetch student's `auth_uid` from the `students` table
-    const { data: student, error: studentError } = await supabase
-        .from("students")
-        .select("auth_uid, test")
+    // ✅ Fetch the student's section order from `ordine_sections`
+    const { data: studentTestOrder, error: studentTestOrderError } = await supabase
+        .from("ordine_sections")
+        .select("ordine")
         .eq("auth_uid", user.id)
-        .single();
+        .eq("tipologia_test", selectedTest);
 
-    console.log("👤 Student Data:", student);
-    if (studentError || !student) {
-        console.error("❌ Error fetching student record:", studentError?.message);
-        alert("Student data not found. Please contact support.");
+    if (studentTestOrderError || !studentTestOrder || studentTestOrder.length === 0) {
+        console.error("❌ Error fetching student's section order:", studentTestOrderError?.message);
+        window.location.href = "choose_test.html";
+        alert("Section order not found. Please contact support.");
         return;
     }
 
-    const authUid = student.auth_uid;
-    const testType = student.test; // "tolc_i" or "bocconi"
-    console.log("🎯 Student test type:", testType);
+    // ✅ Ensure `ordineSections` contains only unique values
+    let ordineSections = [...new Set(studentTestOrder[0].ordine)];
+    console.log("📊 Section Order (Unique):", ordineSections);
 
-    // ✅ Fetch student's test progress using `auth_uid`
-    const { data: studentTests, error: progressError } = await supabase
+    if (!ordineSections || ordineSections.length === 0) {
+        console.error("❌ ordine_sections is empty or missing.");
+        alert("No section order available. Please contact support.");
+        window.location.href = "choose_test.html";
+        return;
+    }
+
+    // ✅ Fetch student's test progress
+    let { data: studentTests, error: progressError } = await supabase
         .from("student_tests")
         .select("*")
-        .eq("auth_uid", authUid)
-        .order("section, test_number, progressivo");
+        .eq("auth_uid", user.id)
+        .eq("tipologia_test", selectedTest)
+        .order("tipologia_esercizi, progressivo");
 
     if (progressError) {
         console.error("❌ Error fetching student progress:", progressError.message);
+        window.location.href = "choose_test.html";
         return;
     }
 
     console.log("📊 Student Progress Data:", studentTests);
+    console.log("📊 Selected Test Type:", selectedTest);
 
-    if (testType === "tolc_i") {
-        // ✅ Fetch test structure for tolc_i
-        const { data: testData, error: testError } = await supabase
-            .from("questions")
-            .select("section, test_number, progressivo")
-            .order("section, test_number, progressivo");
+    // ✅ Ensure only unique sections exist in test data
+    studentTests = studentTests.filter((test, index, self) =>
+        index === self.findIndex((t) =>
+             t.section === test.section &&
+             t.tipologia_esercizi === test.tipologia_esercizi &&
+             t.progressivo === test.progressivo
+        )
+    );
 
-        if (testError) {
-            console.error("❌ Error fetching test structure:", testError.message);
-            return;
-        }
-
-        // ✅ Fix: Use `testData` instead of `data`
-        const uniqueTests = Array.from(new Set(testData.map(test => 
-            `${test.section}-${test.test_number}-${test.progressivo}`
-        ))).map(key => {
-            const [section, test_number, progressivo] = key.split("-").map(Number);
-            return { section, test_number, progressivo };
-        });
-
-        displayTolcTree(uniqueTests, studentTests);
-    } else if (testType === "bocconi") {
-        // ✅ Fetch test structure for Bocconi
-        const { data: testData, error: testError } = await supabase
-            .from("questions_bocconi")
-            .select("section, test_number")
-            .order("section, test_number");
-
-        if (testError) {
-            console.error("❌ Error fetching Bocconi test structure:", testError.message);
-            return;
-        }
-
-        const uniqueTests = Array.from(new Set(testData.map(test => 
-            `${test.section}-${test.test_number}`
-        ))).map(key => {
-            const [section, test_number] = key.split("-").map(Number);
-            return { section, test_number };
-        });
-
-        displayBocconiTree(uniqueTests, studentTests);
-    } else {
-        console.error("❌ Unknown test type:", testType);
-    }
+    // ✅ Sort test data based on `ordine_sections`
+    studentTests.sort((a, b) => ordineSections.indexOf(a.section) - ordineSections.indexOf(b.section));
+    
+    displayTestTree(studentTests, studentTests, testType, selectedTest);
 }
 
-// ✅ Display TOLC-I test structure
-function displayTolcTree(tests, studentTests) {
+function displayTestTree(tests,studentTests, testType, selectedTest) {
     const testTree = document.getElementById("testTree");
     testTree.innerHTML = "";
-    
+
     // Group tests by section first
     const sectionsMap = {};
     tests.forEach(test => {
-      if (!sectionsMap[test.section]) {
-        sectionsMap[test.section] = [];
-      }
-      sectionsMap[test.section].push(test);
+        if (!sectionsMap[test.section]) {
+            sectionsMap[test.section] = {};
+        }
+        if (!sectionsMap[test.section][test.tipologia_esercizi]) {
+            sectionsMap[test.section][test.tipologia_esercizi] = [];
+        }
+        sectionsMap[test.section][test.tipologia_esercizi].push(test);
     });
-    
-    // Define section names
-    const sectionNames = [
-      "Logica e Insiemi", "Algebra", "Goniometria e Trigonometria",
-      "Logaritmi e Esponenziali", "Geometria", "Probabilità, Combinatoria e Statistica", "Simulazioni"
-    ];
-    
+
     // For each section, create a section container
     Object.keys(sectionsMap).forEach(sectionKey => {
-      const section = Number(sectionKey);
-      const sectionDiv = document.createElement("div");
-      sectionDiv.classList.add("section");
-      sectionDiv.innerHTML = `<h3>${sectionNames[section - 1]}</h3>`;
-      
-      // Group tests within this section by test_number
-      const testsInSection = sectionsMap[section];
-      const groups = {};
-      testsInSection.forEach(test => {
-        if (!groups[test.test_number]) {
-          groups[test.test_number] = [];
-        }
-        groups[test.test_number].push(test);
-      });
-      
-      // Create a container for the columns (one per test_number)
-      const groupsContainer = document.createElement("div");
-      groupsContainer.style.display = "flex";
-      groupsContainer.style.gap = "20px";
-      
-      // For each test_number group, sort by progressivo and create a column
-      Object.keys(groups).forEach(testNumKey => {
-        const testNumber = Number(testNumKey);
-        const group = groups[testNumber];
-        group.sort((a, b) => a.progressivo - b.progressivo);
-        
-        const columnDiv = document.createElement("div");
-        columnDiv.style.display = "flex";
-        columnDiv.style.flexDirection = "column";
-        columnDiv.style.alignItems = "center";
+        const section = sectionKey; // Section names are already stored correctly
+        const sectionDiv = document.createElement("div");
+        sectionDiv.classList.add("section");
+        sectionDiv.innerHTML = `<h3>${section}</h3>`;
 
-        
-        // For each test in this group, create a button
-        group.forEach(test => {
-          // Find student's progress for this test
-          const studentTest = studentTests.find(t => 
-            t.section === test.section &&
-            t.test_number === test.test_number &&
-            t.progressivo === test.progressivo
-          );
-          const status = studentTest ? studentTest.status : "locked";
-          
-          const testBtn = document.createElement("button");
-          // Label the button with its progressivo number
-          if (test.section === 7) {
-            testBtn.textContent = `Simulazione ${test.test_number}`;
-            } else {
-                if (test.test_number === 1) {
-                    testBtn.textContent = `Esercizi per casa ${test.progressivo}`;
-                } else if (test.test_number === 2) {
-                    testBtn.textContent = `Assessment`;
-                }
-            } 
-          
-          // Apply status styling and actions
-          if (status === "completed") {
-            testBtn.classList.add("completed");
-          } else if (status === "locked") {
-            testBtn.disabled = true;
-            testBtn.classList.add("locked");
-          } else {
-            testBtn.onclick = () => startTolcTest(test.section, test.test_number, test.progressivo);
-          }
-          
-          columnDiv.appendChild(testBtn);
+        // Container for different types of exercises (Esercizi per casa, Assessment, Simulazioni)
+        const tipologiaContainer = document.createElement("div");
+        tipologiaContainer.style.display = "flex";
+        tipologiaContainer.style.flexDirection = "column";
+        tipologiaContainer.style.gap = "10px";
+
+        // Ensure "Esercizi per casa" comes first, then "Assessment"
+        const orderedTipologie = Object.keys(sectionsMap[section]).sort((a, b) => {
+            if (a === "Esercizi per casa") return -1;
+            if (b === "Esercizi per casa") return 1;
+            if (a === "Assessment") return -1;
+            if (b === "Assessment") return 1;
+            return 0;
         });
-        
-        groupsContainer.appendChild(columnDiv);
-      });
-      
-      sectionDiv.appendChild(groupsContainer);
-      testTree.appendChild(sectionDiv);
-    });
-  }
 
-// ✅ Display Bocconi test structure
-function displayBocconiTree(tests, studentTests) {
-    const testTree = document.getElementById("testTree");
-    testTree.innerHTML = "";
-    const sectionDiv = document.createElement("div");
-    sectionDiv.classList.add("section");
-    sectionDiv.innerHTML = `<h3>Simulazioni</h3>`;
-    testTree.appendChild(sectionDiv);
+        // Group by `tipologia_esercizi`
+        orderedTipologie.forEach(tipologia => {
+            const testsInTipologia = sectionsMap[section][tipologia];
 
-    tests.forEach(test => {
-        const testBtn = document.createElement("button");
-        testBtn.textContent = `Simulazione ${test.test_number}`;
-        
-        const studentTest = studentTests.find(t => t.section === test.section && t.test_number === test.test_number);
-        const status = studentTest ? studentTest.status : "locked";
+            // Group tests within this tipologia by progressivo
+            const groups = {};
+            testsInTipologia.forEach(test => {
+                if (!groups[test.progressivo]) {
+                    groups[test.progressivo] = [];
+                }
+                groups[test.progressivo].push(test);
+            });
 
-        if (status === "completed") {
-            //testBtn.textContent += " ✔ Done";
-            testBtn.classList.add("completed");
-        } else if (status === "locked") {
-            testBtn.disabled = true;
-            testBtn.classList.add("locked");
-        } else {
-            testBtn.onclick = () => startBocconiTest(test.section, test.test_number);
-        }
+            // Create a container for the columns (one per progressivo)
+            const groupsContainer = document.createElement("div");
+            groupsContainer.style.display = "flex";
+            groupsContainer.style.gap = "20px";
+            groupsContainer.style.marginBottom = "10px";
 
-        sectionDiv.appendChild(testBtn);
+            // Label for tipologia
+            const tipologiaLabel = document.createElement("h4");
+            tipologiaLabel.textContent = tipologia;
+            tipologiaContainer.appendChild(tipologiaLabel);
+
+            // Ensure progressivo values are sorted correctly
+            const orderedProgressivi = Object.keys(groups).map(Number).sort((a, b) => a - b);
+
+            // For each progressivo group, create a column
+            orderedProgressivi.forEach(progressivo => {
+                const group = groups[progressivo];
+
+                const columnDiv = document.createElement("div");
+                columnDiv.style.display = "flex";
+                columnDiv.style.flexDirection = "column";
+                columnDiv.style.alignItems = "center";
+
+                // For each test in this group, create a button
+                group.forEach(test => {
+                    // Find student's progress for this test
+                    const studentTest = studentTests.find(t =>
+                        t.section === test.section &&
+                        t.tipologia_esercizi === test.tipologia_esercizi &&
+                        t.progressivo === test.progressivo
+                    );
+                    const status = studentTest ? studentTest.status : "locked";
+
+                    const testBtn = document.createElement("button");
+                    testBtn.textContent = `${tipologia} ${test.progressivo}`;
+
+                    // Apply status styles
+                    if (status === "completed") {
+                        testBtn.classList.add("completed");
+                    } else if (status === "locked") {
+                        testBtn.disabled = true;
+                        testBtn.classList.add("locked");
+                    } else {
+                        if (testType === "pdf") {
+                            testBtn.onclick = () => startPdfTest(test.section, test.tipologia_esercizi, test.progressivo, selectedTest);
+                        } else {
+                            testBtn.onclick = () => startBancaDatiTest(test.section, test.tipologia_esercizi, test.progressivo, selectedTest);
+                        }
+                    }
+                    columnDiv.appendChild(testBtn);
+                });
+
+                groupsContainer.appendChild(columnDiv);
+            });
+
+            tipologiaContainer.appendChild(groupsContainer);
+        });
+
+        sectionDiv.appendChild(tipologiaContainer);
+        testTree.appendChild(sectionDiv);
     });
 }
 
-async function startTolcTest(section, testNumber, testProgressivo) {
+// ✅ Start PDF test
+async function startPdfTest(section, tipologia_esercizi, testProgressivo, selectedTest) {
+    console.log(`🚀 Starting PDF Test: ${section} - ${tipologia_esercizi} - ${testProgressivo} - ${selectedTest}`);
     const { data: testQuestion, error } = await supabase
         .from("questions")
         .select("pdf_url")
         .eq("section", section)
-        .eq("test_number", testNumber)
+        .eq("tipologia_esercizi", tipologia_esercizi)
         .eq("progressivo", testProgressivo)
+        .eq("tipologia_test", selectedTest)
         .limit(1)
         .single();
+    
 
     if (error || !testQuestion) {
         console.error("❌ Error fetching PDF URL:", error?.message);
@@ -261,13 +222,18 @@ async function startTolcTest(section, testNumber, testProgressivo) {
 
     sessionStorage.setItem("testPdf", testQuestion.pdf_url);
     sessionStorage.setItem("currentSection", section);
-    sessionStorage.setItem("currentTestNumber", testNumber);
+    sessionStorage.setItem("currentTipologiaEsercizi", tipologia_esercizi);
     sessionStorage.setItem("currentTestProgressivo", testProgressivo);
+    sessionStorage.setItem("selectedTestType", selectedTest);
     window.location.href = "test.html";
 }
 
-async function startBocconiTest(section, testNumber) {
+// ✅ Start Banca Dati test
+async function startBancaDatiTest(section, tipologia_esercizi, testProgressivo, selectedTest) {  
+    console.log(`🚀 Starting Banca Dati Test: ${section} - ${tipologia_esercizi} - ${testProgressivo} - ${selectedTest}`);   
     sessionStorage.setItem("currentSection", section);
-    sessionStorage.setItem("currentTestNumber", testNumber);
+    sessionStorage.setItem("currentTipologiaEsercizi", tipologia_esercizi);
+    sessionStorage.setItem("currentTestProgressivo", testProgressivo);
+    sessionStorage.setItem("selectedTestType", selectedTest);
     window.location.href = "test_bocconi.html";
 }

@@ -163,7 +163,7 @@ const eyeSlash = `
         if (userType === "student") {
           sessionStorage.setItem("studentId", user.id);
           await supabase.auth.setSession(data.session);
-          window.location.href = "test_selection.html";
+          window.location.href = "choose_test.html";
         } else if (userType === "tutor") {
           sessionStorage.setItem("tutorId", user.id);
           window.location.href = "tutor_dashboard.html";
@@ -188,7 +188,7 @@ const eyeSlash = `
       (async () => {
         const { data: user, error } = await supabase.auth.getUser();
         if (user && user.id) {
-          window.location.href = "test_selection.html";
+          window.location.href = "choose_test.html";
         }
       })();
     });

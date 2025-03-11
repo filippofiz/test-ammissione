@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Assegna Nuovi Test</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <h2>Assegna Nuovi Test</h2>
+
+  <label for="studentDropdown">Seleziona Studente:</label>
+  <select id="studentDropdown"></select>
+
+  <h3>Test non ancora assegnati:</h3>
+  <div id="unassignedTests"></div>
+
+  <button id="assignSelectedTests">Assegna Test</button>
+  
+  <h3>Test d'ingresso non ancora assegnati:</h3>
+  <div id="unassignedIngressoTests"></div>
+  <button id="assignIngressoTests">Assegna Test d'ingresso</button>
+
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+    
+    // Updated Supabase key to match tutor_dashboard.html
+    const supabase = createClient(
+      "https://elrwpaezjnemmiegkyin.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVscndwYWV6am5lbW1pZWdreWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzAyMDUsImV4cCI6MjA1MzY0NjIwNX0.p6R2S1HK8kPFYiEAYtYaxIAH8XSmzjQBWQ_ywy3akdI"
+    );
+
+    // Declare global variables
+    let globalStudentId = null;
+    let globalStudentTests = [];
+
+    // Helper: Get the logged in tutor's id.
+    async function getTutorId() {
+      const { data: userData, error: authError } = await supabase.auth.getUser();
+      if (authError || !userData || !userData.user) {
+          console.error("❌ Error getting authenticated tutor:", authError);
+          alert("Session expired. Please log in again.");
+          window.location.href = "login.html";
+          return null;
+      }
+      const authUid = userData.user.id;
+      const { data: tutorData, error: tutorError } = await supabase
+          .from("tutors")
+          .select("id")
+          .eq("auth_uid", authUid)
+          .single();
+      if (tutorError || !tutorData) {
+          console.error("❌ Error fetching tutor ID:", tutorError);
+          alert("Tutor account not found.");
+          window.location.href = "login.html";
+      }
+      return tutorData.id;
+    }
+
+    async function loadStudents() {
+        const tutorId = await getTutorId();
+        if (!tutorId) return;
+
+        // Fetch auth_uid and name from students
+        const { data: students, error } = await supabase
+            .from("students")
+            .select("auth_uid, name, tests")
+            .eq("tutor_id", tutorId);
+
+        //const studentTests = students.map(student => student.tests);
+        //console.log("Student tests:", studentTests);   
+        //if (error) {
+         //   console.error("❌ Error fetching students:", error.message);
+        //    return;
+        //}
+
+        // 1) Populate dropdown:
+        students.forEach(student => {
+          const option = document.createElement("option");
+          option.value = student.auth_uid;
+          option.textContent = student.name;
+          // Save this student's tests in a data attribute:
+          option.dataset.tests = JSON.stringify(student.tests || []);
+          studentDropdown.appendChild(option);
+        });
+
+        // 2) After populating, pick the first student's tests:
+        const firstOption = studentDropdown.options[0];
+        const firstStudentTests = JSON.parse(firstOption.dataset.tests || "[]");
+        fetchUnassignedTests(firstStudentTests);
+        fetchUnassignedTestIngresso(firstStudentTests);
+
+        // 3) On dropdown change:
+        studentDropdown.addEventListener("change", () => {
+          const selectedOption = studentDropdown.selectedOptions[0];
+          const testsForThisStudent = JSON.parse(selectedOption.dataset.tests || "[]");
+          fetchUnassignedTests(testsForThisStudent);
+          fetchUnassignedTestIngresso(testsForThisStudent);
+        });
+    }
+
+    async function fetchUnassignedTests(studentTests) {
+      const studentId = document.getElementById("studentDropdown").value;
+      console.log("Selected student:", studentId);
+      if (!studentId) return;
+
+      // Fetch tests already assigned to the student.
+      const { data: assignedTests, error: assignedError } = await supabase
+        .from("student_tests")
+        .select("section, tipologia_esercizi, progressivo, tipologia_test")
+        .in("tipologia_test", studentTests)
+        .eq("auth_uid", studentId);
+      if (assignedError) {
+        console.error("❌ Error fetching assigned tests:", assignedError.message);
+        return;
+      }
+      
+      // Build a set of composite keys for assigned tests.
+      const assignedCompositeSet = new Set();
+      (assignedTests || []).forEach(test => {
+        const key = `${test.section}-${test.tipologia_esercizi}-${test.progressivo}-${test.tipologia_test}`;
+        assignedCompositeSet.add(key);
+      });
+      
+      // Query available tests from "questions"
+      let { data: availableTests, error: availableError } = await supabase
+        .from("questions")
+        .select("section, tipologia_esercizi, progressivo, tipologia_test")
+        .in("tipologia_test", studentTests);
+      
+      // Query available tests from "questions_bocconi"
+      // For bocconi tests, if "tipologia_esercizi" is missing, set it to "BOCCONI" and default progressivo to 1.
+      let { data: bocconiTests, error: bocconiError } = await supabase
+        .from("questions_bocconi")
+        .select("section, tipologia_esercizi, tipologia_test")
+        .in("tipologia_test", studentTests);
+
+      if (availableError || bocconiError) {
+        console.error("❌ Error fetching unassigned tests:", availableError?.message || bocconiError?.message);
+        return;
+      }
+
+      // Transform availableTests rows to include composite key and composite name.
+      const tests1 = (availableTests || []).map(test => {
+        const compositeKey = `${test.section}-${test.tipologia_esercizi}-${test.progressivo}-${test.tipologia_test}`;
+        return {
+          section: test.section,
+          tipologia_esercizi: test.tipologia_esercizi,
+          progressivo: test.progressivo,
+          tipologia_test: test.tipologia_test,
+          compositeKey,
+          compositeName: `${test.section}: ${test.tipologia_esercizi} ${test.progressivo} of ${test.tipologia_test}`
+        };
+      });
+
+      // Transform bocconiTests rows – apply default values.
+      const tests2 = (bocconiTests || []).map(test => {
+        const tipologia_esercizi = test.tipologia_esercizi ? test.tipologia_esercizi : "BOCCONI";
+        const progressivo = 1;  // default for bocconi tests
+        const compositeKey = `${test.section}-${tipologia_esercizi}-${progressivo}-${test.tipologia_test}`;
+        return {
+          section: test.section,
+          tipologia_esercizi: tipologia_esercizi,
+          progressivo: progressivo,
+          tipologia_test: test.tipologia_test,
+          compositeKey,
+          compositeName: `${test.section}: ${tipologia_esercizi} ${progressivo} of ${test.tipologia_test}`
+        };
+      });
+
+      // Combine tests from both sources.
+      const combinedTests = [...tests1, ...tests2];
+
+      // Filter out tests that are already assigned (by composite key).
+      const unassignedTests = combinedTests.filter(test => !assignedCompositeSet.has(test.compositeKey));
+
+      // Further deduplicate tests based on the composite key.
+      const uniqueTestsMap = new Map();
+      unassignedTests.forEach(test => {
+        uniqueTestsMap.set(test.compositeKey, test);
+      });
+      const uniqueTests = Array.from(uniqueTestsMap.values());
+
+      const testContainer = document.getElementById("unassignedTests");
+      testContainer.innerHTML = "";
+
+      uniqueTests.forEach(test => {
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = test.compositeKey;
+        // Use a safe ID (replace spaces and special characters)
+        checkbox.id = `test-${test.compositeKey.replace(/\W/g, '')}`;
+        // Store individual fields as data attributes
+        checkbox.dataset.section = test.section;
+        checkbox.dataset.tipologiaEs = test.tipologia_esercizi;
+        checkbox.dataset.progressivo = test.progressivo;
+        checkbox.dataset.tipologiaTest = test.tipologia_test;
+
+        const label = document.createElement("label");
+        label.htmlFor = checkbox.id;
+        label.textContent = test.compositeName;
+
+        testContainer.appendChild(checkbox);
+        testContainer.appendChild(label);
+        testContainer.appendChild(document.createElement("br"));
+      });
+    }
+
+    async function fetchUnassignedTestIngresso(studentTests) {
+      // Query tipologia_test from the "questions" table.
+      const { data: questionsData, error: questionsError } = await supabase
+        .from("questions")
+        .select("tipologia_test");
+      if (questionsError) {
+        console.error("Error fetching tests from questions:", questionsError.message);
+        return;
+      }
+
+      // Query tipologia_test from the "questions_bocconi" table.
+      const { data: bocconiData, error: bocconiError } = await supabase
+        .from("questions_bocconi")
+        .select("tipologia_test");
+      if (bocconiError) {
+        console.error("Error fetching tests from questions_bocconi:", bocconiError.message);
+        return;
+      }
+
+      // Combine both results and deduplicate.
+      let allTests = [];
+      if (questionsData) {
+        allTests = allTests.concat(questionsData.map(item => item.tipologia_test));
+      }
+      if (bocconiData) {
+        allTests = allTests.concat(bocconiData.map(item => item.tipologia_test));
+      }
+      const uniqueTests = [...new Set(allTests)];
+
+      console.log("Unique ingresso tests:", uniqueTests);
+      console.log("Student tests:", studentTests);
+
+      // Filter out tests that already appear in the studentTests array.
+      const unassignedTests = uniqueTests.filter(test => !studentTests.includes(test));
+      console.log("Unassigned ingresso tests:", unassignedTests);
+
+
+      // Display these choices in a container.
+      const container = document.getElementById("unassignedIngressoTests");
+      if (!container) {
+        console.error("Container for unassigned ingresso tests not found.");
+        return;
+      }
+      container.innerHTML = ""; // Clear previous content
+
+      unassignedTests.forEach(test => {
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = test;
+        // Create a safe ID by removing non-word characters.
+        checkbox.id = "ingresso-" + test.replace(/\W/g, '');
+
+        const label = document.createElement("label");
+        label.htmlFor = checkbox.id;
+        label.textContent = test;
+
+        container.appendChild(checkbox);
+        container.appendChild(label);
+        container.appendChild(document.createElement("br"));
+      });
+    }
+
+    async function assignTests() {
+      const studentId = document.getElementById("studentDropdown").value;
+      if (!studentId) return;
+
+      const selectedCheckboxes = Array.from(document.querySelectorAll("#unassignedTests input:checked"));
+      if (selectedCheckboxes.length === 0) {
+        alert("Seleziona almeno un test!");
+        return;
+      }
+
+      // Map each selected checkbox to an entry including all required fields.
+      const testEntries = selectedCheckboxes.map(checkbox => ({
+        auth_uid: studentId,
+        section: checkbox.dataset.section,
+        tipologia_esercizi: checkbox.dataset.tipologiaEs,
+        progressivo: Number(checkbox.dataset.progressivo),
+        tipologia_test: checkbox.dataset.tipologiaTest,
+        status: "locked"
+      }));
+
+      console.log("Assigning tests:", testEntries);
+
+      const { error } = await supabase
+        .from("student_tests")
+        .insert(testEntries);
+
+      if (error) {
+        console.error("❌ Error assigning tests:", error.message);
+        alert("Errore nell'assegnazione dei test.");
+        return;
+      }
+
+      alert("✅ Test assegnati con successo!");
+      window.location.reload();
+    }
+        // Function to assign ingresso tests: append the selected ingresso tests to the student's tests array.
+        async function assignTestIngresso() {
+      const studentId = document.getElementById("studentDropdown").value;
+      if (!studentId) return;
+
+      const selectedCheckboxes = Array.from(document.querySelectorAll("#unassignedIngressoTests input:checked"));
+      if (selectedCheckboxes.length === 0) {
+        alert("Seleziona almeno un test d'ingresso!");
+        return;
+      }
+
+      const selectedTests = selectedCheckboxes.map(cb => cb.value);
+
+      // Fetch current tests from the student's record.
+      const { data: studentData, error: studentError } = await supabase
+        .from("students")
+        .select("tests")
+        .eq("auth_uid", studentId)
+        .single();
+      if (studentError || !studentData) {
+        console.error("Error fetching student data:", studentError?.message);
+        alert("Errore nel recupero dei dati dello studente.");
+        return;
+      }
+      const currentTests = studentData.tests || [];
+      const newTests = selectedTests.filter(test => !currentTests.includes(test));
+      if (newTests.length === 0) {
+        alert("I test d'ingresso selezionati sono già assegnati.");
+        return;
+      }
+      const updatedTests = currentTests.concat(newTests);
+      const { error } = await supabase
+        .from("students")
+        .update({ tests: updatedTests })
+        .eq("auth_uid", studentId);
+      if (error) {
+        console.error("Error updating student's tests:", error.message);
+        alert("Errore nell'assegnazione dei test d'ingresso.");
+        return;
+      }
+      alert("✅ Test d'ingresso assegnati con successo!");
+      fetchUnassignedTestIngresso(updatedTests);
+      window.location.reload();
+    }
+
+    document.getElementById("studentDropdown").addEventListener("change", async () => {
+      const tests = JSON.parse(document.getElementById("studentDropdown").selectedOptions[0].dataset.tests || "[]");
+      await fetchUnassignedTests(tests);
+      await fetchUnassignedTestIngresso(tests);
+    });
+    document.getElementById("assignSelectedTests").addEventListener("click", assignTests);
+    document.getElementById("assignIngressoTests").addEventListener("click", assignTestIngresso);
+
+    loadStudents();
+  </script>
+</body>
+</html>

@@ -51,7 +51,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 async function loadTest() {
     const pdfUrl = sessionStorage.getItem("testPdf");
-    const currentSection = parseInt(sessionStorage.getItem("currentSection")); // Ensure it's a number
+    const currentSection = sessionStorage.getItem("currentSection"); // Ensure it's a number
 
     console.log("Fetching test for PDF URL:", pdfUrl);
 
@@ -118,8 +118,9 @@ async function loadTest() {
         .select("duration")
         .eq("auth_uid", studentId)
         .eq("section", currentSection)
-        .eq("test_number", sessionStorage.getItem("currentTestNumber"))
+        .eq("tipologia_esercizi", sessionStorage.getItem("currentTipologiaEsercizi"))
         .eq("progressivo", sessionStorage.getItem("currentTestProgressivo"))
+        .eq("tipologia_test", sessionStorage.getItem("selectedTestType"))
         .single();
 
     if (testError || !testData) {
@@ -498,7 +499,8 @@ async function submitAnswers() {
         .update({ status: "completed" })
         .eq("auth_uid", studentId)
         .eq("section", sessionStorage.getItem("currentSection"))
-        .eq("test_number", sessionStorage.getItem("currentTestNumber"))
+        .eq("tipologia_esercizi", sessionStorage.getItem("currentTipologiaEsercizi"))
+        .eq("tipologia_test", sessionStorage.getItem("selectedTestType"))
         .eq("progressivo", sessionStorage.getItem("currentTestProgressivo"));
 
     console.log("✅ Test marked as completed!");
@@ -547,25 +549,38 @@ function updateNavigationButtons() {
 
     console.log(`🔄 Updating buttons for Page ${currentPage}`);
 
-    const currentSection = parseInt(sessionStorage.getItem("currentSection"));
+    // Determine test type based on the presence of "PDF" in the test name
+    const selectedTest = sessionStorage.getItem("selectedTestType");
+    const testType = selectedTest.includes("TOLC") ? "tolc" : "bocconi";
+    const testModality = selectedTest.includes("PDF") ? "pdf" : "banca_dati";
 
-    // ✅ Prevent navigating back after section transition
-    const isSectionBoundary = Object.values(sectionPageBoundaries).includes(currentPage);
-    const isPastBoundary = Object.values(sectionPageBoundaries).some(boundary => boundary && currentPage === boundary+1);
+    console.log(`📌 Test Type Determined: ${testType}`);
 
-    if (currentSection === 7 && isSectionBoundary) {
-        nextPageBtn.textContent = "Prossima Sezione";
-    } else {
-        nextPageBtn.textContent = "Avanti";
-    }
+    const currentSection = sessionStorage.getItem("currentSection");
+    if (testType === "tolc") {
+        // TOLC navigation using section boundaries.
+        const isSectionBoundary = Object.values(sectionPageBoundaries).includes(currentPage);
+        const isPastBoundary = Object.values(sectionPageBoundaries).some(
+            boundary => boundary && currentPage === boundary + 1
+        );
+        
+        if (sessionStorage.getItem("currentSection") === "Simulazioni" && isSectionBoundary) {
+            nextPageBtn.textContent = "Prossima Sezione";
+        } else {
+            nextPageBtn.textContent = "Avanti";
+        }
+        
+        // Disable previous button if we are just past a section boundary.
+        if (sessionStorage.getItem("currentSection") === "Simulazioni" && isPastBoundary) {
+            prevPageBtn.disabled = true;
+        } else {
+            prevPageBtn.disabled = false;
+        }
+    } else if (testType === "bocconi" && testModality === "pdf") {
+        prevPageBtn.disabled = true; // Disable previous button for Bocconi PDF tests
+    } 
 
-    // ✅ Disable "Previous Page" if past a section boundary (Page 21, 31, 41)
-    if (currentSection === 7 && isPastBoundary) {
-        prevPageBtn.disabled = true;
-    } else {
-        prevPageBtn.disabled = false;
-    }
-}
+}      
 
 // ✅ Select the test container (modify ID/class as needed)
 const testContainer = document.querySelector("#testContainer"); // Ensure this ID exists in test.html
@@ -593,61 +608,98 @@ document.addEventListener("fullscreenchange", function () {
     }
 });
 
+
 function buildQuestionNav() {
     const questionNav = document.getElementById("questionNav");
     if (!questionNav) return;
   
+    // Determine test type based on the selected test type
+    const selectedTest = sessionStorage.getItem("selectedTestType");
+    const testType = selectedTest.includes("TOLC") ? "tolc" : "bocconi";
+    const testModality = selectedTest.includes("PDF") ? "pdf" : "banca_dati";
+  
     questionNav.innerHTML = ""; // Clear existing
   
-    // Determine the current question range based on the questions on the current page.
-    const currentPageQuestions = questions.filter(q => q.page_number === currentPage);
-    let currentRange = null;
-    if (currentPageQuestions.length > 0) {
-      const firstQuestionNumber = currentPageQuestions[0].question_number;
-      if (firstQuestionNumber >= 1 && firstQuestionNumber <= 20)
-        currentRange = { min: 1, max: 20 };
-      else if (firstQuestionNumber >= 21 && firstQuestionNumber <= 30)
-        currentRange = { min: 21, max: 30 };
-      else if (firstQuestionNumber >= 31 && firstQuestionNumber <= 40)
-        currentRange = { min: 31, max: 40 };
-      else if (firstQuestionNumber >= 41 && firstQuestionNumber <= 50)
-        currentRange = { min: 41, max: 50 };
+    if (testType === "tolc") {
+      // Determine the current question range based on the questions on the current page.
+      const currentPageQuestions = questions.filter(q => q.page_number === currentPage);
+      let currentRange = null;
+      if (currentPageQuestions.length > 0) {
+        const firstQuestionNumber = currentPageQuestions[0].question_number;
+        if (firstQuestionNumber >= 1 && firstQuestionNumber <= 20)
+          currentRange = { min: 1, max: 20 };
+        else if (firstQuestionNumber >= 21 && firstQuestionNumber <= 30)
+          currentRange = { min: 21, max: 30 };
+        else if (firstQuestionNumber >= 31 && firstQuestionNumber <= 40)
+          currentRange = { min: 31, max: 40 };
+        else if (firstQuestionNumber >= 41 && firstQuestionNumber <= 50)
+          currentRange = { min: 41, max: 50 };
+      }
+  
+      // 1. Sort questions by question_number
+      const sortedQuestions = [...questions].sort((a, b) => a.question_number - b.question_number);
+  
+      // 2. Create a cell for each question
+      sortedQuestions.forEach((q) => {
+          const btn = document.createElement("button");
+          btn.classList.add("question-cell");
+  
+          // Display question_number in the cell
+          btn.textContent = q.question_number;
+  
+          // If answered, turn green
+          if (studentAnswers[q.id]) {
+              btn.classList.add("answered");
+          }
+  
+          // If this question is on the current page, highlight it
+          if (q.page_number === currentPage) {
+              btn.classList.add("current-question");
+          }
+  
+          // Disable navigation to questions outside the current range
+          if (currentRange && (q.question_number < currentRange.min || q.question_number > currentRange.max)) {
+              btn.disabled = true;
+              btn.classList.add("disabled-nav"); // Optional: styling
+          } else {
+              // Allow navigation within the current range
+              btn.addEventListener("click", () => {
+                  loadQuestionsForPage(q.page_number);
+              });
+          }
+  
+          questionNav.appendChild(btn);
+      });
+  
+    } else { // bocconi mode: only allow navigation for questions on the current page
+      // 1. Sort questions by question_number
+      const sortedQuestions = [...questions].sort((a, b) => a.question_number - b.question_number);
+  
+      // 2. Create a cell for each question
+      sortedQuestions.forEach((q) => {
+          const btn = document.createElement("button");
+          btn.classList.add("question-cell");
+  
+          // Display question_number in the cell
+          btn.textContent = q.question_number;
+  
+          // If answered, mark green
+          if (studentAnswers[q.id]) {
+              btn.classList.add("answered");
+          }
+  
+          // Only enable navigation for questions on the current page
+          if (q.page_number === currentPage) {
+              btn.classList.add("current-question");
+              btn.addEventListener("click", () => {
+                  loadQuestionsForPage(q.page_number);
+              });
+          } else {
+              btn.disabled = true;
+              btn.classList.add("disabled-nav");
+          }
+  
+          questionNav.appendChild(btn);
+      });
     }
-  
-    // 1. Sort questions by question_number
-    const sortedQuestions = [...questions].sort(
-      (a, b) => a.question_number - b.question_number
-    );
-  
-    // 2. Create a cell for each question
-    sortedQuestions.forEach((q) => {
-      const btn = document.createElement("button");
-      btn.classList.add("question-cell");
-  
-      // Display question_number in the cell
-      btn.textContent = q.question_number;
-  
-      // 3. If answered, turn green
-      if (studentAnswers[q.id]) {
-        btn.classList.add("answered");
-      }
-  
-      // 4. If this question is on the current page, highlight it
-      if (q.page_number === currentPage) {
-        btn.classList.add("current-question");
-      }
-  
-      // 5. Disable navigation to questions outside the current range
-      if (currentRange && (q.question_number < currentRange.min || q.question_number > currentRange.max)) {
-        btn.disabled = true;
-        btn.classList.add("disabled-nav"); // Optional: add a class for styling (e.g., to gray out)
-      } else {
-        // Allow navigation within the current range
-        btn.addEventListener("click", () => {
-          loadQuestionsForPage(q.page_number);
-        });
-      }
-  
-      questionNav.appendChild(btn);
-    });
-  }
+}
