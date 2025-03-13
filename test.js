@@ -9,9 +9,11 @@ let testEndTime;
 let pdfDoc = null; // Holds the loaded PDF document
 let isSubmitting = false;
 let testDuration; // New global variable
+const testId = sessionStorage.getItem("selectedTestId");
 
 document.addEventListener("DOMContentLoaded", async () => {
     console.log("DOM fully loaded. Initializing test...");
+    console.log("Selected Test ID:", testId);
     const submitBtn = document.getElementById("submitAnswers");
 
     if (!submitBtn) {
@@ -433,6 +435,10 @@ function selectAnswer(questionId, answer, btn) {
   }
 
 async function submitAnswers() {
+    // Ask the student to confirm before submission.
+    if (!confirm("Sei sicuro di voler inviare le risposte?")) {
+        return; // If they cancel, do nothing.
+    }
     isSubmitting = true;
     let studentId = sessionStorage.getItem("studentId");
 
@@ -473,7 +479,8 @@ async function submitAnswers() {
             auth_uid: studentId,  // Using auth_uid
             question_id: q.id,
             answer: answer,
-            auto_score: auto_score
+            auto_score: auto_score,
+            test_id: testId
         };
     });
 
@@ -500,7 +507,8 @@ async function submitAnswers() {
         .eq("section", sessionStorage.getItem("currentSection"))
         .eq("tipologia_esercizi", sessionStorage.getItem("currentTipologiaEsercizi"))
         .eq("tipologia_test", sessionStorage.getItem("selectedTestType"))
-        .eq("progressivo", sessionStorage.getItem("currentTestProgressivo"));
+        .eq("progressivo", sessionStorage.getItem("currentTestProgressivo"))
+        .eq("id", testId);
 
     console.log("✅ Test marked as completed!");
 

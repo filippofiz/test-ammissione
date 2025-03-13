@@ -7,6 +7,7 @@ let correctMapping = {};  // e.g., {questionId: correctLetter} for standard choi
 let testEndTime;
 let timerStarted = false;
 let isSubmitting = false;
+const testId = sessionStorage.getItem("selectedTestId");
 
 // Letters for standard choices (randomized per question)
 const standardLetters = ["a", "b", "c", "d", "e"];
@@ -18,6 +19,7 @@ const extraChoices = [
 
 document.addEventListener("DOMContentLoaded", async () => {
   await loadTest();
+  console.log("testID", testId);
   
   const submitBtn = document.getElementById("submitAnswers");
   if (!submitBtn) {
@@ -272,6 +274,7 @@ async function submitAnswersBocconi() {
   }
   studentId = sessionData.session.user.id;
   console.log("Student ID:", studentId);
+  console.log("testID", testId);
 
   // For each question, if no answer selected, assign "z"
   const submissions = questions.map(q => {
@@ -283,7 +286,8 @@ async function submitAnswersBocconi() {
       auth_uid: studentId,
       question_id: q.id,
       answer: answer,
-      auto_score: auto_score
+      auto_score: auto_score,
+      test_id: testId
     };
   });
   console.log("Submissions:", submissions);
@@ -303,7 +307,8 @@ async function submitAnswersBocconi() {
     .eq("section", sessionStorage.getItem("currentSection"))
     .eq("tipologia_esercizi", sessionStorage.getItem("currentTipologiaEsercizi"))
     .eq("progressivo", sessionStorage.getItem("currentTestProgressivo"))
-    .eq("tipologia_test", sessionStorage.getItem("selectedTestType"));
+    .eq("tipologia_test", sessionStorage.getItem("selectedTestType"))
+    .eq("id", testId);
   window.location.href = "test_selection.html";
 }
 

@@ -1,408 +1,411 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = "https://elrwpaezjnemmiegkyin.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVscndwYWV6am5lbW1pZWdreWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzAyMDUsImV4cCI6MjA1MzY0NjIwNX0.p6R2S1HK8kPFYiEAYtYaxIAH8XSmzjQBWQ_ywy3akdI"; 
+const SUPABASE_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVscndwYWV6am5lbW1pZWdreWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzAyMDUsImV4cCI6MjA1MzY0NjIwNX0.p6R2S1HK8kPFYiEAYtYaxIAH8XSmzjQBWQ_ywy3akdI";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const studentId = sessionStorage.getItem("selectedStudentId");
 const studentName = sessionStorage.getItem("selectedStudentName");
-const exercises_arr = ["Esercizi per casa", "Assessment", "Post Assessment"];
-const sections_arr = [
-    "Logica e Insiemi", "Algebra", "Goniometria e Trigonometria",
-    "Logaritmi e Esponenziali", "Geometria", "Probabilità, Combinatoria e Statistica", "Simulazioni"
-];
+const globalTestType = sessionStorage.getItem("selectedTestType");
 document.getElementById("dashboardTitle").textContent = `${studentName}'s Dashboard`;
 
 if (!studentId) {
-    alert("Error: No student selected.");
-    window.location.href = "tutor_dashboard.html";
+  alert("Error: No student selected.");
+  window.location.href = "tutor_dashboard.html";
 }
 
-// Global variables to hold fetched data, test type, and chart instances
+// Global variables for fetched data and chart instances.
 let globalAnswers = [];
 let globalQuestions = [];
-let globalTestType; // holds student.test value
-let chartInstance;     // for the pie chart
-let barChartInstance;  // for the bar chart
+let studentTestsData = []; // Data from student_tests for the current student & test type.
+let chartInstance; // for the pie chart
+let barChartInstance; // for the bar chart
 
 async function loadDashboard() {
-    // Set up the pie chart canvas
-    const pieCanvas = document.getElementById("resultsChart");
-    pieCanvas.style.maxWidth = "400px";
-    pieCanvas.style.maxHeight = "400px";
-    pieCanvas.width = 400;
-    pieCanvas.height = 400;
+  // Set up the pie chart canvas.
+  const pieCanvas = document.getElementById("resultsChart");
+  pieCanvas.style.maxWidth = "400px";
+  pieCanvas.style.maxHeight = "400px";
+  pieCanvas.width = 400;
+  pieCanvas.height = 400;
 
-    // Set up the bar chart canvas (hidden by default)
-    const barCanvas = document.getElementById("barChart");
-    barCanvas.style.maxWidth = "400px";
-    barCanvas.style.maxHeight = "400px";
-    barCanvas.width = 400;
-    barCanvas.height = 400;
-    barCanvas.style.display = "none";
+  // Set up the bar chart canvas (hidden by default).
+  const barCanvas = document.getElementById("barChart");
+  barCanvas.style.maxWidth = "400px";
+  barCanvas.style.maxHeight = "400px";
+  barCanvas.width = 400;
+  barCanvas.height = 400;
+  barCanvas.style.display = "none";
 
-    const { data: student, error: studentError } = await supabase
-        .from("students")
-        .select("test")
-        .eq("auth_uid", studentId)
-        .single();
+  // Make sure all four filters are visible.
+  document.getElementById("sectionFilter").style.display = "inline-block";
+  document.getElementById("tipologiaFilter").style.display = "inline-block";
+  document.getElementById("progressivoFilter").style.display = "inline-block";
+  document.getElementById("argomentoFilter").style.display = "inline-block";
 
-    if (studentError || !student) {
-        console.error("❌ Error fetching student test type:", studentError?.message);
-        alert("Student data not found.");
-        return;
-    }
+  // Determine answer and question tables based on globalTestType.
+  const answerTable = globalTestType.includes("PDF")
+    ? "student_answers"
+    : "studentbocconi_answers";
+  const questionTable = globalTestType.includes("PDF")
+    ? "questions"
+    : "questions_bocconi";
 
-    globalTestType = student.test;
-    console.log(`📌 Student Test Type: ${globalTestType}`);
+  // Fetch student answers.
+  const { data: answers, error: answersError } = await supabase
+    .from(answerTable)
+    .select("answer, auto_score, question_id")
+    .eq("auth_uid", studentId);
+  if (answersError) {
+    console.error("❌ Error fetching student answers:", answersError.message);
+    return;
+  }
 
-    // For tolc_i students, show section and exercise filters.
-    // For Bocconi (non-tolc_i), hide the section filter but keep exercise and argomento filters.
-    if (globalTestType === "tolc_i") {
-        document.getElementById("sectionFilter").style.display = "inline-block";
-        document.getElementById("exerciseFilter").style.display = "inline-block";
-    } else {
-        document.getElementById("sectionFilter").style.display = "none";
-        document.getElementById("exerciseFilter").style.display = "inline-block";
-    }
+  // Fetch questions (used for overall data and for argomento filter).
+  const { data: questions, error: questionsError } = await supabase
+    .from(questionTable)
+    .select("id, section, tipologia_esercizi, progressivo, argomento")
+    .eq("tipologia_test", globalTestType);
+  if (questionsError) {
+    console.error("❌ Error fetching questions:", questionsError.message);
+    return;
+  }
 
-    // Fetch data from appropriate tables.
-    const answerTable = globalTestType === "tolc_i" ? "student_answers" : "studentbocconi_answers";
-    const questionTable = globalTestType === "tolc_i" ? "questions" : "questions_bocconi";
+  globalAnswers = answers;
+  globalQuestions = questions;
 
-    const { data: answers, error: answersError } = await supabase
-        .from(answerTable)
-        .select("question_id, answer, auto_score")
-        .eq("auth_uid", studentId);
+  // Fetch student_tests data for the current student and test type.
+  // Note: We also select the "status" column.
+  const { data: testsData, error: testsError } = await supabase
+    .from("student_tests")
+    .select("section, tipologia_esercizi, progressivo, status, id")
+    .eq("auth_uid", studentId)
+    .eq("tipologia_test", globalTestType);
+  if (testsError) {
+    console.error("❌ Error fetching student_tests data:", testsError.message);
+    return;
+  }
+  studentTestsData = testsData;
 
-    if (answersError) {
-        console.error("❌ Error fetching student answers:", answersError.message);
-        return;
-    }
+  // Populate filters (only using tests with status "completed" for section, tipologia, progressivo)
+  populateFiltersFromStudentTests(studentTestsData);
 
-    const { data: questions, error: questionsError } = await supabase
-        .from(questionTable)
-        .select("id, section, test_number, argomento");
-
-    if (questionsError) {
-        console.error("❌ Error fetching questions:", questionsError.message);
-        return;
-    }
-
-    // Store data globally.
-    globalAnswers = answers;
-    globalQuestions = questions;
-
-    // Populate section and argomento filters.
-    populateFilters(questions, globalTestType);
-    // Populate exercise filter based on current section selection (or for Bocconi, overall simulazioni).
-    updateExerciseFilter();
-
-    // Add change listeners for live updates.
-    // For tolc_i, change in section filter updates exercise filter.
-    document.getElementById("sectionFilter").addEventListener("change", () => {
-        updateExerciseFilter();
-        filterDashboard();
-    });
-    document.getElementById("exerciseFilter").addEventListener("change", filterDashboard);
-    document.getElementById("argomentoFilter").addEventListener("change", filterDashboard);
-
-    // Initially update the dashboard.
+  // Add change listeners.
+  document.getElementById("sectionFilter").addEventListener("change", () => {
+    populateDependentFilters();
     filterDashboard();
+  });
+  document.getElementById("tipologiaFilter").addEventListener("change", filterDashboard);
+  document.getElementById("progressivoFilter").addEventListener("change", filterDashboard);
+  document.getElementById("argomentoFilter").addEventListener("change", filterDashboard);
+
+  // Initially update the dashboard.
+  filterDashboard();
 }
 
-function populateFilters(questions, testType) {
-    const sectionFilter = document.getElementById("sectionFilter");
-    const exerciseFilter = document.getElementById("exerciseFilter");
-    const argomentoFilter = document.getElementById("argomentoFilter");
+// Populate filters (section, tipologia, progressivo) from student_tests data, using only completed tests.
+function populateFiltersFromStudentTests(testsData) {
+  const sectionFilter = document.getElementById("sectionFilter");
+  const tipologiaFilter = document.getElementById("tipologiaFilter");
+  const progressivoFilter = document.getElementById("progressivoFilter");
 
-    // Clear and add default "All" options.
-    sectionFilter.innerHTML = `<option value="all">All Sections</option>`;
-    exerciseFilter.innerHTML = `<option value="all">All Exercises</option>`;
-    argomentoFilter.innerHTML = `<option value="all">All Argomenti</option>`;
+  // Use only tests with status "completed".
+  const completedTests = testsData.filter(test => test.status === "completed");
 
-    const sections = new Set();
-    const argomenti = new Set();
+  // Clear filters and add default "all" option.
+  sectionFilter.innerHTML = `<option value="all">All Sections</option>`;
+  tipologiaFilter.innerHTML = `<option value="all">All Tipologie</option>`;
+  progressivoFilter.innerHTML = `<option value="all">All Progressivi</option>`;
 
-    questions.forEach(q => {
-        if (testType === "tolc_i") {
-            sections.add(q.section);
-        }
-        argomenti.add(q.argomento);
-    });
+  const sections = Array.from(new Set(completedTests.map(test => test.section)));
+  const tipologie = Array.from(new Set(completedTests.map(test => test.tipologia_esercizi)));
+  const progressivi = Array.from(new Set(completedTests.map(test => test.progressivo)));
 
-    if (testType === "tolc_i") {
-        sections.forEach(s => {
-            sectionFilter.innerHTML += `<option value="${s}">${sections_arr[s - 1]}</option>`;
-        });
-    }
-    argomenti.forEach(a => {
-        argomentoFilter.innerHTML += `<option value="${a}">${a}</option>`;
-    });
+  sections.forEach(s => {
+    sectionFilter.innerHTML += `<option value="${s}">${s}</option>`;
+  });
+  tipologie.forEach(t => {
+    tipologiaFilter.innerHTML += `<option value="${t}">${t}</option>`;
+  });
+  progressivi.forEach(p => {
+    progressivoFilter.innerHTML += `<option value="${p}">${p}</option>`;
+  });
 }
 
-function updateExerciseFilter() {
-    const exerciseFilter = document.getElementById("exerciseFilter");
-    // Clear current options.
-    exerciseFilter.innerHTML = "";
+// When a section is chosen, update dependent filters.
+// Tipologia and Progressivo come from student_tests data (for that section, using completed tests).
+// Argomento comes from the questions table, filtered by the chosen section.
+function populateDependentFilters() {
+  const sectionVal = document.getElementById("sectionFilter").value;
+  const tipologiaFilter = document.getElementById("tipologiaFilter");
+  const progressivoFilter = document.getElementById("progressivoFilter");
+  const argomentoFilter = document.getElementById("argomentoFilter");
 
-    if (globalTestType !== "tolc_i") {
-        // For Bocconi students, show only simulazione options.
-        exerciseFilter.innerHTML = `<option value="all">All Simulazioni</option>`;
-        const simulazioniSet = new Set();
-        globalQuestions.forEach(q => {
-            simulazioniSet.add(q.test_number);
-        });
-        simulazioniSet.forEach(num => {
-            exerciseFilter.innerHTML += `<option value="${num}">Simulazione ${num}</option>`;
-        });
-    } else {
-        // For tolc_i students, update based on the selected section.
-        const sectionFilter = document.getElementById("sectionFilter");
-        if (sectionFilter.value === "all") {
-            exerciseFilter.innerHTML = `<option value="all">All Exercises</option>`;
-        } else if (sectionFilter.value === "7") {
-            exerciseFilter.innerHTML = `<option value="all">All Simulazioni</option>`;
-            const simulazioniSet = new Set();
-            globalQuestions.forEach(q => {
-                if (q.section.toString() === "7") {
-                    simulazioniSet.add(q.test_number);
-                }
-            });
-            simulazioniSet.forEach(num => {
-                exerciseFilter.innerHTML += `<option value="${num}">Simulazione ${num}</option>`;
-            });
-        } else {
-            exerciseFilter.innerHTML = `<option value="all">All Exercises</option>`;
-            const exercisesSet = new Set();
-            globalQuestions.forEach(q => {
-                if (q.section.toString() === sectionFilter.value) {
-                    exercisesSet.add(q.test_number);
-                }
-            });
-            exercisesSet.forEach(num => {
-                const label = exercises_arr[num - 1] || `Exercise ${num}`;
-                exerciseFilter.innerHTML += `<option value="${num}">${label}</option>`;
-            });
-        }
-    }
+  let filteredTests = studentTestsData.filter(test => test.status === "completed");
+  if (sectionVal !== "all") {
+    filteredTests = filteredTests.filter(test => test.section.toString() === sectionVal);
+  }
+
+  tipologiaFilter.innerHTML = `<option value="all">All Tipologie</option>`;
+  progressivoFilter.innerHTML = `<option value="all">All Progressivi</option>`;
+  const tipologie = Array.from(new Set(filteredTests.map(test => test.tipologia_esercizi)));
+  const progressivi = Array.from(new Set(filteredTests.map(test => test.progressivo)));
+  tipologie.forEach(t => {
+    tipologiaFilter.innerHTML += `<option value="${t}">${t}</option>`;
+  });
+  progressivi.forEach(p => {
+    progressivoFilter.innerHTML += `<option value="${p}">${p}</option>`;
+  });
+
+  // For argomento, use globalQuestions filtered by section.
+  let filteredQuestions = globalQuestions;
+  if (sectionVal !== "all") {
+    filteredQuestions = filteredQuestions.filter(q => q.section.toString() === sectionVal);
+  }
+  argomentoFilter.innerHTML = `<option value="all">All Argomenti</option>`;
+  const argomenti = Array.from(new Set(filteredQuestions.map(q => q.argomento).filter(a => a)));
+  argomenti.forEach(a => {
+    argomentoFilter.innerHTML += `<option value="${a}">${a}</option>`;
+  });
 }
 
 function filterDashboard() {
-    // Get filter values.
-    // For Bocconi, the section filter is hidden; default its value to "7" (Simulazioni).
-    let sectionFilterVal = document.getElementById("sectionFilter").value;
-    if (globalTestType !== "tolc_i") {
-        sectionFilterVal = "7";
-    }
-    const exerciseFilterVal = document.getElementById("exerciseFilter").value;
-    const argomentoFilterVal = document.getElementById("argomentoFilter").value;
-    const scoreDisplay = document.getElementById("scoreDisplay");
-    const scoreDisplay2 = document.getElementById("scoreDisplay2");
+  // Get filter values.
+  const sectionVal = document.getElementById("sectionFilter").value;
+  const tipologiaVal = document.getElementById("tipologiaFilter").value;
+  const progressivoVal = document.getElementById("progressivoFilter").value;
+  const argomentoVal = document.getElementById("argomentoFilter").value;
+  const scoreDisplay = document.getElementById("scoreDisplay");
+  const scoreDisplay2 = document.getElementById("scoreDisplay2");
 
-    // Filter questions based on selections.
-    let filteredQuestions = globalQuestions;
-    if (sectionFilterVal !== "all") {
-        filteredQuestions = filteredQuestions.filter(q => q.section.toString() === sectionFilterVal);
-    }
-    if (exerciseFilterVal !== "all") {
-        filteredQuestions = filteredQuestions.filter(q => q.test_number.toString() === exerciseFilterVal);
-    }
-    if (argomentoFilterVal !== "all") {
-        filteredQuestions = filteredQuestions.filter(q => q.argomento === argomentoFilterVal);
-    }
+  // Filter student_tests data by section, tipologia, and progressivo.
+  let filteredTests = studentTestsData.filter(test => test.status === "completed");
+  if (sectionVal !== "all") {
+    filteredTests = filteredTests.filter(q => q.section.toString() === sectionVal);
+  }
+  if (tipologiaVal !== "all") {
+    filteredTests = filteredTests.filter(q => Number(q.tipologia_esercizi) === Number(tipologiaVal));
+  }
+  if (progressivoVal !== "all") {
+    filteredTests = filteredTests.filter(q => Number(q.progressivo) === Number(progressivoVal));
+  }
 
-    // Allowed question IDs from filtered questions.
-    const allowedQuestionIds = new Set(filteredQuestions.map(q => q.id));
-    const filteredAnswers = globalAnswers.filter(ans => allowedQuestionIds.has(ans.question_id));
+  console.log("Filtered Tests:", filteredTests);
+  // For argomento, filter globalQuestions by section and by chosen argomento.
+  let filteredQuestions = globalQuestions;
+  if (sectionVal !== "all") {
+    filteredQuestions = filteredQuestions.filter(q => q.section.toString() === sectionVal);
+  }
+  
+  if (argomentoVal !== "all") {
+    filteredQuestions = filteredQuestions.filter(q => q.argomento.toString() === argomentoVal);
+  }
 
-    // Always update the pie chart with the filtered answers.
-    updateChart(filteredAnswers);
+  if (progressivoVal !== "all") {
+    filteredQuestions = filteredQuestions.filter(q => Number(q.progressivo) === Number(progressivoVal));
+  }  
+  
+  console.log("Filtered Questions:", filteredQuestions);
 
-    // Updated condition for showing the bar chart:
-    // For Bocconi: if exercise is "all" and a specific argomento is chosen.
-    // For tolc_i: if both section and exercise are "all" and a specific argomento is chosen.
-    const barCanvas = document.getElementById("barChart");
-    if (
-        (globalTestType !== "tolc_i" && exerciseFilterVal === "all" && argomentoFilterVal !== "all") ||
-        (globalTestType === "tolc_i" && sectionFilterVal === "all" && exerciseFilterVal === "all" && argomentoFilterVal !== "all")
-    ) {
-        barCanvas.style.display = "block";
-        updateBarChart(filteredAnswers, filteredQuestions);
-    } else {
-        if (barChartInstance) {
-            barChartInstance.destroy();
-            barChartInstance = null;
-        }
-        barCanvas.style.display = "none";
+  // Allowed question IDs from filtered student_tests data.
+  const allowedQuestionIds = new Set(filteredQuestions.map(q => q.id));
+  console.log("Allowed Question IDs:", allowedQuestionIds);
+  console.log("Global Answers:", globalAnswers);
+  const filteredAnswers = globalAnswers.filter(ans => allowedQuestionIds.has(ans.question_id));
+
+  console.log("Filtered Answers:", filteredAnswers);
+
+  // Update the pie chart.
+  updateChart(filteredAnswers);
+
+  // For the bar chart: if section, tipologia, and progressivo are all "all" and argomento is "all", show the bar chart.
+  const barCanvas = document.getElementById("barChart");
+  if (
+    sectionVal === "all" &&
+    tipologiaVal === "all" &&
+    progressivoVal === "all" &&
+    argomentoVal === "all"
+  ) {
+    barCanvas.style.display = "block";
+    updateBarChart(filteredAnswers, filteredQuestions);
+  } else {
+    if (barChartInstance) {
+      barChartInstance.destroy();
+      barChartInstance = null;
     }
+    barCanvas.style.display = "none";
+  }
 
-    // Calculate and display the score based on the conditions.
-    if (
-        (globalTestType === "tolc_i" && sectionFilterVal !== "all" && exerciseFilterVal !== "all" && argomentoFilterVal === "all") ||
-        (globalTestType !== "tolc_i" && exerciseFilterVal !== "all" && argomentoFilterVal === "all")
-    ) {
-        const score = calculateScore(filteredAnswers, 1); // Change 1 to 2 for the second modality
-        scoreDisplay.textContent = `Score (1 for correct, 0 otherwise): ${score}`;
-        const score2 = calculateScore(filteredAnswers, 2);
-        scoreDisplay2.textContent = `Score (1 for correct, -0.25 for incorrect, 0 otherwise): ${score2}`;
-        scoreDisplay.style.display = "block";
-        scoreDisplay2.style.display = "block";
-    } else {
-        scoreDisplay.style.display = "none";
-        scoreDisplay2.style.display = "none";
-    }
+  // Show scores only if all four filters are "all".
+  if (
+    sectionVal === "all" &&
+    tipologiaVal === "all" &&
+    progressivoVal === "all" &&
+    argomentoVal === "all"
+  ) {
+    const score = calculateScore(filteredAnswers, 1);
+    scoreDisplay.textContent = `Score (1 for correct, 0 otherwise): ${score}`;
+    const score2 = calculateScore(filteredAnswers, 2);
+    scoreDisplay2.textContent = `Score (1 for correct, -0.25 for incorrect, 0 otherwise): ${score2}`;
+    scoreDisplay.style.display = "block";
+    scoreDisplay2.style.display = "block";
+  } else {
+    scoreDisplay.style.display = "none";
+    scoreDisplay2.style.display = "none";
+  }
 }
 
 function calculateScore(answers, modality) {
-    let score = 0;
-    answers.forEach(ans => {
-        if (modality === 1) {
-            score += ans.auto_score === 1 ? 1 : 0;
-        } else if (modality === 2) {
-            if (ans.auto_score === 1) {
-                score += 1;
-            } else if (ans.auto_score === 0 && !["x", "y", "z"].includes(ans.answer)) {
-                score -= 0.25;
-            }
-        }
-    });
-    return score;
+  let score = 0;
+  answers.forEach(ans => {
+    if (modality === 1) {
+      score += ans.auto_score === 1 ? 1 : 0;
+    } else if (modality === 2) {
+      if (ans.auto_score === 1) {
+        score += 1;
+      } else if (ans.auto_score === 0 && !["x", "y", "z"].includes(ans.answer)) {
+        score -= 0.25;
+      }
+    }
+  });
+  return score;
 }
 
 function updateChart(answers) {
-    if (chartInstance) {
-        chartInstance.destroy();
+  if (chartInstance) {
+    chartInstance.destroy();
+  }
+  const categories = { correct: 0, wrong: 0, insicuro: 0, "non ho idea": 0, "non dato": 0 };
+  answers.forEach(d => {
+    if (d.auto_score === 1) {
+      categories.correct++;
+    } else if (d.auto_score === 0 && !["x", "y", "z"].includes(d.answer)) {
+      categories.wrong++;
+    } else if (d.answer === "x") {
+      categories.insicuro++;
+    } else if (d.answer === "y") {
+      categories["non ho idea"]++;
+    } else {
+      categories["non dato"]++;
     }
-    const categories = { correct: 0, wrong: 0, insicuro: 0, "non ho idea": 0, "non dato": 0 };
-    answers.forEach(d => {
-        if (d.auto_score === 1) {
-            categories.correct++;
-        } else if (d.auto_score === 0 && !["x", "y", "z"].includes(d.answer)) {
-            categories.wrong++;
-        } else if (d.answer === "x") {
-            categories.insicuro++;
-        } else if (d.answer === "y") {
-            categories["non ho idea"]++;
-        } else {
-            categories["non dato"]++;
+  });
+  const ctx = document.getElementById("resultsChart").getContext("2d");
+  chartInstance = new Chart(ctx, {
+    type: "pie",
+    data: {
+      labels: Object.keys(categories),
+      datasets: [{
+        data: Object.values(categories),
+        backgroundColor: ["green", "red", "blue", "orange", "gray"]
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        datalabels: {
+          formatter: (value, context) => {
+            const dataArr = context.chart.data.datasets[0].data;
+            const total = dataArr.reduce((acc, val) => acc + val, 0);
+            if (total === 0) return '';
+            const percentage = ((value / total) * 100).toFixed(2);
+            return Number(percentage) === 0 ? '' : percentage + '%';
+          },
+          color: "#fff",
+          font: { weight: "bold" }
         }
-    });
-    const ctx = document.getElementById("resultsChart").getContext("2d");
-    chartInstance = new Chart(ctx, {
-        type: "pie",
-        data: {
-            labels: Object.keys(categories),
-            datasets: [{
-                data: Object.values(categories),
-                backgroundColor: ["green", "red", "blue", "orange", "gray"]
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                datalabels: {
-                    formatter: (value, context) => {
-                        const dataArr = context.chart.data.datasets[0].data;
-                        const total = dataArr.reduce((acc, val) => acc + val, 0);
-                        if (total === 0) return '';
-                        const percentage = ((value / total) * 100).toFixed(2);
-                        return Number(percentage) === 0 ? '' : percentage + '%';
-                    },
-                    color: "#fff",
-                    font: { weight: "bold" }
-                }
-            }
-        },
-        plugins: [ChartDataLabels]
-    });
+      }
+    },
+    plugins: [ChartDataLabels]
+  });
 }
 
 function updateBarChart(filteredAnswers, filteredQuestions) {
-    // Group by section and exercise for the chosen argomento.
-    const groups = {};
-    filteredQuestions.forEach(q => {
-        const key = `${q.section}-${q.test_number}`;
-        if (!groups[key]) {
-            groups[key] = { total: 0, correct: 0, section: q.section, test_number: q.test_number };
-        }
-        groups[key].total++;
-    });
-    const questionGroupMap = {};
-    filteredQuestions.forEach(q => {
-        questionGroupMap[q.id] = `${q.section}-${q.test_number}`;
-    });
-    filteredAnswers.forEach(ans => {
-        const key = questionGroupMap[ans.question_id];
-        if (key && ans.auto_score === 1) {
-            groups[key].correct++;
-        }
-    });
-    const groupKeys = Object.keys(groups).sort((a, b) => {
-        const [s1, t1] = a.split("-").map(Number);
-        const [s2, t2] = b.split("-").map(Number);
-        return s1 === s2 ? t1 - t2 : s1 - s2;
-    });
-    const labels = [];
-    const data = [];
-    groupKeys.forEach(key => {
-        const group = groups[key];
-        const percentage = group.total ? (group.correct / group.total * 100) : 0;
-        const sectionName = sections_arr[group.section - 1];
-        let exerciseName;
-        if (group.section === 7) {
-            exerciseName = `Simulazione ${group.test_number}`;
-        } else {
-            exerciseName = exercises_arr[group.test_number - 1] || `Exercise ${group.test_number}`;
-        }
-        labels.push(`${sectionName} - ${exerciseName}`);
-        data.push(percentage.toFixed(2));
-    });
-  
-    const ctx = document.getElementById("barChart").getContext("2d");
-    if (barChartInstance) {
-        barChartInstance.destroy();
+  // Group by section and exercise (using test_number) for the chosen argomento.
+  const groups = {};
+  filteredQuestions.forEach(q => {
+    const key = `${q.section}-${q.test_number}`;
+    if (!groups[key]) {
+      groups[key] = { total: 0, correct: 0, section: q.section, test_number: q.test_number };
     }
-    barChartInstance = new Chart(ctx, {
-        type: "bar",
-        data: {
-            labels: labels,
-            datasets: [{
-                label: "Percentage Correct",
-                data: data,
-                backgroundColor: "blue"
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 100,
-                    ticks: {
-                        callback: value => value + '%'
-                    }
-                }
-            },
-            plugins: {
-                datalabels: {
-                    formatter: (value, context) => {
-                        if (Number(value) === 0) return '';
-                        return value + '%';
-                    },
-                    color: "#fff",
-                    font: { weight: "bold" }
-                }
-            }
-        },
-        plugins: [ChartDataLabels]
-    });
+    groups[key].total++;
+  });
+  const questionGroupMap = {};
+  filteredQuestions.forEach(q => {
+    questionGroupMap[q.id] = `${q.section}-${q.test_number}`;
+  });
+  filteredAnswers.forEach(ans => {
+    const key = questionGroupMap[ans.question_id];
+    if (key && ans.auto_score === 1) {
+      groups[key].correct++;
+    }
+  });
+  const groupKeys = Object.keys(groups).sort((a, b) => {
+    const [s1, t1] = a.split("-").map(Number);
+    const [s2, t2] = b.split("-").map(Number);
+    return s1 === s2 ? t1 - t2 : s1 - s2;
+  });
+  const labels = [];
+  const data = [];
+  groupKeys.forEach(key => {
+    const group = groups[key];
+    const percentage = group.total ? (group.correct / group.total * 100) : 0;
+    // Assuming sections_arr and exercises_arr exist for labeling.
+    const sectionName = sections_arr[group.section - 1];
+    let exerciseName;
+    if (group.section === 7) {
+      exerciseName = `Simulazione ${group.test_number}`;
+    } else {
+      exerciseName = exercises_arr[group.test_number - 1] || `Exercise ${group.test_number}`;
+    }
+    labels.push(`${sectionName} - ${exerciseName}`);
+    data.push(percentage.toFixed(2));
+  });
+  
+  const ctx = document.getElementById("barChart").getContext("2d");
+  if (barChartInstance) {
+    barChartInstance.destroy();
+  }
+  barChartInstance = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "Percentage Correct",
+        data: data,
+        backgroundColor: "blue"
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 100,
+          ticks: {
+            callback: value => value + '%'
+          }
+        }
+      },
+      plugins: {
+        datalabels: {
+          formatter: (value, context) => {
+            if (Number(value) === 0) return '';
+            return value + '%';
+          },
+          color: "#fff",
+          font: { weight: "bold" }
+        }
+      }
+    },
+    plugins: [ChartDataLabels]
+  });
 }
 
 function goBack() {
-    window.history.back();
+  window.history.back();
 }
 
 loadDashboard();

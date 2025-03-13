@@ -74,21 +74,21 @@ document.addEventListener("DOMContentLoaded", () => {
     // Process chosen tests from the tolc_i table.
     const { data: tolcTests, error: tolcError } = await supabase
       .from("questions")
-      .select("section, test_number, progressivo, tipologia_test")
+      .select("section, tipologia_esercizi, progressivo, tipologia_test")
       .in("tipologia_test", chosenTests)
-      .order("section, test_number, progressivo");
+      .order("progressivo");
   
     if (tolcError) {
       console.error("❌ Error fetching tolc_i test structure:", tolcError.message);
     } else if (tolcTests) {
       // Remove duplicates manually.
       const uniqueTolcTests = Array.from(
-        new Set(tolcTests.map(test => `${test.section}|${test.test_number}|${test.progressivo}|${test.tipologia_test}`))
+        new Set(tolcTests.map(test => `${test.section}|${test.tipologia_esercizi}|${test.progressivo}|${test.tipologia_test}`))
         ).map(key => {
             const parts = key.split("|");
             return { 
-                section: Number(parts[0]), 
-                test_number: Number(parts[1]), 
+                section: parts[0], 
+                tipologia_esercizi: parts[1], 
                 progressivo: Number(parts[2]), 
                 tipologia_test: parts[3]
             };
@@ -99,7 +99,7 @@ document.addEventListener("DOMContentLoaded", () => {
         testEntries.push({
           auth_uid: authUid,
           section: test.section,
-          test_number: test.test_number,
+          tipologia_esercizi: test.tipologia_esercizi,
           progressivo: test.progressivo,
           tipologia_test: test.tipologia_test,
           status: test.progressivo === 1 ? "unlocked" : "locked"
@@ -110,18 +110,18 @@ document.addEventListener("DOMContentLoaded", () => {
     // Process chosen tests from the bocconi table.
     const { data: bocconiTests, error: bocconiError } = await supabase
       .from("questions_bocconi")
-      .select("section, test_number, tipologia_test")
+      .select("section, tipologia_esercizi, tipologia_test")
       .in("tipologia_test", chosenTests)
-      .order("section, test_number");
+      .order("progressivo");
   
     if (bocconiError) {
       console.error("❌ Error fetching bocconi test structure:", bocconiError.message);
     } else if (bocconiTests) {
       const uniqueBocconiTests = Array.from(
-        new Set(bocconiTests.map(test => `${test.section}-${test.test_number}-${test.tipologia_test}`))
+        new Set(bocconiTests.map(test => `${test.section}-${test.tipologia_esercizi}-${test.tipologia_test}`))
       ).map(key => {
-        const [section, test_number, tipologia_test] = key.split("-").map((v, i) => i < 2 ? Number(v) : v);
-        return { section, test_number, tipologia_test };
+        const [section, tipologia_esercizi, tipologia_test] = key.split("-").map((v, i) => i < 2 ? Number(v) : v);
+        return { section, tipologia_esercizi, tipologia_test };
       });
   
       uniqueBocconiTests.forEach(test => {
@@ -129,8 +129,8 @@ document.addEventListener("DOMContentLoaded", () => {
         testEntries.push({
           auth_uid: authUid,
           section: test.section,
-          test_number: test.test_number,
-          progressivo: 1,
+          tipologia_esercizi: test.tipologia_esercizi,
+          progressivo: test.progressivo,
           tipologia_test: test.tipologia_test,
           status: "locked" // or you might want to unlock the first one; adjust as needed
         });

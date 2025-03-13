@@ -166,7 +166,8 @@ function displayTestTree(tests,studentTests, testType, selectedTest) {
                     const studentTest = studentTests.find(t =>
                         t.section === test.section &&
                         t.tipologia_esercizi === test.tipologia_esercizi &&
-                        t.progressivo === test.progressivo
+                        t.progressivo === test.progressivo &&
+                        t.id === test.id
                     );
                     const status = studentTest ? studentTest.status : "locked";
 
@@ -181,9 +182,9 @@ function displayTestTree(tests,studentTests, testType, selectedTest) {
                         testBtn.classList.add("locked");
                     } else {
                         if (testType === "pdf") {
-                            testBtn.onclick = () => startPdfTest(test.section, test.tipologia_esercizi, test.progressivo, selectedTest);
+                            testBtn.onclick = () => startPdfTest(test.section, test.tipologia_esercizi, test.progressivo, selectedTest,test.id);
                         } else {
-                            testBtn.onclick = () => startBancaDatiTest(test.section, test.tipologia_esercizi, test.progressivo, selectedTest);
+                            testBtn.onclick = () => startBancaDatiTest(test.section, test.tipologia_esercizi, test.progressivo, selectedTest, test.id);
                         }
                     }
                     columnDiv.appendChild(testBtn);
@@ -201,8 +202,8 @@ function displayTestTree(tests,studentTests, testType, selectedTest) {
 }
 
 // ✅ Start PDF test
-async function startPdfTest(section, tipologia_esercizi, testProgressivo, selectedTest) {
-    console.log(`🚀 Starting PDF Test: ${section} - ${tipologia_esercizi} - ${testProgressivo} - ${selectedTest}`);
+async function startPdfTest(section, tipologia_esercizi, testProgressivo, selectedTest, testId) {
+    console.log(`🚀 Starting PDF Test: ${section} - ${tipologia_esercizi} - ${testProgressivo} - ${selectedTest} - ${testId}`);
     const { data: testQuestion, error } = await supabase
         .from("questions")
         .select("pdf_url")
@@ -224,16 +225,16 @@ async function startPdfTest(section, tipologia_esercizi, testProgressivo, select
     sessionStorage.setItem("currentSection", section);
     sessionStorage.setItem("currentTipologiaEsercizi", tipologia_esercizi);
     sessionStorage.setItem("currentTestProgressivo", testProgressivo);
-    sessionStorage.setItem("selectedTestType", selectedTest);
+    sessionStorage.setItem("selectedTestId", testId);
     window.location.href = "test.html";
 }
 
 // ✅ Start Banca Dati test
-async function startBancaDatiTest(section, tipologia_esercizi, testProgressivo, selectedTest) {  
+async function startBancaDatiTest(section, tipologia_esercizi, testProgressivo, selectedTest, testId) {  
     console.log(`🚀 Starting Banca Dati Test: ${section} - ${tipologia_esercizi} - ${testProgressivo} - ${selectedTest}`);   
     sessionStorage.setItem("currentSection", section);
     sessionStorage.setItem("currentTipologiaEsercizi", tipologia_esercizi);
     sessionStorage.setItem("currentTestProgressivo", testProgressivo);
-    sessionStorage.setItem("selectedTestType", selectedTest);
+    sessionStorage.setItem("selectedTestId", testId);
     window.location.href = "test_bocconi.html";
 }

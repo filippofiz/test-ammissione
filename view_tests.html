@@ -81,9 +81,6 @@
     const studentId = sessionStorage.getItem("selectedStudentId"); // ✅ Already `auth_uid`
     const studentName = sessionStorage.getItem("selectedStudentName") || "Student";
     document.getElementById("studentTestProgressTitle").textContent = `Avanzamento preparazione di ${studentName}`;
-    const exercises = ["Esercizi per casa", "Assessment"];
-    const sections = ["Logica e Insiemi", "Algebra", "Goniometria e Trigonometria", "Logaritmi e Esponenziali", "Geometria", "Probabilità, Combinatoria e Statistica", "Simulazioni"];
-    document.getElementById("studentTestProgressTitle").textContent = `Avanzamento preparazione di ${studentName}`;
 
     let viewAnswersMode = false; // global flag for toggle
 
@@ -319,17 +316,16 @@
       const confirmReset = confirm("⚠ This test is marked as completed. Do you want to reset it and remove all student answers?");
       if (!confirmReset) return;
 
-      console.log(`🔄 Resetting Test: Section ${section}, Test Type: ${studentTestType}, Progressivo: ${studentTestType},  Selected: ${selectedTest}`);
+      console.log(`🔄 Resetting Test: Section ${section}, Test Type: ${studentTestType}, Progressivo: ${testProgressivo},  Selected: ${selectedTest}`);
 
       // Step 1: Find all question IDs linked to this test.
       const { data: questions, error: questionError } = await supabase
-          .from(studentTestType === "tolc_i" ? "questions" : "questions_bocconi")
+          .from(selectedTest.includes("PDF") ? "questions" : "questions_bocconi")
           .select("id")
           .eq("section", section)
           .eq("tipologia_esercizi", studentTestType)
           .eq("tipologia_test", selectedTest)
           .eq("progressivo", testProgressivo);
-
 
       if (questionError) {
           console.error("❌ Error fetching questions for reset:", questionError);
@@ -345,7 +341,7 @@
 
       // Step 2: Delete student answers linked to these questions.
       const { error: deleteError } = await supabase
-          .from(studentTestType === "tolc_i" ? "student_answers" : "studentbocconi_answers")
+          .from(selectedTest.includes("PDF") ? "student_answers" : "studentbocconi_answers")
           .delete()
           .in("question_id", questionIds)
           .eq("auth_uid", studentId);
