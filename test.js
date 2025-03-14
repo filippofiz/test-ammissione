@@ -400,14 +400,14 @@ function loadQuestionsForPage(page) {
 
 function selectAnswer(questionId, answer, btn) {
     let mappedAnswer = answer;
-    // Map "insicuro" to "x" and "non ho idea" to "y"
+    // Map "insicuro" and "non ho idea" to "x" and "y" respectively.
     if (answer.toLowerCase() === "insicuro") {
       mappedAnswer = "x";
     } else if (answer.toLowerCase() === "non ho idea") {
       mappedAnswer = "y";
     }
     
-    // Toggle the answer: if already selected, unselect it
+    // Toggle the answer: if already selected, unselect it.
     if (studentAnswers[questionId] === mappedAnswer) {
       delete studentAnswers[questionId];
       mappedAnswer = null;
@@ -415,19 +415,25 @@ function selectAnswer(questionId, answer, btn) {
       studentAnswers[questionId] = mappedAnswer;
     }
     
-    buildQuestionNav(); // Update nav grid
-  
-    // Update buttons within the question UI
+    buildQuestionNav(); // Update the navigation grid
+    
+    // Update buttons within the question UI.
     const questionDiv = btn.closest("div");
     const buttons = questionDiv.querySelectorAll("button");
     
     buttons.forEach(b => {
       let btnMapped = b.textContent;
+      // Normalize the text for the extra choices.
       if (btnMapped.toLowerCase() === "insicuro") btnMapped = "x";
       if (btnMapped.toLowerCase() === "non ho idea") btnMapped = "y";
       
       if (btnMapped === studentAnswers[questionId]) {
-        b.style.background = "green";
+        // If the chosen answer is one of the extra ones, color it yellow; otherwise, green.
+        if (studentAnswers[questionId] === "x" || studentAnswers[questionId] === "y") {
+          b.style.background = "yellow";
+        } else {
+          b.style.background = "green";
+        }
       } else {
         b.style.background = "";
       }
@@ -619,94 +625,34 @@ document.addEventListener("fullscreenchange", function () {
 function buildQuestionNav() {
     const questionNav = document.getElementById("questionNav");
     if (!questionNav) return;
-  
-    // Determine test type based on the selected test type
-    const selectedTest = sessionStorage.getItem("selectedTestType");
-    const testType = selectedTest.includes("TOLC") ? "tolc" : "bocconi";
-    const testModality = selectedTest.includes("PDF") ? "pdf" : "banca_dati";
-  
-    questionNav.innerHTML = ""; // Clear existing
-  
-    if (testType === "tolc") {
-      // Determine the current question range based on the questions on the current page.
-      const currentPageQuestions = questions.filter(q => q.page_number === currentPage);
-      let currentRange = null;
-      if (currentPageQuestions.length > 0) {
-        const firstQuestionNumber = currentPageQuestions[0].question_number;
-        if (firstQuestionNumber >= 1 && firstQuestionNumber <= 20)
-          currentRange = { min: 1, max: 20 };
-        else if (firstQuestionNumber >= 21 && firstQuestionNumber <= 30)
-          currentRange = { min: 21, max: 30 };
-        else if (firstQuestionNumber >= 31 && firstQuestionNumber <= 40)
-          currentRange = { min: 31, max: 40 };
-        else if (firstQuestionNumber >= 41 && firstQuestionNumber <= 50)
-          currentRange = { min: 41, max: 50 };
+    questionNav.innerHTML = "";
+    // Sort questions by question_number.
+    const sorted = [...questions].sort((a, b) => a.question_number - b.question_number);
+    sorted.forEach((q, index) => {
+      const btn = document.createElement("button");
+      btn.classList.add("question-cell");
+      btn.textContent = q.question_number;
+      if (studentAnswers[q.id]) {
+        // If the chosen answer is one of the extra ones, color yellow; else add "answered" class.
+        if (studentAnswers[q.id] === "x" || studentAnswers[q.id] === "y") {
+          btn.style.backgroundColor = "yellow";
+        } else {
+          btn.classList.add("answered");
+        }
       }
-  
-      // 1. Sort questions by question_number
-      const sortedQuestions = [...questions].sort((a, b) => a.question_number - b.question_number);
-  
-      // 2. Create a cell for each question
-      sortedQuestions.forEach((q) => {
-          const btn = document.createElement("button");
-          btn.classList.add("question-cell");
-  
-          // Display question_number in the cell
-          btn.textContent = q.question_number;
-  
-          // If answered, turn green
-          if (studentAnswers[q.id]) {
-              btn.classList.add("answered");
-          }
-  
-          // If this question is on the current page, highlight it
-          if (q.page_number === currentPage) {
-              btn.classList.add("current-question");
-          }
-  
-          // Disable navigation to questions outside the current range
-          if (currentRange && (q.question_number < currentRange.min || q.question_number > currentRange.max)) {
-              btn.disabled = true;
-              btn.classList.add("disabled-nav"); // Optional: styling
-          } else {
-              // Allow navigation within the current range
-              btn.addEventListener("click", () => {
-                  loadQuestionsForPage(q.page_number);
-              });
-          }
-  
-          questionNav.appendChild(btn);
+      // Highlight if question belongs to current page.
+      const pageIndex = currentPage - 2; // Test pages start at 2.
+      const startIdx = pageIndex * 3;
+      if (index >= startIdx && index < startIdx + 3) {
+        btn.classList.add("current-question");
+      }
+      // Allow clicking to jump forward (but not backward).
+      btn.addEventListener("click", () => {
+        if (index >= startIdx) {
+          const targetPage = Math.floor(index / 3) + 2;
+          loadQuestionsForPage(targetPage);
+        }
       });
-  
-    } else { // bocconi mode: only allow navigation for questions on the current page
-      // 1. Sort questions by question_number
-      const sortedQuestions = [...questions].sort((a, b) => a.question_number - b.question_number);
-  
-      // 2. Create a cell for each question
-      sortedQuestions.forEach((q) => {
-          const btn = document.createElement("button");
-          btn.classList.add("question-cell");
-  
-          // Display question_number in the cell
-          btn.textContent = q.question_number;
-  
-          // If answered, mark green
-          if (studentAnswers[q.id]) {
-              btn.classList.add("answered");
-          }
-  
-          // Only enable navigation for questions on the current page
-          if (q.page_number === currentPage) {
-              btn.classList.add("current-question");
-              btn.addEventListener("click", () => {
-                  loadQuestionsForPage(q.page_number);
-              });
-          } else {
-              btn.disabled = true;
-              btn.classList.add("disabled-nav");
-          }
-  
-          questionNav.appendChild(btn);
-      });
-    }
-}
+      questionNav.appendChild(btn);
+    });
+  }
