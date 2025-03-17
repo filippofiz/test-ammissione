@@ -58,9 +58,9 @@ async function loadTest() {
     return;
   }
   
-  // Fetch Bocconi questions from the "questions_bocconi" table using section and test_number.
+  // Fetch Bocconi questions from the "questions_bancaDati" table using section and test_number.
   const { data, error } = await supabase
-    .from("questions_bocconi")
+    .from("questions_bancaDati")
     .select("*")
     .eq("section", currentSection)
     .eq("tipologia_esercizi", currentTipologiaEsercizi)

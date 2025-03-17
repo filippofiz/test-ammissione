@@ -64,9 +64,9 @@
     }
 
     // Decide which questions and answers tables to use.
-    // If selectedTestType contains "PDF", use questions/student_answers; otherwise, use questions_bocconi/studentbocconi_answers.
+    // If selectedTestType contains "PDF", use questions/student_answers; otherwise, use questions_bancaDati/studentbocconi_answers.
     const usePDF = selectedTestType.includes("PDF");
-    const questionsTable = usePDF ? "questions" : "questions_bocconi";
+    const questionsTable = usePDF ? "questions" : "questions_bancaDati";
     const answersTable = usePDF ? "student_answers" : "studentbocconi_answers";
 
     async function loadTestAnswers() {
@@ -156,9 +156,11 @@
     questionDiv.appendChild(header);
     
     // Display the question text (using innerHTML for LaTeX).
-    const qText = document.createElement("p");
-    qText.innerHTML = q.question;
-    questionDiv.appendChild(qText);
+    if (!usePDF) {
+      const qText = document.createElement("p");
+      qText.innerHTML = q.question;
+      questionDiv.appendChild(qText);
+    }
     
     // If image_url is not null, create and append an image element.
     if (q.image_url) {
@@ -189,17 +191,19 @@
     }
     questionDiv.appendChild(answerDiv);
     
-    // Compute "Altre risposte possibili" from the question's choices,
-    // excluding the correct answer and the student's answer.
-    let allChoices = [q.correct_answer, q.wrong_1, q.wrong_2, q.wrong_3, q.wrong_4];
-    // Remove duplicates, if any.
-    allChoices = [...new Set(allChoices)];
-    const otherChoices = allChoices.filter(choice => choice !== q.correct_answer && choice !== studentAnswer);
-    
-    if (otherChoices.length > 0) {
-      const otherDiv = document.createElement("div");
-      otherDiv.innerHTML = `<strong>Altre risposte possibili:</strong> ${otherChoices.join(", ")}`;
-      questionDiv.appendChild(otherDiv);
+    if (!usePDF) {
+      // Compute "Altre risposte possibili" from the question's choices,
+      // excluding the correct answer and the student's answer.
+      let allChoices = [q.correct_answer, q.wrong_1, q.wrong_2, q.wrong_3, q.wrong_4];
+      // Remove duplicates, if any.
+      allChoices = [...new Set(allChoices)];
+      const otherChoices = allChoices.filter(choice => choice !== q.correct_answer && choice !== studentAnswer);
+      
+      if (otherChoices.length > 0) {
+        const otherDiv = document.createElement("div");
+        otherDiv.innerHTML = `<strong>Altre risposte possibili:</strong> ${otherChoices.join(", ")}`;
+        questionDiv.appendChild(otherDiv);
+      }
     }
     
     listContainer.appendChild(questionDiv);

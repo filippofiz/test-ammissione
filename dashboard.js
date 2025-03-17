@@ -50,7 +50,7 @@ async function loadDashboard() {
     : "studentbocconi_answers";
   const questionTable = globalTestType.includes("PDF")
     ? "questions"
-    : "questions_bocconi";
+    : "questions_bancaDati";
 
   // Fetch student answers.
   const { data: answers, error: answersError } = await supabase
@@ -239,9 +239,9 @@ function filterDashboard() {
 
   // Show scores only if all four filters are "all".
   if (
-    sectionVal === "all" &&
-    tipologiaVal === "all" &&
-    progressivoVal === "all" &&
+    sectionVal != "all" &&
+    tipologiaVal != "all" &&
+    progressivoVal != "all" &&
     argomentoVal === "all"
   ) {
     const score = calculateScore(filteredAnswers, 1);

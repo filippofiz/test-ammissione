@@ -109,7 +109,7 @@ document.addEventListener("DOMContentLoaded", () => {
   
     // Process chosen tests from the bocconi table.
     const { data: bocconiTests, error: bocconiError } = await supabase
-      .from("questions_bocconi")
+      .from("questions_bancaDati")
       .select("section, tipologia_esercizi, tipologia_test")
       .in("tipologia_test", chosenTests)
       .order("progressivo");
@@ -181,7 +181,7 @@ document.addEventListener("DOMContentLoaded", () => {
       .from("questions")
       .select("tipologia_test");
     const { data: bocconiData, error: bocconiError } = await supabase
-      .from("questions_bocconi")
+      .from("questions_bancaDati")
       .select("tipologia_test");
   
     if (tolcError) {

@@ -159,7 +159,7 @@
       );
       // ✅ Fetch questions with the selected test type
       /*let { data: testData, error: testError } = await supabase
-          .from(testType === "pdf" ? "questions" : "questions_bocconi")
+          .from(testType === "pdf" ? "questions" : "questions_bancaDati")
           .select("section, progressivo, tipologia_esercizi")
           .eq("tipologia_test", selectedTest)
           .order("tipologia_esercizi, progressivo");
@@ -320,7 +320,7 @@
 
       // Step 1: Find all question IDs linked to this test.
       const { data: questions, error: questionError } = await supabase
-          .from(selectedTest.includes("PDF") ? "questions" : "questions_bocconi")
+          .from(selectedTest.includes("PDF") ? "questions" : "questions_bancaDati")
           .select("id")
           .eq("section", section)
           .eq("tipologia_esercizi", studentTestType)

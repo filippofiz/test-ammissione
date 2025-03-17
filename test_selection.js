@@ -236,5 +236,5 @@ async function startBancaDatiTest(section, tipologia_esercizi, testProgressivo, 
     sessionStorage.setItem("currentTipologiaEsercizi", tipologia_esercizi);
     sessionStorage.setItem("currentTestProgressivo", testProgressivo);
     sessionStorage.setItem("selectedTestId", testId);
-    window.location.href = "test_bocconi.html";
+    window.location.href = "test_bancaDati.html";
 }

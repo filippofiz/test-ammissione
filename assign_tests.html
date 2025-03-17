@@ -128,10 +128,10 @@
         .select("section, tipologia_esercizi, progressivo, tipologia_test")
         .in("tipologia_test", studentTests);
       
-      // Query available tests from "questions_bocconi"
+      // Query available tests from "questions_bancaDati"
       // For bocconi tests, if "tipologia_esercizi" is missing, set it to "BOCCONI" and default progressivo to 1.
       let { data: bocconiTests, error: bocconiError } = await supabase
-        .from("questions_bocconi")
+        .from("questions_bancaDati")
         .select("section, tipologia_esercizi, tipologia_test")
         .in("tipologia_test", studentTests);
 
@@ -216,12 +216,12 @@
         return;
       }
 
-      // Query tipologia_test from the "questions_bocconi" table.
+      // Query tipologia_test from the "questions_bancaDati" table.
       const { data: bocconiData, error: bocconiError } = await supabase
-        .from("questions_bocconi")
+        .from("questions_bancaDati")
         .select("tipologia_test");
       if (bocconiError) {
-        console.error("Error fetching tests from questions_bocconi:", bocconiError.message);
+        console.error("Error fetching tests from questions_bancaDati:", bocconiError.message);
         return;
       }
 
