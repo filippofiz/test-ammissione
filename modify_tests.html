@@ -1,72 +1,48 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Modify Tests</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modify Tests Upload</title>
+  <link rel="stylesheet" href="styles.css">
+  <!-- Include PapaParse from CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+  <style>
+    /* Basic styling */
+    .upload-section { margin: 20px; }
+    .upload-section h2 { margin-bottom: 10px; }
+    .summary { margin-top: 20px; background: #f5f5f5; padding: 10px; border-radius: 5px; }
+    .error { color: red; font-weight: bold; }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h2>📝 Add a New Question</h2>
+  <div class="upload-section">
+    <h2>Upload Questions</h2>
+    <!-- Radio buttons to choose test type -->
+    <p>Seleziona Tipo di Test CSV:</p>
+    <label>
+      <input type="radio" name="csvTestType" value="PDF" checked>
+      PDF
+    </label>
+    <label>
+      <input type="radio" name="csvTestType" value="Banca Dati">
+      Banca Dati
+    </label>
+    <br><br>
+    <!-- File input for CSV -->
+    <input type="file" id="csvFileInput" accept=".csv">
+    <br><br>
+    <!-- Button to trigger upload and parse -->
+    <button id="uploadCsvBtn">Carica CSV</button>
+    <div id="uploadMessage"></div>
+    <div id="uploadSummary" class="summary"></div>
+  </div>
 
-        <label for="pdfUpload">Upload PDF:</label>
-        <input type="file" id="pdfUpload" accept="application/pdf"><br>
-        <p id="uploadStatus"></p>
+  <!--<div class="upload-section">
+    <h2>Upload PDF Tests (future functionality)</h2>
+    <button id="uploadPdfBtn">Carica PDF</button>
+  </div>-->
 
-        <label for="numQuestions">Number of Questions:</label>
-        <input type="number" id="numQuestions" min="1" placeholder="Enter number of questions"><br>
-        <button id="generateQuestions">Generate Question Fields</button>
-        
-        <div id="questionsContainer"></div>
-
-        <button id="submitQuestion">Add Questions</button><br>
-        <button onclick="goBack()">⬅ Back to Tutor Dashboard</button>
-    </div>
-
-    <script type="module" src="modify_tests.js" defer></script>
-
-    <style>
-        .container {
-            max-width: 600px;
-            margin: auto;
-            padding: 20px;
-            border: 1px solid #ddd;
-            background: #f9f9f9;
-            height: 80vh;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .question-block {
-            background: #f4f4f4;
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 5px;
-        }
-
-        label, input, select, button {
-            display: block;
-            width: 100%;
-            margin: 5px 0;
-        }
-
-        button {
-            background: #007bff;
-            color: white;
-            border: none;
-            padding: 10px;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background: #0056b3;
-        }
-
-        select {
-            height: 35px;
-        }
-    </style>
+  <script type="module" src="modify_tests.js"></script>
 </body>
 </html>

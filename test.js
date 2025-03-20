@@ -625,34 +625,37 @@ document.addEventListener("fullscreenchange", function () {
 function buildQuestionNav() {
     const questionNav = document.getElementById("questionNav");
     if (!questionNav) return;
-    questionNav.innerHTML = "";
-    // Sort questions by question_number.
-    const sorted = [...questions].sort((a, b) => a.question_number - b.question_number);
-    sorted.forEach((q, index) => {
+    
+    questionNav.innerHTML = ""; // Clear existing buttons
+  
+    // Get the questions currently displayed on the page
+    const currentQuestions = questions.filter(q => q.page_number === currentPage);
+  
+    // Generate buttons for all questions
+    questions.forEach(q => {
       const btn = document.createElement("button");
       btn.classList.add("question-cell");
       btn.textContent = q.question_number;
+  
+      // Highlight if this question is currently displayed
+      if (currentQuestions.some(currQ => currQ.id === q.id)) {
+        btn.classList.add("current-question");
+      }
+  
+      // Highlight answered questions
       if (studentAnswers[q.id]) {
-        // If the chosen answer is one of the extra ones, color yellow; else add "answered" class.
         if (studentAnswers[q.id] === "x" || studentAnswers[q.id] === "y") {
           btn.style.backgroundColor = "yellow";
         } else {
           btn.classList.add("answered");
         }
       }
-      // Highlight if question belongs to current page.
-      const pageIndex = currentPage - 2; // Test pages start at 2.
-      const startIdx = pageIndex * 3;
-      if (index >= startIdx && index < startIdx + 3) {
-        btn.classList.add("current-question");
-      }
-      // Allow clicking to jump forward (but not backward).
+  
+      // Allow navigation
       btn.addEventListener("click", () => {
-        if (index >= startIdx) {
-          const targetPage = Math.floor(index / 3) + 2;
-          loadQuestionsForPage(targetPage);
-        }
+        loadQuestionsForPage(q.page_number);
       });
+  
       questionNav.appendChild(btn);
     });
   }
