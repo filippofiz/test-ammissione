@@ -5,6 +5,7 @@ let currentPage = 1;
 let totalPages = 1;
 let studentAnswers = {};
 let sectionPageBoundaries = {};
+let sectionPageStartPages = {};
 let testEndTime;
 let pdfDoc = null; // Holds the loaded PDF document
 let isSubmitting = false;
@@ -41,10 +42,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     prevPageBtn.addEventListener("click", () => {
         if (currentPage > 1) loadQuestionsForPage(currentPage - 1);
     });
-
     nextPageBtn.addEventListener("click", () => {
-        if (currentPage < totalPages) loadQuestionsForPage(currentPage + 1);
-    });
+        const nextPage = currentPage + 1;
+        if (nextPage > totalPages) return;
+        
+        // Only prompt confirmation if the button is labeled "Prossima Sezione"
+        if (nextPageBtn.textContent.trim() === "Prossima Sezione") {
+        customConfirm("Stai per passare alla prossima sezione. Vuoi continuare?").then(confirmChange => {
+            if (!confirmChange) return;
+            loadQuestionsForPage(nextPage);
+        });
+        return;
+        }
+        
+        loadQuestionsForPage(nextPage);
+      });
 
     //Load test and PDF
     await loadTest();
@@ -106,10 +118,19 @@ async function loadTest() {
     sectionPageBoundaries = {};
 
     boundaries.forEach(q => {
-        if (q.question_number === 20) sectionPageBoundaries[1] = q.page_number;
-        if (q.question_number === 30) sectionPageBoundaries[2] = q.page_number;
-        if (q.question_number === 40) sectionPageBoundaries[3] = q.page_number;
-    });
+        if (q.question_number === 20) {
+          sectionPageBoundaries[2] = q.question_number;
+          sectionPageStartPages[2] = q.page_number;
+        }
+        if (q.question_number === 30) {
+          sectionPageBoundaries[3] = q.question_number;
+          sectionPageStartPages[3] = q.page_number;
+        }
+        if (q.question_number === 40) {
+          sectionPageBoundaries[4] = q.question_number;
+          sectionPageStartPages[4] = q.page_number;
+        }
+      });
 
     console.log("Section Boundaries Loaded:", sectionPageBoundaries);
 
@@ -184,7 +205,7 @@ async function loadPdf(pdfUrl) {
     }
 }
 
-let zoomLevel = 1.0; // Default zoom level
+let zoomLevel = 1.2; // Default zoom level
 let isDragging = false;
 let startX, startY, scrollLeft, scrollTop;
 
@@ -572,8 +593,8 @@ function updateNavigationButtons() {
     const currentSection = sessionStorage.getItem("currentSection");
     if (testType === "tolc") {
         // TOLC navigation using section boundaries.
-        const isSectionBoundary = Object.values(sectionPageBoundaries).includes(currentPage);
-        const isPastBoundary = Object.values(sectionPageBoundaries).some(
+        const isSectionBoundary = Object.values(sectionPageStartPages).includes(currentPage);
+        const isPastBoundary = Object.values(sectionPageStartPages).some(
             boundary => boundary && currentPage === boundary + 1
         );
         
@@ -625,24 +646,30 @@ document.addEventListener("fullscreenchange", function () {
 function buildQuestionNav() {
     const questionNav = document.getElementById("questionNav");
     if (!questionNav) return;
-    
     questionNav.innerHTML = ""; // Clear existing buttons
   
-    // Get the questions currently displayed on the page
-    const currentQuestions = questions.filter(q => q.page_number === currentPage);
+    // Compute the "minimum allowed page" for the current section.
+    // We sort all the section boundaries and choose the highest boundary that is less than the current page.
+    let minPage = 1;
+    const boundariesArr = Object.values(sectionPageBoundaries).sort((a, b) => a - b);
+    for (const boundary of boundariesArr) {
+      if (boundary < currentPage) {
+        minPage = boundary;
+      }
+    }
   
-    // Generate buttons for all questions
+    // Create a navigation button for every question.
     questions.forEach(q => {
       const btn = document.createElement("button");
       btn.classList.add("question-cell");
       btn.textContent = q.question_number;
   
-      // Highlight if this question is currently displayed
-      if (currentQuestions.some(currQ => currQ.id === q.id)) {
+      // Highlight if this question is on the current page.
+      if (q.page_number === currentPage) {
         btn.classList.add("current-question");
       }
   
-      // Highlight answered questions
+      // Highlight answered questions.
       if (studentAnswers[q.id]) {
         if (studentAnswers[q.id] === "x" || studentAnswers[q.id] === "y") {
           btn.style.backgroundColor = "yellow";
@@ -651,11 +678,109 @@ function buildQuestionNav() {
         }
       }
   
-      // Allow navigation
-      btn.addEventListener("click", () => {
-        loadQuestionsForPage(q.page_number);
-      });
+      // If the student is beyond the boundary, disable navigation for questions on or before that boundary.
+      const targetSection = getSectionForQuestionNumber(q.question_number);
+      const currentQuestion = questions.find(qq => qq.page_number === currentPage);
+      const currentSectionNumber = getSectionForQuestionNumber(currentQuestion?.question_number || 1);
+      
+      if (targetSection < currentSectionNumber) {
+        // ✅ Disable all buttons for previous sections
+        btn.disabled = true;
+      } else {
+        btn.addEventListener("click", () => {
+            if (targetSection > currentSectionNumber) {
+              customConfirm("Stai per passare alla prossima sezione. Vuoi continuare?")
+                .then(confirmChange => {
+                  if (confirmChange) {
+                    loadQuestionsForPage(q.page_number);
+                  }
+                  // else: do nothing, remain on the current page
+                });
+            } else {
+              loadQuestionsForPage(q.page_number);
+            }
+          });
+      }
   
       questionNav.appendChild(btn);
     });
   }
+
+  function getSectionForPage(page) {
+    const boundariesArr = Object.values(sectionPageBoundaries)
+      .map(b => Number(b))
+      .sort((a, b) => a - b);
+  
+    let section = 1;
+    for (const boundary of boundariesArr) {
+      if (page < boundary) break;
+      section++;
+    }
+    return section;
+  }
+
+  function getSectionForQuestionNumber(questionNumber) {
+    const boundaries = Object.entries(sectionPageBoundaries)
+      .map(([section, qNum]) => ({ section: Number(section), qNum }))
+      .sort((a, b) => a.qNum - b.qNum);
+  
+    let section = 1;
+    for (const b of boundaries) {
+      if (questionNumber - 1 < b.qNum) break;
+      section = b.section;
+    }
+    return section;
+  }  
+
+  function customConfirm(message) {
+    return new Promise(resolve => {
+      // Create overlay for the modal
+      const overlay = document.createElement('div');
+      overlay.style.position = 'fixed';
+      overlay.style.top = '0';
+      overlay.style.left = '0';
+      overlay.style.width = '100%';
+      overlay.style.height = '100%';
+      overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+      overlay.style.display = 'flex';
+      overlay.style.alignItems = 'center';
+      overlay.style.justifyContent = 'center';
+      overlay.style.zIndex = '10000';
+  
+      // Create dialog box
+      const dialog = document.createElement('div');
+      dialog.style.background = '#fff';
+      dialog.style.padding = '20px';
+      dialog.style.borderRadius = '5px';
+      dialog.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+      dialog.innerHTML = `<p>${message}</p>`;
+  
+      // Create buttons container
+      const btnContainer = document.createElement('div');
+      btnContainer.style.marginTop = '10px';
+      btnContainer.style.textAlign = 'right';
+  
+      // Create Yes button
+      const btnYes = document.createElement('button');
+      btnYes.textContent = 'Yes';
+      btnYes.style.marginRight = '10px';
+      btnYes.addEventListener('click', () => {
+        document.body.removeChild(overlay);
+        resolve(true);
+      });
+  
+      // Create No button
+      const btnNo = document.createElement('button');
+      btnNo.textContent = 'No';
+      btnNo.addEventListener('click', () => {
+        document.body.removeChild(overlay);
+        resolve(false);
+      });
+  
+      btnContainer.appendChild(btnYes);
+      btnContainer.appendChild(btnNo);
+      dialog.appendChild(btnContainer);
+      overlay.appendChild(dialog);
+      document.body.appendChild(overlay);
+    });
+  }  
