@@ -11,6 +11,8 @@ let pdfDoc = null; // Holds the loaded PDF document
 let isSubmitting = false;
 let testDuration; // New global variable
 const testId = sessionStorage.getItem("selectedTestId");
+let globalCurrentSection = "";
+let sectionNames = null;
 
 document.addEventListener("DOMContentLoaded", async () => {
     console.log("DOM fully loaded. Initializing test...");
@@ -65,128 +67,137 @@ document.addEventListener("DOMContentLoaded", async () => {
 async function loadTest() {
     const pdfUrl = sessionStorage.getItem("testPdf");
     const currentSection = sessionStorage.getItem("currentSection"); // Ensure it's a number
-
+    const tipologiaEsercizi = sessionStorage.getItem("currentTipologiaEsercizi"); // new
+    const selectedTestType = sessionStorage.getItem("selectedTestType"); // new
+  
     console.log("Fetching test for PDF URL:", pdfUrl);
-
+  
     if (!pdfUrl) {
-        alert("Test PDF not found! Contact your tutor.");
-        console.error("ERROR: No `testPdf` found in sessionStorage.");
-        window.location.href = "test_selection.html";
-        return;
+      alert("Test PDF not found! Contact your tutor.");
+      console.error("ERROR: No `testPdf` found in sessionStorage.");
+      window.location.href = "test_selection.html";
+      return;
     }
-
+  
     let studentId = sessionStorage.getItem("studentId");
-
-    // If `studentId` is missing, fetch it again
+  
+    // If `studentId` is missing, fetch it again (existing code)...
     if (!studentId) {
-        console.log("🔄 Fetching student ID from Supabase...");
-
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-
-        if (sessionError || !sessionData || !sessionData.session) {
-            console.error("❌ ERROR: No active session found.");
-            alert("Session expired. Please log in again.");
-            window.location.href = "login.html";
-            return;
-        }
-
-        studentId = sessionData.session.user.id;
-        sessionStorage.setItem("studentId", studentId); // ✅ Save it again
-        console.log("✅ Student ID restored:", studentId);
+      console.log("🔄 Fetching student ID from Supabase...");
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !sessionData || !sessionData.session) {
+        console.error("❌ ERROR: No active session found.");
+        alert("Session expired. Please log in again.");
+        window.location.href = "login.html";
+        return;
+      }
+      studentId = sessionData.session.user.id;
+      sessionStorage.setItem("studentId", studentId); // ✅ Save it again
+      console.log("✅ Student ID restored:", studentId);
     }
-
+  
     console.log("🎯 Student ID:", studentId);
-    
-    // Load PDF first, but don't render yet
+  
+    // Load PDF first, but don't render yet.
     await loadPdf(pdfUrl);
-    // Fetch page numbers where question numbers 20, 30, and 40 appear
-    const { data: boundaries, error: boundaryError } = await supabase
+ 
+    // If tipologia_esercizi is "Simulazioni", fetch dynamic boundaries and section names.
+    if (currentSection === "Simulazioni") {
+      globalCurrentSection = currentSection; // store it globally
+      const { data: simulazioniData, error: simulazioniError } = await supabase
+        .from("simulazioni_parti")
+        .select("boundaries, nome_parti")
+        .eq("tipologia_test", selectedTestType)
+        .single();
+      if (simulazioniError || !simulazioniData) {
+        console.error("Error fetching simulazioni boundaries:", simulazioniError);
+        return;
+      }
+      const boundariesFilter = simulazioniData.boundaries; // expects an array of integers
+      sectionNames = simulazioniData.nome_parti; // expects an array of section names
+      console.log("Fetched dynamic boundaries:", boundariesFilter);
+      console.log("Fetched section names:", sectionNames);
+
+      // Now fetch the page numbers for questions whose question_number is in our dynamic boundaries array.
+      const { data: boundaries, error: boundaryError } = await supabase
         .from("questions")
         .select("question_number, page_number")
         .eq("pdf_url", pdfUrl)
-        .in("question_number", [20, 30, 40])
+        .in("question_number", boundariesFilter)
         .order("question_number");
-
-    if (boundaryError) {
+      if (boundaryError) {
         console.error("❌ Error fetching section boundaries:", boundaryError.message);
         return;
-    }
+      }
+      console.log("📌 Section Boundaries (Page Numbers):", boundaries);
 
-    console.log("📌 Section Boundaries (Page Numbers):", boundaries);
+      // Reset the section boundaries objects.
+      sectionPageBoundaries = {};
+      sectionPageStartPages = {};
 
-    // Store dynamically fetched page numbers
-    sectionPageBoundaries = {};
-
-    boundaries.forEach(q => {
-        if (q.question_number === 20) {
-          sectionPageBoundaries[2] = q.question_number;
-          sectionPageStartPages[2] = q.page_number;
-        }
-        if (q.question_number === 30) {
-          sectionPageBoundaries[3] = q.question_number;
-          sectionPageStartPages[3] = q.page_number;
-        }
-        if (q.question_number === 40) {
-          sectionPageBoundaries[4] = q.question_number;
-          sectionPageStartPages[4] = q.page_number;
+      // Map the fetched boundaries to section numbers.
+      boundaries.forEach(q => {
+        const index = boundariesFilter.indexOf(q.question_number);
+        if (index !== -1) {
+          const sectionNumber = index + 2; // first boundary becomes section 2, etc.
+          sectionPageBoundaries[sectionNumber] = q.question_number;
+          sectionPageStartPages[sectionNumber] = q.page_number;
         }
       });
+      console.log("Section Boundaries Loaded:", sectionPageBoundaries);
+    } else {
+      // If not Simulazioni, clear boundaries (they're not used)
+      sectionPageBoundaries = {};
+      sectionPageStartPages = {};
+    }
 
     console.log("Section Boundaries Loaded:", sectionPageBoundaries);
-
-    //Fetch test duration from Supabase
+  
+    // Fetch test duration (existing code)...
     const { data: testData, error: testError } = await supabase
-        .from("student_tests")
-        .select("duration")
-        .eq("auth_uid", studentId)
-        .eq("section", currentSection)
-        .eq("tipologia_esercizi", sessionStorage.getItem("currentTipologiaEsercizi"))
-        .eq("progressivo", sessionStorage.getItem("currentTestProgressivo"))
-        .eq("tipologia_test", sessionStorage.getItem("selectedTestType"))
-        .single();
-
+      .from("student_tests")
+      .select("duration")
+      .eq("auth_uid", studentId)
+      .eq("section", currentSection)
+      .eq("tipologia_esercizi", sessionStorage.getItem("currentTipologiaEsercizi"))
+      .eq("progressivo", sessionStorage.getItem("currentTestProgressivo"))
+      .eq("tipologia_test", selectedTestType)
+      .single();
     if (testError || !testData) {
-        console.error("❌ Error fetching test duration:", testError?.message);
-        alert("Test not found.");
-        return;
+      console.error("❌ Error fetching test duration:", testError?.message);
+      alert("Test not found.");
+      return;
     }
-
     console.log("📌 Test Duration:", testData.duration, "seconds");
-
-    testDuration = testData.duration; // Store the duration for later use   
-
-    // Fetch questions from Supabase
+  
+    testDuration = testData.duration; // Store the duration for later use
+  
+    // Fetch questions (existing code)...
     let { data, error } = await supabase
-        .from("questions")
-        .select("*")
-        .eq("pdf_url", pdfUrl)
-        .order("page_number, question_number", { ascending: true });
-
+      .from("questions")
+      .select("*")
+      .eq("pdf_url", pdfUrl)
+      .order("page_number, question_number", { ascending: true });
     console.log("Supabase Response:", data, error);
-
     if (error) {
-        console.error("ERROR fetching questions:", error);
-        alert("Error loading questions! Check Console.");
-        return;
+      console.error("ERROR fetching questions:", error);
+      alert("Error loading questions! Check Console.");
+      return;
     }
-
     if (!data || data.length === 0) {
-        console.warn("⚠️ WARNING: No questions found for this PDF.");
-        alert("No questions available for this test.");
-        return;
+      console.warn("⚠️ WARNING: No questions found for this PDF.");
+      alert("No questions available for this test.");
+      return;
     }
-
+  
     questions = data;
     totalPages = Math.max(...questions.map(q => q.page_number));
-
-    // Build nav grid once
+  
+    // Build nav grid once and load first page.
     buildQuestionNav();
-
     console.log(`Test loaded successfully! Total pages: ${totalPages}`);
-
-    // ✅ Render only the first page correctly
-    loadQuestionsForPage(1); 
-}
+    loadQuestionsForPage(1);
+  }
 
 async function loadPdf(pdfUrl) {
     console.log("Loading PDF from:", pdfUrl);
@@ -322,6 +333,7 @@ pdfViewer.addEventListener("mousemove", (e) => {
 
 
 function loadQuestionsForPage(page) {
+    updateSectionHeader(page);
     const submitButton = document.getElementById("submitAnswers");    
     const prevPageBtn = document.getElementById("prevPage");
     const nextPageBtn = document.getElementById("nextPage");
@@ -336,10 +348,9 @@ function loadQuestionsForPage(page) {
 
     const questionContainer = document.getElementById("question-container");
     if (!questionContainer) {
-        console.error("ERROR: 'question-container' not found in HTML!");
-        return;
+      console.error("ERROR: 'question-container' not found in HTML!");
+      return;
     }
-
     questionContainer.innerHTML = "";
 
     // ✅ First Page Special Display: Hide Navigation & Show Welcome Message
@@ -569,7 +580,7 @@ function updateTimer() {
         // ✅ Format Time (MM:SS)
         const minutes = Math.floor(timeLeft / 60000);
         const seconds = Math.floor((timeLeft % 60000) / 1000);
-        timerElement.textContent = `Time Left: ${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
+        timerElement.textContent = `Tempo rimasto: ${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
     }
 
     const timerInterval = setInterval(tick, 1000); // ✅ Update every second
@@ -784,3 +795,53 @@ function buildQuestionNav() {
       document.body.appendChild(overlay);
     });
   }  
+
+  function getCurrentSection() {
+    // Get all questions for the current page.
+    const pageQuestions = questions.filter(q => q.page_number === currentPage + 1);
+    if (pageQuestions.length > 0) {
+      // Use the first question's number (converted to Number) to determine the section.
+      const firstQuestionNumber = Number(pageQuestions[0].question_number);
+      return getSectionForQuestionNumber(firstQuestionNumber);
+    }
+    return 1;
+  }  
+
+  function updateSectionHeader(page) {
+    const questionSection = document.querySelector(".question-section");
+    if (!questionSection) return;
+    
+    // Remove any existing header
+    const oldHeader = questionSection.querySelector(".section-header");
+    if (oldHeader) {
+      oldHeader.remove();
+    }
+    
+    // Do not add header if we're on page 1
+    if (page === 1) return;
+    
+    // Only add header if the test is "Simulazioni" and we have section names available.
+    if (globalCurrentSection === "Simulazioni" && Array.isArray(sectionNames) && sectionNames.length > 0) {
+      // Determine the current section number using your helper.
+      const currentSectionNumber = getCurrentSection(); // This should return a number (e.g. 1,2,3,...)
+      // Use the section name corresponding to that number.
+      // (Assuming sectionNames is an array where the first element corresponds to section 1)
+      const headerText =
+        currentSectionNumber > 0 && currentSectionNumber <= sectionNames.length
+          ? sectionNames[currentSectionNumber - 1]
+          : "Sezione " + currentSectionNumber;
+    
+      const headerDiv = document.createElement("div");
+      headerDiv.className = "section-header";
+      headerDiv.innerHTML = `<p>${headerText}</p>`;
+      
+      // Insert header right after the timer element so it appears above the navigation buttons.
+      const timerElement = document.getElementById("timer");
+      if (timerElement) {
+        timerElement.insertAdjacentElement("afterend", headerDiv);
+      } else {
+        // Fallback: insert at the top of the question section
+        questionSection.insertAdjacentElement("afterbegin", headerDiv);
+      }
+    }
+  }
