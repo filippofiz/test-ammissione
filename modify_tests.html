@@ -16,28 +16,29 @@
   </style>
 </head>
 <body>
-  <div class="upload-section">
-    <h2>Upload Questions</h2>
-    <!-- Radio buttons to choose test type -->
-    <p>Seleziona Tipo di Test CSV:</p>
-    <label>
-      <input type="radio" name="csvTestType" value="PDF" checked>
-      PDF
-    </label>
-    <label>
-      <input type="radio" name="csvTestType" value="Banca Dati">
-      Banca Dati
-    </label>
-    <br><br>
-    <!-- File input for CSV -->
-    <input type="file" id="csvFileInput" accept=".csv">
-    <br><br>
-    <!-- Button to trigger upload and parse -->
-    <button id="uploadCsvBtn">Carica CSV</button>
-    <div id="uploadMessage"></div>
-    <div id="uploadSummary" class="summary"></div>
+  <div class="upload-wrapper"> 
+    <div class="upload-section">
+      <h2>Carica Domande</h2>
+      <!-- Radio buttons to choose test type -->
+      <p>Seleziona Tipo di Test:</p>
+      <label>
+        <input type="radio" name="csvTestType" value="PDF" checked>
+        PDF
+      </label>
+      <label>
+        <input type="radio" name="csvTestType" value="Banca Dati">
+        Banca Dati
+      </label>
+      <br><br>
+      <!-- File input for CSV -->
+      <input type="file" id="csvFileInput" accept=".csv">
+      <br><br>
+      <!-- Button to trigger upload and parse -->
+      <button id="uploadCsvBtn">Carica CSV</button>
+      <div id="uploadMessage"></div>
+      <div id="uploadSummary" class="summary"></div>
+    </div>
   </div>
-
   <!--<div class="upload-section">
     <h2>Upload PDF Tests (future functionality)</h2>
     <button id="uploadPdfBtn">Carica PDF</button>

@@ -676,3 +676,144 @@ button.disabled-green {
   opacity: 0.5;
   cursor: default;
 }
+
+/* --- Uploaded Tests Section Styling --- */
+#uploadedTestsContainer {
+  margin: 30px auto;
+  max-width: 600px;
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  padding: 20px;
+  font-family: 'Arial', sans-serif;
+}
+
+#uploadedTestsContainer h3 {
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+  text-align: center;
+  color: #1C2545;
+}
+
+#uploadedTestsDropdown {
+  width: 100%;
+  padding: 10px 15px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+  margin-bottom: 20px;
+  background: #fafafa;
+}
+
+#uploadedTestsList {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+#uploadedTestsList li {
+  padding: 12px 15px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 1rem;
+  color: #333;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+#uploadedTestsList li:last-child {
+  border-bottom: none;
+}
+
+#uploadedTestsList li a {
+  color: #23AC75;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+#uploadedTestsList li a:hover {
+  text-decoration: underline;
+}
+
+/* --- Upload Questions Section Styling --- */
+.upload-section {
+  background-color: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  max-width: 700px;
+  margin: 30px auto;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.upload-section h2 {
+  font-size: 1.8rem;
+  text-align: center;
+  color: #1C2545;
+  margin-bottom: 20px;
+}
+
+.upload-section p {
+  font-size: 1rem;
+  color: #333;
+}
+
+.upload-section label {
+  font-size: 1rem;
+  color: #333;
+  margin-right: 15px;
+}
+
+.upload-section input[type="file"] {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+.upload-section button {
+  display: inline-block;
+  padding: 10px 20px;
+  font-size: 1rem;
+  color: #fff;
+  background-color: #23AC75;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  margin-top: 10px;
+}
+
+.upload-section button:hover {
+  background-color: #1a8c60;
+}
+
+.upload-section .summary {
+  margin-top: 20px;
+  background: #f9f9f9;
+  padding: 20px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+.upload-section .error {
+  color: #d8000c;
+  background-color: #ffbaba;
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+}
+
+.upload-wrapper {
+  display: flex;
+  justify-content: center;
+  /* Optionally, you can add padding or a min-height if needed */
+}
+
+.upload-wrapper .upload-section {
+  width: 100%;
+  max-width: 700px; /* preserves your intended width */
+  /* Remove any display: inline-block if set */
+}

@@ -113,14 +113,25 @@ uploadCsvBtn.addEventListener("click", async () => {
         const tipologia_test = row.tipologia_test.trim();
         const key = `${section}||${tipologia_esercizi}||${progressivo}||${tipologia_test}`;
         if (!groups[key]) {
-          groups[key] = {
-            section,
-            tipologia_esercizi,
-            progressivo,
-            tipologia_test,
-            count: 0,
-            pdf_url: "" // Will be set after PDF upload.
-          };
+          if (targetTable === "questions_bancaDati") {
+            groups[key] = {
+              section,
+              tipologia_esercizi,
+              progressivo,
+              tipologia_test,
+              count: 0,
+              images: {}  // For Banca Dati, store image URLs per question.
+            };
+          } else {
+            groups[key] = {
+              section,
+              tipologia_esercizi,
+              progressivo,
+              tipologia_test,
+              count: 0,
+              pdf_url: ""  // For PDF tests.
+            };
+          }
         }
         groups[key].count++;
       });
@@ -142,11 +153,32 @@ uploadCsvBtn.addEventListener("click", async () => {
       groupArray.forEach((group, idx) => {
         const { section, tipologia_esercizi, progressivo, tipologia_test, count } = group;
         const groupKey = `${section}||${tipologia_esercizi}||${progressivo}||${tipologia_test}`;
-        summaryHtml += `<li id="group-${idx}">
+        if (targetTable === "questions_bancaDati") {
+          summaryHtml += `<li id="group-${idx}">
+            ${tipologia_esercizi} ${progressivo} di ${section} del ${tipologia_test} [${count} domande]
+            <ul>`;
+          // For each row in csvData that belongs to this group, list the question.
+          const filteredRows = csvData.filter(row => {
+            const key = `${row.section.trim()}||${row.tipologia_esercizi.trim()}||${row.progressivo.trim()}||${row.tipologia_test.trim()}`;
+            return key === groupKey;
+          });
+          filteredRows.sort((a, b) => Number(a.question_number) - Number(b.question_number));
+          filteredRows.forEach(row => {
+            summaryHtml += `<li>
+              Domanda ${row.question_number}
+              <button onclick="uploadImageForGroupQuestion('${groupKey}', ${idx}, '${row.question_number}')">Upload Image</button>
+              <span id="imageStatus-${idx}-${row.question_number}"></span>
+            </li>`;
+          });
+          summaryHtml += `</ul></li>`;
+        } else {
+          // Existing branch for PDF tests.
+          summaryHtml += `<li id="group-${idx}">
             ${tipologia_esercizi} ${progressivo} di ${section} del ${tipologia_test} [${count} domande]
             <button onclick="uploadPdfForGroup('${groupKey}', ${idx})">Upload PDF</button>
             <span id="pdfStatus-${idx}"></span>
           </li>`;
+        }
       });
       summaryHtml += "</ol>";
       uploadSummaryDiv.innerHTML = summaryHtml;
@@ -155,14 +187,22 @@ uploadCsvBtn.addEventListener("click", async () => {
       const confirmUploadBtn = document.createElement("button");
       confirmUploadBtn.textContent = "Conferma Upload CSV";
       confirmUploadBtn.addEventListener("click", () => {
-        // Before uploading CSV data, assign each row the pdf_url based on its group.
+        // Before uploading CSV data, assign each row the proper URL based on its group.
         csvData.forEach(row => {
           const key = `${row.section.trim()}||${row.tipologia_esercizi.trim()}||${row.progressivo.trim()}||${row.tipologia_test.trim()}`;
-          if (groups[key] && groups[key].pdf_url) {
-            row.pdf_url = groups[key].pdf_url;
+          if (targetTable === "questions_bancaDati") {
+            if (groups[key] && groups[key].images && groups[key].images[row.question_number]) {
+              row.image_url = groups[key].images[row.question_number];
+            }
+          } else {
+            if (groups[key] && groups[key].pdf_url) {
+              row.pdf_url = groups[key].pdf_url;
+            }
           }
         });
-        uploadDataToSupabase(csvData, targetTable);
+        // Filter each row so that only the expected columns are sent.
+        const filteredData = csvData.map(row => filterRow(row, expectedColumns));
+        uploadDataToSupabase(filteredData, targetTable);
       });
       uploadSummaryDiv.appendChild(confirmUploadBtn);
     },
@@ -248,12 +288,182 @@ async function uploadDataToSupabase(data, tableName) {
   const { error } = await supabase
     .from(tableName)
     .insert(data);
-  if (error) {
-    uploadMessageDiv.innerHTML = `<p class='error'>Errore nell'upload: ${error.message}</p>`;
-  } else {
-    uploadMessageDiv.innerHTML = `<p>Upload completato con successo!</p>`;
-  }
+    if (error) {
+      uploadMessageDiv.innerHTML = `<p class='error'>Errore nell'upload: ${error.message}</p>`;
+    } else {
+      uploadMessageDiv.innerHTML = `<p>Upload completato con successo! Ricaricamento...</p>`;
+      setTimeout(() => {
+        location.reload();
+      }, 1000); // wait 1 second before refreshing
+    }
 }
 
 // Expose the function to the global scope for inline onclick usage.
 window.uploadPdfForGroup = uploadPdfForGroup;
+
+// --- Addition: List of Already Uploaded Tests ---
+
+async function fetchUploadedTests() {
+  // Query both tables for the desired fields.
+  const { data: questionsData, error: error1 } = await supabase
+    .from("questions")
+    .select("section, tipologia_esercizi, progressivo, tipologia_test");
+  const { data: bancaData, error: error2 } = await supabase
+    .from("questions_bancaDati")
+    .select("section, tipologia_esercizi, progressivo, tipologia_test");
+
+  if (error1 || error2) {
+    console.error("Error fetching tests:", error1, error2);
+    return;
+  }
+
+  // Merge results from both tables.
+  const allTests = [...questionsData, ...bancaData];
+
+  // Remove duplicates based on the combination of section, tipologia_esercizi, progressivo, and tipologia_test.
+  const uniqueTestsMap = new Map();
+  allTests.forEach(test => {
+    const key = `${test.section}||${test.tipologia_esercizi}||${test.progressivo}||${test.tipologia_test}`;
+    if (!uniqueTestsMap.has(key)) {
+      uniqueTestsMap.set(key, test);
+    }
+  });
+  const uniqueTests = Array.from(uniqueTestsMap.values());
+
+  // Create a set of unique tipologia_test values.
+  const tipologiaSet = new Set();
+  uniqueTests.forEach(test => tipologiaSet.add(test.tipologia_test));
+  const tipologiaArray = Array.from(tipologiaSet).sort();
+
+  // Create (or reuse) a container for the dropdown and list.
+  let container = document.getElementById("uploadedTestsContainer");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "uploadedTestsContainer";
+    // Optionally, style or append the container where desired (e.g., at the end of the page).
+    document.body.appendChild(container);
+  }
+  container.innerHTML = "<h3>Test già caricati</h3>";
+
+  // Create the dropdown for tipologia_test.
+  let dropdown = document.getElementById("uploadedTestsDropdown");
+  if (!dropdown) {
+    dropdown = document.createElement("select");
+    dropdown.id = "uploadedTestsDropdown";
+    container.appendChild(dropdown);
+  }
+  dropdown.innerHTML = "";
+  tipologiaArray.forEach(tipologia => {
+    const option = document.createElement("option");
+    option.value = tipologia;
+    option.textContent = tipologia;
+    dropdown.appendChild(option);
+  });
+
+  // Create a container for the list of tests.
+  let listContainer = document.getElementById("uploadedTestsList");
+  if (!listContainer) {
+    listContainer = document.createElement("ul");
+    listContainer.id = "uploadedTestsList";
+    container.appendChild(listContainer);
+  }
+
+  // Function to update the list based on the selected tipologia_test.
+  function updateUploadedTestsList(selectedTipologia) {
+    const filteredTests = uniqueTests.filter(test => test.tipologia_test === selectedTipologia);
+    listContainer.innerHTML = "";
+    filteredTests.forEach(test => {
+      const li = document.createElement("li");
+      li.textContent = `${test.section}: ${test.tipologia_esercizi} ${test.progressivo}`;
+      listContainer.appendChild(li);
+    });
+  }
+
+  // Update list when the dropdown value changes.
+  dropdown.addEventListener("change", () => {
+    updateUploadedTestsList(dropdown.value);
+  });
+
+  // Initially populate the list with the first tipologia_test.
+  if (tipologiaArray.length > 0) {
+    updateUploadedTestsList(tipologiaArray[0]);
+  }
+}
+
+// Call fetchUploadedTests after the DOM is loaded.
+document.addEventListener("DOMContentLoaded", () => {
+  fetchUploadedTests();
+});
+
+async function uploadImageForGroupQuestion(groupKey, groupIdx, questionNumber) {
+  // Create (or reuse) a hidden file input for the image upload.
+  let fileInput = document.getElementById(`imageInput-${groupIdx}-${questionNumber}`);
+  if (!fileInput) {
+    fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.accept = "image/*";
+    fileInput.id = `imageInput-${groupIdx}-${questionNumber}`;
+    fileInput.style.display = "none";
+    document.body.appendChild(fileInput);
+  }
+  
+  fileInput.onchange = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (!confirm("Sei sicuro di voler caricare questa immagine per la domanda?")) return;
+    
+    // Define a unique file path using the group key, question number, and timestamp.
+    const filePath = `${groupKey.replace(/\|\|/g, "_")}_${questionNumber}_${Date.now()}.jpg`;
+    
+    // Upload the image file to Supabase storage bucket "images".
+    const { data: uploadData, error: uploadError } = await supabase
+      .storage
+      .from("images")
+      .upload(filePath, file);
+      console.log("uploadData: ", uploadData);
+      console.log("filePath: ", filePath);
+    if (uploadError) {
+      document.getElementById(`imageStatus-${groupIdx}-${questionNumber}`).innerText = "Errore upload immagine.";
+      console.error("Errore upload immagine:", uploadError.message);
+      return;
+    }
+    
+    // Retrieve the public URL for the uploaded image.
+    const { data, error: dataError } = supabase
+      .storage
+      .from("images")
+      .getPublicUrl(filePath);
+    if (dataError) {
+      document.getElementById(`imageStatus-${groupIdx}-${questionNumber}`).innerText = "Errore generazione URL.";
+      console.error("Errore generazione URL:", dataError.message);
+      return;
+    }
+    
+    let publicURL = data.publicUrl;
+    console.log("Image uploaded to:", publicURL);
+    
+    // Save the public URL in the group object as 'image_url'
+    for (const key in groups) {
+      if (key === groupKey) {
+        groups[key].images[questionNumber] = publicURL;
+      }
+    }
+    // Update the status display.
+    document.getElementById(`imageStatus-${groupIdx}-${questionNumber}`).innerHTML = `<br><em>Immagine caricata:</em> <a href="${publicURL}" target="_blank">${publicURL}</a>`;
+  };
+  
+  // Trigger the file selection dialog.
+  fileInput.click();
+}
+
+window.uploadImageForGroupQuestion = uploadImageForGroupQuestion;
+
+function filterRow(row, allowedKeys) {
+  const newRow = {};
+  allowedKeys.forEach(key => {
+    if (row.hasOwnProperty(key)) {
+      newRow[key] = row[key];
+    }
+  });
+  return newRow;
+}
