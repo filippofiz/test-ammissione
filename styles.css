@@ -827,3 +827,10 @@ button.disabled-green {
   font-weight: bold;
   border-radius: 4px;
 }
+
+/* Light versions for Argomento rows */
+.correct-light   { background-color: rgba(76, 175, 80, 0.4); color: black; }
+.incorrect-light { background-color: rgba(244, 67, 54, 0.4); color: black; }
+.x-answer-light  { background-color: rgba(33, 150, 243, 0.4); color: black; }
+.y-answer-light  { background-color: rgba(255, 152, 0, 0.4); color: black; }
+.z-answer-light  { background-color: rgba(158, 158, 158, 0.4); color: black; }

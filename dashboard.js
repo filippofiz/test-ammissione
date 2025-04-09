@@ -8,7 +8,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const studentId = sessionStorage.getItem("selectedStudentId");
 const studentName = sessionStorage.getItem("selectedStudentName");
 const globalTestType = sessionStorage.getItem("selectedTestType");
-document.getElementById("dashboardTitle").textContent = `${studentName}'s Dashboard`;
+document.getElementById("dashboardTitle").textContent = `Risultati dei test di ${studentName}`;
 
 if (!studentId) {
   alert("Error: No student selected.");
@@ -38,7 +38,7 @@ async function loadDashboard() {
   barCanvas.height = 400;
   barCanvas.style.display = "none";
 
-  // Make sure all four filters are visible.
+  // Make sure all filters are visible.
   document.getElementById("sectionFilter").style.display = "inline-block";
   document.getElementById("tipologiaFilter").style.display = "inline-block";
   document.getElementById("progressivoFilter").style.display = "inline-block";
@@ -62,7 +62,7 @@ async function loadDashboard() {
     return;
   }
 
-  // Fetch questions (used for overall data and for argomento filter).
+  // Fetch questions.
   const { data: questions, error: questionsError } = await supabase
     .from(questionTable)
     .select("id, section, tipologia_esercizi, progressivo, argomento")
@@ -75,8 +75,7 @@ async function loadDashboard() {
   globalAnswers = answers;
   globalQuestions = questions;
 
-  // Fetch student_tests data for the current student and test type.
-  // Note: We also select the "status" column.
+  // Fetch student_tests data.
   const { data: testsData, error: testsError } = await supabase
     .from("student_tests")
     .select("section, tipologia_esercizi, progressivo, status, id")
@@ -88,35 +87,42 @@ async function loadDashboard() {
   }
   studentTestsData = testsData;
 
-  // Populate filters (only using tests with status "completed" for section, tipologia, progressivo)
   populateFiltersFromStudentTests(studentTestsData);
+  populateAnswersFilter();
 
-  // Add change listeners.
   document.getElementById("sectionFilter").addEventListener("change", () => {
     populateDependentFilters();
     filterDashboard();
+    updateInteractiveTable();
   });
-  document.getElementById("tipologiaFilter").addEventListener("change", filterDashboard);
-  document.getElementById("progressivoFilter").addEventListener("change", filterDashboard);
-  document.getElementById("argomentoFilter").addEventListener("change", filterDashboard);
+  document.getElementById("tipologiaFilter").addEventListener("change", () => {
+    filterDashboard();
+    updateInteractiveTable();
+  });
+  document.getElementById("progressivoFilter").addEventListener("change", () => {
+    filterDashboard();
+    updateInteractiveTable();
+  });
+  document.getElementById("argomentoFilter").addEventListener("change", () => {
+    filterDashboard();
+    updateInteractiveTable();
+  });
+  document.getElementById("answersFilter").addEventListener("change", updateInteractiveTable);
 
-  // Initially update the dashboard.
   filterDashboard();
+  updateInteractiveTable();
 }
 
-// Populate filters (section, tipologia, progressivo) from student_tests data, using only completed tests.
 function populateFiltersFromStudentTests(testsData) {
   const sectionFilter = document.getElementById("sectionFilter");
   const tipologiaFilter = document.getElementById("tipologiaFilter");
   const progressivoFilter = document.getElementById("progressivoFilter");
 
-  // Use only tests with status "completed".
   const completedTests = testsData.filter(test => test.status === "completed");
 
-  // Clear filters and add default "all" option.
-  sectionFilter.innerHTML = `<option value="all">All Sections</option>`;
-  tipologiaFilter.innerHTML = `<option value="all">All Tipologie</option>`;
-  progressivoFilter.innerHTML = `<option value="all">All Progressivi</option>`;
+  sectionFilter.innerHTML = `<option value="all">Tutte le Sezioni</option>`;
+  tipologiaFilter.innerHTML = `<option value="all">Tutte le Tipologie</option>`;
+  progressivoFilter.innerHTML = `<option value="all">Tutti i Progressivi</option>`;
 
   const sections = Array.from(new Set(completedTests.map(test => test.section)));
   const tipologie = Array.from(new Set(completedTests.map(test => test.tipologia_esercizi)));
@@ -133,9 +139,18 @@ function populateFiltersFromStudentTests(testsData) {
   });
 }
 
-// When a section is chosen, update dependent filters.
-// Tipologia and Progressivo come from student_tests data (for that section, using completed tests).
-// Argomento comes from the questions table, filtered by the chosen section.
+function populateAnswersFilter() {
+  const answersSelect = document.getElementById("answersFilter");
+  answersSelect.innerHTML = "";
+  const options = ["all", "corretto", "incorretto", "insicuro", "non ho idea", "non dato"];
+  options.forEach(o => {
+    const opt = document.createElement("option");
+    opt.value = o;
+    opt.textContent = o;
+    answersSelect.appendChild(opt);
+  });
+}
+
 function populateDependentFilters() {
   const sectionVal = document.getElementById("sectionFilter").value;
   const tipologiaFilter = document.getElementById("tipologiaFilter");
@@ -147,8 +162,8 @@ function populateDependentFilters() {
     filteredTests = filteredTests.filter(test => test.section.toString() === sectionVal);
   }
 
-  tipologiaFilter.innerHTML = `<option value="all">All Tipologie</option>`;
-  progressivoFilter.innerHTML = `<option value="all">All Progressivi</option>`;
+  tipologiaFilter.innerHTML = `<option value="all">Tutte le Tipologie</option>`;
+  progressivoFilter.innerHTML = `<option value="all">Tutti i Progressivi</option>`;
   const tipologie = Array.from(new Set(filteredTests.map(test => test.tipologia_esercizi)));
   const progressivi = Array.from(new Set(filteredTests.map(test => test.progressivo)));
   tipologie.forEach(t => {
@@ -158,12 +173,11 @@ function populateDependentFilters() {
     progressivoFilter.innerHTML += `<option value="${p}">${p}</option>`;
   });
 
-  // For argomento, use globalQuestions filtered by section.
   let filteredQuestions = globalQuestions;
   if (sectionVal !== "all") {
     filteredQuestions = filteredQuestions.filter(q => q.section.toString() === sectionVal);
   }
-  argomentoFilter.innerHTML = `<option value="all">All Argomenti</option>`;
+  argomentoFilter.innerHTML = `<option value="all">Tutti gli Argomenti</option>`;
   const argomenti = Array.from(new Set(filteredQuestions.map(q => q.argomento).filter(a => a)));
   argomenti.forEach(a => {
     argomentoFilter.innerHTML += `<option value="${a}">${a}</option>`;
@@ -171,7 +185,6 @@ function populateDependentFilters() {
 }
 
 function filterDashboard() {
-  // Get filter values.
   const sectionVal = document.getElementById("sectionFilter").value;
   const tipologiaVal = document.getElementById("tipologiaFilter").value;
   const progressivoVal = document.getElementById("progressivoFilter").value;
@@ -179,7 +192,6 @@ function filterDashboard() {
   const scoreDisplay = document.getElementById("scoreDisplay");
   const scoreDisplay2 = document.getElementById("scoreDisplay2");
 
-  // Filter student_tests data by section, tipologia, and progressivo.
   let filteredTests = studentTestsData.filter(test => test.status === "completed");
   if (sectionVal !== "all") {
     filteredTests = filteredTests.filter(q => q.section.toString() === sectionVal);
@@ -191,35 +203,22 @@ function filterDashboard() {
     filteredTests = filteredTests.filter(q => Number(q.progressivo) === Number(progressivoVal));
   }
 
-  console.log("Filtered Tests:", filteredTests);
-  // For argomento, filter globalQuestions by section and by chosen argomento.
   let filteredQuestions = globalQuestions;
   if (sectionVal !== "all") {
     filteredQuestions = filteredQuestions.filter(q => q.section.toString() === sectionVal);
   }
-  
   if (argomentoVal !== "all") {
     filteredQuestions = filteredQuestions.filter(q => q.argomento.toString() === argomentoVal);
   }
-
   if (progressivoVal !== "all") {
     filteredQuestions = filteredQuestions.filter(q => Number(q.progressivo) === Number(progressivoVal));
-  }  
+  }
   
-  console.log("Filtered Questions:", filteredQuestions);
-
-  // Allowed question IDs from filtered student_tests data.
   const allowedQuestionIds = new Set(filteredQuestions.map(q => q.id));
-  console.log("Allowed Question IDs:", allowedQuestionIds);
-  console.log("Global Answers:", globalAnswers);
   const filteredAnswers = globalAnswers.filter(ans => allowedQuestionIds.has(ans.question_id));
 
-  console.log("Filtered Answers:", filteredAnswers);
-
-  // Update the pie chart.
   updateChart(filteredAnswers);
 
-  // For the bar chart: if section, tipologia, and progressivo are all "all" and argomento is "all", show the bar chart.
   const barCanvas = document.getElementById("barChart");
   if (
     sectionVal === "all" &&
@@ -237,7 +236,6 @@ function filterDashboard() {
     barCanvas.style.display = "none";
   }
 
-  // Show scores only if all four filters are "all".
   if (
     sectionVal != "all" &&
     tipologiaVal != "all" &&
@@ -276,12 +274,12 @@ function updateChart(answers) {
   if (chartInstance) {
     chartInstance.destroy();
   }
-  const categories = { correct: 0, wrong: 0, insicuro: 0, "non ho idea": 0, "non dato": 0 };
+  const categories = { corretto: 0, incorretto: 0, insicuro: 0, "non ho idea": 0, "non dato": 0 };
   answers.forEach(d => {
     if (d.auto_score === 1) {
-      categories.correct++;
+      categories.corretto++;
     } else if (d.auto_score === 0 && !["x", "y", "z"].includes(d.answer)) {
-      categories.wrong++;
+      categories.incorretto++;
     } else if (d.answer === "x") {
       categories.insicuro++;
     } else if (d.answer === "y") {
@@ -322,12 +320,11 @@ function updateChart(answers) {
 }
 
 function updateBarChart(filteredAnswers, filteredQuestions) {
-  // Group by section and exercise (using test_number) for the chosen argomento.
   const groups = {};
   filteredQuestions.forEach(q => {
     const key = `${q.section}-${q.test_number}`;
     if (!groups[key]) {
-      groups[key] = { total: 0, correct: 0, section: q.section, test_number: q.test_number };
+      groups[key] = { total: 0, corretto: 0, section: q.section, test_number: q.test_number };
     }
     groups[key].total++;
   });
@@ -338,7 +335,7 @@ function updateBarChart(filteredAnswers, filteredQuestions) {
   filteredAnswers.forEach(ans => {
     const key = questionGroupMap[ans.question_id];
     if (key && ans.auto_score === 1) {
-      groups[key].correct++;
+      groups[key].corretto++;
     }
   });
   const groupKeys = Object.keys(groups).sort((a, b) => {
@@ -406,6 +403,331 @@ function updateBarChart(filteredAnswers, filteredQuestions) {
 
 function goBack() {
   window.history.back();
+}
+
+// Build a nested header structure for the interactive table.
+function buildHeaderStructureInt(questionsData) {
+  const structure = {};
+  questionsData.forEach(q => {
+    if (!structure[q.section]) {
+      structure[q.section] = {};
+    }
+    if (!structure[q.section][q.tipologia_esercizi]) {
+      structure[q.section][q.tipologia_esercizi] = new Set();
+    }
+    structure[q.section][q.tipologia_esercizi].add(q.progressivo);
+  });
+  for (const section in structure) {
+    for (const tipologia in structure[section]) {
+      structure[section][tipologia] = Array.from(structure[section][tipologia]).sort((a, b) => a - b);
+    }
+  }
+  return structure;
+}
+
+// Flatten header structure into an ordered array.
+function buildHeaderDefinitionsInt(structure) {
+  const headerDefs = [];
+  const sections = Object.keys(structure).sort();
+  sections.forEach(section => {
+    const tipologie = Object.keys(structure[section]).sort();
+    tipologie.forEach(tipologia => {
+      structure[section][tipologia].forEach(progressivo => {
+        headerDefs.push({ section, tipologia, progressivo });
+      });
+    });
+  });
+  return headerDefs;
+}
+
+function generateInteractiveTable(questionsData, answersData) {
+  const container = document.getElementById("interactiveTableContainer");
+  container.innerHTML = "";
+  const table = document.createElement("table");
+
+  const answerFilterVal = document.getElementById("answersFilter").value;
+  const displayAll = (answerFilterVal === "all");
+  let selectedIndex = null;
+  if (!displayAll) {
+    const mapping = { "corretto": 0, "incorretto": 1, "insicuro": 2, "non ho idea": 3, "non dato": 4 };
+    selectedIndex = mapping[answerFilterVal];
+  }
+
+  const headerStructure = buildHeaderStructureInt(questionsData);
+  const headerDefs = buildHeaderDefinitionsInt(headerStructure);
+
+  const thead = document.createElement("thead");
+
+  // Header Row 1: Sections
+  const headerRow1 = document.createElement("tr");
+  const emptyTh = document.createElement("th");
+  emptyTh.rowSpan = 4;
+  emptyTh.textContent = "";
+  headerRow1.appendChild(emptyTh);
+
+  Object.keys(headerStructure).sort().forEach(section => {
+    let colCount = 0;
+    const tipologie = headerStructure[section];
+    for (const tipologia in tipologie) {
+      colCount += tipologie[tipologia].length * (displayAll ? 5 : 1);
+    }
+    const th = document.createElement("th");
+    th.textContent = section;
+    th.colSpan = colCount;
+    headerRow1.appendChild(th);
+  });
+  thead.appendChild(headerRow1);
+
+  // Header Row 2: Tipologia
+  const headerRow2 = document.createElement("tr");
+  Object.keys(headerStructure).sort().forEach(section => {
+    const tipologie = headerStructure[section];
+    Object.keys(tipologie).sort().forEach(tipologia => {
+      const colCount = tipologie[tipologia].length * (displayAll ? 5 : 1);
+      const th = document.createElement("th");
+      th.textContent = tipologia;
+      th.colSpan = colCount;
+      headerRow2.appendChild(th);
+    });
+  });
+  thead.appendChild(headerRow2);
+
+  // Header Row 3: Progressivo
+  const headerRow3 = document.createElement("tr");
+  Object.keys(headerStructure).sort().forEach(section => {
+    const tipologie = headerStructure[section];
+    Object.keys(tipologie).sort().forEach(tipologia => {
+      tipologie[tipologia].forEach(progressivo => {
+        const th = document.createElement("th");
+        th.textContent = progressivo;
+        th.colSpan = (displayAll ? 5 : 1);
+        th.classList.add("double-border-right");
+        headerRow3.appendChild(th);
+      });
+    });
+  });
+  thead.appendChild(headerRow3);
+
+  // Header Row 4: Answers
+  const headerRow4 = document.createElement("tr");
+  headerDefs.forEach(() => {
+    if (displayAll) {
+      ["Corretto", "Incorretto", "Insicuro", "Non ho idea", "Non dato"].forEach(label => {
+        const th = document.createElement("th");
+        th.textContent = label;
+        headerRow4.appendChild(th);
+      });
+    } else {
+      const labels = ["Corretto", "Incorretto", "Insicuro", "Non ho idea", "Non dato"];
+      const th = document.createElement("th");
+      th.textContent = labels[selectedIndex];
+      if (selectedIndex === 4) { // After last answer category
+        th.classList.add("double-border-right");
+      }
+      headerRow4.appendChild(th);
+    }
+  });
+  thead.appendChild(headerRow4);
+
+  table.appendChild(thead);
+
+  // Body
+  const tbody = document.createElement("tbody");
+
+  const answersMap = {};
+  answersData.forEach(ans => {
+    answersMap[ans.question_id] = ans;
+  });
+
+  const questionsMap = {};
+  questionsData.forEach(q => {
+    const key = q.section + "|" + q.tipologia_esercizi + "|" + q.progressivo + "|" + q.argomento;
+    if (!questionsMap[key]) {
+      questionsMap[key] = [];
+    }
+    questionsMap[key].push(q);
+  });
+
+  const argomenti = Array.from(new Set(questionsData.map(q => q.argomento))).sort();
+  const totals = {};
+  headerDefs.forEach((def, idx) => {
+    totals[idx] = displayAll ? [0, 0, 0, 0, 0] : [0];
+  });
+
+  argomenti.forEach(argomento => {
+    const tr = document.createElement("tr");
+    const thArg = document.createElement("th");
+    thArg.textContent = argomento;
+    tr.appendChild(thArg);
+
+    headerDefs.forEach((def, idx) => {
+      const key = def.section + "|" + def.tipologia + "|" + def.progressivo + "|" + argomento;
+      const counts = [0, 0, 0, 0, 0];
+
+      if (questionsMap[key]) {
+        questionsMap[key].forEach(q => {
+          const ansRecord = answersMap[q.id];
+          if (ansRecord) {
+            if (ansRecord.auto_score === 1) counts[0]++;
+            else if (ansRecord.answer === "x") counts[2]++;
+            else if (ansRecord.answer === "y") counts[3]++;
+            else if (ansRecord.answer === "z") counts[4]++;
+            else counts[1]++;
+          }
+        });
+      }
+
+      const total = counts.reduce((a, b) => a + b, 0);
+
+      if (displayAll) {
+        for (let i = 0; i < 5; i++) {
+          const td = document.createElement("td");
+          if (total === 0) {
+            td.textContent = "-";
+          } else {
+            if (counts[i] === 0) {
+              td.textContent = "0";
+            } else {
+              td.textContent = `${counts[i]} (${((counts[i] / total) * 100).toFixed(0)}%)`;
+            }
+          }
+          if (counts[i] > 0) {
+            if (i === 0) td.classList.add("correct-light");
+            if (i === 1) td.classList.add("incorrect-light");
+            if (i === 2) td.classList.add("x-answer-light");
+            if (i === 3) td.classList.add("y-answer-light");
+            if (i === 4) td.classList.add("z-answer-light");
+            totals[idx][i] += counts[i];
+          }
+          if (i === 4) {  // After last column of a progressivo
+            td.classList.add("double-border-right");
+          }
+          tr.appendChild(td);
+        }
+      } else {
+        const td = document.createElement("td");
+        if (total === 0) {
+          td.textContent = "-";
+        } else {
+          if (counts[selectedIndex] > 0) {
+            td.textContent = `${counts[selectedIndex]} (${((counts[selectedIndex] / total) * 100).toFixed(0)}%)`;
+          } else {
+            td.textContent = counts[selectedIndex];
+          }
+        }
+        if (counts[selectedIndex] > 0) {
+          if (selectedIndex === 0) td.classList.add("correct-light");
+          if (selectedIndex === 1) td.classList.add("incorrect-light");
+          if (selectedIndex === 2) td.classList.add("x-answer-light");
+          if (selectedIndex === 3) td.classList.add("y-answer-light");
+          if (selectedIndex === 4) td.classList.add("z-answer-light");
+          totals[idx][0] += counts[selectedIndex];
+        }
+        tr.appendChild(td);
+      }
+    });
+    tbody.appendChild(tr);
+  });
+
+  // Totals Row
+  const totalTr = document.createElement("tr");
+  const thTotal = document.createElement("th");
+  thTotal.textContent = "Totale";
+  totalTr.appendChild(thTotal);
+
+  headerDefs.forEach((def, idx) => {
+    if (displayAll) {
+      const sumTotal = totals[idx].reduce((a, b) => a + b, 0);
+      for (let i = 0; i < 5; i++) {
+        const td = document.createElement("td");
+        if (sumTotal === 0) {
+          td.textContent = "-";
+        } else {
+          if (totals[idx][i] > 0) {
+            td.textContent = `${totals[idx][i]} (${((totals[idx][i] / sumTotal) * 100).toFixed(0)}%)`;
+          }
+          else {
+            td.textContent = totals[idx][i];
+          }
+          
+        }
+        if (totals[idx][i] > 0) {
+          if (i === 0) td.classList.add("corretto");
+          if (i === 1) td.classList.add("incorretto");
+          if (i === 2) td.classList.add("x-answer");
+          if (i === 3) td.classList.add("y-answer");
+          if (i === 4) td.classList.add("z-answer");
+        }
+        if (i === 4) { // After last column of a progressivo
+          td.classList.add("double-border-right");
+        }
+        totalTr.appendChild(td);
+      }
+    } else {
+      const td = document.createElement("td");
+      const val = totals[idx][0];
+      if (val === 0) {
+        td.textContent = "-";
+      } else {
+        td.textContent = `${val} (100%)`;
+      }
+      if (val > 0) {
+        if (selectedIndex === 0) td.classList.add("corretto");
+        if (selectedIndex === 1) td.classList.add("incorretto");
+        if (selectedIndex === 2) td.classList.add("x-answer");
+        if (selectedIndex === 3) td.classList.add("y-answer");
+        if (selectedIndex === 4) td.classList.add("z-answer");
+      }
+      totalTr.appendChild(td);
+    }
+  });
+
+  tbody.appendChild(totalTr);
+  table.appendChild(tbody);
+  container.appendChild(table);
+}
+
+function filterInteractiveTable() {
+  // Use common filters.
+  const sectionVal = document.getElementById("sectionFilter").value;
+  const tipologiaVal = document.getElementById("tipologiaFilter").value;
+  const progressivoVal = document.getElementById("progressivoFilter").value;
+  const argomentoVal = document.getElementById("argomentoFilter").value;
+  const answersVal = document.getElementById("answersFilter").value;
+
+  let filteredQuestions = globalQuestions.slice();
+  if (sectionVal !== "all") {
+    filteredQuestions = filteredQuestions.filter(q => q.section === sectionVal);
+  }
+  if (tipologiaVal !== "all") {
+    filteredQuestions = filteredQuestions.filter(q => q.tipologia_esercizi === tipologiaVal);
+  }
+  if (progressivoVal !== "all") {
+    filteredQuestions = filteredQuestions.filter(q => q.progressivo === Number(progressivoVal));
+  }
+  if (argomentoVal !== "all") {
+    filteredQuestions = filteredQuestions.filter(q => q.argomento === argomentoVal);
+  }
+  if (answersVal !== "all") {
+    filteredQuestions = filteredQuestions.filter(q => {
+      const ansRec = globalAnswers.find(a => a.question_id === q.id);
+      if (!ansRec) return false;
+      if (answersVal === "corretto") return ansRec.auto_score === 1;
+      if (answersVal === "incorretto") return ansRec.auto_score !== 1 && !["x", "y", "z"].includes(ansRec.answer);
+      if (answersVal === "insicuro") return ansRec.answer === "x";
+      if (answersVal === "non ho idea") return ansRec.answer === "y";
+      if (answersVal === "non dato") return ansRec.answer === "z";
+    });
+  }
+  const filteredAnswers = globalAnswers.filter(a => 
+    filteredQuestions.some(q => q.id === a.question_id)
+  );
+  return { filteredQuestions, filteredAnswers };
+}
+
+function updateInteractiveTable() {
+  const { filteredQuestions, filteredAnswers } = filterInteractiveTable();
+  generateInteractiveTable(filteredQuestions, filteredAnswers);
 }
 
 loadDashboard();
