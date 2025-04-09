@@ -88,7 +88,6 @@ async function loadDashboard() {
   studentTestsData = testsData;
 
   populateFiltersFromStudentTests(studentTestsData);
-  populateAnswersFilter();
 
   document.getElementById("sectionFilter").addEventListener("change", () => {
     populateDependentFilters();
@@ -107,7 +106,6 @@ async function loadDashboard() {
     filterDashboard();
     updateInteractiveTable();
   });
-  document.getElementById("answersFilter").addEventListener("change", updateInteractiveTable);
 
   filterDashboard();
   updateInteractiveTable();
@@ -136,18 +134,6 @@ function populateFiltersFromStudentTests(testsData) {
   });
   progressivi.forEach(p => {
     progressivoFilter.innerHTML += `<option value="${p}">${p}</option>`;
-  });
-}
-
-function populateAnswersFilter() {
-  const answersSelect = document.getElementById("answersFilter");
-  answersSelect.innerHTML = "";
-  const options = ["all", "corretto", "incorretto", "insicuro", "non ho idea", "non dato"];
-  options.forEach(o => {
-    const opt = document.createElement("option");
-    opt.value = o;
-    opt.textContent = o;
-    answersSelect.appendChild(opt);
   });
 }
 
@@ -295,19 +281,45 @@ function updateChart(answers) {
       labels: Object.keys(categories),
       datasets: [{
         data: Object.values(categories),
-        backgroundColor: ["green", "red", "blue", "orange", "gray"]
+        backgroundColor: [
+          '#4CAF50', // Green (Correct)
+          '#F44336', // Red (Incorrect)
+          '#2196F3', // Blue (Insicuro)
+          '#FFC107', // Amber (Non ho idea)
+          '#9E9E9E'  // Grey (Non dato)
+        ],
+        borderColor: 'white',
+        borderWidth: 2,
+        hoverOffset: 10
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            usePointStyle: true,
+            pointStyle: 'circle',
+            padding: 20,
+            font: {
+              size: 16,
+              weight: 'bold'
+            }
+          }
+        },
+        tooltip: {
+          bodyFont: {
+            size: 16
+          }
+        },
         datalabels: {
           formatter: (value, context) => {
             const dataArr = context.chart.data.datasets[0].data;
             const total = dataArr.reduce((acc, val) => acc + val, 0);
             if (total === 0) return '';
-            const percentage = ((value / total) * 100).toFixed(2);
+            const percentage = ((value / total) * 100).toFixed(1);
             return Number(percentage) === 0 ? '' : percentage + '%';
           },
           color: "#fff",
@@ -317,6 +329,7 @@ function updateChart(answers) {
     },
     plugins: [ChartDataLabels]
   });
+
 }
 
 function updateBarChart(filteredAnswers, filteredQuestions) {
@@ -444,14 +457,7 @@ function generateInteractiveTable(questionsData, answersData) {
   const container = document.getElementById("interactiveTableContainer");
   container.innerHTML = "";
   const table = document.createElement("table");
-
-  const answerFilterVal = document.getElementById("answersFilter").value;
-  const displayAll = (answerFilterVal === "all");
-  let selectedIndex = null;
-  if (!displayAll) {
-    const mapping = { "corretto": 0, "incorretto": 1, "insicuro": 2, "non ho idea": 3, "non dato": 4 };
-    selectedIndex = mapping[answerFilterVal];
-  }
+  const displayAll = true;
 
   const headerStructure = buildHeaderStructureInt(questionsData);
   const headerDefs = buildHeaderDefinitionsInt(headerStructure);
@@ -693,7 +699,6 @@ function filterInteractiveTable() {
   const tipologiaVal = document.getElementById("tipologiaFilter").value;
   const progressivoVal = document.getElementById("progressivoFilter").value;
   const argomentoVal = document.getElementById("argomentoFilter").value;
-  const answersVal = document.getElementById("answersFilter").value;
 
   let filteredQuestions = globalQuestions.slice();
   if (sectionVal !== "all") {
@@ -707,17 +712,6 @@ function filterInteractiveTable() {
   }
   if (argomentoVal !== "all") {
     filteredQuestions = filteredQuestions.filter(q => q.argomento === argomentoVal);
-  }
-  if (answersVal !== "all") {
-    filteredQuestions = filteredQuestions.filter(q => {
-      const ansRec = globalAnswers.find(a => a.question_id === q.id);
-      if (!ansRec) return false;
-      if (answersVal === "corretto") return ansRec.auto_score === 1;
-      if (answersVal === "incorretto") return ansRec.auto_score !== 1 && !["x", "y", "z"].includes(ansRec.answer);
-      if (answersVal === "insicuro") return ansRec.answer === "x";
-      if (answersVal === "non ho idea") return ansRec.answer === "y";
-      if (answersVal === "non dato") return ansRec.answer === "z";
-    });
   }
   const filteredAnswers = globalAnswers.filter(a => 
     filteredQuestions.some(q => q.id === a.question_id)
