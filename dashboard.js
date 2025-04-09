@@ -19,25 +19,8 @@ if (!studentId) {
 let globalAnswers = [];
 let globalQuestions = [];
 let studentTestsData = []; // Data from student_tests for the current student & test type.
-let chartInstance; // for the pie chart
-let barChartInstance; // for the bar chart
 
 async function loadDashboard() {
-  // Set up the pie chart canvas.
-  const pieCanvas = document.getElementById("resultsChart");
-  pieCanvas.style.maxWidth = "400px";
-  pieCanvas.style.maxHeight = "400px";
-  pieCanvas.width = 400;
-  pieCanvas.height = 400;
-
-  // Set up the bar chart canvas (hidden by default).
-  const barCanvas = document.getElementById("barChart");
-  barCanvas.style.maxWidth = "400px";
-  barCanvas.style.maxHeight = "400px";
-  barCanvas.width = 400;
-  barCanvas.height = 400;
-  barCanvas.style.display = "none";
-
   // Make sure all filters are visible.
   document.getElementById("sectionFilter").style.display = "inline-block";
   document.getElementById("tipologiaFilter").style.display = "inline-block";
@@ -202,25 +185,22 @@ function filterDashboard() {
   
   const allowedQuestionIds = new Set(filteredQuestions.map(q => q.id));
   const filteredAnswers = globalAnswers.filter(ans => allowedQuestionIds.has(ans.question_id));
-
-  updateChart(filteredAnswers);
-
-  const barCanvas = document.getElementById("barChart");
-  if (
-    sectionVal === "all" &&
-    tipologiaVal === "all" &&
-    progressivoVal === "all" &&
-    argomentoVal === "all"
-  ) {
-    barCanvas.style.display = "block";
-    updateBarChart(filteredAnswers, filteredQuestions);
-  } else {
-    if (barChartInstance) {
-      barChartInstance.destroy();
-      barChartInstance = null;
+  // Assuming 'filteredAnswers' is already computed:
+  let correctCount = 0, incorrectCount = 0, insicuroCount = 0, nonHoIdeaCount = 0, nonDatoCount = 0;
+  filteredAnswers.forEach(d => {
+    if (d.auto_score === 1) {
+      correctCount++;
+    } else if (d.auto_score === 0 && !["x", "y", "z"].includes(d.answer)) {
+      incorrectCount++;
+    } else if (d.answer === "x") {
+      insicuroCount++;
+    } else if (d.answer === "y") {
+      nonHoIdeaCount++;
+    } else {
+      nonDatoCount++;
     }
-    barCanvas.style.display = "none";
-  }
+  });
+  updateEChartsPie(correctCount, incorrectCount, insicuroCount, nonHoIdeaCount, nonDatoCount);
 
   if (
     sectionVal != "all" &&
@@ -256,163 +236,6 @@ function calculateScore(answers, modality) {
   return score;
 }
 
-function updateChart(answers) {
-  if (chartInstance) {
-    chartInstance.destroy();
-  }
-  const categories = { corretto: 0, incorretto: 0, insicuro: 0, "non ho idea": 0, "non dato": 0 };
-  answers.forEach(d => {
-    if (d.auto_score === 1) {
-      categories.corretto++;
-    } else if (d.auto_score === 0 && !["x", "y", "z"].includes(d.answer)) {
-      categories.incorretto++;
-    } else if (d.answer === "x") {
-      categories.insicuro++;
-    } else if (d.answer === "y") {
-      categories["non ho idea"]++;
-    } else {
-      categories["non dato"]++;
-    }
-  });
-  const ctx = document.getElementById("resultsChart").getContext("2d");
-  chartInstance = new Chart(ctx, {
-    type: "pie",
-    data: {
-      labels: Object.keys(categories),
-      datasets: [{
-        data: Object.values(categories),
-        backgroundColor: [
-          '#4CAF50', // Green (Correct)
-          '#F44336', // Red (Incorrect)
-          '#2196F3', // Blue (Insicuro)
-          '#FFC107', // Amber (Non ho idea)
-          '#9E9E9E'  // Grey (Non dato)
-        ],
-        borderColor: 'white',
-        borderWidth: 2,
-        hoverOffset: 10
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels: {
-            usePointStyle: true,
-            pointStyle: 'circle',
-            padding: 20,
-            font: {
-              size: 16,
-              weight: 'bold'
-            }
-          }
-        },
-        tooltip: {
-          bodyFont: {
-            size: 16
-          }
-        },
-        datalabels: {
-          formatter: (value, context) => {
-            const dataArr = context.chart.data.datasets[0].data;
-            const total = dataArr.reduce((acc, val) => acc + val, 0);
-            if (total === 0) return '';
-            const percentage = ((value / total) * 100).toFixed(1);
-            return Number(percentage) === 0 ? '' : percentage + '%';
-          },
-          color: "#fff",
-          font: { weight: "bold" }
-        }
-      }
-    },
-    plugins: [ChartDataLabels]
-  });
-
-}
-
-function updateBarChart(filteredAnswers, filteredQuestions) {
-  const groups = {};
-  filteredQuestions.forEach(q => {
-    const key = `${q.section}-${q.test_number}`;
-    if (!groups[key]) {
-      groups[key] = { total: 0, corretto: 0, section: q.section, test_number: q.test_number };
-    }
-    groups[key].total++;
-  });
-  const questionGroupMap = {};
-  filteredQuestions.forEach(q => {
-    questionGroupMap[q.id] = `${q.section}-${q.test_number}`;
-  });
-  filteredAnswers.forEach(ans => {
-    const key = questionGroupMap[ans.question_id];
-    if (key && ans.auto_score === 1) {
-      groups[key].corretto++;
-    }
-  });
-  const groupKeys = Object.keys(groups).sort((a, b) => {
-    const [s1, t1] = a.split("-").map(Number);
-    const [s2, t2] = b.split("-").map(Number);
-    return s1 === s2 ? t1 - t2 : s1 - s2;
-  });
-  const labels = [];
-  const data = [];
-  groupKeys.forEach(key => {
-    const group = groups[key];
-    const percentage = group.total ? (group.correct / group.total * 100) : 0;
-    // Assuming sections_arr and exercises_arr exist for labeling.
-    const sectionName = sections_arr[group.section - 1];
-    let exerciseName;
-    if (group.section === 7) {
-      exerciseName = `Simulazione ${group.test_number}`;
-    } else {
-      exerciseName = exercises_arr[group.test_number - 1] || `Exercise ${group.test_number}`;
-    }
-    labels.push(`${sectionName} - ${exerciseName}`);
-    data.push(percentage.toFixed(2));
-  });
-  
-  const ctx = document.getElementById("barChart").getContext("2d");
-  if (barChartInstance) {
-    barChartInstance.destroy();
-  }
-  barChartInstance = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels: labels,
-      datasets: [{
-        label: "Percentage Correct",
-        data: data,
-        backgroundColor: "blue"
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        y: {
-          beginAtZero: true,
-          max: 100,
-          ticks: {
-            callback: value => value + '%'
-          }
-        }
-      },
-      plugins: {
-        datalabels: {
-          formatter: (value, context) => {
-            if (Number(value) === 0) return '';
-            return value + '%';
-          },
-          color: "#fff",
-          font: { weight: "bold" }
-        }
-      }
-    },
-    plugins: [ChartDataLabels]
-  });
-}
 
 function goBack() {
   window.history.back();
@@ -722,6 +545,68 @@ function filterInteractiveTable() {
 function updateInteractiveTable() {
   const { filteredQuestions, filteredAnswers } = filterInteractiveTable();
   generateInteractiveTable(filteredQuestions, filteredAnswers);
+}
+
+function updateEChartsPie(correctCount, incorrectCount, insicuroCount, nonHoIdeaCount, nonDatoCount) {
+  const chartDom = document.getElementById('echartsPieContainer');
+  const myChart = echarts.init(chartDom);
+  
+  const option = {
+    backgroundColor: '#2c343c',
+    tooltip: {
+      trigger: 'item',
+      formatter: '{b}: {c} ({d}%)'
+    },
+    series: [
+      {
+        name: 'Answers',
+        type: 'pie',
+        radius: ['40%', '70%'], // Inner radius and outer radius
+        avoidLabelOverlap: false,
+        itemStyle: {
+          borderRadius: 10,
+          borderColor: '#fff',
+          borderWidth: 2,
+          shadowBlur: 10,
+          shadowOffsetX: 0,
+          shadowColor: 'rgba(0, 0, 0, 0.5)'
+        },
+        label: {
+          show: true,
+          position: 'outside',
+          fontSize: 16,
+          color: '#fff',
+          formatter: '{b}: {d}%'
+        },
+        labelLine: {
+          show: true,
+          length: 20,
+          length2: 30,
+          smooth: true,
+          lineStyle: {
+            width: 2
+          }
+        },
+        emphasis: {
+          scale: true,
+          scaleSize: 10,
+          itemStyle: {
+            shadowBlur: 30,
+            shadowColor: 'rgba(0, 0, 0, 0.8)'
+          }
+        },
+        data: [
+          { value: correctCount, name: 'Corretto', itemStyle: { color: '#4CAF50' } },
+          { value: incorrectCount, name: 'Incorretto', itemStyle: { color: '#F44336' } },
+          { value: insicuroCount, name: 'Insicuro', itemStyle: { color: '#2196F3' } },
+          { value: nonHoIdeaCount, name: 'Non ho idea', itemStyle: { color: '#FFC107' } },
+          { value: nonDatoCount, name: 'Non dato', itemStyle: { color: '#9E9E9E' } }
+        ]
+      }
+    ]
+  };
+
+  myChart.setOption(option);
 }
 
 loadDashboard();

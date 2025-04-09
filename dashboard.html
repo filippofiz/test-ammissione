@@ -6,8 +6,7 @@
   <title>Student Dashboard</title>
   <!-- Google Fonts for a modern look -->
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <link rel="stylesheet" href="styles.css">
   <style>
     /* Global Styles */
@@ -153,12 +152,7 @@
       <select id="progressivoFilter" style="display: none;"></select>
       <select id="argomentoFilter"></select>
     </div>
-    
-    <!-- Container for both charts -->
-    <div class="charts-container">
-      <canvas id="resultsChart"></canvas>
-      <canvas id="barChart"></canvas>
-    </div>
+    <div id="echartsPieContainer" style="width: 700px; height: 400px; margin: auto;"></div>
     <div id="scoreDisplay"></div>
     <div id="scoreDisplay2"></div>
 
