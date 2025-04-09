@@ -35,10 +35,10 @@ async function loadDashboard() {
     ? "questions"
     : "questions_bancaDati";
 
-  // Fetch student answers.
+  // Fetch student answers including the submitted_at timestamp.
   const { data: answers, error: answersError } = await supabase
     .from(answerTable)
-    .select("answer, auto_score, question_id")
+    .select("answer, auto_score, question_id, submitted_at, test_id")
     .eq("auth_uid", studentId);
   if (answersError) {
     console.error("❌ Error fetching student answers:", answersError.message);
@@ -92,18 +92,29 @@ async function loadDashboard() {
 
   filterDashboard();
   updateInteractiveTable();
+  // After updating the interactive table...
+populateLinePlotFilter();
+updateLineChart();
+
+// Also attach event listeners.
+document.getElementById("sectionFilter").addEventListener("change", updateLineChart);
+document.getElementById("tipologiaFilter").addEventListener("change", updateLineChart);
+document.getElementById("progressivoFilter").addEventListener("change", updateLineChart);
+document.getElementById("linePlotArgomentoFilter").addEventListener("change", updateLineChart);
 }
 
 function populateFiltersFromStudentTests(testsData) {
   const sectionFilter = document.getElementById("sectionFilter");
   const tipologiaFilter = document.getElementById("tipologiaFilter");
   const progressivoFilter = document.getElementById("progressivoFilter");
+  const argomentoFilter = document.getElementById("argomentoFilter");
 
   const completedTests = testsData.filter(test => test.status === "completed");
 
   sectionFilter.innerHTML = `<option value="all">Tutte le Sezioni</option>`;
   tipologiaFilter.innerHTML = `<option value="all">Tutte le Tipologie</option>`;
   progressivoFilter.innerHTML = `<option value="all">Tutti i Progressivi</option>`;
+  argomentoFilter.innerHTML = `<option value="all">Tutti gli Argomenti</option>`;
 
   const sections = Array.from(new Set(completedTests.map(test => test.section)));
   const tipologie = Array.from(new Set(completedTests.map(test => test.tipologia_esercizi)));
@@ -607,6 +618,151 @@ function updateEChartsPie(correctCount, incorrectCount, insicuroCount, nonHoIdea
   };
 
   myChart.setOption(option);
+}
+
+function populateLinePlotFilter() {
+  const lineFilter = document.getElementById("linePlotArgomentoFilter");
+  lineFilter.innerHTML = "";
+  lineFilter.innerHTML += `<option value="Totale">Totale</option>`;
+  // Get all unique argomenti from all questions.
+  const argomenti = Array.from(new Set(globalQuestions.map(q => q.argomento).filter(a => a)));
+  argomenti.forEach(arg => {
+    lineFilter.innerHTML += `<option value="${arg}">${arg}</option>`;
+  });
+}
+
+function updateLineChart() {
+  // Use all global answers (line graph is independent of the common filters)
+  let filteredAnswers = globalAnswers;
+
+  // Filter by argomento if a specific one is selected
+  const selectedLineArg = document.getElementById("linePlotArgomentoFilter").value;
+  if (selectedLineArg !== "Totale") {
+    // Create a lookup from question_id to its details.
+    const questionsMap = {};
+    globalQuestions.forEach(q => { questionsMap[q.id] = q; });
+    filteredAnswers = filteredAnswers.filter(ans => {
+      const q = questionsMap[ans.question_id];
+      return q && q.argomento && q.argomento.toString() === selectedLineArg;
+    });
+  }
+  
+  // Group the answers by test_id.
+  const groupedByTest = {};
+  filteredAnswers.forEach(ans => {
+    const testId = ans.test_id || "unknown";
+    if (!groupedByTest[testId]) {
+      groupedByTest[testId] = [];
+    }
+    groupedByTest[testId].push(ans);
+  });
+
+  // Build an array of test groups with their earliest submitted_at date.
+  const testGroups = [];
+  for (let testId in groupedByTest) {
+    const testAnswers = groupedByTest[testId];
+    // Get the earliest submitted_at in this test group.
+    const earliest = testAnswers.reduce((min, curr) => {
+      return (!min || curr.submitted_at < min) ? curr.submitted_at : min;
+    }, null);
+    testGroups.push({ testId, earliest });
+  }
+
+  // Sort the test groups by their earliest submitted_at date.
+  testGroups.sort((a, b) => a.earliest.localeCompare(b.earliest));
+  
+  // Create a sorted list of testIds based on the sorted groups.
+  const sortedTestIds = testGroups.map(group => group.testId);
+
+  // Define the answer categories.
+  const categories = ["Corretto", "Incorretto", "Insicuro", "Non ho idea", "Non dato"];
+  // Prepare an object to store the series data per category.
+  const seriesData = {
+    "Corretto": [],
+    "Incorretto": [],
+    "Insicuro": [],
+    "Non ho idea": [],
+    "Non dato": []
+  };
+
+  // Prepare the x-axis labels array.
+  const xLabels = [];
+
+  // For each test group (in chronological order), compute percentages and build the label.
+  sortedTestIds.forEach(testId => {
+    const answersForTest = groupedByTest[testId];
+    let counts = [0, 0, 0, 0, 0];  // Order: Corretto, Incorretto, Insicuro, Non ho idea, Non dato.
+    answersForTest.forEach(ans => {
+      if (ans.auto_score === 1) {
+        counts[0]++;
+      } else if (ans.auto_score === 0 && !["x", "y", "z"].includes(ans.answer)) {
+        counts[1]++;
+      } else if (ans.answer === "x") {
+        counts[2]++;
+      } else if (ans.answer === "y") {
+        counts[3]++;
+      } else if (ans.answer === "z") {
+        counts[4]++;
+      }
+    });
+    const total = counts.reduce((a, b) => a + b, 0);
+    // Calculate percentages.
+    const percentages = counts.map(c => total > 0 ? Number(((c / total) * 100).toFixed(0)) : 0);
+    categories.forEach((cat, idx) => {
+      seriesData[cat].push(percentages[idx]);
+    });
+    
+    // Lookup the associated test record from student_tests (studentTestsData is assumed to be loaded).
+    const testRecord = studentTestsData.find(t => String(t.id) === testId);
+    if (testRecord) {
+      // Build a label: first line shows the section,
+      // second line shows tipologia_esercizi and progressivo.
+      const label = `${testRecord.section}\n${testRecord.tipologia_esercizi} ${testRecord.progressivo}`;
+      xLabels.push(label);
+    } else {
+      xLabels.push(testId);
+    }
+  });
+
+  // Use the same colour mapping as used in your pie chart and table.
+  const colorMap = {
+    "Corretto": "#4CAF50",
+    "Incorretto": "#F44336",
+    "Insicuro": "#2196F3",
+    "Non ho idea": "#FFC107",
+    "Non dato": "#9E9E9E"
+  };
+
+  // Initialize or update the line chart using ECharts.
+  const lineChartDom = document.getElementById("lineChartContainer");
+  const lineChart = echarts.init(lineChartDom);
+  const option = {
+    tooltip: { trigger: 'axis' },
+    legend: { data: categories, textStyle: { color: "#333" } },
+    xAxis: {
+      type: 'category',
+      data: xLabels,
+      axisLabel: {
+        // Using newlines in labels; the formatter returns the label as it is.
+        formatter: function(value) {
+          return value;
+        }
+      }
+    },
+    yAxis: {
+      type: 'value',
+      name: 'Percentuale',
+      max: 100
+    },
+    series: categories.map(cat => ({
+      name: cat,
+      type: 'line',
+      data: seriesData[cat],
+      smooth: true,
+      itemStyle: { color: colorMap[cat] }
+    }))
+  };
+  lineChart.setOption(option);
 }
 
 loadDashboard();
