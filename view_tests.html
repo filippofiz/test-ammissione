@@ -55,11 +55,11 @@
     
     <!-- NEW LEGEND SECTION -->
     <div id="legend">
-      <h4>Legend:</h4>
+      <h4>Legenda:</h4>
       <ul>
-        <li><span class="legend-box completed"></span> Completed</li>
-        <li><span class="legend-box unlocked"></span> Unlocked</li>
-        <li><span class="legend-box locked"></span> Locked</li>
+        <li><span class="legend-box completed"></span> Completato</li>
+        <li><span class="legend-box unlocked"></span> Sbloccato</li>
+        <li><span class="legend-box locked"></span> Bloccato</li>
       </ul>
     </div>
     <!-- NEW TOGGLE BUTTON -->
@@ -157,163 +157,203 @@
               t.progressivo === test.progressivo
           )
       );
-      // ✅ Fetch questions with the selected test type
-      /*let { data: testData, error: testError } = await supabase
-          .from(testType === "pdf" ? "questions" : "questions_bancaDati")
-          .select("section, progressivo, tipologia_esercizi")
-          .eq("tipologia_test", selectedTest)
-          .order("tipologia_esercizi, progressivo");
-
-      if (testError) {
-          console.error("❌ Error fetching test structure:", testError.message);
-          return;
-      }
-
-      // ✅ Ensure only unique sections exist in test data
-      testData = testData.filter((test, index, self) =>
-          index === self.findIndex((t) =>
-              t.section === test.section &&
-              t.tipologia_esercizi === test.tipologia_esercizi &&
-              t.progressivo === test.progressivo
-          )
-      );*/
 
       // ✅ Sort test data based on `ordine_sections`
       studentTests.sort((a, b) => ordineSections.indexOf(a.section) - ordineSections.indexOf(b.section));
+
+      // 1️⃣ Fetch Materia from questions
+      const { data: questionsData, error: materiaError } = await supabase
+        .from("questions")
+        .select("section, tipologia_esercizi, progressivo, Materia")
+        .eq("tipologia_test", selectedTest);
+      if (materiaError) {
+        console.error("❌ Error fetching Materia:", materiaError.message);
+      }
+
+      // 2️⃣ Build lookup: "sec|tipo|prog" → Materia
+      const materiaMap = {};
+      questionsData?.forEach(q => {
+        materiaMap[`${q.section}|${q.tipologia_esercizi}|${q.progressivo}`] = q.Materia;
+      });
+
+      // 3️⃣ Attach Materia to each studentTests record
+      studentTests = studentTests.map(t => ({
+        ...t,
+        Materia: materiaMap[`${t.section}|${t.tipologia_esercizi}|${t.progressivo}`] || ""
+      }));
       
       displayTestTree(studentTests, studentTests, testType, selectedTest);
 
     }
 
     function displayTestTree(tests, studentTests, testType, selectedTest) {
-      const testTree = document.getElementById("testTree");
-      testTree.innerHTML = "";
-      
-      // Group tests by section first
-      const sectionsMap = {};
-      tests.forEach(test => {
-          if (!sectionsMap[test.section]) {
-              sectionsMap[test.section] = {};
+  const tree = document.getElementById("testTree");
+  tree.innerHTML = "";
+
+  // 1️⃣ Bucket tests by Materia (blank → "Altro")
+  const byMat = {};
+  tests.forEach(t => {
+    const mat = t.Materia || "Altro";
+    (byMat[mat] = byMat[mat]||[]).push(t);
+  });
+
+  // 2️⃣ Order Materie: α, but put "Simulazioni" last
+  const mats = Object.keys(byMat).sort((a,b) => {
+    if (a==="Simulazioni") return 1;
+    if (b==="Simulazioni") return -1;
+    return a.localeCompare(b);
+  });
+
+  mats.forEach(materia => {
+    const section = document.createElement("div");
+    section.classList.add("materia-section");
+
+    // Header
+    const h2 = document.createElement("h2");
+    h2.classList.add("materia-header");
+    h2.textContent = materia==="Altro" ? "Altre Materie" : materia;
+    section.appendChild(h2);
+
+    const group = byMat[materia];
+
+    // ────────────────────────────────────────────
+    // If Simulazioni → flat row of buttons
+    if (materia==="Simulazioni") {
+      const row = document.createElement("div");
+      row.style.display="flex";
+      row.style.flexWrap="wrap";
+      row.style.gap="8px";
+
+      group.forEach(t => {
+        const st = studentTests.find(s =>
+          s.section===t.section &&
+          s.tipologia_esercizi===t.tipologia_esercizi &&
+          s.progressivo===t.progressivo
+        );
+        const status = st?.status||"locked";
+
+        const btn = document.createElement("button");
+        btn.textContent = `Test ${t.progressivo}`;
+
+        // view‑answers vs lock logic unchanged
+        if (viewAnswersMode) {
+          if (status==="completed") {
+            btn.classList.add("view-answers");
+            btn.onclick = () => viewStudentAnswers(t.section, t.progressivo, t.tipologia_esercizi, selectedTest, studentId);
+          } else {
+            btn.classList.add("disabled-green");
+            btn.onclick = null;
           }
-          if (!sectionsMap[test.section][test.tipologia_esercizi]) {
-              sectionsMap[test.section][test.tipologia_esercizi] = [];
+        } else {
+          if (status==="completed") {
+            btn.classList.add("completed");
+            btn.onclick = () => confirmResetTest(t.section,t.progressivo,t.tipologia_esercizi,selectedTest);
+          } else {
+            btn.classList.add(status);
+            btn.onclick = () => toggleTestLock(t.section,t.progressivo,t.tipologia_esercizi,status,selectedTest);
           }
-          sectionsMap[test.section][test.tipologia_esercizi].push(test);
+        }
+        row.appendChild(btn);
       });
-  
-        
-      // For each section, create a section container
-      Object.keys(sectionsMap).forEach(sectionKey => {
-          const section = sectionKey; // Section names are already stored correctly
-          const sectionDiv = document.createElement("div");
-          sectionDiv.classList.add("section");
-          sectionDiv.innerHTML = `<h3>${section}</h3>`;
-          
-          // Container for different types of exercises (Esercizi per casa, Assessment, Simulazioni)
-          const tipologiaContainer = document.createElement("div");
-          tipologiaContainer.style.display = "flex";
-          tipologiaContainer.style.flexDirection = "column";
-          tipologiaContainer.style.gap = "10px";
-          
-          // Ensure "Esercizi per casa" comes first, then "Assessment"
-          const orderedTipologie = Object.keys(sectionsMap[section]).sort((a, b) => {
-              if (a === "Esercizi per casa") return -1;
-              if (b === "Esercizi per casa") return 1;
-              if (a === "Assessment") return -1;
-              if (b === "Assessment") return 1;
-              return 0;
-          });
-          
-          // Group by `tipologia_esercizi`
-          orderedTipologie.forEach(tipologia => {
-              const testsInTipologia = sectionsMap[section][tipologia];
 
-              // Group tests within this tipologia by progressivo
-              const groups = {};
-              testsInTipologia.forEach(test => {
-                  if (!groups[test.progressivo]) {
-                      groups[test.progressivo] = [];
-                  }
-                  groups[test.progressivo].push(test);
-              });
-    
-            
-            // Create a container for the columns (one per progressivo)
-            const groupsContainer = document.createElement("div");
-            groupsContainer.style.display = "flex";
-            groupsContainer.style.gap = "20px";
-            groupsContainer.style.marginBottom = "10px";
+      section.appendChild(row);
 
-            // Label for tipologia
-            const tipologiaLabel = document.createElement("h4");
-            tipologiaLabel.textContent = tipologia;
-            tipologiaContainer.appendChild(tipologiaLabel);
+    } else {
+      // ────────────────────────────────────────────
+      // Otherwise preserve section→tipologia→progressivo nesting
+      const secMap = {};
+      group.forEach(t => {
+        (secMap[t.section]=secMap[t.section]||{})[t.tipologia_esercizi] ??= [];
+        secMap[t.section][t.tipologia_esercizi].push(t);
+      });
 
-            // Ensure progressivo values are sorted correctly
-            const orderedProgressivi = Object.keys(groups).map(Number).sort((a, b) => a - b);
+      Object.keys(secMap).forEach(secKey => {
+        const secDiv = document.createElement("div");
+        secDiv.classList.add("section");
+        secDiv.innerHTML = `<h3>${secKey}</h3>`;
 
-            // For each progressivo group, create a column
-          orderedProgressivi.forEach(progressivo => {
-                const group = groups[progressivo];
+        const tipContainer = document.createElement("div");
+        tipContainer.style.display="flex";
+        tipContainer.style.flexDirection="column";
+        tipContainer.style.gap="10px";
 
-                const columnDiv = document.createElement("div");
-                columnDiv.style.display = "flex";
-                columnDiv.style.flexDirection = "column";
-                columnDiv.style.alignItems = "center";
+        // order tipologie as before
+        Object.keys(secMap[secKey]).sort((a,b)=>{
+          if(a==="Esercizi per casa") return -1;
+          if(b==="Esercizi per casa") return  1;
+          if(a==="Assessment") return -1;
+          if(b==="Assessment") return  1;
+          return 0;
+        }).forEach(tip => {
+          const label = document.createElement("h4");
+          label.textContent = tip;
+          tipContainer.appendChild(label);
 
-                // For each test in this group, create a button
-            group.forEach(test => {
-                    // Find student's progress for this test
-                    const studentTest = studentTests.find(t =>
-                        t.section === test.section &&
-                        t.tipologia_esercizi === test.tipologia_esercizi &&
-                        t.progressivo === test.progressivo
-                    );
-                    const status = studentTest ? studentTest.status : "locked";
+          const cols = document.createElement("div");
+          cols.style.display="flex";
+          cols.style.gap="20px";
+          cols.style.marginBottom="10px";
 
-                    const testBtn = document.createElement("button");
-                    testBtn.textContent = `${tipologia} ${test.progressivo}`;
-
-              
-                    if (viewAnswersMode) {
-                      // In view answers mode, if test is completed, make it clickable green.
-                      if (status === "completed") {
-                        testBtn.classList.add("view-answers"); // CSS class for green clickable button
-                        testBtn.onclick = () => viewStudentAnswers(test.section, test.progressivo, test.tipologia_esercizi, selectedTest, studentId);
-                      } else {
-                        // For tests not completed, still turn them green (but no click action)
-                        testBtn.classList.add("disabled-green");
-                        testBtn.onclick = null;
-                      }
-                    } else {
-                      // Original behavior: if completed, assign the reset functionality; otherwise, allow toggle.
-                      if (status === "completed") {
-                        testBtn.classList.add("completed");
-                        testBtn.onclick = () =>
-                          confirmResetTest(test.section, test.progressivo, test.tipologia_esercizi, selectedTest);
-                      } else {
-                        testBtn.classList.add(status);
-                        testBtn.onclick = () =>
-                          toggleTestLock(test.section, test.progressivo, test.tipologia_esercizi, status, selectedTest);
-                      }
-                    }
-
-                    columnDiv.appendChild(testBtn);
-                  });
-            
-            groupsContainer.appendChild(columnDiv);
+          // group by progressivo
+          const progGroups = {};
+          secMap[secKey][tip].forEach(t => {
+            (progGroups[t.progressivo]=progGroups[t.progressivo]||[]).push(t);
           });
 
-          tipologiaContainer.appendChild(groupsContainer);
+          Object.keys(progGroups).sort((a,b)=>a-b).forEach(prog => {
+            const col = document.createElement("div");
+            col.style.display="flex";
+            col.style.flexDirection="column";
+            col.style.alignItems="center";
+
+            progGroups[prog].forEach(t => {
+              const st = studentTests.find(s =>
+                s.section===t.section &&
+                s.tipologia_esercizi===t.tipologia_esercizi &&
+                s.progressivo===t.progressivo
+              );
+              const status = st?.status||"locked";
+
+              const btn = document.createElement("button");
+              btn.textContent = `${tip} ${t.progressivo}`;
+
+              if (viewAnswersMode) {
+                if (status==="completed") {
+                  btn.classList.add("view-answers");
+                  btn.onclick = () => viewStudentAnswers(t.section, t.progressivo, t.tipologia_esercizi, selectedTest, studentId);
+                } else {
+                  btn.classList.add("disabled-green");
+                  btn.onclick = null;
+                }
+              } else {
+                if (status==="completed") {
+                  btn.classList.add("completed");
+                  btn.onclick = () => confirmResetTest(t.section,t.progressivo,t.tipologia_esercizi,selectedTest);
+                } else {
+                  btn.classList.add(status);
+                  btn.onclick = () => toggleTestLock(t.section,t.progressivo,t.tipologia_esercizi,status,selectedTest);
+                }
+              }
+
+              col.appendChild(btn);
+            });
+
+            cols.appendChild(col);
+          });
+
+          tipContainer.appendChild(cols);
         });
-          
-          sectionDiv.appendChild(tipologiaContainer);
-          testTree.appendChild(sectionDiv);
+
+        secDiv.appendChild(tipContainer);
+        section.appendChild(secDiv);
       });
     }
 
+    tree.appendChild(section);
+  });
+}
     async function confirmResetTest(section, testProgressivo, studentTestType, selectedTest) {
-      const confirmReset = confirm("⚠ This test is marked as completed. Do you want to reset it and remove all student answers?");
+      const confirmReset = confirm("⚠ Questo test è contrassegnato come completato. Vuoi reimpostarlo e rimuovere tutte le risposte dello studente?");
       if (!confirmReset) return;
 
       console.log(`🔄 Resetting Test: Section ${section}, Test Type: ${studentTestType}, Progressivo: ${testProgressivo},  Selected: ${selectedTest}`);

@@ -82,124 +82,181 @@ async function loadTestTree() {
 
     // ✅ Sort test data based on `ordine_sections`
     studentTests.sort((a, b) => ordineSections.indexOf(a.section) - ordineSections.indexOf(b.section));
-    
+    // 1️⃣ Fetch Materia for each question
+    const { data: questionsData, error: materiaError } = await supabase
+    .from("questions")
+    .select("section, tipologia_esercizi, progressivo, Materia")
+    .eq("tipologia_test", selectedTest);
+
+    if (materiaError) {
+    console.error("❌ Error fetching Materia info:", materiaError.message);
+    }
+
+    // 2️⃣ Build a quick lookup: "section|tipologia|progressivo" → Materia
+    const materiaMap = {};
+    questionsData.forEach(q => {
+    materiaMap[`${q.section}|${q.tipologia_esercizi}|${q.progressivo}`] = q.Materia;
+    });
+
+    // 3️⃣ Attach `Materia` to each studentTests record
+    studentTests = studentTests.map(t => ({
+    ...t,
+    Materia: materiaMap[`${t.section}|${t.tipologia_esercizi}|${t.progressivo}`] || ""
+    }));
+
+    // Finally call your renderer with the enriched array
     displayTestTree(studentTests, studentTests, testType, selectedTest);
 }
 
-function displayTestTree(tests,studentTests, testType, selectedTest) {
+function displayTestTree(tests, studentTests, testType, selectedTest) {
     const testTree = document.getElementById("testTree");
     testTree.innerHTML = "";
-
-    // Group tests by section first
-    const sectionsMap = {};
+  
+    // 1️⃣ Group by Materia (blank → "Altro")
+    const byMateria = {};
     tests.forEach(test => {
-        if (!sectionsMap[test.section]) {
-            sectionsMap[test.section] = {};
-        }
-        if (!sectionsMap[test.section][test.tipologia_esercizi]) {
+      const mat = test.Materia || "Altro";
+      if (!byMateria[mat]) byMateria[mat] = [];
+      byMateria[mat].push(test);
+    });
+  
+    // 2️⃣ Decide ordering: Simulazioni first, then others α, then Altro last
+    const materiaKeys = Object.keys(byMateria).sort((a, b) => {
+        if (a === "Simulazioni") return  1;           // a goes after b
+        if (b === "Simulazioni") return -1;           // a goes before b
+        return a.localeCompare(b);                    // otherwise alphabetical
+      });
+  
+    materiaKeys.forEach(materia => {
+      const group = byMateria[materia];
+      // Section wrapper for this Materia
+      const matDiv = document.createElement("div");
+      matDiv.classList.add("materia-section");
+  
+      // Header
+      const h2 = document.createElement("h2");
+      h2.classList.add("materia-header");
+      h2.textContent = materia === "Altro" ? "Altre Materie" : materia;
+      matDiv.appendChild(h2);
+  
+      // If Simulazioni → flat list
+      if (materia === "Simulazioni") {
+        const flat = document.createElement("div");
+        flat.style.display = "flex";
+        flat.style.flexWrap = "wrap";
+        flat.style.gap = "8px";
+  
+        group.forEach(test => {
+          const studentEntry = studentTests.find(t => t.id === test.id);
+          const status = studentEntry?.status || "locked";
+  
+          const btn = document.createElement("button");
+          btn.textContent = btn.textContent = `Test ${test.progressivo}`;;          // only the number
+          if (status === "completed") btn.classList.add("completed");
+          else if (status === "locked") {
+            btn.disabled = true;
+            btn.classList.add("locked");
+          } else {
+            // same click handlers as before
+            if (testType === "pdf") {
+              btn.onclick = () => startPdfTest(test.section, test.tipologia_esercizi, test.progressivo, selectedTest, test.id);
+            } else {
+              btn.onclick = () => startBancaDatiTest(test.section, test.tipologia_esercizi, test.progressivo, selectedTest, test.id);
+            }
+          }
+          flat.appendChild(btn);
+        });
+  
+        matDiv.appendChild(flat);
+  
+      } else {
+        // Nested grouping (section → tipologia → progressivo)
+        const sectionsMap = {};
+        group.forEach(test => {
+          if (!sectionsMap[test.section]) sectionsMap[test.section] = {};
+          if (!sectionsMap[test.section][test.tipologia_esercizi]) {
             sectionsMap[test.section][test.tipologia_esercizi] = [];
-        }
-        sectionsMap[test.section][test.tipologia_esercizi].push(test);
-    });
-
-    // For each section, create a section container
-    Object.keys(sectionsMap).forEach(sectionKey => {
-        const section = sectionKey; // Section names are already stored correctly
-        const sectionDiv = document.createElement("div");
-        sectionDiv.classList.add("section");
-        sectionDiv.innerHTML = `<h3>${section}</h3>`;
-
-        // Container for different types of exercises (Esercizi per casa, Assessment, Simulazioni)
-        const tipologiaContainer = document.createElement("div");
-        tipologiaContainer.style.display = "flex";
-        tipologiaContainer.style.flexDirection = "column";
-        tipologiaContainer.style.gap = "10px";
-
-        // Ensure "Esercizi per casa" comes first, then "Assessment"
-        const orderedTipologie = Object.keys(sectionsMap[section]).sort((a, b) => {
+          }
+          sectionsMap[test.section][test.tipologia_esercizi].push(test);
+        });
+  
+        Object.keys(sectionsMap).forEach(sectionKey => {
+          const sectionDiv = document.createElement("div");
+          sectionDiv.classList.add("section");
+          sectionDiv.innerHTML = `<h3>${sectionKey}</h3>`;
+  
+          const tipContainer = document.createElement("div");
+          tipContainer.style.display = "flex";
+          tipContainer.style.flexDirection = "column";
+          tipContainer.style.gap = "10px";
+  
+          // Order tipologie as before
+          const tipKeys = Object.keys(sectionsMap[sectionKey]).sort((a, b) => {
             if (a === "Esercizi per casa") return -1;
-            if (b === "Esercizi per casa") return 1;
-            if (a === "Assessment") return -1;
-            if (b === "Assessment") return 1;
+            if (b === "Esercizi per casa") return  1;
+            if (a === "Assessment")          return -1;
+            if (b === "Assessment")          return  1;
             return 0;
-        });
-
-        // Group by `tipologia_esercizi`
-        orderedTipologie.forEach(tipologia => {
-            const testsInTipologia = sectionsMap[section][tipologia];
-
-            // Group tests within this tipologia by progressivo
+          });
+  
+          tipKeys.forEach(tip => {
+            const testsInTip = sectionsMap[sectionKey][tip];
             const groups = {};
-            testsInTipologia.forEach(test => {
-                if (!groups[test.progressivo]) {
-                    groups[test.progressivo] = [];
+            testsInTip.forEach(t => {
+              if (!groups[t.progressivo]) groups[t.progressivo] = [];
+              groups[t.progressivo].push(t);
+            });
+  
+            const tipLabel = document.createElement("h4");
+            tipLabel.textContent = tip;
+            tipContainer.appendChild(tipLabel);
+  
+            const colWrapper = document.createElement("div");
+            colWrapper.style.display = "flex";
+            colWrapper.style.gap = "20px";
+            colWrapper.style.marginBottom = "10px";
+  
+            Object.keys(groups).sort((a,b)=>a-b).forEach(prog => {
+              const col = document.createElement("div");
+              col.style.display = "flex";
+              col.style.flexDirection = "column";
+              col.style.alignItems = "center";
+  
+              groups[prog].forEach(test => {
+                const studentEntry = studentTests.find(t => t.id === test.id);
+                const status = studentEntry?.status || "locked";
+  
+                const btn = document.createElement("button");
+                btn.textContent = `${tip} ${test.progressivo}`;
+  
+                if (status === "completed") btn.classList.add("completed");
+                else if (status === "locked") {
+                  btn.disabled = true;
+                  btn.classList.add("locked");
+                } else {
+                  if (testType === "pdf") {
+                    btn.onclick = () => startPdfTest(test.section, test.tipologia_esercizi, test.progressivo, selectedTest, test.id);
+                  } else {
+                    btn.onclick = () => startBancaDatiTest(test.section, test.tipologia_esercizi, test.progressivo, selectedTest, test.id);
+                  }
                 }
-                groups[test.progressivo].push(test);
+                col.appendChild(btn);
+              });
+  
+              colWrapper.appendChild(col);
             });
-
-            // Create a container for the columns (one per progressivo)
-            const groupsContainer = document.createElement("div");
-            groupsContainer.style.display = "flex";
-            groupsContainer.style.gap = "20px";
-            groupsContainer.style.marginBottom = "10px";
-
-            // Label for tipologia
-            const tipologiaLabel = document.createElement("h4");
-            tipologiaLabel.textContent = tipologia;
-            tipologiaContainer.appendChild(tipologiaLabel);
-
-            // Ensure progressivo values are sorted correctly
-            const orderedProgressivi = Object.keys(groups).map(Number).sort((a, b) => a - b);
-
-            // For each progressivo group, create a column
-            orderedProgressivi.forEach(progressivo => {
-                const group = groups[progressivo];
-
-                const columnDiv = document.createElement("div");
-                columnDiv.style.display = "flex";
-                columnDiv.style.flexDirection = "column";
-                columnDiv.style.alignItems = "center";
-
-                // For each test in this group, create a button
-                group.forEach(test => {
-                    // Find student's progress for this test
-                    const studentTest = studentTests.find(t =>
-                        t.section === test.section &&
-                        t.tipologia_esercizi === test.tipologia_esercizi &&
-                        t.progressivo === test.progressivo &&
-                        t.id === test.id
-                    );
-                    const status = studentTest ? studentTest.status : "locked";
-
-                    const testBtn = document.createElement("button");
-                    testBtn.textContent = `${tipologia} ${test.progressivo}`;
-
-                    // Apply status styles
-                    if (status === "completed") {
-                        testBtn.classList.add("completed");
-                    } else if (status === "locked") {
-                        testBtn.disabled = true;
-                        testBtn.classList.add("locked");
-                    } else {
-                        if (testType === "pdf") {
-                            testBtn.onclick = () => startPdfTest(test.section, test.tipologia_esercizi, test.progressivo, selectedTest,test.id);
-                        } else {
-                            testBtn.onclick = () => startBancaDatiTest(test.section, test.tipologia_esercizi, test.progressivo, selectedTest, test.id);
-                        }
-                    }
-                    columnDiv.appendChild(testBtn);
-                });
-
-                groupsContainer.appendChild(columnDiv);
-            });
-
-            tipologiaContainer.appendChild(groupsContainer);
+  
+            tipContainer.appendChild(colWrapper);
+          });
+  
+          sectionDiv.appendChild(tipContainer);
+          matDiv.appendChild(sectionDiv);
         });
-
-        sectionDiv.appendChild(tipologiaContainer);
-        testTree.appendChild(sectionDiv);
+      }
+  
+      testTree.appendChild(matDiv);
     });
-}
+  }
 
 // ✅ Start PDF test
 async function startPdfTest(section, tipologia_esercizi, testProgressivo, selectedTest, testId) {

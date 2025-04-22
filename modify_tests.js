@@ -312,13 +312,17 @@ async function fetchUploadedTests() {
     .from("questions_bancaDati")
     .select("section, tipologia_esercizi, progressivo, tipologia_test");
 
+// Tag source table so we know where to delete later
+const qData = questionsData.map(t => ({ ...t, sourceTable: "questions" }));
+const bData = bancaData.map(t  => ({ ...t, sourceTable: "questions_bancaDati" }));
+
+// Merge and dedupe
+const allTests = [...qData, ...bData];
+
   if (error1 || error2) {
     console.error("Error fetching tests:", error1, error2);
     return;
   }
-
-  // Merge results from both tables.
-  const allTests = [...questionsData, ...bancaData];
 
   // Remove duplicates based on the combination of section, tipologia_esercizi, progressivo, and tipologia_test.
   const uniqueTestsMap = new Map();
@@ -375,8 +379,55 @@ async function fetchUploadedTests() {
     filteredTests.forEach(test => {
       const li = document.createElement("li");
       li.textContent = `${test.section}: ${test.tipologia_esercizi} ${test.progressivo}`;
+      const deleteBtn = document.createElement("button");
+      deleteBtn.textContent = "Elimina";
+      deleteBtn.classList.add("delete-test-btn");
+      deleteBtn.addEventListener("click", () => deleteTestGroup(test));
+      li.appendChild(deleteBtn);
       listContainer.appendChild(li);
     });
+  }
+  async function deleteTestGroup(test) {
+    const ok = confirm(
+      `Sei sicuro di voler eliminare TUTTI i dati per:\n` +
+      `${test.tipologia_test}, ${test.section}: ${test.tipologia_esercizi} ${test.progressivo}\n\n` +
+      `Questo rimuoverà domande e progressi studenti definitivamente.`
+    );
+    if (!ok) return;
+  
+    // 1️⃣ Delete from questions/questions_bancaDati
+    let { error: qErr } = await supabase
+      .from(test.sourceTable)
+      .delete()
+      .eq("section", test.section)
+      .eq("tipologia_esercizi", test.tipologia_esercizi)
+      .eq("progressivo", test.progressivo)
+      .eq("tipologia_test", test.tipologia_test);
+  
+    if (qErr) {
+      alert("Errore eliminazione domande: " + qErr.message);
+      console.error(qErr);
+      return;
+    }
+  
+    // 2️⃣ Delete from student_tests
+    let { error: sErr } = await supabase
+      .from("student_tests")
+      .delete()
+      .eq("section", test.section)
+      .eq("tipologia_esercizi", test.tipologia_esercizi)
+      .eq("progressivo", test.progressivo)
+      .eq("tipologia_test", test.tipologia_test);
+  
+    if (sErr) {
+      alert("Errore eliminazione progressi studenti: " + sErr.message);
+      console.error(sErr);
+      return;
+    }
+  
+    alert("✅ Test e progressi eliminati con successo.");
+    // 3️⃣ Refresh the “Test già caricati” panel
+    fetchUploadedTests();
   }
 
   // Update list when the dropdown value changes.

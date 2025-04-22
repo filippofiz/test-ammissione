@@ -834,3 +834,28 @@ button.disabled-green {
 .x-answer-light  { background-color: rgba(33, 150, 243, 0.4); color: black; }
 .y-answer-light  { background-color: rgba(255, 152, 0, 0.4); color: black; }
 .z-answer-light  { background-color: rgba(158, 158, 158, 0.4); color: black; }
+
+.materia-section {
+  margin-bottom: 2.5rem;
+}
+.materia-header {
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: #23AC75;
+  border-bottom: 2px solid #e0e0e0;
+  padding-bottom: 0.3rem;
+  margin-bottom: 1rem;
+}
+
+.delete-test-btn {
+  margin-left: 1rem;
+  padding: 4px 8px;
+  background-color: #e53935;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.delete-test-btn:hover {
+  background-color: #c62828;
+}
