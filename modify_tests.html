@@ -30,17 +30,13 @@
         Banca Dati
       </label>
       <br><br>
-      <!-- Download the blank CSV template -->
-      <p>
-        <a href="https://elrwpaezjnemmiegkyin.supabase.co/storage/v1/object/public/template//PDF_template.xlsm"
-          download
-          class="template-download-link">
-          📄 Scarica il template
-        </a>
-      </p>
+      <button id="templateBtn">
+        📄 Apri il template
+      </button>
+      <br><br>
       <!-- File input for CSV -->
       <input type="file" id="csvFileInput" accept=".csv">
-      <br><br>
+      <br>
       <!-- Button to trigger upload and parse -->
       <button id="uploadCsvBtn">Carica CSV</button>
       <div id="uploadMessage"></div>

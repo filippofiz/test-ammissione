@@ -518,3 +518,11 @@ function filterRow(row, allowedKeys) {
   });
   return newRow;
 }
+
+document.getElementById('templateBtn').addEventListener('click', () => {
+  // opens the Sheet in a new tab
+  window.open(
+    'https://docs.google.com/spreadsheets/d/1KC3trv5Z3wfN1hjPI2q5FDrQ_0uNNnUw6JZSG4JdVts/edit?usp=sharing',
+    '_blank'
+  );
+});

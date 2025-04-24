@@ -859,17 +859,3 @@ button.disabled-green {
 .delete-test-btn:hover {
   background-color: #c62828;
 }
-
-.template-download-link {
-  display: inline-block;
-  margin-bottom: 0.75rem;
-  padding: 0.6rem 1.2rem;
-  background-color: #23AC75;
-  color: #fff;
-  border-radius: 6px;
-  text-decoration: none;
-  font-weight: 600;
-}
-.template-download-link:hover {
-  background-color: #1a8c60;
-}
