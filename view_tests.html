@@ -232,6 +232,13 @@
         );
         const status = st?.status||"locked";
 
+        // 1️⃣ Create a column wrapper
+        const col = document.createElement("div");
+        col.style.display = "flex";
+        col.style.flexDirection = "column";
+        col.style.alignItems = "center";
+        col.style.gap = "4px"; // small vertical space
+
         const btn = document.createElement("button");
         btn.textContent = `Test ${t.progressivo}`;
 
@@ -253,7 +260,40 @@
             btn.onclick = () => toggleTestLock(t.section,t.progressivo,t.tipologia_esercizi,status,selectedTest);
           }
         }
-        row.appendChild(btn);
+
+    col.style.display       = "flex";
+    col.style.flexDirection = "column";
+    col.style.alignItems    = "center";
+    col.style.gap           = "4px";
+
+    // 2️⃣ your existing button
+    btn.textContent = `Test ${t.progressivo}`;
+    // … view-answers / lock logic unchanged …
+    col.appendChild(btn);
+
+    // 3️⃣ replace with an input for direct editing
+    const durationInput = document.createElement("input");
+    durationInput.type  = "number";
+    durationInput.min   = "0";
+    durationInput.value = st?.duration ?? "";
+    durationInput.classList.add("duration-input");
+    durationInput.addEventListener("change", async () => {
+      const newVal = durationInput.value;
+      const { error } = await supabase
+        .from("student_tests")
+        .update({ duration: newVal })
+        .eq("id", st.id);
+      if (error) {
+        alert("Errore aggiornamento durata: " + error.message);
+        return;
+      }
+      // Optionally show a tiny confirmation or just leave it
+    });
+    col.appendChild(durationInput);
+
+    // 4️⃣ finally append the whole column into the row
+    row.appendChild(col);
+
       });
 
       section.appendChild(row);
@@ -335,7 +375,36 @@
                 }
               }
 
-              col.appendChild(btn);
+            col.style.display       = "flex";
+            col.style.flexDirection = "column";
+            col.style.alignItems    = "center";
+            col.style.gap           = "4px";
+
+            // 2️⃣ your existing button
+            btn.textContent = `Test ${t.progressivo}`;
+            // … view-answers / lock logic unchanged …
+            col.appendChild(btn);
+
+            // 3️⃣ replace with an input for direct editing
+            const durationInput = document.createElement("input");
+            durationInput.type  = "number";
+            durationInput.min   = "0";
+            durationInput.value = st?.duration ?? "";
+            durationInput.classList.add("duration-input");
+            durationInput.addEventListener("change", async () => {
+              const newVal = durationInput.value;
+              const { error } = await supabase
+                .from("student_tests")
+                .update({ duration: newVal })
+                .eq("id", st.id);
+              if (error) {
+                alert("Errore aggiornamento durata: " + error.message);
+                return;
+              }
+              // Optionally show a tiny confirmation or just leave it
+            });
+            col.appendChild(durationInput);
+
             });
 
             cols.appendChild(col);

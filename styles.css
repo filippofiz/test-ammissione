@@ -859,3 +859,19 @@ button.disabled-green {
 .delete-test-btn:hover {
   background-color: #c62828;
 }
+
+.duration-display {
+  margin-top: 4px;
+  font-size: 0.7rem;
+  color: #404040;
+  text-align: center;
+}
+
+.duration-input {
+  width: 60px;
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 2px 4px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
