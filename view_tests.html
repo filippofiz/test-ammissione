@@ -50,6 +50,7 @@
   </style>
 </head>
 <body>
+  <div id="pageWrapper">
   <div class="container">
     <h2 id="studentTestProgressTitle"></h2>
     
@@ -65,24 +66,44 @@
     <!-- NEW TOGGLE BUTTON -->
     <button id="toggleViewAnswers">Vedi risposte dello studente</button>
     
-    <div id="testTree">
-      <!-- ✅ Test progress tree will be loaded dynamically -->
+    <div id="mainPanel" style="display:flex; gap:20px; align-items:flex-start;">
+      <!-- LEFT: your existing test tree -->
+      <div id="testTree" style="flex:1;">
+        <!-- populated dynamically -->
+      </div>
     </div>
+
     <button id="backButton">⬅ Back to Tutor Dashboard</button>
   </div>
-
+    <!-- 🚩 Moved outside the main container: -->
+  <div id="unlockPanel" style="width:280px; border:1px solid #ccc; padding:10px; border-radius:6px; margin-top:1rem;">
+    <h3>Modalità di sblocco</h3>
+    <div style="display:flex; gap:10px;">
+      <div style="flex:1;">
+        <h4>Sblocco manuale</h4>
+        <ul id="manualList" class="unlock-list"></ul>
+      </div>
+      <div style="flex:1;">
+        <h4>Sblocco automatico</h4>
+        <ul id="autoList" class="unlock-list"></ul>
+      </div>
+    </div>
+  </div>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <script type="module">
     import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
     const SUPABASE_URL = "https://elrwpaezjnemmiegkyin.supabase.co"; 
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVscndwYWV6am5lbW1pZWdreWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzAyMDUsImV4cCI6MjA1MzY0NjIwNX0.p6R2S1HK8kPFYiEAYtYaxIAH8XSmzjQBWQ_ywy3akdI";  
-
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    import { updateAutoUnlockStatus } from './autoUnlock.js';
     const studentId = sessionStorage.getItem("selectedStudentId"); // ✅ Already `auth_uid`
     const studentName = sessionStorage.getItem("selectedStudentName") || "Student";
     document.getElementById("studentTestProgressTitle").textContent = `Avanzamento preparazione di ${studentName}`;
 
     let viewAnswersMode = false; // global flag for toggle
+    let studentTestsCache = [];
 
     document.getElementById("toggleViewAnswers").addEventListener("click", () => {
       viewAnswersMode = !viewAnswersMode;
@@ -181,12 +202,15 @@
         ...t,
         Materia: materiaMap[`${t.section}|${t.tipologia_esercizi}|${t.progressivo}`] || ""
       }));
-      
+      studentTestsCache = studentTests;
       displayTestTree(studentTests, studentTests, testType, selectedTest);
-
+      setupDragDrop(studentTests);
+      initSortable(); 
+      await updateAutoUnlockStatus(studentTestsCache);;
+      displayTestTree(studentTestsCache, studentTestsCache, testType, selectedTest);
     }
 
-    function displayTestTree(tests, studentTests, testType, selectedTest) {
+  function displayTestTree(tests, studentTests, testType, selectedTest) {
   const tree = document.getElementById("testTree");
   tree.innerHTML = "";
 
@@ -421,6 +445,99 @@
     tree.appendChild(section);
   });
 }
+
+function setupDragDrop(tests) {
+  const manual = document.getElementById("manualList");
+  const auto   = document.getElementById("autoList");
+  manual.innerHTML = "";
+  auto.innerHTML   = "";
+
+  // 1️⃣ Split & sort
+  const manualTests = tests
+    .filter(t => t.unlock_mode !== "automatic")
+    .sort((a, b) => a.unlock_order - b.unlock_order);
+
+  const autoTests = tests
+    .filter(t => t.unlock_mode === "automatic")
+    .sort((a, b) => a.unlock_order - b.unlock_order);
+
+  // 2️⃣ Helper to create each <li>
+  function appendLi(listEl, t) {
+    const li = document.createElement("li");
+    li.textContent    = `${t.section} ${t.tipologia_esercizi} ${t.progressivo}`;
+    li.draggable      = true;
+    li.dataset.testId = t.id;
+
+    li.addEventListener("dragstart", ev => {
+      ev.dataTransfer.setData("text/plain", t.id);
+      ev.dataTransfer.effectAllowed = "move";
+    });
+
+    listEl.appendChild(li);
+  }
+
+  // 3️⃣ Populate each list in order
+  manualTests.forEach(t => appendLi(manual, t));
+  autoTests  .forEach(t => appendLi(auto,   t));
+
+  // 4️⃣ Allow drop between lists and persist mode changes
+  [manual, auto].forEach(list => {
+    list.addEventListener("dragover", ev => {
+      ev.preventDefault();
+      ev.dataTransfer.dropEffect = "move";
+    });
+    list.addEventListener("drop", async ev => {
+      ev.preventDefault();
+      const id = ev.dataTransfer.getData("text/plain");
+      const dragged = document.querySelector(`li[data-test-id="${id}"]`);
+      if (dragged && list !== dragged.parentNode) {
+        list.appendChild(dragged);
+        const newMode = list.id === 'autoList' ? 'automatic' : 'manual';
+        const { error } = await supabase
+          .from('student_tests')
+          .update({ unlock_mode: newMode })
+          .eq('id', id);
+        if (error) {
+          alert("Errore salvando modalità di sblocco: " + error.message);
+        }
+      }
+    });
+  });
+}
+// 5️⃣ Initialize SortableJS so you can reorder within each list
+function initSortable() {
+  const manual = document.getElementById("manualList");
+  const auto   = document.getElementById("autoList");
+
+  [manual, auto].forEach(listEl => {
+    Sortable.create(listEl, {
+      group: "unlock",
+      animation: 150,
+      onEnd: () => persistOrder(manual, "manual").then(() => persistOrder(auto, "automatic"))
+    });
+  });
+}
+    async function persistOrder(listEl, mode) {
+      // For each <li> in this list, set its unlock_mode and unlock_order
+      const updates = Array.from(listEl.children).map((li, idx) => ({
+        id:           li.dataset.testId,
+        unlock_mode:  mode,
+        unlock_order: idx
+      }));
+      // Write each update back to Supabase
+      for (const u of updates) {
+        const { error } = await supabase
+          .from("student_tests")
+          .update({
+            unlock_mode:  u.unlock_mode,
+            unlock_order: u.unlock_order
+          })
+          .eq("id", u.id);
+        if (error) console.error("Persist error:", error.message);
+      }
+    }
+
+
     async function confirmResetTest(section, testProgressivo, studentTestType, selectedTest) {
       const confirmReset = confirm("⚠ Questo test è contrassegnato come completato. Vuoi reimpostarlo e rimuovere tutte le risposte dello studente?");
       if (!confirmReset) return;
@@ -527,7 +644,7 @@
       window.location.href = "view_answers.html";
     }
   </script>
-
+</body>
   <!-- Go back function -->
   <script>
     function goBack() {

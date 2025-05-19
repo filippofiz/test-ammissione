@@ -70,7 +70,39 @@ async function loadTestTree() {
 
     console.log("📊 Student Progress Data:", studentTests);
     console.log("📊 Selected Test Type:", selectedTest);
+        // ——————— AUTO-UNLOCK PASS ———————
+    //
+    // For each automatic test, if the previous unlock_order
+    // (also automatic) is completed, unlock this one.
+    //
+    for (const test of studentTests) {
+      if (test.unlock_mode === "automatic" && test.unlock_order > 0) {
+        const prevOrder = test.unlock_order - 1;
+        const prevTest = studentTests.find(t => t.unlock_order === prevOrder);
+        if (
+          prevTest &&
+          prevTest.unlock_mode === "automatic" &&
+          prevTest.status === "completed" &&
+          test.status !== "completed"
+        ) {
+          const { error: updateError } = await supabase
+            .from("student_tests")
+            .update({ status: "unlocked" })
+            .eq("id", test.id);
 
+          if (!updateError) {
+            // update our local copy so the UI will render correctly
+            test.status = "unlocked";
+          } else {
+            console.error(
+              `❌ Auto-unlock failed for test id ${test.id}:`,
+              updateError.message
+            );
+          }
+        }
+      }
+    }
+    // —————————————————————————————————————
     // ✅ Ensure only unique sections exist in test data
     studentTests = studentTests.filter((test, index, self) =>
         index === self.findIndex((t) =>

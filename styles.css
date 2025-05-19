@@ -875,3 +875,41 @@ button.disabled-green {
   border: 1px solid #ccc;
   border-radius: 4px;
 }
+/* The flex parent: both children start at the same top line */
+#pageWrapper {
+  display: flex;
+  align-items: flex-start;   /* top-align them */
+  gap: 20px;                 /* space between the two panels */
+  padding: 30px;             /* instead of .container’s margin-top */
+}
+
+/* Override any margin-top on .container so it no longer pushes itself down */
+.container {
+  margin: 0 auto;            /* center horizontally, no vertical margin */
+}
+
+/* Style the unlock panel to match */
+#unlockPanel {
+  width: 280px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 10px;
+  background: #fafafa;
+}
+
+/* Your existing list styles */
+.unlock-list {
+  min-height: 200px;
+  border: 1px solid #ccc;
+  padding: 8px;
+  margin: 0;
+  list-style: none;
+  background: #fff;
+}
+.unlock-list li {
+  padding: 4px 8px;
+  margin: 4px 0;
+  background: #f1f1f1;
+  border-radius: 4px;
+  cursor: move;
+}
