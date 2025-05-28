@@ -1,0 +1,35 @@
+<!-- header.html -->
+<!-- 
+  Header riutilizzabile per tutte le pagine del portale Up to Ten
+  Include questo file in ogni pagina con un server-side include o copialo
+-->
+<header class="uptoten-header">
+  <div class="uptoten-header-content">
+    <a href="dashboard.html" class="logo-link">
+      <img src="https://elrwpaezjnemmiegkyin.supabase.co/storage/v1/object/public/images//6_Logo_trasparente.png" 
+           alt="Logo Up to Ten" 
+           class="uptoten-logo">
+    </a>
+    <div class="header-right">
+      <span class="greeting">Ciao, <span class="user-name">Utente</span></span>
+      <button id="logoutBtn" class="logout-btn">Logout</button>
+    </div>
+  </div>
+</header>
+
+<!-- Script per aggiornare il nome utente -->
+<script>
+// Questa funzione può essere chiamata dopo aver recuperato i dati dell'utente
+function updateHeaderGreeting(userName) {
+  const userNameElement = document.querySelector('.user-name');
+  if (userNameElement) {
+    userNameElement.textContent = userName;
+  }
+}
+
+// Gestione logout (da personalizzare con la tua logica Supabase)
+document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+  // Aggiungi qui la logica di logout
+  console.log('Logout clicked');
+});
+</script>

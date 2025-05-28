@@ -1,39 +1,198 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tutor Dashboard</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>Dashboard Tutor - Up to Ten</title>
+  <link rel="stylesheet" href="header.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh;
+      color: rgb(28, 37, 69);
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 2rem;
+    }
+
+    /* Responsive container per schermi grandi */
+    @media (min-width: 1600px) {
+      .container {
+        max-width: 1400px;
+      }
+    }
+
+    @media (max-width: 1280px) {
+      .container {
+        padding: 0 1.5rem;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        margin: 1rem auto;
+        padding: 0 1rem;
+      }
+    }
+
+    .dashboard-header {
+      background: linear-gradient(135deg, rgb(28, 37, 69), #1a2541);
+      color: white;
+      padding: 2rem 2.5rem;
+      border-radius: 16px;
+      margin-bottom: 2rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
+    }
+
+    .dashboard-header h2 {
+      font-size: 1.8rem;
+      margin-bottom: 1rem;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .modify-btn {
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      color: white;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      padding: 0.75rem 1.5rem;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .modify-btn:hover {
+      background: #00a666;
+      border-color: #00a666;
+      transform: translateY(-3px);
+    }
+
+    .students-section {
+      background: white;
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    }
+
+    .students-section h3 {
+      font-size: 1.4rem;
+      color: rgb(28, 37, 69);
+      margin-bottom: 1.5rem;
+    }
+
+    .student-progress {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    .student-progress:hover {
+      transform: translateX(4px);
+      border-color: #00a666;
+    }
+
+    .student-progress h3 {
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+    }
+
+    .test-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      background: rgba(0, 166, 102, 0.05);
+      border-radius: 10px;
+      margin-bottom: 0.5rem;
+    }
+
+    .test-row span {
+      flex: 1;
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+
+    .viewTestsBtn, .dashboardBtn {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.3s ease;
+    }
+
+    .viewTestsBtn {
+      background: white;
+      color: #00a666;
+      border: 1.5px solid #00a666;
+    }
+
+    .viewTestsBtn:hover {
+      background: #00a666;
+      color: white;
+    }
+
+    .dashboardBtn {
+      background: rgb(28, 37, 69);
+      color: white;
+    }
+
+    .dashboardBtn:hover {
+      transform: scale(1.05);
+    }
+  </style>
 </head>
 <body>
-  <!-- Header: logo a sinistra e saluto + logout a destra -->
-  <header class="portale-header">
-    <div class="portale-header-content">
-      <img src="https://elrwpaezjnemmiegkyin.supabase.co/storage/v1/object/public/images//6_Logo_trasparente.png" 
-           alt="Logo Università" class="portale-logo">
-      <div class="header-right">
-        <span class="greeting">Ciao, Utente</span>
-        <button id="logoutBtn" class="logout-btn">Logout</button>
-      </div>
-    </div>
-  </header>
+  <!-- Carica l'header dal file esterno -->
+  <div id="header-placeholder"></div>
 
   <div class="container">
     <div class="dashboard-header">
-      <h2>Dashboard</h2>
-      <button id="modifyTestsBtn" class="modify-btn">Gestione test</button>
-      <!-- New Button for Assigning New Tests -->
-      <button id="assignTestsBtn" class="modify-btn">Assegna nuovi test</button>
+      <h2>Dashboard Tutor</h2>
+      <div class="button-group">
+        <button id="modifyTestsBtn" class="modify-btn">🛠️ Gestione test</button>
+        <button id="assignTestsBtn" class="modify-btn">➕ Assegna nuovi test</button>
+      </div>
     </div>
      
-    <!-- Lista degli studenti -->
-    <h3>I tuoi studenti</h3>
-    <div id="studentsContainer">
-      <!-- Gli elementi saranno aggiunti dinamicamente -->
+    <div class="students-section">
+      <h3>🎓 I tuoi studenti</h3>
+      <div id="studentsContainer">
+        <!-- Gli studenti verranno caricati qui -->
+      </div>
     </div>
   </div>
   
+  <script>
+    // Carica l'header dal file esterno
+    fetch('header.html')
+      .then(response => response.text())
+      .then(data => {
+        document.getElementById('header-placeholder').innerHTML = data;
+      });
+  </script>
+
   <script type="module">
     import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -42,111 +201,104 @@
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Aggiorna il saluto in header usando la parte prima della "@" dell'email
-    document.addEventListener("DOMContentLoaded", async () => {
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !sessionData || !sessionData.session) {
-        document.querySelector('.greeting').textContent = "Ciao, Utente";
-      } else {
+    // Aspetta che l'header sia caricato, poi aggiorna il nome
+    setTimeout(async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData?.session) {
         const userId = sessionData.session.user.id;
-        const { data: tutor, error: tutorError } = await supabase
+        const { data: tutor } = await supabase
           .from("tutors")
           .select("name")
           .eq("auth_uid", userId)
           .single();
-        if (tutorError || !tutor) {
-          document.querySelector('.greeting').textContent = "Ciao, Utente";
-        } else {
-          document.querySelector('.greeting').textContent = `Ciao, ${tutor.name}`;
+        
+        if (tutor?.name) {
+          const userNameElement = document.querySelector('.user-name');
+          if (userNameElement) {
+            userNameElement.textContent = tutor.name;
+          }
         }
       }
-    });
+
+      // Aggiungi evento logout
+      document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+        await supabase.auth.signOut();
+        window.location.href = "login.html";
+      });
+    }, 100);
 
     async function getTutorId() {
       const { data: userData, error: authError } = await supabase.auth.getUser();
       if (authError || !userData || !userData.user) {
-          console.error("❌ Error getting authenticated tutor:", authError);
-          alert("Session expired. Please log in again.");
+          alert("Sessione scaduta. Accedi di nuovo.");
           window.location.href = "login.html";
           return null;
       }
       const authUid = userData.user.id;
-      const { data: tutorData, error: tutorError } = await supabase
+      const { data: tutorData } = await supabase
           .from("tutors")
           .select("id")
           .eq("auth_uid", authUid)
           .single();
-      if (tutorError || !tutorData) {
-          console.error("❌ Error fetching tutor ID:", tutorError);
-          alert("Tutor account not found.");
-          window.location.href = "login.html";
-      }
-      return tutorData.id;
+      return tutorData?.id;
     }
 
     async function fetchStudents() {
       const tutorId = await getTutorId();
       if (!tutorId) return;
-      // Now select also the "tests" column.
-      const { data: students, error: studentError } = await supabase
+      
+      const { data: students } = await supabase
           .from("students")
           .select("id, auth_uid, name, tests")
           .eq("tutor_id", tutorId);
       
-      if (studentError) {
-          console.error("❌ Error fetching students:", studentError);
-          return;
-      }
-      displayStudentProgress(students);
+      displayStudentProgress(students || []);
     }
 
     async function displayStudentProgress(students) {
       const studentsContainer = document.getElementById("studentsContainer");
       studentsContainer.innerHTML = "";
-      // For each student, create a container.
+      
+      if (students.length === 0) {
+        studentsContainer.innerHTML = '<p style="text-align: center; color: #6c757d;">Nessuno studente assegnato</p>';
+        return;
+      }
+      
       for (const student of students) {
         const studentDiv = document.createElement("div");
         studentDiv.classList.add("student-progress");
-        studentDiv.innerHTML = `<h3>${student.name}</h3>`;
+        studentDiv.innerHTML = `<h3>👤 ${student.name}</h3>`;
         
-        // For each test in the student's tests array, create a row with two buttons.
         if (student.tests && student.tests.length > 0) {
           student.tests.forEach(testOption => {
             const rowDiv = document.createElement("div");
             rowDiv.classList.add("test-row");
-            // Optionally, display the test name.
+            
             const testLabel = document.createElement("span");
-            testLabel.textContent = testOption;
-            testLabel.style.marginRight = "10px";
+            testLabel.textContent = `📝 ${testOption}`;
             rowDiv.appendChild(testLabel);
             
-            // Button for "Visualizza test assegnati"
             const viewTestsBtn = document.createElement("button");
             viewTestsBtn.classList.add("viewTestsBtn");
-            viewTestsBtn.textContent = "Visualizza test assegnati";
+            viewTestsBtn.textContent = "Test assegnati";
             viewTestsBtn.onclick = () => viewStudentTests(student.auth_uid, student.name, testOption);
             rowDiv.appendChild(viewTestsBtn);
             
-            // Button for "Visualizza i risultati"
             const dashboardBtn = document.createElement("button");
             dashboardBtn.classList.add("dashboardBtn");
-            dashboardBtn.textContent = "Visualizza i risultati";
+            dashboardBtn.textContent = "Risultati";
             dashboardBtn.onclick = () => viewStudentDashboard(student.auth_uid, student.name, testOption);
             rowDiv.appendChild(dashboardBtn);
             
             studentDiv.appendChild(rowDiv);
           });
         } else {
-          // If no tests are available.
-          const noTests = document.createElement("p");
-          noTests.textContent = "Nessun test disponibile";
-          studentDiv.appendChild(noTests);
+          studentDiv.innerHTML += '<p style="color: #6c757d; text-align: center;">Nessun test disponibile</p>';
         }
         studentsContainer.appendChild(studentDiv);
       }
     }
 
-    // Update the click handlers to also store the selected test.
     window.viewStudentTests = function (studentId, studentName, selectedTest) {
       sessionStorage.setItem("selectedStudentId", studentId);
       sessionStorage.setItem("selectedStudentName", studentName);
@@ -161,16 +313,10 @@
       window.location.href = "dashboard.html";
     };
 
-    document.getElementById("logoutBtn").addEventListener("click", async () => {
-      await supabase.auth.signOut();
-      window.location.href = "login.html";
-    });
-
     document.getElementById("modifyTestsBtn").addEventListener("click", () => {
       window.location.href = "modify_tests.html";
     });
 
-    // New event listener to go to the "Assegna nuovi test" page.
     document.getElementById("assignTestsBtn").addEventListener("click", () => {
       window.location.href = "assign_tests.html";
     });

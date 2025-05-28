@@ -3,43 +3,391 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Assegna Nuovi Test</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>Assegna Nuovi Test - Up to Ten</title>
+  <link rel="stylesheet" href="header.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh;
+      color: rgb(28, 37, 69);
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 2rem;
+    }
+
+    /* Responsive container per schermi grandi */
+    @media (min-width: 1600px) {
+      .container {
+        max-width: 1400px;
+      }
+    }
+
+    @media (max-width: 1280px) {
+      .container {
+        padding: 0 1.5rem;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        margin: 1rem auto;
+        padding: 0 1rem;
+      }
+    }
+
+    /* Page Header */
+    .page-header {
+      background: linear-gradient(135deg, rgb(28, 37, 69), #1a2541);
+      color: white;
+      padding: 2rem 2.5rem;
+      border-radius: 16px;
+      margin-bottom: 2rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .page-header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -10%;
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle, rgba(0, 166, 102, 0.3) 0%, transparent 70%);
+      animation: pulse 4s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.5; }
+      50% { transform: scale(1.2); opacity: 0.8; }
+    }
+
+    .page-header h2 {
+      font-size: 1.8rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Student Selection Card */
+    .selection-card {
+      background: white;
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      margin-bottom: 2rem;
+      animation: fadeInUp 0.6s ease-out;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .selection-card label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+      color: rgb(28, 37, 69);
+      font-size: 1.1rem;
+    }
+
+    #studentDropdown {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 2px solid #e9ecef;
+      border-radius: 10px;
+      font-size: 1rem;
+      background: white;
+      color: rgb(28, 37, 69);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    #studentDropdown:hover {
+      border-color: #00a666;
+    }
+
+    #studentDropdown:focus {
+      outline: none;
+      border-color: #00a666;
+      box-shadow: 0 0 0 3px rgba(0, 166, 102, 0.1);
+    }
+
+    /* Test Sections */
+    .test-section {
+      background: white;
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      margin-bottom: 2rem;
+      animation: fadeInUp 0.8s ease-out;
+    }
+
+    .test-section h3 {
+      font-size: 1.3rem;
+      color: rgb(28, 37, 69);
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .test-section h3::before {
+      content: '📋';
+      font-size: 1.5rem;
+    }
+
+    /* Test Container */
+    #unassignedTests, #unassignedIngressoTests {
+      display: grid;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+      max-height: 300px;
+      overflow-y: auto;
+      padding: 1rem;
+      background: #f8f9fa;
+      border-radius: 10px;
+      border: 1px solid #e9ecef;
+    }
+
+    /* Custom Scrollbar */
+    #unassignedTests::-webkit-scrollbar,
+    #unassignedIngressoTests::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    #unassignedTests::-webkit-scrollbar-track,
+    #unassignedIngressoTests::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+
+    #unassignedTests::-webkit-scrollbar-thumb,
+    #unassignedIngressoTests::-webkit-scrollbar-thumb {
+      background: #00a666;
+      border-radius: 10px;
+    }
+
+    /* Checkbox Styling */
+    .test-item {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem;
+      background: white;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .test-item:hover {
+      background: rgba(0, 166, 102, 0.05);
+      transform: translateX(4px);
+    }
+
+    .test-item input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      margin-right: 0.75rem;
+      cursor: pointer;
+      accent-color: #00a666;
+    }
+
+    .test-item label {
+      flex: 1;
+      cursor: pointer;
+      font-size: 0.95rem;
+      color: rgb(28, 37, 69);
+    }
+
+    /* Buttons */
+    .assign-btn {
+      background: linear-gradient(135deg, #00a666, #00c775);
+      color: white;
+      border: none;
+      padding: 0.75rem 2rem;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      width: 100%;
+      margin-top: 1rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .assign-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      transition: left 0.6s;
+    }
+
+    .assign-btn:hover::before {
+      left: 100%;
+    }
+
+    .assign-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 166, 102, 0.3);
+    }
+
+    .assign-btn:active {
+      transform: translateY(-1px);
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 2rem;
+      color: #6c757d;
+      font-style: italic;
+    }
+
+    /* Loading State */
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(0, 166, 102, 0.3);
+      border-radius: 50%;
+      border-top-color: #00a666;
+      animation: spin 1s ease-in-out infinite;
+      margin: 2rem auto;
+      display: block;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .container {
+        padding: 0 1rem;
+      }
+
+      .page-header, .selection-card, .test-section {
+        padding: 1.5rem;
+      }
+
+      .page-header h2 {
+        font-size: 1.5rem;
+      }
+    }
+  </style>
 </head>
 <body>
-  <h2>Assegna Nuovi Test</h2>
+  <!-- Carica l'header dal file esterno -->
+  <div id="header-placeholder"></div>
 
-  <label for="studentDropdown">Seleziona Studente:</label>
-  <select id="studentDropdown"></select>
+  <div class="container">
+    <!-- Page Header -->
+    <div class="page-header">
+      <h2>✨ Assegna Nuovi Test</h2>
+    </div>
 
-  <h3>Test non ancora assegnati:</h3>
-  <div id="unassignedTests"></div>
+    <!-- Student Selection -->
+    <div class="selection-card">
+      <label for="studentDropdown">👤 Seleziona Studente:</label>
+      <select id="studentDropdown">
+        <option value="">Caricamento studenti...</option>
+      </select>
+    </div>
 
-  <button id="assignSelectedTests">Assegna Test</button>
-  
-  <h3>Test d'ingresso non ancora assegnati:</h3>
-  <div id="unassignedIngressoTests"></div>
-  <button id="assignIngressoTests">Assegna Test d'ingresso</button>
+    <!-- Regular Tests Section -->
+    <div class="test-section">
+      <h3>Test non ancora assegnati</h3>
+      <div id="unassignedTests">
+        <div class="loading"></div>
+      </div>
+      <button id="assignSelectedTests" class="assign-btn">
+        ✅ Assegna Test Selezionati
+      </button>
+    </div>
+
+    <!-- Ingresso Tests Section -->
+    <div class="test-section">
+      <h3>Test d'ingresso non ancora assegnati</h3>
+      <div id="unassignedIngressoTests">
+        <div class="loading"></div>
+      </div>
+      <button id="assignIngressoTests" class="assign-btn">
+        🎯 Assegna Test d'Ingresso
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // Carica l'header dal file esterno
+    fetch('header.html')
+      .then(response => response.text())
+      .then(data => {
+        document.getElementById('header-placeholder').innerHTML = data;
+      });
+  </script>
 
   <script type="module">
     import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
     
-    // Updated Supabase key to match tutor_dashboard.html
     const supabase = createClient(
       "https://elrwpaezjnemmiegkyin.supabase.co",
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVscndwYWV6am5lbW1pZWdreWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzAyMDUsImV4cCI6MjA1MzY0NjIwNX0.p6R2S1HK8kPFYiEAYtYaxIAH8XSmzjQBWQ_ywy3akdI"
     );
 
-    // Declare global variables
-    let globalStudentId = null;
-    let globalStudentTests = [];
+    // Aspetta che l'header sia caricato, poi aggiorna il nome
+    setTimeout(async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData?.session) {
+        const userId = sessionData.session.user.id;
+        const { data: tutor } = await supabase
+          .from("tutors")
+          .select("name")
+          .eq("auth_uid", userId)
+          .single();
+        
+        if (tutor?.name) {
+          const userNameElement = document.querySelector('.user-name');
+          if (userNameElement) {
+            userNameElement.textContent = tutor.name;
+          }
+        }
+      }
 
-    // Helper: Get the logged in tutor's id.
+      // Aggiungi evento logout
+      document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+        await supabase.auth.signOut();
+        window.location.href = "login.html";
+      });
+    }, 100);
+
+    // Helper: Get the logged in tutor's id
     async function getTutorId() {
       const { data: userData, error: authError } = await supabase.auth.getUser();
       if (authError || !userData || !userData.user) {
           console.error("❌ Error getting authenticated tutor:", authError);
-          alert("Session expired. Please log in again.");
+          alert("Sessione scaduta. Accedi di nuovo.");
           window.location.href = "login.html";
           return null;
       }
@@ -51,7 +399,7 @@
           .single();
       if (tutorError || !tutorData) {
           console.error("❌ Error fetching tutor ID:", tutorError);
-          alert("Tutor account not found.");
+          alert("Account tutor non trovato.");
           window.location.href = "login.html";
       }
       return tutorData.id;
@@ -61,86 +409,65 @@
         const tutorId = await getTutorId();
         if (!tutorId) return;
 
-        // Fetch auth_uid and name from students
+        const studentDropdown = document.getElementById("studentDropdown");
+        studentDropdown.innerHTML = '<option value="">Seleziona uno studente...</option>';
+
         const { data: students, error } = await supabase
             .from("students")
             .select("auth_uid, name, tests")
             .eq("tutor_id", tutorId);
 
-        //const studentTests = students.map(student => student.tests);
-        //console.log("Student tests:", studentTests);   
-        //if (error) {
-         //   console.error("❌ Error fetching students:", error.message);
-        //    return;
-        //}
-
-        // 1) Populate dropdown:
         students.forEach(student => {
           const option = document.createElement("option");
           option.value = student.auth_uid;
           option.textContent = student.name;
-          // Save this student's tests in a data attribute:
           option.dataset.tests = JSON.stringify(student.tests || []);
           studentDropdown.appendChild(option);
         });
 
-        // 2) After populating, pick the first student's tests:
-        const firstOption = studentDropdown.options[0];
-        const firstStudentTests = JSON.parse(firstOption.dataset.tests || "[]");
-        fetchUnassignedTests(firstStudentTests);
-        fetchUnassignedTestIngresso(firstStudentTests);
-
-        // 3) On dropdown change:
-        studentDropdown.addEventListener("change", () => {
-          const selectedOption = studentDropdown.selectedOptions[0];
-          const testsForThisStudent = JSON.parse(selectedOption.dataset.tests || "[]");
-          fetchUnassignedTests(testsForThisStudent);
-          fetchUnassignedTestIngresso(testsForThisStudent);
-        });
+        // Clear loading states
+        document.getElementById("unassignedTests").innerHTML = '<div class="empty-state">Seleziona uno studente per vedere i test disponibili</div>';
+        document.getElementById("unassignedIngressoTests").innerHTML = '<div class="empty-state">Seleziona uno studente per vedere i test d\'ingresso disponibili</div>';
     }
 
     async function fetchUnassignedTests(studentTests) {
       const studentId = document.getElementById("studentDropdown").value;
-      console.log("Selected student:", studentId);
       if (!studentId) return;
 
-      // Fetch tests already assigned to the student.
+      const testContainer = document.getElementById("unassignedTests");
+      testContainer.innerHTML = '<div class="loading"></div>';
+
+      // Fetch tests already assigned to the student
       const { data: assignedTests, error: assignedError } = await supabase
         .from("student_tests")
         .select("section, tipologia_esercizi, progressivo, tipologia_test")
         .in("tipologia_test", studentTests)
         .eq("auth_uid", studentId);
+      
       if (assignedError) {
         console.error("❌ Error fetching assigned tests:", assignedError.message);
         return;
       }
       
-      // Build a set of composite keys for assigned tests.
+      // Build a set of composite keys for assigned tests
       const assignedCompositeSet = new Set();
       (assignedTests || []).forEach(test => {
         const key = `${test.section}-${test.tipologia_esercizi}-${test.progressivo}-${test.tipologia_test}`;
         assignedCompositeSet.add(key);
       });
       
-      // Query available tests from "questions"
-      let { data: availableTests, error: availableError } = await supabase
+      // Query available tests from both tables
+      let { data: availableTests } = await supabase
         .from("questions")
         .select("section, tipologia_esercizi, progressivo, tipologia_test")
         .in("tipologia_test", studentTests);
       
-      // Query available tests from "questions_bancaDati"
-      // For bocconi tests, if "tipologia_esercizi" is missing, set it to "BOCCONI" and default progressivo to 1.
-      let { data: bocconiTests, error: bocconiError } = await supabase
+      let { data: bocconiTests } = await supabase
         .from("questions_bancaDati")
         .select("section, tipologia_esercizi, tipologia_test")
         .in("tipologia_test", studentTests);
 
-      if (availableError || bocconiError) {
-        console.error("❌ Error fetching unassigned tests:", availableError?.message || bocconiError?.message);
-        return;
-      }
-
-      // Transform availableTests rows to include composite key and composite name.
+      // Transform and combine tests
       const tests1 = (availableTests || []).map(test => {
         const compositeKey = `${test.section}-${test.tipologia_esercizi}-${test.progressivo}-${test.tipologia_test}`;
         return {
@@ -149,14 +476,13 @@
           progressivo: test.progressivo,
           tipologia_test: test.tipologia_test,
           compositeKey,
-          compositeName: `${test.section}: ${test.tipologia_esercizi} ${test.progressivo} of ${test.tipologia_test}`
+          compositeName: `${test.section}: ${test.tipologia_esercizi} ${test.progressivo} (${test.tipologia_test})`
         };
       });
 
-      // Transform bocconiTests rows – apply default values.
       const tests2 = (bocconiTests || []).map(test => {
-        const tipologia_esercizi = test.tipologia_esercizi ? test.tipologia_esercizi : "BOCCONI";
-        const progressivo = 1;  // default for bocconi tests
+        const tipologia_esercizi = test.tipologia_esercizi || "BOCCONI";
+        const progressivo = 1;
         const compositeKey = `${test.section}-${tipologia_esercizi}-${progressivo}-${test.tipologia_test}`;
         return {
           section: test.section,
@@ -164,33 +490,35 @@
           progressivo: progressivo,
           tipologia_test: test.tipologia_test,
           compositeKey,
-          compositeName: `${test.section}: ${tipologia_esercizi} ${progressivo} of ${test.tipologia_test}`
+          compositeName: `${test.section}: ${tipologia_esercizi} (${test.tipologia_test})`
         };
       });
 
-      // Combine tests from both sources.
       const combinedTests = [...tests1, ...tests2];
-
-      // Filter out tests that are already assigned (by composite key).
       const unassignedTests = combinedTests.filter(test => !assignedCompositeSet.has(test.compositeKey));
-
-      // Further deduplicate tests based on the composite key.
+      
+      // Deduplicate
       const uniqueTestsMap = new Map();
       unassignedTests.forEach(test => {
         uniqueTestsMap.set(test.compositeKey, test);
       });
       const uniqueTests = Array.from(uniqueTestsMap.values());
 
-      const testContainer = document.getElementById("unassignedTests");
       testContainer.innerHTML = "";
 
+      if (uniqueTests.length === 0) {
+        testContainer.innerHTML = '<div class="empty-state">Tutti i test sono già stati assegnati!</div>';
+        return;
+      }
+
       uniqueTests.forEach(test => {
+        const testItem = document.createElement("div");
+        testItem.classList.add("test-item");
+        
         const checkbox = document.createElement("input");
         checkbox.type = "checkbox";
         checkbox.value = test.compositeKey;
-        // Use a safe ID (replace spaces and special characters)
         checkbox.id = `test-${test.compositeKey.replace(/\W/g, '')}`;
-        // Store individual fields as data attributes
         checkbox.dataset.section = test.section;
         checkbox.dataset.tipologiaEs = test.tipologia_esercizi;
         checkbox.dataset.progressivo = test.progressivo;
@@ -200,32 +528,26 @@
         label.htmlFor = checkbox.id;
         label.textContent = test.compositeName;
 
-        testContainer.appendChild(checkbox);
-        testContainer.appendChild(label);
-        testContainer.appendChild(document.createElement("br"));
+        testItem.appendChild(checkbox);
+        testItem.appendChild(label);
+        testContainer.appendChild(testItem);
       });
     }
 
     async function fetchUnassignedTestIngresso(studentTests) {
-      // Query tipologia_test from the "questions" table.
-      const { data: questionsData, error: questionsError } = await supabase
+      const testContainer = document.getElementById("unassignedIngressoTests");
+      testContainer.innerHTML = '<div class="loading"></div>';
+
+      // Query all available test types
+      const { data: questionsData } = await supabase
         .from("questions")
         .select("tipologia_test");
-      if (questionsError) {
-        console.error("Error fetching tests from questions:", questionsError.message);
-        return;
-      }
 
-      // Query tipologia_test from the "questions_bancaDati" table.
-      const { data: bocconiData, error: bocconiError } = await supabase
+      const { data: bocconiData } = await supabase
         .from("questions_bancaDati")
         .select("tipologia_test");
-      if (bocconiError) {
-        console.error("Error fetching tests from questions_bancaDati:", bocconiError.message);
-        return;
-      }
 
-      // Combine both results and deduplicate.
+      // Combine and deduplicate
       let allTests = [];
       if (questionsData) {
         allTests = allTests.concat(questionsData.map(item => item.tipologia_test));
@@ -235,42 +557,41 @@
       }
       const uniqueTests = [...new Set(allTests)];
 
-      console.log("Unique ingresso tests:", uniqueTests);
-      console.log("Student tests:", studentTests);
-
-      // Filter out tests that already appear in the studentTests array.
+      // Filter out already assigned
       const unassignedTests = uniqueTests.filter(test => !studentTests.includes(test));
-      console.log("Unassigned ingresso tests:", unassignedTests);
 
+      testContainer.innerHTML = "";
 
-      // Display these choices in a container.
-      const container = document.getElementById("unassignedIngressoTests");
-      if (!container) {
-        console.error("Container for unassigned ingresso tests not found.");
+      if (unassignedTests.length === 0) {
+        testContainer.innerHTML = '<div class="empty-state">Tutti i test d\'ingresso sono già stati assegnati!</div>';
         return;
       }
-      container.innerHTML = ""; // Clear previous content
 
       unassignedTests.forEach(test => {
+        const testItem = document.createElement("div");
+        testItem.classList.add("test-item");
+        
         const checkbox = document.createElement("input");
         checkbox.type = "checkbox";
         checkbox.value = test;
-        // Create a safe ID by removing non-word characters.
         checkbox.id = "ingresso-" + test.replace(/\W/g, '');
 
         const label = document.createElement("label");
         label.htmlFor = checkbox.id;
         label.textContent = test;
 
-        container.appendChild(checkbox);
-        container.appendChild(label);
-        container.appendChild(document.createElement("br"));
+        testItem.appendChild(checkbox);
+        testItem.appendChild(label);
+        testContainer.appendChild(testItem);
       });
     }
 
     async function assignTests() {
       const studentId = document.getElementById("studentDropdown").value;
-      if (!studentId) return;
+      if (!studentId) {
+        alert("Seleziona uno studente!");
+        return;
+      }
 
       const selectedCheckboxes = Array.from(document.querySelectorAll("#unassignedTests input:checked"));
       if (selectedCheckboxes.length === 0) {
@@ -278,7 +599,6 @@
         return;
       }
 
-      // Map each selected checkbox to an entry including all required fields.
       const testEntries = selectedCheckboxes.map(checkbox => ({
         auth_uid: studentId,
         section: checkbox.dataset.section,
@@ -287,8 +607,6 @@
         tipologia_test: checkbox.dataset.tipologiaTest,
         status: "locked"
       }));
-
-      console.log("Assigning tests:", testEntries);
 
       const { error } = await supabase
         .from("student_tests")
@@ -303,10 +621,13 @@
       alert("✅ Test assegnati con successo!");
       window.location.reload();
     }
-        // Function to assign ingresso tests: append the selected ingresso tests to the student's tests array.
-        async function assignTestIngresso() {
+
+    async function assignTestIngresso() {
       const studentId = document.getElementById("studentDropdown").value;
-      if (!studentId) return;
+      if (!studentId) {
+        alert("Seleziona uno studente!");
+        return;
+      }
 
       const selectedCheckboxes = Array.from(document.querySelectorAll("#unassignedIngressoTests input:checked"));
       if (selectedCheckboxes.length === 0) {
@@ -316,46 +637,54 @@
 
       const selectedTests = selectedCheckboxes.map(cb => cb.value);
 
-      // Fetch current tests from the student's record.
-      const { data: studentData, error: studentError } = await supabase
+      // Fetch current tests
+      const { data: studentData } = await supabase
         .from("students")
         .select("tests")
         .eq("auth_uid", studentId)
         .single();
-      if (studentError || !studentData) {
-        console.error("Error fetching student data:", studentError?.message);
-        alert("Errore nel recupero dei dati dello studente.");
-        return;
-      }
+      
       const currentTests = studentData.tests || [];
       const newTests = selectedTests.filter(test => !currentTests.includes(test));
+      
       if (newTests.length === 0) {
         alert("I test d'ingresso selezionati sono già assegnati.");
         return;
       }
+      
       const updatedTests = currentTests.concat(newTests);
       const { error } = await supabase
         .from("students")
         .update({ tests: updatedTests })
         .eq("auth_uid", studentId);
+      
       if (error) {
         console.error("Error updating student's tests:", error.message);
         alert("Errore nell'assegnazione dei test d'ingresso.");
         return;
       }
+      
       alert("✅ Test d'ingresso assegnati con successo!");
-      fetchUnassignedTestIngresso(updatedTests);
       window.location.reload();
     }
 
+    // Event Listeners
     document.getElementById("studentDropdown").addEventListener("change", async () => {
-      const tests = JSON.parse(document.getElementById("studentDropdown").selectedOptions[0].dataset.tests || "[]");
+      const selectedOption = document.getElementById("studentDropdown").selectedOptions[0];
+      if (!selectedOption || !selectedOption.value) {
+        document.getElementById("unassignedTests").innerHTML = '<div class="empty-state">Seleziona uno studente per vedere i test disponibili</div>';
+        document.getElementById("unassignedIngressoTests").innerHTML = '<div class="empty-state">Seleziona uno studente per vedere i test d\'ingresso disponibili</div>';
+        return;
+      }
+      const tests = JSON.parse(selectedOption.dataset.tests || "[]");
       await fetchUnassignedTests(tests);
       await fetchUnassignedTestIngresso(tests);
     });
+
     document.getElementById("assignSelectedTests").addEventListener("click", assignTests);
     document.getElementById("assignIngressoTests").addEventListener("click", assignTestIngresso);
 
+    // Initialize
     loadStudents();
   </script>
 </body>
