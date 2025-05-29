@@ -8,7 +8,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const studentId = sessionStorage.getItem("selectedStudentId");
 const studentName = sessionStorage.getItem("selectedStudentName");
 const globalTestType = sessionStorage.getItem("selectedTestType");
-document.getElementById("dashboardTitle").textContent = `Risultati dei test di ${studentName}`;
+document.getElementById("dashboardTitle").textContent = `Risultati di ${studentName}`;
 
 if (!studentId) {
   alert("Error: No student selected.");
@@ -18,9 +18,39 @@ if (!studentId) {
 // Global variables for fetched data and chart instances.
 let globalAnswers = [];
 let globalQuestions = [];
-let studentTestsData = []; // Data from student_tests for the current student & test type.
+let studentTestsData = [];
+let chartInstances = {};
+
+// Update tutor name in header
+async function updateTutorName() {
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (sessionData?.session) {
+    const userId = sessionData.session.user.id;
+    const { data: tutor } = await supabase
+      .from("tutors")
+      .select("name")
+      .eq("auth_uid", userId)
+      .single();
+    
+    if (tutor?.name) {
+      const userNameElement = document.querySelector('.user-name');
+      if (userNameElement) {
+        userNameElement.textContent = tutor.name;
+      }
+    }
+  }
+
+  // Add logout event
+  document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    window.location.href = "login.html";
+  });
+}
 
 async function loadDashboard() {
+  // Update tutor name after a delay to ensure header is loaded
+  setTimeout(updateTutorName, 200);
+  
   // Make sure all filters are visible.
   document.getElementById("sectionFilter").style.display = "inline-block";
   document.getElementById("tipologiaFilter").style.display = "inline-block";
@@ -74,33 +104,24 @@ async function loadDashboard() {
 
   document.getElementById("sectionFilter").addEventListener("change", () => {
     populateDependentFilters();
-    filterDashboard();
-    updateInteractiveTable();
+    updateAllVisualizations();
   });
-  document.getElementById("tipologiaFilter").addEventListener("change", () => {
-    filterDashboard();
-    updateInteractiveTable();
-  });
-  document.getElementById("progressivoFilter").addEventListener("change", () => {
-    filterDashboard();
-    updateInteractiveTable();
-  });
-  document.getElementById("argomentoFilter").addEventListener("change", () => {
-    filterDashboard();
-    updateInteractiveTable();
-  });
+  document.getElementById("tipologiaFilter").addEventListener("change", updateAllVisualizations);
+  document.getElementById("progressivoFilter").addEventListener("change", updateAllVisualizations);
+  document.getElementById("argomentoFilter").addEventListener("change", updateAllVisualizations);
+  document.getElementById("linePlotArgomentoFilter").addEventListener("change", updateLineChart);
 
+  updateAllVisualizations();
+  populateLinePlotFilter();
+}
+
+function updateAllVisualizations() {
   filterDashboard();
   updateInteractiveTable();
-  // After updating the interactive table...
-populateLinePlotFilter();
-updateLineChart();
-
-// Also attach event listeners.
-document.getElementById("sectionFilter").addEventListener("change", updateLineChart);
-document.getElementById("tipologiaFilter").addEventListener("change", updateLineChart);
-document.getElementById("progressivoFilter").addEventListener("change", updateLineChart);
-document.getElementById("linePlotArgomentoFilter").addEventListener("change", updateLineChart);
+  updateLineChart();
+  updateRadarChart();
+  updateBarChart();
+  updateHeatmap();
 }
 
 function populateFiltersFromStudentTests(testsData) {
@@ -196,7 +217,8 @@ function filterDashboard() {
   
   const allowedQuestionIds = new Set(filteredQuestions.map(q => q.id));
   const filteredAnswers = globalAnswers.filter(ans => allowedQuestionIds.has(ans.question_id));
-  // Assuming 'filteredAnswers' is already computed:
+  
+  // Count answers
   let correctCount = 0, incorrectCount = 0, insicuroCount = 0, nonHoIdeaCount = 0, nonDatoCount = 0;
   filteredAnswers.forEach(d => {
     if (d.auto_score === 1) {
@@ -211,8 +233,26 @@ function filterDashboard() {
       nonDatoCount++;
     }
   });
+  
+  // Update stats cards
+  const totalAnswers = filteredAnswers.length;
+  document.getElementById("correctCount").textContent = correctCount;
+  document.getElementById("incorrectCount").textContent = incorrectCount;
+  document.getElementById("correctPercentage").textContent = totalAnswers > 0 ? 
+    `${((correctCount / totalAnswers) * 100).toFixed(1)}% del totale` : "0% del totale";
+  document.getElementById("incorrectPercentage").textContent = totalAnswers > 0 ? 
+    `${((incorrectCount / totalAnswers) * 100).toFixed(1)}% del totale` : "0% del totale";
+  
+  // Update completion rate
+  const totalQuestions = filteredQuestions.length;
+  const completionRate = totalQuestions > 0 ? ((totalAnswers / totalQuestions) * 100).toFixed(1) : 0;
+  document.getElementById("completionRate").textContent = `${completionRate}%`;
+  document.getElementById("progressFill").style.width = `${completionRate}%`;
+  
+  // Update pie chart
   updateEChartsPie(correctCount, incorrectCount, insicuroCount, nonHoIdeaCount, nonDatoCount);
 
+  // Calculate and display scores
   if (
     sectionVal != "all" &&
     tipologiaVal != "all" &&
@@ -220,13 +260,15 @@ function filterDashboard() {
     argomentoVal === "all"
   ) {
     const score = calculateScore(filteredAnswers, 1);
-    scoreDisplay.textContent = `Score (1 for correct, 0 otherwise): ${score}`;
     const score2 = calculateScore(filteredAnswers, 2);
+    document.getElementById("totalScore").textContent = score.toFixed(2);
+    scoreDisplay.textContent = `Modalità standard (${score})`;
     scoreDisplay2.textContent = `Score (1 for correct, -0.25 for incorrect, 0 otherwise): ${score2}`;
-    scoreDisplay.style.display = "block";
     scoreDisplay2.style.display = "block";
   } else {
-    scoreDisplay.style.display = "none";
+    const score = calculateScore(filteredAnswers, 1);
+    document.getElementById("totalScore").textContent = score.toFixed(2);
+    scoreDisplay.textContent = "Modalità standard";
     scoreDisplay2.style.display = "none";
   }
 }
@@ -247,12 +289,457 @@ function calculateScore(answers, modality) {
   return score;
 }
 
+function updateEChartsPie(correctCount, incorrectCount, insicuroCount, nonHoIdeaCount, nonDatoCount) {
+  const chartDom = document.getElementById('echartsPieContainer');
+  if (!chartInstances.pie) {
+    chartInstances.pie = echarts.init(chartDom);
+  }
+  
+  const option = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'item',
+      formatter: '{b}: {c} ({d}%)'
+    },
+    legend: {
+      bottom: '5%',
+      left: 'center'
+    },
+    series: [
+      {
+        name: 'Risposte',
+        type: 'pie',
+        radius: ['40%', '70%'],
+        avoidLabelOverlap: false,
+        itemStyle: {
+          borderRadius: 10,
+          borderColor: '#fff',
+          borderWidth: 2
+        },
+        label: {
+          show: true,
+          formatter: '{d}%'
+        },
+        emphasis: {
+          label: {
+            show: true,
+            fontSize: 20,
+            fontWeight: 'bold'
+          }
+        },
+        data: [
+          { value: correctCount, name: 'Corretto', itemStyle: { color: '#10b981' } },
+          { value: incorrectCount, name: 'Incorretto', itemStyle: { color: '#ef4444' } },
+          { value: insicuroCount, name: 'Insicuro', itemStyle: { color: '#3b82f6' } },
+          { value: nonHoIdeaCount, name: 'Non ho idea', itemStyle: { color: '#f59e0b' } },
+          { value: nonDatoCount, name: 'Non dato', itemStyle: { color: '#6b7280' } }
+        ]
+      }
+    ]
+  };
 
-function goBack() {
-  window.history.back();
+  chartInstances.pie.setOption(option);
 }
 
-// Build a nested header structure for the interactive table.
+function updateBarChart() {
+  const chartDom = document.getElementById('barChartContainer');
+  if (!chartInstances.bar) {
+    chartInstances.bar = echarts.init(chartDom);
+  }
+  
+  // Get filtered data
+  const sectionVal = document.getElementById("sectionFilter").value;
+  const tipologiaVal = document.getElementById("tipologiaFilter").value;
+  const progressivoVal = document.getElementById("progressivoFilter").value;
+  const argomentoVal = document.getElementById("argomentoFilter").value;
+  
+  let filteredQuestions = globalQuestions;
+  if (sectionVal !== "all") {
+    filteredQuestions = filteredQuestions.filter(q => q.section.toString() === sectionVal);
+  }
+  if (argomentoVal !== "all") {
+    filteredQuestions = filteredQuestions.filter(q => q.argomento.toString() === argomentoVal);
+  }
+  if (progressivoVal !== "all") {
+    filteredQuestions = filteredQuestions.filter(q => Number(q.progressivo) === Number(progressivoVal));
+  }
+  
+  const allowedQuestionIds = new Set(filteredQuestions.map(q => q.id));
+  const filteredAnswers = globalAnswers.filter(ans => allowedQuestionIds.has(ans.question_id));
+  
+  // Group by argomento
+  const argomentoStats = {};
+  filteredQuestions.forEach(q => {
+    if (!argomentoStats[q.argomento]) {
+      argomentoStats[q.argomento] = { correct: 0, total: 0 };
+    }
+  });
+  
+  filteredAnswers.forEach(ans => {
+    const question = filteredQuestions.find(q => q.id === ans.question_id);
+    if (question) {
+      argomentoStats[question.argomento].total++;
+      if (ans.auto_score === 1) {
+        argomentoStats[question.argomento].correct++;
+      }
+    }
+  });
+  
+  const categories = Object.keys(argomentoStats);
+  const correctPercentages = categories.map(cat => 
+    argomentoStats[cat].total > 0 ? (argomentoStats[cat].correct / argomentoStats[cat].total * 100).toFixed(1) : 0
+  );
+  
+  const option = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
+        type: 'shadow'
+      },
+      formatter: '{b}: {c}%'
+    },
+    xAxis: {
+      type: 'category',
+      data: categories,
+      axisLabel: {
+        rotate: 45,
+        interval: 0
+      }
+    },
+    yAxis: {
+      type: 'value',
+      name: '% Corrette',
+      max: 100
+    },
+    series: [{
+      name: 'Percentuale Corrette',
+      type: 'bar',
+      data: correctPercentages,
+      itemStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: '#10b981' },
+          { offset: 1, color: '#059669' }
+        ]),
+        borderRadius: [8, 8, 0, 0]
+      }
+    }]
+  };
+  
+  chartInstances.bar.setOption(option);
+}
+
+function updateRadarChart() {
+  const chartDom = document.getElementById('radarChartContainer');
+  if (!chartInstances.radar) {
+    chartInstances.radar = echarts.init(chartDom);
+  }
+  
+  // Get all argomenti and calculate performance
+  const argomentoStats = {};
+  globalQuestions.forEach(q => {
+    if (!argomentoStats[q.argomento]) {
+      argomentoStats[q.argomento] = { correct: 0, total: 0 };
+    }
+  });
+  
+  globalAnswers.forEach(ans => {
+    const question = globalQuestions.find(q => q.id === ans.question_id);
+    if (question) {
+      argomentoStats[question.argomento].total++;
+      if (ans.auto_score === 1) {
+        argomentoStats[question.argomento].correct++;
+      }
+    }
+  });
+  
+  const indicators = Object.keys(argomentoStats).map(arg => ({
+    name: arg,
+    max: 100
+  }));
+  
+  const values = Object.keys(argomentoStats).map(arg => 
+    argomentoStats[arg].total > 0 ? (argomentoStats[arg].correct / argomentoStats[arg].total * 100).toFixed(1) : 0
+  );
+  
+  const option = {
+    backgroundColor: 'transparent',
+    tooltip: {},
+    radar: {
+      indicator: indicators,
+      shape: 'polygon',
+      splitNumber: 5,
+      axisName: {
+        color: '#6b7280'
+      },
+      splitLine: {
+        lineStyle: {
+          color: '#e5e7eb'
+        }
+      },
+      splitArea: {
+        areaStyle: {
+          color: ['rgba(59, 130, 246, 0.05)', 'rgba(59, 130, 246, 0.1)']
+        }
+      }
+    },
+    series: [{
+      name: 'Competenze',
+      type: 'radar',
+      data: [{
+        value: values,
+        name: 'Performance',
+        itemStyle: {
+          color: '#3b82f6'
+        },
+        lineStyle: {
+          width: 2
+        },
+        areaStyle: {
+          color: new echarts.graphic.RadialGradient(0.5, 0.5, 1, [
+            { offset: 0, color: 'rgba(59, 130, 246, 0.4)' },
+            { offset: 1, color: 'rgba(59, 130, 246, 0.1)' }
+          ])
+        }
+      }]
+    }]
+  };
+  
+  chartInstances.radar.setOption(option);
+}
+
+function updateHeatmap() {
+  const chartDom = document.getElementById('heatmapContainer');
+  if (!chartInstances.heatmap) {
+    chartInstances.heatmap = echarts.init(chartDom);
+  }
+  
+  // Create a matrix of section vs tipologia performance
+  const sections = Array.from(new Set(globalQuestions.map(q => q.section)));
+  const tipologie = Array.from(new Set(globalQuestions.map(q => q.tipologia_esercizi)));
+  
+  const data = [];
+  sections.forEach((section, sIdx) => {
+    tipologie.forEach((tipologia, tIdx) => {
+      const questions = globalQuestions.filter(q => 
+        q.section === section && q.tipologia_esercizi === tipologia
+      );
+      const questionIds = questions.map(q => q.id);
+      const answers = globalAnswers.filter(a => questionIds.includes(a.question_id));
+      
+      if (answers.length > 0) {
+        const correctRate = answers.filter(a => a.auto_score === 1).length / answers.length * 100;
+        data.push([tIdx, sIdx, correctRate.toFixed(1)]);
+      }
+    });
+  });
+  
+  const option = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      position: 'top',
+      formatter: function(params) {
+        return `${sections[params.value[1]]} - ${tipologie[params.value[0]]}: ${params.value[2]}%`;
+      }
+    },
+    grid: {
+      height: '70%',
+      top: '10%'
+    },
+    xAxis: {
+      type: 'category',
+      data: tipologie,
+      splitArea: {
+        show: true
+      },
+      axisLabel: {
+        rotate: 45
+      }
+    },
+    yAxis: {
+      type: 'category',
+      data: sections,
+      splitArea: {
+        show: true
+      }
+    },
+    visualMap: {
+      min: 0,
+      max: 100,
+      calculable: true,
+      orient: 'horizontal',
+      left: 'center',
+      bottom: '5%',
+      inRange: {
+        color: ['#ef4444', '#f59e0b', '#10b981']
+      }
+    },
+    series: [{
+      name: 'Performance',
+      type: 'heatmap',
+      data: data,
+      label: {
+        show: true
+      },
+      emphasis: {
+        itemStyle: {
+          shadowBlur: 10,
+          shadowColor: 'rgba(0, 0, 0, 0.5)'
+        }
+      }
+    }]
+  };
+  
+  chartInstances.heatmap.setOption(option);
+}
+
+function populateLinePlotFilter() {
+  const lineFilter = document.getElementById("linePlotArgomentoFilter");
+  lineFilter.innerHTML = "";
+  lineFilter.innerHTML += `<option value="Totale">Totale</option>`;
+  const argomenti = Array.from(new Set(globalQuestions.map(q => q.argomento).filter(a => a)));
+  argomenti.forEach(arg => {
+    lineFilter.innerHTML += `<option value="${arg}">${arg}</option>`;
+  });
+}
+
+function updateLineChart() {
+  const chartDom = document.getElementById('lineChartContainer');
+  if (!chartInstances.line) {
+    chartInstances.line = echarts.init(chartDom);
+  }
+  
+  let filteredAnswers = globalAnswers;
+  const selectedLineArg = document.getElementById("linePlotArgomentoFilter").value;
+  
+  if (selectedLineArg !== "Totale") {
+    const questionsMap = {};
+    globalQuestions.forEach(q => { questionsMap[q.id] = q; });
+    filteredAnswers = filteredAnswers.filter(ans => {
+      const q = questionsMap[ans.question_id];
+      return q && q.argomento && q.argomento.toString() === selectedLineArg;
+    });
+  }
+  
+  const groupedByTest = {};
+  filteredAnswers.forEach(ans => {
+    const testId = ans.test_id || "unknown";
+    if (!groupedByTest[testId]) {
+      groupedByTest[testId] = [];
+    }
+    groupedByTest[testId].push(ans);
+  });
+
+  const testGroups = [];
+  for (let testId in groupedByTest) {
+    const testAnswers = groupedByTest[testId];
+    const earliest = testAnswers.reduce((min, curr) => {
+      return (!min || curr.submitted_at < min) ? curr.submitted_at : min;
+    }, null);
+    testGroups.push({ testId, earliest });
+  }
+
+  testGroups.sort((a, b) => a.earliest.localeCompare(b.earliest));
+  const sortedTestIds = testGroups.map(group => group.testId);
+
+  const categories = ["Corretto", "Incorretto", "Insicuro", "Non ho idea", "Non dato"];
+  const seriesData = {
+    "Corretto": [],
+    "Incorretto": [],
+    "Insicuro": [],
+    "Non ho idea": [],
+    "Non dato": []
+  };
+
+  const xLabels = [];
+
+  sortedTestIds.forEach(testId => {
+    const answersForTest = groupedByTest[testId];
+    let counts = [0, 0, 0, 0, 0];
+    answersForTest.forEach(ans => {
+      if (ans.auto_score === 1) {
+        counts[0]++;
+      } else if (ans.auto_score === 0 && !["x", "y", "z"].includes(ans.answer)) {
+        counts[1]++;
+      } else if (ans.answer === "x") {
+        counts[2]++;
+      } else if (ans.answer === "y") {
+        counts[3]++;
+      } else if (ans.answer === "z") {
+        counts[4]++;
+      }
+    });
+    const total = counts.reduce((a, b) => a + b, 0);
+    const percentages = counts.map(c => total > 0 ? Number(((c / total) * 100).toFixed(0)) : 0);
+    categories.forEach((cat, idx) => {
+      seriesData[cat].push(percentages[idx]);
+    });
+    
+    const testRecord = studentTestsData.find(t => String(t.id) === testId);
+    if (testRecord) {
+      const label = `${testRecord.section}\n${testRecord.tipologia_esercizi} ${testRecord.progressivo}`;
+      xLabels.push(label);
+    } else {
+      xLabels.push(testId);
+    }
+  });
+
+  const colorMap = {
+    "Corretto": "#10b981",
+    "Incorretto": "#ef4444",
+    "Insicuro": "#3b82f6",
+    "Non ho idea": "#f59e0b",
+    "Non dato": "#6b7280"
+  };
+
+  const option = {
+    backgroundColor: 'transparent',
+    tooltip: { 
+      trigger: 'axis',
+      axisPointer: {
+        type: 'cross'
+      }
+    },
+    legend: { 
+      data: categories,
+      bottom: '5%'
+    },
+    grid: {
+      bottom: '15%'
+    },
+    xAxis: {
+      type: 'category',
+      data: xLabels,
+      axisLabel: {
+        formatter: function(value) {
+          return value;
+        },
+        interval: 0,
+        rotate: 45
+      }
+    },
+    yAxis: {
+      type: 'value',
+      name: 'Percentuale (%)',
+      max: 100
+    },
+    series: categories.map(cat => ({
+      name: cat,
+      type: 'line',
+      data: seriesData[cat],
+      smooth: true,
+      itemStyle: { color: colorMap[cat] },
+      lineStyle: { width: 2 },
+      emphasis: {
+        focus: 'series'
+      }
+    }))
+  };
+  
+  chartInstances.line.setOption(option);
+}
+
+// Build header structure for interactive table
 function buildHeaderStructureInt(questionsData) {
   const structure = {};
   questionsData.forEach(q => {
@@ -272,7 +759,6 @@ function buildHeaderStructureInt(questionsData) {
   return structure;
 }
 
-// Flatten header structure into an ordered array.
 function buildHeaderDefinitionsInt(structure) {
   const headerDefs = [];
   const sections = Object.keys(structure).sort();
@@ -357,14 +843,6 @@ function generateInteractiveTable(questionsData, answersData) {
         th.textContent = label;
         headerRow4.appendChild(th);
       });
-    } else {
-      const labels = ["Corretto", "Incorretto", "Insicuro", "Non ho idea", "Non dato"];
-      const th = document.createElement("th");
-      th.textContent = labels[selectedIndex];
-      if (selectedIndex === 4) { // After last answer category
-        th.classList.add("double-border-right");
-      }
-      headerRow4.appendChild(th);
     }
   });
   thead.appendChild(headerRow4);
@@ -439,31 +917,11 @@ function generateInteractiveTable(questionsData, answersData) {
             if (i === 4) td.classList.add("z-answer-light");
             totals[idx][i] += counts[i];
           }
-          if (i === 4) {  // After last column of a progressivo
+          if (i === 4) {
             td.classList.add("double-border-right");
           }
           tr.appendChild(td);
         }
-      } else {
-        const td = document.createElement("td");
-        if (total === 0) {
-          td.textContent = "-";
-        } else {
-          if (counts[selectedIndex] > 0) {
-            td.textContent = `${counts[selectedIndex]} (${((counts[selectedIndex] / total) * 100).toFixed(0)}%)`;
-          } else {
-            td.textContent = counts[selectedIndex];
-          }
-        }
-        if (counts[selectedIndex] > 0) {
-          if (selectedIndex === 0) td.classList.add("correct-light");
-          if (selectedIndex === 1) td.classList.add("incorrect-light");
-          if (selectedIndex === 2) td.classList.add("x-answer-light");
-          if (selectedIndex === 3) td.classList.add("y-answer-light");
-          if (selectedIndex === 4) td.classList.add("z-answer-light");
-          totals[idx][0] += counts[selectedIndex];
-        }
-        tr.appendChild(td);
       }
     });
     tbody.appendChild(tr);
@@ -485,11 +943,9 @@ function generateInteractiveTable(questionsData, answersData) {
         } else {
           if (totals[idx][i] > 0) {
             td.textContent = `${totals[idx][i]} (${((totals[idx][i] / sumTotal) * 100).toFixed(0)}%)`;
-          }
-          else {
+          } else {
             td.textContent = totals[idx][i];
           }
-          
         }
         if (totals[idx][i] > 0) {
           if (i === 0) td.classList.add("corretto");
@@ -498,27 +954,11 @@ function generateInteractiveTable(questionsData, answersData) {
           if (i === 3) td.classList.add("y-answer");
           if (i === 4) td.classList.add("z-answer");
         }
-        if (i === 4) { // After last column of a progressivo
+        if (i === 4) {
           td.classList.add("double-border-right");
         }
         totalTr.appendChild(td);
       }
-    } else {
-      const td = document.createElement("td");
-      const val = totals[idx][0];
-      if (val === 0) {
-        td.textContent = "-";
-      } else {
-        td.textContent = `${val} (100%)`;
-      }
-      if (val > 0) {
-        if (selectedIndex === 0) td.classList.add("corretto");
-        if (selectedIndex === 1) td.classList.add("incorretto");
-        if (selectedIndex === 2) td.classList.add("x-answer");
-        if (selectedIndex === 3) td.classList.add("y-answer");
-        if (selectedIndex === 4) td.classList.add("z-answer");
-      }
-      totalTr.appendChild(td);
     }
   });
 
@@ -528,7 +968,6 @@ function generateInteractiveTable(questionsData, answersData) {
 }
 
 function filterInteractiveTable() {
-  // Use common filters.
   const sectionVal = document.getElementById("sectionFilter").value;
   const tipologiaVal = document.getElementById("tipologiaFilter").value;
   const progressivoVal = document.getElementById("progressivoFilter").value;
@@ -558,212 +997,23 @@ function updateInteractiveTable() {
   generateInteractiveTable(filteredQuestions, filteredAnswers);
 }
 
-function updateEChartsPie(correctCount, incorrectCount, insicuroCount, nonHoIdeaCount, nonDatoCount) {
-  const chartDom = document.getElementById('echartsPieContainer');
-  const myChart = echarts.init(chartDom);
-  
-  const option = {
-    backgroundColor: '#2c343c',
-    tooltip: {
-      trigger: 'item',
-      formatter: '{b}: {c} ({d}%)'
-    },
-    series: [
-      {
-        name: 'Answers',
-        type: 'pie',
-        radius: ['40%', '70%'], // Inner radius and outer radius
-        avoidLabelOverlap: false,
-        itemStyle: {
-          borderRadius: 10,
-          borderColor: '#fff',
-          borderWidth: 2,
-          shadowBlur: 10,
-          shadowOffsetX: 0,
-          shadowColor: 'rgba(0, 0, 0, 0.5)'
-        },
-        label: {
-          show: true,
-          position: 'outside',
-          fontSize: 16,
-          color: '#fff',
-          formatter: '{b}: {d}%'
-        },
-        labelLine: {
-          show: true,
-          length: 20,
-          length2: 30,
-          smooth: true,
-          lineStyle: {
-            width: 2
-          }
-        },
-        emphasis: {
-          scale: true,
-          scaleSize: 10,
-          itemStyle: {
-            shadowBlur: 30,
-            shadowColor: 'rgba(0, 0, 0, 0.8)'
-          }
-        },
-        data: [
-          { value: correctCount, name: 'Corretto', itemStyle: { color: '#4CAF50' } },
-          { value: incorrectCount, name: 'Incorretto', itemStyle: { color: '#F44336' } },
-          { value: insicuroCount, name: 'Insicuro', itemStyle: { color: '#2196F3' } },
-          { value: nonHoIdeaCount, name: 'Non ho idea', itemStyle: { color: '#FFC107' } },
-          { value: nonDatoCount, name: 'Non dato', itemStyle: { color: '#9E9E9E' } }
-        ]
-      }
-    ]
-  };
-
-  myChart.setOption(option);
+function goBack() {
+  window.history.back();
 }
 
-function populateLinePlotFilter() {
-  const lineFilter = document.getElementById("linePlotArgomentoFilter");
-  lineFilter.innerHTML = "";
-  lineFilter.innerHTML += `<option value="Totale">Totale</option>`;
-  // Get all unique argomenti from all questions.
-  const argomenti = Array.from(new Set(globalQuestions.map(q => q.argomento).filter(a => a)));
-  argomenti.forEach(arg => {
-    lineFilter.innerHTML += `<option value="${arg}">${arg}</option>`;
-  });
+function openReport() {
+  // Salva il file HTML del report
+  const reportHTML = 'student-report.html';
+  window.open(reportHTML, '_blank', 'width=1200,height=800');
 }
 
-function updateLineChart() {
-  // Use all global answers (line graph is independent of the common filters)
-  let filteredAnswers = globalAnswers;
-
-  // Filter by argomento if a specific one is selected
-  const selectedLineArg = document.getElementById("linePlotArgomentoFilter").value;
-  if (selectedLineArg !== "Totale") {
-    // Create a lookup from question_id to its details.
-    const questionsMap = {};
-    globalQuestions.forEach(q => { questionsMap[q.id] = q; });
-    filteredAnswers = filteredAnswers.filter(ans => {
-      const q = questionsMap[ans.question_id];
-      return q && q.argomento && q.argomento.toString() === selectedLineArg;
-    });
-  }
-  
-  // Group the answers by test_id.
-  const groupedByTest = {};
-  filteredAnswers.forEach(ans => {
-    const testId = ans.test_id || "unknown";
-    if (!groupedByTest[testId]) {
-      groupedByTest[testId] = [];
-    }
-    groupedByTest[testId].push(ans);
+// Resize charts on window resize
+window.addEventListener('resize', () => {
+  Object.values(chartInstances).forEach(chart => {
+    chart.resize();
   });
-
-  // Build an array of test groups with their earliest submitted_at date.
-  const testGroups = [];
-  for (let testId in groupedByTest) {
-    const testAnswers = groupedByTest[testId];
-    // Get the earliest submitted_at in this test group.
-    const earliest = testAnswers.reduce((min, curr) => {
-      return (!min || curr.submitted_at < min) ? curr.submitted_at : min;
-    }, null);
-    testGroups.push({ testId, earliest });
-  }
-
-  // Sort the test groups by their earliest submitted_at date.
-  testGroups.sort((a, b) => a.earliest.localeCompare(b.earliest));
-  
-  // Create a sorted list of testIds based on the sorted groups.
-  const sortedTestIds = testGroups.map(group => group.testId);
-
-  // Define the answer categories.
-  const categories = ["Corretto", "Incorretto", "Insicuro", "Non ho idea", "Non dato"];
-  // Prepare an object to store the series data per category.
-  const seriesData = {
-    "Corretto": [],
-    "Incorretto": [],
-    "Insicuro": [],
-    "Non ho idea": [],
-    "Non dato": []
-  };
-
-  // Prepare the x-axis labels array.
-  const xLabels = [];
-
-  // For each test group (in chronological order), compute percentages and build the label.
-  sortedTestIds.forEach(testId => {
-    const answersForTest = groupedByTest[testId];
-    let counts = [0, 0, 0, 0, 0];  // Order: Corretto, Incorretto, Insicuro, Non ho idea, Non dato.
-    answersForTest.forEach(ans => {
-      if (ans.auto_score === 1) {
-        counts[0]++;
-      } else if (ans.auto_score === 0 && !["x", "y", "z"].includes(ans.answer)) {
-        counts[1]++;
-      } else if (ans.answer === "x") {
-        counts[2]++;
-      } else if (ans.answer === "y") {
-        counts[3]++;
-      } else if (ans.answer === "z") {
-        counts[4]++;
-      }
-    });
-    const total = counts.reduce((a, b) => a + b, 0);
-    // Calculate percentages.
-    const percentages = counts.map(c => total > 0 ? Number(((c / total) * 100).toFixed(0)) : 0);
-    categories.forEach((cat, idx) => {
-      seriesData[cat].push(percentages[idx]);
-    });
-    
-    // Lookup the associated test record from student_tests (studentTestsData is assumed to be loaded).
-    const testRecord = studentTestsData.find(t => String(t.id) === testId);
-    if (testRecord) {
-      // Build a label: first line shows the section,
-      // second line shows tipologia_esercizi and progressivo.
-      const label = `${testRecord.section}\n${testRecord.tipologia_esercizi} ${testRecord.progressivo}`;
-      xLabels.push(label);
-    } else {
-      xLabels.push(testId);
-    }
-  });
-
-  // Use the same colour mapping as used in your pie chart and table.
-  const colorMap = {
-    "Corretto": "#4CAF50",
-    "Incorretto": "#F44336",
-    "Insicuro": "#2196F3",
-    "Non ho idea": "#FFC107",
-    "Non dato": "#9E9E9E"
-  };
-
-  // Initialize or update the line chart using ECharts.
-  const lineChartDom = document.getElementById("lineChartContainer");
-  const lineChart = echarts.init(lineChartDom);
-  const option = {
-    tooltip: { trigger: 'axis' },
-    legend: { data: categories, textStyle: { color: "#333" } },
-    xAxis: {
-      type: 'category',
-      data: xLabels,
-      axisLabel: {
-        // Using newlines in labels; the formatter returns the label as it is.
-        formatter: function(value) {
-          return value;
-        }
-      }
-    },
-    yAxis: {
-      type: 'value',
-      name: 'Percentuale',
-      max: 100
-    },
-    series: categories.map(cat => ({
-      name: cat,
-      type: 'line',
-      data: seriesData[cat],
-      smooth: true,
-      itemStyle: { color: colorMap[cat] }
-    }))
-  };
-  lineChart.setOption(option);
-}
+});
 
 loadDashboard();
 window.goBack = goBack;
+window.openReport = openReport;

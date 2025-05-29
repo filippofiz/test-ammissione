@@ -1,670 +1,121 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>View Student Tests</title>
-  <link rel="stylesheet" href="styles.css">
-  <style>
-    /* Legend styles */
-    #legend {
-      margin: 1rem 0;
-      padding: 0.5rem;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      background-color: #fafafa;
-    }
-    #legend h4 {
-      margin-bottom: 0.5rem;
-      font-size: 1rem;
-    }
-    #legend ul {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      display: flex;
-      gap: 20px;
-    }
-    #legend li {
-      display: flex;
-      align-items: center;
-      font-size: 0.9rem;
-    }
-    .legend-box {
-      display: inline-block;
-      width: 20px;
-      height: 20px;
-      margin-right: 5px;
-      border-radius: 3px;
-      border: 1px solid #ccc;
-    }
-    .legend-box.completed {
-      background-color: #90EE90;
-    }
-    .legend-box.unlocked {
-      background-color: blue;
-    }
-    .legend-box.locked {
-      background-color: gray;
-    }
-  </style>
+  <title>Visualizza Test Studente - Up to Ten</title>
+  <link rel="stylesheet" href="header.css">
+  <link rel="stylesheet" href="view-tests.css">
 </head>
 <body>
-  <div id="pageWrapper">
-  <div class="container">
-    <h2 id="studentTestProgressTitle"></h2>
-    
-    <!-- NEW LEGEND SECTION -->
-    <div id="legend">
-      <h4>Legenda:</h4>
-      <ul>
-        <li><span class="legend-box completed"></span> Completato</li>
-        <li><span class="legend-box unlocked"></span> Sbloccato</li>
-        <li><span class="legend-box locked"></span> Bloccato</li>
-      </ul>
-    </div>
-    <!-- NEW TOGGLE BUTTON -->
-    <button id="toggleViewAnswers">Vedi risposte dello studente</button>
-    
-    <div id="mainPanel" style="display:flex; gap:20px; align-items:flex-start;">
-      <!-- LEFT: your existing test tree -->
-      <div id="testTree" style="flex:1;">
-        <!-- populated dynamically -->
-      </div>
-    </div>
+  <!-- Container principale che si sposta -->
+  <div class="page-container" id="pageContainer">
+    <!-- Header esterno -->
+    <div id="header-placeholder"></div>
 
-    <button id="backButton">⬅ Back to Tutor Dashboard</button>
-  </div>
-    <!-- 🚩 Moved outside the main container: -->
-  <div id="unlockPanel" style="width:280px; border:1px solid #ccc; padding:10px; border-radius:6px; margin-top:1rem;">
-    <h3>Modalità di sblocco</h3>
-    <div style="display:flex; gap:10px;">
-      <div style="flex:1;">
-        <h4>Sblocco manuale</h4>
-        <ul id="manualList" class="unlock-list"></ul>
+    <div class="container">
+      <!-- Page Header -->
+      <div class="page-header">
+        <h2 id="studentTestProgressTitle">Avanzamento preparazione</h2>
       </div>
-      <div style="flex:1;">
-        <h4>Sblocco automatico</h4>
-        <ul id="autoList" class="unlock-list"></ul>
+      
+      <!-- Legend Section con Toggle Button dentro -->
+      <div id="legend">
+        <div class="legend-content">
+          <h4>📋 Legenda:</h4>
+          <ul>
+            <li><span class="legend-box completed"></span> Completato</li>
+            <li><span class="legend-box unlocked"></span> Sbloccato</li>
+            <li><span class="legend-box locked"></span> Bloccato</li>
+          </ul>
+        </div>
+        <!-- Toggle Button dentro il box -->
+        <button id="toggleViewAnswers">👁️ Vedi risposte dello studente</button>
       </div>
+      
+      <!-- Test Tree -->
+      <div id="testTree">
+        <!-- Populated dynamically -->
+      </div>
+
+      <!-- Back Button -->
+      <button id="backButton">⬅ Torna alla Dashboard Tutor</button>
     </div>
   </div>
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-  <script type="module">
-    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-    const SUPABASE_URL = "https://elrwpaezjnemmiegkyin.supabase.co"; 
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVscndwYWV6am5lbW1pZWdreWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzAyMDUsImV4cCI6MjA1MzY0NjIwNX0.p6R2S1HK8kPFYiEAYtYaxIAH8XSmzjQBWQ_ywy3akdI";  
-    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+  <!-- Indicatore modalità correzione -->
+  <div class="correction-indicator">
+    ✏️ MODALITÀ CORREZIONE ATTIVA
+  </div>
 
-    import { updateAutoUnlockStatus } from './autoUnlock.js';
-    const studentId = sessionStorage.getItem("selectedStudentId"); // ✅ Already `auth_uid`
-    const studentName = sessionStorage.getItem("selectedStudentName") || "Student";
-    document.getElementById("studentTestProgressTitle").textContent = `Avanzamento preparazione di ${studentName}`;
+  <!-- Toggle Button per Unlock Panel - FUORI dal container -->
+  <button class="unlock-toggle-btn" id="unlockToggle">
+    ⚙️ Modalità sblocco
+  </button>
 
-    let viewAnswersMode = false; // global flag for toggle
-    let studentTestsCache = [];
-
-    document.getElementById("toggleViewAnswers").addEventListener("click", () => {
-      viewAnswersMode = !viewAnswersMode;
-      // Update button text based on mode
-      document.getElementById("toggleViewAnswers").textContent = 
-          viewAnswersMode ? "Nascondi risposte degli studenti" : "Vedi risposte degli studenti";
-      loadTestTree(); // Reload test tree to update the buttons’ appearance and behavior
-    });
+  <!-- Unlock Panel - Nascosto di default - FUORI dal container -->
+  <div id="unlockPanel">
+    <div class="unlock-header">
+      <h3>⚙️ Modalità di sblocco</h3>
+    </div>
     
-    if (!studentId) {
-      alert("Error: No student selected.");
-      window.location.href = "tutor_dashboard.html";
-    }
-
-    async function loadTestTree() {
-      console.log("👤 Viewing tests for Student UID:", studentId);
-      const selectedTest = sessionStorage.getItem("selectedTestType");
-
-      if (!selectedTest) {
-        alert("No test selected. Redirecting to test selection...");
-        window.location.href = "choose_test.html";
-        return;
-      }
-
-      console.log(`🎯 Selected Test: ${selectedTest}`);
-
-      // Determine test type based on "PDF"
-      const testType = selectedTest.includes("PDF") ? "pdf" : "banca_dati";
-      console.log(`📌 Determined Test Type: ${testType}`);
-
-        // ✅ Fetch the student's section order from `ordine_sections`
-      const { data: studentTestOrder, error: studentTestOrderError } = await supabase
-          .from("ordine_sections")
-          .select("ordine")
-          .eq("auth_uid", studentId)
-          .eq("tipologia_test", selectedTest);
-
-      if (studentTestOrderError || !studentTestOrder || studentTestOrder.length === 0) {
-        console.error("❌ Error fetching student's section order:", studentTestOrderError?.message);
-        alert("Section order not found. Please contact support.");
-        return;
-     }      
-      // ✅ Ensure `ordineSections` contains only unique values
-      let ordineSections = [...new Set(studentTestOrder[0].ordine)];
-      console.log("📊 Section Order (Unique):", ordineSections);
-
-      if (!ordineSections || ordineSections.length === 0) {
-          console.error("❌ ordine_sections is empty or missing.");
-          alert("No section order available. Please contact support.");
-          return;
-      }
-
-      // ✅ Fetch student's test progress using `auth_uid`
-      let { data: studentTests, error: progressError } = await supabase
-          .from("student_tests")
-          .select("*")
-          .eq("auth_uid", studentId)
-          .eq("tipologia_test", selectedTest)
-          .order("tipologia_esercizi, progressivo");
-
-      if (progressError) {
-          console.error("❌ Error fetching student progress:", progressError.message);
-          return;
-      }
-
-      console.log("📊 Student Progress Data:", studentTests);
-
-      studentTests = studentTests.filter((test, index, self) =>
-          index === self.findIndex((t) =>
-              t.section === test.section &&
-              t.tipologia_esercizi === test.tipologia_esercizi &&
-              t.progressivo === test.progressivo
-          )
-      );
-
-      // ✅ Sort test data based on `ordine_sections`
-      studentTests.sort((a, b) => ordineSections.indexOf(a.section) - ordineSections.indexOf(b.section));
-
-      // 1️⃣ Fetch Materia from questions
-      const { data: questionsData, error: materiaError } = await supabase
-        .from("questions")
-        .select("section, tipologia_esercizi, progressivo, Materia")
-        .eq("tipologia_test", selectedTest);
-      if (materiaError) {
-        console.error("❌ Error fetching Materia:", materiaError.message);
-      }
-
-      // 2️⃣ Build lookup: "sec|tipo|prog" → Materia
-      const materiaMap = {};
-      questionsData?.forEach(q => {
-        materiaMap[`${q.section}|${q.tipologia_esercizi}|${q.progressivo}`] = q.Materia;
-      });
-
-      // 3️⃣ Attach Materia to each studentTests record
-      studentTests = studentTests.map(t => ({
-        ...t,
-        Materia: materiaMap[`${t.section}|${t.tipologia_esercizi}|${t.progressivo}`] || ""
-      }));
-      studentTestsCache = studentTests;
-      displayTestTree(studentTests, studentTests, testType, selectedTest);
-      setupDragDrop(studentTests);
-      initSortable(); 
-      await updateAutoUnlockStatus(studentTestsCache);;
-      displayTestTree(studentTestsCache, studentTestsCache, testType, selectedTest);
-    }
-
-  function displayTestTree(tests, studentTests, testType, selectedTest) {
-  const tree = document.getElementById("testTree");
-  tree.innerHTML = "";
-
-  // 1️⃣ Bucket tests by Materia (blank → "Altro")
-  const byMat = {};
-  tests.forEach(t => {
-    const mat = t.Materia || "Altro";
-    (byMat[mat] = byMat[mat]||[]).push(t);
-  });
-
-  // 2️⃣ Order Materie: α, but put "Simulazioni" last
-  const mats = Object.keys(byMat).sort((a,b) => {
-    if (a==="Simulazioni") return 1;
-    if (b==="Simulazioni") return -1;
-    return a.localeCompare(b);
-  });
-
-  mats.forEach(materia => {
-    const section = document.createElement("div");
-    section.classList.add("materia-section");
-
-    // Header
-    const h2 = document.createElement("h2");
-    h2.classList.add("materia-header");
-    h2.textContent = materia==="Altro" ? "Altre Materie" : materia;
-    section.appendChild(h2);
-
-    const group = byMat[materia];
-
-    // ────────────────────────────────────────────
-    // If Simulazioni → flat row of buttons
-    if (materia==="Simulazioni") {
-      const row = document.createElement("div");
-      row.style.display="flex";
-      row.style.flexWrap="wrap";
-      row.style.gap="8px";
-
-      group.forEach(t => {
-        const st = studentTests.find(s =>
-          s.section===t.section &&
-          s.tipologia_esercizi===t.tipologia_esercizi &&
-          s.progressivo===t.progressivo
-        );
-        const status = st?.status||"locked";
-
-        // 1️⃣ Create a column wrapper
-        const col = document.createElement("div");
-        col.style.display = "flex";
-        col.style.flexDirection = "column";
-        col.style.alignItems = "center";
-        col.style.gap = "4px"; // small vertical space
-
-        const btn = document.createElement("button");
-        btn.textContent = `Test ${t.progressivo}`;
-
-        // view‑answers vs lock logic unchanged
-        if (viewAnswersMode) {
-          if (status==="completed") {
-            btn.classList.add("view-answers");
-            btn.onclick = () => viewStudentAnswers(t.section, t.progressivo, t.tipologia_esercizi, selectedTest, studentId);
-          } else {
-            btn.classList.add("disabled-green");
-            btn.onclick = null;
-          }
-        } else {
-          if (status==="completed") {
-            btn.classList.add("completed");
-            btn.onclick = () => confirmResetTest(t.section,t.progressivo,t.tipologia_esercizi,selectedTest);
-          } else {
-            btn.classList.add(status);
-            btn.onclick = () => toggleTestLock(t.section,t.progressivo,t.tipologia_esercizi,status,selectedTest);
-          }
-        }
-
-    col.style.display       = "flex";
-    col.style.flexDirection = "column";
-    col.style.alignItems    = "center";
-    col.style.gap           = "4px";
-
-    // 2️⃣ your existing button
-    btn.textContent = `Test ${t.progressivo}`;
-    // … view-answers / lock logic unchanged …
-    col.appendChild(btn);
-
-    // 3️⃣ replace with an input for direct editing
-    const durationInput = document.createElement("input");
-    durationInput.type  = "number";
-    durationInput.min   = "0";
-    durationInput.value = st?.duration ?? "";
-    durationInput.classList.add("duration-input");
-    durationInput.addEventListener("change", async () => {
-      const newVal = durationInput.value;
-      const { error } = await supabase
-        .from("student_tests")
-        .update({ duration: newVal })
-        .eq("id", st.id);
-      if (error) {
-        alert("Errore aggiornamento durata: " + error.message);
-        return;
-      }
-      // Optionally show a tiny confirmation or just leave it
-    });
-    col.appendChild(durationInput);
-
-    // 4️⃣ finally append the whole column into the row
-    row.appendChild(col);
-
-      });
-
-      section.appendChild(row);
-
-    } else {
-      // ────────────────────────────────────────────
-      // Otherwise preserve section→tipologia→progressivo nesting
-      const secMap = {};
-      group.forEach(t => {
-        (secMap[t.section]=secMap[t.section]||{})[t.tipologia_esercizi] ??= [];
-        secMap[t.section][t.tipologia_esercizi].push(t);
-      });
-
-      Object.keys(secMap).forEach(secKey => {
-        const secDiv = document.createElement("div");
-        secDiv.classList.add("section");
-        secDiv.innerHTML = `<h3>${secKey}</h3>`;
-
-        const tipContainer = document.createElement("div");
-        tipContainer.style.display="flex";
-        tipContainer.style.flexDirection="column";
-        tipContainer.style.gap="10px";
-
-        // order tipologie as before
-        Object.keys(secMap[secKey]).sort((a,b)=>{
-          if(a==="Esercizi per casa") return -1;
-          if(b==="Esercizi per casa") return  1;
-          if(a==="Assessment") return -1;
-          if(b==="Assessment") return  1;
-          return 0;
-        }).forEach(tip => {
-          const label = document.createElement("h4");
-          label.textContent = tip;
-          tipContainer.appendChild(label);
-
-          const cols = document.createElement("div");
-          cols.style.display="flex";
-          cols.style.gap="20px";
-          cols.style.marginBottom="10px";
-
-          // group by progressivo
-          const progGroups = {};
-          secMap[secKey][tip].forEach(t => {
-            (progGroups[t.progressivo]=progGroups[t.progressivo]||[]).push(t);
-          });
-
-          Object.keys(progGroups).sort((a,b)=>a-b).forEach(prog => {
-            const col = document.createElement("div");
-            col.style.display="flex";
-            col.style.flexDirection="column";
-            col.style.alignItems="center";
-
-            progGroups[prog].forEach(t => {
-              const st = studentTests.find(s =>
-                s.section===t.section &&
-                s.tipologia_esercizi===t.tipologia_esercizi &&
-                s.progressivo===t.progressivo
-              );
-              const status = st?.status||"locked";
-
-              const btn = document.createElement("button");
-              btn.textContent = `${tip} ${t.progressivo}`;
-
-              if (viewAnswersMode) {
-                if (status==="completed") {
-                  btn.classList.add("view-answers");
-                  btn.onclick = () => viewStudentAnswers(t.section, t.progressivo, t.tipologia_esercizi, selectedTest, studentId);
-                } else {
-                  btn.classList.add("disabled-green");
-                  btn.onclick = null;
-                }
-              } else {
-                if (status==="completed") {
-                  btn.classList.add("completed");
-                  btn.onclick = () => confirmResetTest(t.section,t.progressivo,t.tipologia_esercizi,selectedTest);
-                } else {
-                  btn.classList.add(status);
-                  btn.onclick = () => toggleTestLock(t.section,t.progressivo,t.tipologia_esercizi,status,selectedTest);
-                }
-              }
-
-            col.style.display       = "flex";
-            col.style.flexDirection = "column";
-            col.style.alignItems    = "center";
-            col.style.gap           = "4px";
-
-            // 2️⃣ your existing button
-            btn.textContent = `Test ${t.progressivo}`;
-            // … view-answers / lock logic unchanged …
-            col.appendChild(btn);
-
-            // 3️⃣ replace with an input for direct editing
-            const durationInput = document.createElement("input");
-            durationInput.type  = "number";
-            durationInput.min   = "0";
-            durationInput.value = st?.duration ?? "";
-            durationInput.classList.add("duration-input");
-            durationInput.addEventListener("change", async () => {
-              const newVal = durationInput.value;
-              const { error } = await supabase
-                .from("student_tests")
-                .update({ duration: newVal })
-                .eq("id", st.id);
-              if (error) {
-                alert("Errore aggiornamento durata: " + error.message);
-                return;
-              }
-              // Optionally show a tiny confirmation or just leave it
-            });
-            col.appendChild(durationInput);
-
-            });
-
-            cols.appendChild(col);
-          });
-
-          tipContainer.appendChild(cols);
-        });
-
-        secDiv.appendChild(tipContainer);
-        section.appendChild(secDiv);
-      });
-    }
-
-    tree.appendChild(section);
-  });
-}
-
-function setupDragDrop(tests) {
-  const manual = document.getElementById("manualList");
-  const auto   = document.getElementById("autoList");
-  manual.innerHTML = "";
-  auto.innerHTML   = "";
-
-  // 1️⃣ Split & sort
-  const manualTests = tests
-    .filter(t => t.unlock_mode !== "automatic")
-    .sort((a, b) => a.unlock_order - b.unlock_order);
-
-  const autoTests = tests
-    .filter(t => t.unlock_mode === "automatic")
-    .sort((a, b) => a.unlock_order - b.unlock_order);
-
-  // 2️⃣ Helper to create each <li>
-  function appendLi(listEl, t) {
-    const li = document.createElement("li");
-    li.textContent    = `${t.section} ${t.tipologia_esercizi} ${t.progressivo}`;
-    li.draggable      = true;
-    li.dataset.testId = t.id;
-
-    li.addEventListener("dragstart", ev => {
-      ev.dataTransfer.setData("text/plain", t.id);
-      ev.dataTransfer.effectAllowed = "move";
-    });
-
-    listEl.appendChild(li);
-  }
-
-  // 3️⃣ Populate each list in order
-  manualTests.forEach(t => appendLi(manual, t));
-  autoTests  .forEach(t => appendLi(auto,   t));
-
-  // 4️⃣ Allow drop between lists and persist mode changes
-  [manual, auto].forEach(list => {
-    list.addEventListener("dragover", ev => {
-      ev.preventDefault();
-      ev.dataTransfer.dropEffect = "move";
-    });
-    list.addEventListener("drop", async ev => {
-      ev.preventDefault();
-      const id = ev.dataTransfer.getData("text/plain");
-      const dragged = document.querySelector(`li[data-test-id="${id}"]`);
-      if (dragged && list !== dragged.parentNode) {
-        list.appendChild(dragged);
-        const newMode = list.id === 'autoList' ? 'automatic' : 'manual';
-        const { error } = await supabase
-          .from('student_tests')
-          .update({ unlock_mode: newMode })
-          .eq('id', id);
-        if (error) {
-          alert("Errore salvando modalità di sblocco: " + error.message);
-        }
-      }
-    });
-  });
-}
-// 5️⃣ Initialize SortableJS so you can reorder within each list
-function initSortable() {
-  const manual = document.getElementById("manualList");
-  const auto   = document.getElementById("autoList");
-
-  [manual, auto].forEach(listEl => {
-    Sortable.create(listEl, {
-      group: "unlock",
-      animation: 150,
-      onEnd: () => persistOrder(manual, "manual").then(() => persistOrder(auto, "automatic"))
-    });
-  });
-}
-    async function persistOrder(listEl, mode) {
-      // For each <li> in this list, set its unlock_mode and unlock_order
-      const updates = Array.from(listEl.children).map((li, idx) => ({
-        id:           li.dataset.testId,
-        unlock_mode:  mode,
-        unlock_order: idx
-      }));
-      // Write each update back to Supabase
-      for (const u of updates) {
-        const { error } = await supabase
-          .from("student_tests")
-          .update({
-            unlock_mode:  u.unlock_mode,
-            unlock_order: u.unlock_order
-          })
-          .eq("id", u.id);
-        if (error) console.error("Persist error:", error.message);
-      }
-    }
-
-
-    async function confirmResetTest(section, testProgressivo, studentTestType, selectedTest) {
-      const confirmReset = confirm("⚠ Questo test è contrassegnato come completato. Vuoi reimpostarlo e rimuovere tutte le risposte dello studente?");
-      if (!confirmReset) return;
-
-      console.log(`🔄 Resetting Test: Section ${section}, Test Type: ${studentTestType}, Progressivo: ${testProgressivo},  Selected: ${selectedTest}`);
-
-      // Step 1: Find all question IDs linked to this test.
-      const { data: questions, error: questionError } = await supabase
-          .from(selectedTest.includes("PDF") ? "questions" : "questions_bancaDati")
-          .select("id")
-          .eq("section", section)
-          .eq("tipologia_esercizi", studentTestType)
-          .eq("tipologia_test", selectedTest)
-          .eq("progressivo", testProgressivo);
-
-      if (questionError) {
-          console.error("❌ Error fetching questions for reset:", questionError);
-          alert("Failed to reset test.");
-          return;
-      }
-
-      const questionIds = questions.map(q => q.id);
-      if (questionIds.length === 0) {
-          alert("No questions found for this test.");
-          return;
-      }
-
-      // Step 2: Delete student answers linked to these questions.
-      const { error: deleteError } = await supabase
-          .from(selectedTest.includes("PDF") ? "student_answers" : "studentbocconi_answers")
-          .delete()
-          .in("question_id", questionIds)
-          .eq("auth_uid", studentId);
-
-      if (deleteError) {
-          console.error("❌ Error deleting student answers:", deleteError);
-          alert("Failed to reset test.");
-          return;
-      }
-
-      // Step 3: Set test status back to "locked".
-      const { error: updateError } = await supabase
-          .from("student_tests")
-          .update({ status: "locked", tutor_unlocked: false })
-          .eq("auth_uid", studentId)
-          .eq("section", section)
-          .eq("tipologia_esercizi", studentTestType)
-          .eq("tipologia_test", selectedTest)
-          .eq("progressivo", testProgressivo);
-
-      if (updateError) {
-          console.error("❌ Error resetting test status:", updateError);
-          alert("Failed to reset test.");
-          return;
-      }
-
-      alert("✅ Test reset successfully. The student will have to retake it.");
-      loadTestTree();
-    }
-
-    async function toggleTestLock(section, testProgressivo, studentTestType, currentStatus, selectedTest) {
-      const newStatus = currentStatus === "locked" ? "unlocked" : "locked";
-      console.log(`🔄 Toggling Test: Section ${section}, Progressivo ${testProgressivo}, Test Type ${selectedTest} → ${newStatus}`);
-
-      let query = supabase
-        .from("student_tests")
-        .update({ status: newStatus, tutor_unlocked: newStatus === "unlocked" })
-        .eq("auth_uid", studentId)
-        .eq("section", section)
-        .eq("tipologia_esercizi", studentTestType)
-        .eq("tipologia_test", selectedTest)
-        .eq("progressivo", testProgressivo);
-
-      const validProgressivo = Number(testProgressivo);
-      if (!isNaN(validProgressivo)) {
-        query = query.eq("progressivo", validProgressivo);
-      }
-
-      const { error } = await query;
-
-      if (error) {
-          console.error("❌ Error toggling test:", error);
-          alert("Failed to update test status.");
-          return;
-      }
-
-      if (section != 'Simulazioni') {
-          alert(`✅${studentTestType} ${testProgressivo} (${section}) of ${selectedTest} is now ${newStatus}!`);
-      } else {
-          alert(`✅Simulazione ${testProgressivo} is now ${newStatus}!`);
-      }
-      loadTestTree();
-    }  
-
-    loadTestTree();
-
-    async function viewStudentAnswers(section, testProgressivo, tipologiaEsercizi, selectedTest, studentId) {
-      console.log(`🚀 View Student Answers: ${section} - ${tipologiaEsercizi} - ${testProgressivo} - ${selectedTest}`);   
-      sessionStorage.setItem("selectedSection", section);
-      sessionStorage.setItem("selectedTipologiaEsercizi", tipologiaEsercizi);
-      sessionStorage.setItem("selectedTestProgressivo", testProgressivo);
-      sessionStorage.setItem("selectedTestType", selectedTest);
-      sessionStorage.setItem("selectedStudentId", studentId);
-      window.location.href = "view_answers.html";
-    }
-  </script>
-</body>
-  <!-- Go back function -->
+    <div class="unlock-content">
+      <div class="unlock-columns">
+        <div class="unlock-column">
+          <h4>🔓 Manuale</h4>
+          <ul id="manualList" class="unlock-list"></ul>
+        </div>
+        <div class="unlock-column">
+          <h4>🔄 Automatico</h4>
+          <ul id="autoList" class="unlock-list"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
   <script>
-    function goBack() {
-      window.location.href = "tutor_dashboard.html";
-    }
+    // Toggle unlock panel
+    document.getElementById('unlockToggle').addEventListener('click', function() {
+      const panel = document.getElementById('unlockPanel');
+      const container = document.getElementById('pageContainer');
+      
+      if (panel.classList.contains('open')) {
+        panel.classList.remove('open');
+        container.classList.remove('shifted');
+        this.classList.remove('open');
+      } else {
+        panel.classList.add('open');
+        container.classList.add('shifted');
+        this.classList.add('open');
+      }
+    });
 
-    document.getElementById("backButton").addEventListener("click", goBack);
+    // Carica l'header
+    fetch('header.html')
+      .then(response => response.text())
+      .then(data => {
+        document.getElementById('header-placeholder').innerHTML = data;
+      });
+      
+    // Gestione modalità correzione
+    document.getElementById('toggleViewAnswers').addEventListener('click', function() {
+      console.log('Click su toggle view answers');
+      // Aggiungiamo/rimuoviamo la modalità correzione in base al testo del bottone
+      setTimeout(() => {
+        if (this.textContent.includes('Nascondi')) {
+          console.log('Attivo modalità correzione');
+          document.body.classList.add('correction-mode');
+        } else {
+          console.log('Disattivo modalità correzione');
+          document.body.classList.remove('correction-mode');
+        }
+      }, 100);
+    });
   </script>
 
-  <style>
-    .locked {
-      background-color: gray;
-      color: white;
-      border-radius: 3px;
-    }
-    .unlocked {
-      background-color: blue;
-      color: white;
-      border-radius: 3px;
-    }
-  </style>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <script type="module" src="view-tests-logic.js"></script>
+  <script src="animated-background.js"></script>
 </body>
 </html>
