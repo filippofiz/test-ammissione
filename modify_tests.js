@@ -14,6 +14,32 @@ const SUPABASE_URL = "https://elrwpaezjnemmiegkyin.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVscndwYWV6am5lbW1pZWdreWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzAyMDUsImV4cCI6MjA1MzY0NjIwNX0.p6R2S1HK8kPFYiEAYtYaxIAH8XSmzjQBWQ_ywy3akdI";  
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// Aspetta che l'header sia caricato, poi aggiorna il nome
+setTimeout(async () => {
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (sessionData?.session) {
+    const userId = sessionData.session.user.id;
+    const { data: tutor } = await supabase
+      .from("tutors")
+      .select("name")
+      .eq("auth_uid", userId)
+      .single();
+    
+    if (tutor?.name) {
+      const userNameElement = document.querySelector('.user-name');
+      if (userNameElement) {
+        userNameElement.textContent = tutor.name;
+      }
+    }
+  }
+
+  // Aggiungi evento logout
+  document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    window.location.href = "login.html";
+  });
+}, 100);
+
 const csvFileInput = document.getElementById("csvFileInput");
 const uploadCsvBtn = document.getElementById("uploadCsvBtn");
 const uploadMessageDiv = document.getElementById("uploadMessage");
@@ -339,14 +365,21 @@ const allTests = [...qData, ...bData];
   uniqueTests.forEach(test => tipologiaSet.add(test.tipologia_test));
   const tipologiaArray = Array.from(tipologiaSet).sort();
 
-  // Create (or reuse) a container for the dropdown and list.
-  let container = document.getElementById("uploadedTestsContainer");
-  if (!container) {
-    container = document.createElement("div");
-    container.id = "uploadedTestsContainer";
-    // Optionally, style or append the container where desired (e.g., at the end of the page).
+// Create (or reuse) a container for the dropdown and list.
+let container = document.getElementById("uploadedTestsContainer");
+if (!container) {
+  container = document.createElement("div");
+  container.id = "uploadedTestsContainer";
+  
+  // Find the main container and append there
+  const mainContainer = document.querySelector('.container');
+  if (mainContainer) {
+    mainContainer.appendChild(container);
+  } else {
+    // Fallback to body if container not found
     document.body.appendChild(container);
   }
+}
   container.innerHTML = "<h3>Test già caricati</h3>";
 
   // Create the dropdown for tipologia_test.

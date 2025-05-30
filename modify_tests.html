@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gestione Test - Up to Ten</title>
   <link rel="stylesheet" href="header.css">
+  <link rel="stylesheet" href="floating-tutor-dashboard-button.css">
   <!-- Include PapaParse from CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
   <style>
@@ -376,9 +377,113 @@
       to { transform: rotate(360deg); }
     }
 
+    /* Test già caricati Section */
+    #uploadedTestsContainer {
+      background: white;
+      padding: 2.5rem;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      margin-bottom: 2rem;
+      animation: fadeInUp 0.6s ease-out;
+    }
+
+    #uploadedTestsContainer h3 {
+      font-size: 1.4rem;
+      color: rgb(28, 37, 69);
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    #uploadedTestsContainer h3::before {
+      content: '📋';
+      font-size: 1.5rem;
+    }
+
+    #uploadedTestsDropdown {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 2px solid #e9ecef;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 500;
+      color: rgb(28, 37, 69);
+      background: white;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-bottom: 1.5rem;
+    }
+
+    #uploadedTestsDropdown:hover {
+      border-color: #00a666;
+    }
+
+    #uploadedTestsDropdown:focus {
+      outline: none;
+      border-color: #00a666;
+      box-shadow: 0 0 0 3px rgba(0, 166, 102, 0.1);
+    }
+
+    #uploadedTestsList {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    #uploadedTestsList li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+      background: #f8f9fa;
+      border-radius: 10px;
+      transition: all 0.3s ease;
+    }
+
+    #uploadedTestsList li:hover {
+      background: #e9ecef;
+      transform: translateX(5px);
+    }
+
+    #uploadedTestsList li:last-child {
+      margin-bottom: 0;
+    }
+
+    .delete-test-btn {
+      background: #dc3545;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .delete-test-btn::before {
+      content: '🗑️';
+      font-size: 0.9rem;
+    }
+
+    .delete-test-btn:hover {
+      background: #c82333;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+    }
+
+    .delete-test-btn:active {
+      transform: translateY(-1px);
+    }
+
     /* Responsive */
     @media (max-width: 768px) {
-      .upload-section {
+      .upload-section, #uploadedTestsContainer {
         padding: 1.5rem;
       }
 
@@ -393,6 +498,17 @@
       .radio-group {
         flex-direction: column;
         gap: 1rem;
+      }
+
+      #uploadedTestsList li {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+      }
+
+      .delete-test-btn {
+        width: 100%;
+        justify-content: center;
       }
     }
   </style>
@@ -452,6 +568,8 @@
       <!-- Summary -->
       <div id="uploadSummary" class="summary"></div>
     </div>
+
+    <!-- Test già caricati Section will be added here by JavaScript -->
   </div>
 
   <script>
@@ -504,5 +622,13 @@
   </script>
 
   <script type="module" src="modify_tests.js"></script>
+  <script src="floating-tutor-dashboard-button.js"></script>
+  
+  <script>
+    // Inizializza il bottone floating
+    createFloatingBackButton({
+      targetUrl: 'tutor_dashboard.html'
+    });
+  </script>
 </body>
 </html>
