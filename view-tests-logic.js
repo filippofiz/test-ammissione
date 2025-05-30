@@ -12,6 +12,62 @@ const studentName = sessionStorage.getItem("selectedStudentName") || "Student";
 let viewAnswersMode = false;
 let studentTestsCache = [];
 
+// NUOVA FUNZIONE: Uniforma la larghezza di tutti i bottoni dei test
+function uniformTestButtonWidths() {
+  // Piccolo delay per assicurarsi che il rendering sia completo
+  setTimeout(() => {
+    // Trova tutti i bottoni dei test dentro #testTree
+    const testButtons = document.querySelectorAll('#testTree button');
+    
+    if (testButtons.length === 0) {
+      console.log("Nessun bottone test trovato");
+      return;
+    }
+    
+    // Prima resettiamo tutte le larghezze per ottenere le dimensioni naturali
+    testButtons.forEach(button => {
+      button.style.width = 'auto';
+    });
+    
+    // Troviamo la larghezza massima tra tutti i bottoni
+    let maxWidth = 0;
+    testButtons.forEach(button => {
+      const width = button.offsetWidth;
+      if (width > maxWidth) {
+        maxWidth = width;
+      }
+    });
+    
+    // Aggiungiamo un piccolo padding extra per sicurezza
+    maxWidth += 20; // 10px per lato
+    
+    console.log(`Larghezza massima trovata: ${maxWidth}px`);
+    
+    // Applichiamo la larghezza massima a tutti i bottoni
+    testButtons.forEach(button => {
+      button.style.width = maxWidth + 'px';
+    });
+    
+    // Applichiamo la stessa larghezza anche a tutti i contenitori delle colonne
+    // che contengono i bottoni (se hanno la classe test-column)
+    const testColumns = document.querySelectorAll('.test-column');
+    testColumns.forEach(column => {
+      column.style.width = maxWidth + 'px';
+    });
+    
+    // Se ci sono div che contengono direttamente i bottoni senza test-column
+    // (come nel caso delle simulazioni), uniformiamo anche quelli
+    testButtons.forEach(button => {
+      const parentDiv = button.parentElement;
+      if (parentDiv && parentDiv.style.display === 'flex' && parentDiv.style.flexDirection === 'column') {
+        parentDiv.style.width = maxWidth + 'px';
+      }
+    });
+    
+    console.log(`✅ Larghezza uniforme applicata a ${testButtons.length} bottoni: ${maxWidth}px`);
+  }, 100); // 100ms di delay per il rendering completo
+}
+
 // Inizializzazione
 document.addEventListener('DOMContentLoaded', async () => {
   // Controlla se c'è uno studente selezionato
@@ -32,6 +88,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Carica l'albero dei test
   await loadTestTree();
+
+  // Aggiungi MutationObserver per monitorare cambiamenti nel testTree
+  const testTree = document.getElementById('testTree');
+  if (testTree) {
+    const testTreeObserver = new MutationObserver((mutations) => {
+      // Se sono stati aggiunti nuovi bottoni, uniforma le larghezze
+      if (mutations.some(m => m.addedNodes.length > 0)) {
+        uniformTestButtonWidths();
+      }
+    });
+    
+    testTreeObserver.observe(testTree, {
+      childList: true,
+      subtree: true
+    });
+  }
 });
 
 // Aggiorna il nome del tutor nell'header
@@ -185,9 +257,12 @@ async function loadTestTree() {
   // Update auto unlock status
   await updateAutoUnlockStatus(studentTestsCache);
   displayTestTree(studentTestsCache, studentTestsCache, testType, selectedTest);
+  
+  // Uniforma le larghezze dopo l'ultimo displayTestTree
+  uniformTestButtonWidths();
 }
 
-// Display test tree
+// Display test tree - MODIFICATA
 function displayTestTree(tests, studentTests, testType, selectedTest) {
   const tree = document.getElementById("testTree");
   tree.innerHTML = "";
@@ -225,6 +300,9 @@ function displayTestTree(tests, studentTests, testType, selectedTest) {
 
     tree.appendChild(section);
   });
+
+  // AGGIUNGI: Uniforma le larghezze dopo aver costruito l'albero
+  uniformTestButtonWidths();
 }
 
 // Display simulazioni
@@ -306,6 +384,7 @@ function displayRegularTests(section, group, studentTests, selectedTest) {
         col.style.display="flex";
         col.style.flexDirection="column";
         col.style.alignItems="center";
+        col.classList.add("test-column"); // AGGIUNGI questa classe
 
         progGroups[prog].forEach(t => {
           const st = studentTests.find(s =>
