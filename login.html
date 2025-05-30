@@ -652,12 +652,12 @@
         successMessage.textContent = 'Accesso riuscito! Reindirizzamento...';
         successMessage.style.display = 'block';
 
-        // Redirect based on role
+        // Redirect based on role - CORRETTI I NOMI DEI FILE
         setTimeout(() => {
           if (currentRole === 'student') {
-            window.location.href = 'student_dashboard.html';
+            window.location.href = 'dashboard.html';  // Cambiato da student_dashboard.html
           } else {
-            window.location.href = 'tutor_dashboard.html';
+            window.location.href = 'tutor_dashboard.html';  // Cambiato da tutor_dashboard.html
           }
         }, 1000);
 
@@ -684,9 +684,9 @@
           .single();
 
         if (studentData) {
-          window.location.href = 'student_dashboard.html';
+          window.location.href = 'dashboard.html';  // Cambiato da student_dashboard.html
         } else {
-          window.location.href = 'tutor_dashboard.html';
+          window.location.href = 'tutor_dashboard.html';  // Cambiato da tutor_dashboard.html
         }
       }
     };
