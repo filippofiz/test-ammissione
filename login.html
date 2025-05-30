@@ -627,71 +627,53 @@
       btnText.style.display = 'none';
       loadingSpinner.style.display = 'block';
 
-      try {
-        // Sign in with Supabase
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
+      // Sign in with Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
 
-        if (error) throw error;
-
-        // Check user role
-        const tableName = currentRole === 'student' ? 'students' : 'tutors';
-        const { data: userData, error: userError } = await supabase
-          .from(tableName)
-          .select('*')
-          .eq('auth_uid', data.user.id)
-          .single();
-
-        if (userError || !userData) {
-          throw new Error(`Account non trovato come ${currentRole}. Verifica di aver selezionato il ruolo corretto.`);
-        }
-
-        // Success
-        successMessage.textContent = 'Accesso riuscito! Reindirizzamento...';
-        successMessage.style.display = 'block';
-
-        // Redirect based on role - CORRETTI I NOMI DEI FILE
-        setTimeout(() => {
-          if (currentRole === 'student') {
-            window.location.href = 'dashboard.html';  // Cambiato da student_dashboard.html
-          } else {
-            window.location.href = 'tutor_dashboard.html';  // Cambiato da tutor_dashboard.html
-          }
-        }, 1000);
-
-      } catch (error) {
-        errorMessage.textContent = error.message || 'Errore durante l\'accesso. Riprova.';
+      if (error) {
+        console.error("Login failed:", error.message);
+        errorMessage.textContent = "Credenziali non valide.";
         errorMessage.style.display = 'block';
-      } finally {
-        // Reset loading state
         loginBtn.disabled = false;
         btnText.style.display = 'inline';
         loadingSpinner.style.display = 'none';
+        return;
       }
+
+      const user = data.user;
+      if (!user || !user.id) {
+        errorMessage.textContent = "Si è verificato un errore. Riprova.";
+        errorMessage.style.display = 'block';
+        loginBtn.disabled = false;
+        btnText.style.display = 'inline';
+        loadingSpinner.style.display = 'none';
+        return;
+      }
+
+      // Success
+      successMessage.textContent = 'Accesso riuscito! Reindirizzamento...';
+      successMessage.style.display = 'block';
+
+      // Redirect based on role
+      if (currentRole === 'student') {
+        sessionStorage.setItem("studentId", user.id);
+        await supabase.auth.setSession(data.session);
+        window.location.href = 'choose_test.html';
+      } else if (currentRole === 'tutor') {
+        sessionStorage.setItem("tutorId", user.id);
+        window.location.href = 'tutor_dashboard.html';
+      }
+
+      // Reset loading state
+      loginBtn.disabled = false;
+      btnText.style.display = 'inline';
+      loadingSpinner.style.display = 'none';
     });
 
-    // Check if user is already logged in
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        // Try to determine user role and redirect
-        const { data: studentData } = await supabase
-          .from('students')
-          .select('*')
-          .eq('auth_uid', session.user.id)
-          .single();
-
-        if (studentData) {
-          window.location.href = 'dashboard.html';  // Cambiato da student_dashboard.html
-        } else {
-          window.location.href = 'tutor_dashboard.html';  // Cambiato da tutor_dashboard.html
-        }
-      }
-    };
-
-    checkAuth();
+          // Auto-login rimosso per evitare problemi con la selezione del ruolo
   </script>
 
   <!-- Animated Background -->

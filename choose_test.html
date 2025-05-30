@@ -1,69 +1,317 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Choose Test | Mock Test</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>Scegli Test - Up to Ten</title>
+  <link rel="stylesheet" href="header.css">
   <style>
-    /* Additional styles for the choose test page */
-    .choose-container {
-      max-width: 600px;
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh;
+      color: rgb(28, 37, 69);
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    .container {
+      max-width: 800px;
       margin: 2rem auto;
-      padding: 2rem;
-      background-color: #fff;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      padding: 0 2rem;
+      animation: fadeInUp 0.6s ease-out;
+      position: relative;
+      z-index: 1;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Page Header */
+    .page-header {
+      background: linear-gradient(135deg, rgb(28, 37, 69), #1a2541);
+      color: white;
+      padding: 2rem 2.5rem;
+      border-radius: 16px;
+      margin-bottom: 2rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .page-header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -10%;
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle, rgba(0, 166, 102, 0.3) 0%, transparent 70%);
+      animation: pulse 4s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.5; }
+      50% { transform: scale(1.2); opacity: 0.8; }
+    }
+
+    .page-header h1 {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .page-header p {
+      font-size: 1.1rem;
+      opacity: 0.9;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Choose Test Card */
+    .choose-card {
+      background: white;
+      padding: 2.5rem;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .choose-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #00a666, #00c775);
+    }
+
+    .choose-card h2 {
+      font-size: 1.5rem;
+      color: rgb(28, 37, 69);
+      margin-bottom: 2rem;
       text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
     }
-    .choose-container h2 {
-      margin-bottom: 1rem;
+
+    .choose-card h2::before {
+      content: '📚';
+      font-size: 1.8rem;
     }
+
+    /* Tests Container */
+    .tests-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      margin: 2rem 0;
+    }
+
+    /* Test Option Button - Stile più piccolo e compatto */
     .test-option-btn {
-      margin: 0.5rem;
-      padding: 0.8rem 1.2rem;
-      background-color: #f0f0f0;
-      border: 1px solid #ccc;
-      border-radius: 6px;
+      padding: 1rem 2rem;
+      background: #f8f9fa;
+      border: 2px solid #e9ecef;
+      border-radius: 10px;
       font-size: 1rem;
+      font-weight: 600;
+      color: rgb(28, 37, 69);
       cursor: pointer;
-      transition: background-color 0.2s ease;
+      transition: all 0.3s ease;
+      text-align: center;
+      min-width: 200px;
     }
+
+    .test-option-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      border-color: rgb(28, 37, 69);
+    }
+
+    .test-option-btn:active {
+      transform: translateY(-1px);
+    }
+
     .test-option-btn.selected {
-      background-color: #23AC75;
-      color: #fff;
-      border-color: #23AC75;
+      background: rgb(28, 37, 69);
+      color: white;
+      border-color: rgb(28, 37, 69);
+      box-shadow: 0 4px 12px rgba(28, 37, 69, 0.3);
     }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+      color: #6c757d;
+    }
+
+    .empty-state-icon {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+      opacity: 0.5;
+    }
+
+    .empty-state p {
+      font-size: 1.1rem;
+    }
+
+    /* Proceed Button */
     .proceed-btn {
-      margin-top: 1.5rem;
-      padding: 0.8rem 1.2rem;
-      background-color: #23AC75;
-      color: #fff;
+      display: block;
+      width: 100%;
+      max-width: 300px;
+      margin: 2rem auto 0;
+      padding: 1rem 2rem;
+      background: linear-gradient(135deg, #00a666, #00c775);
+      color: white;
       border: none;
       border-radius: 12px;
-      font-size: 1.2rem;
+      font-size: 1.1rem;
+      font-weight: 600;
       cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .proceed-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      transition: left 0.6s;
+    }
+
+    .proceed-btn:hover::before {
+      left: 100%;
+    }
+
+    .proceed-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 166, 102, 0.3);
+    }
+
+    .proceed-btn:active {
+      transform: translateY(-1px);
+    }
+
+    .proceed-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Loading State */
+    .loading {
+      text-align: center;
+      padding: 3rem;
+    }
+
+    .loading-spinner {
+      display: inline-block;
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgba(0, 166, 102, 0.3);
+      border-radius: 50%;
+      border-top-color: #00a666;
+      animation: spin 1s ease-in-out infinite;
+      margin-bottom: 1rem;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .container {
+        margin: 1rem auto;
+        padding: 0 1rem;
+      }
+
+      .page-header {
+        padding: 1.5rem;
+      }
+
+      .page-header h1 {
+        font-size: 1.5rem;
+      }
+
+      .choose-card {
+        padding: 1.5rem;
+      }
+
+      .test-option-btn {
+        min-width: 100%;
+      }
     }
   </style>
 </head>
 <body>
-  <!-- Header similar to the login page -->
-  <header class="portale-header">
-    <div class="portale-header-content">
-      <img src="https://elrwpaezjnemmiegkyin.supabase.co/storage/v1/object/public/images//6_Logo_trasparente.png" alt="Logo" class="portale-logo">
-      <span class="greeting">Ciao, Utente</span>
-    </div>
-  </header>
+  <!-- Header dal file esterno -->
+  <div id="header-placeholder"></div>
 
-  <div class="choose-container">
-    <h2>Scegli un test d'ingresso</h2>
-    <div id="testsList">
-      <!-- Test option buttons will be populated here -->
+  <div class="container">
+    <!-- Page Header -->
+    <div class="page-header">
+      <h1>Scegli il tuo Test d'Ingresso</h1>
+      <p>Seleziona il test per cui vuoi prepararti</p>
     </div>
-    <button id="proceedBtn" class="proceed-btn">Proceed</button>
+
+    <!-- Choose Test Card -->
+    <div class="choose-card">
+      <h2>Test Disponibili</h2>
+      
+      <div id="loadingState" class="loading" style="display: none;">
+        <div class="loading-spinner"></div>
+        <p>Caricamento test disponibili...</p>
+      </div>
+
+      <div id="testsContainer" style="display: none;">
+        <div id="testsList" class="tests-container">
+          <!-- I test verranno popolati qui -->
+        </div>
+
+        <button id="proceedBtn" class="proceed-btn">
+          Procedi con il test selezionato
+        </button>
+      </div>
+
+      <div id="emptyState" class="empty-state" style="display: none;">
+        <div class="empty-state-icon">📭</div>
+        <p>Nessun test disponibile al momento</p>
+      </div>
+    </div>
   </div>
 
-
+  <!-- Animated Background -->
+  <script src="animated-background.js"></script>
+  
   <script type="module" src="choose_test.js"></script>
 </body>
 </html>
