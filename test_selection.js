@@ -1,7 +1,121 @@
+// Aggiungi questo all'inizio del file, dopo gli import
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const SUPABASE_URL = "https://elrwpaezjnemmiegkyin.supabase.co"; 
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVscndwYWV6am5lbW1pZWdreWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzAyMDUsImV4cCI6MjA1MzY0NjIwNX0.p6R2S1HK8kPFYiEAYtYaxIAH8XSmzjQBWQ_ywy3akdI";
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Variabile globale per la subscription
+let realtimeSubscription = null;
+
+// Modifica la funzione DOMContentLoaded per includere la subscription
 document.addEventListener("DOMContentLoaded", async () => {
     await loadTestTree();
+    setupRealtimeSubscription(); // Aggiungi questa linea
 });
 
+// Nuova funzione per configurare la subscription real-time
+async function setupRealtimeSubscription() {
+    // Ottieni l'utente corrente
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !sessionData || !sessionData.session) {
+        console.error("❌ No active session for realtime:", sessionError?.message);
+        return;
+    }
+
+    const userId = sessionData.session.user.id;
+    const selectedTest = sessionStorage.getItem("selectedTestType");
+    
+    if (!selectedTest) {
+        console.error("❌ No test selected for realtime subscription");
+        return;
+    }
+
+    console.log("🔄 Setting up realtime subscription for user:", userId);
+
+    // Crea la subscription per ascoltare i cambiamenti
+    realtimeSubscription = supabase
+        .channel('student-tests-changes')
+        .on(
+            'postgres_changes',
+            {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'student_tests',
+                filter: `auth_uid=eq.${userId}`
+            },
+            async (payload) => {
+                console.log('📡 Realtime update received:', payload);
+                
+                // Se un test è stato completato, esegui l'auto-unlock
+                if (payload.new.status === 'completed') {
+                    console.log('✅ Test completed, checking for auto-unlock...');
+                    await handleAutoUnlock(payload.new);
+                }
+            }
+        )
+        .subscribe((status) => {
+            console.log('📡 Realtime subscription status:', status);
+        });
+}
+
+// Nuova funzione per gestire l'auto-unlock quando un test viene completato
+async function handleAutoUnlock(completedTest) {
+    const selectedTest = sessionStorage.getItem("selectedTestType");
+    const userId = completedTest.auth_uid;
+
+    // Recupera tutti i test dello studente
+    let { data: allTests, error } = await supabase
+        .from("student_tests")
+        .select("*")
+        .eq("auth_uid", userId)
+        .eq("tipologia_test", selectedTest)
+        .order("unlock_order");
+
+    if (error) {
+        console.error("❌ Error fetching tests for auto-unlock:", error.message);
+        return;
+    }
+
+    console.log(`🔍 Checking auto-unlock for completed test order ${completedTest.unlock_order}`);
+
+    // Trova il prossimo test automatico da sbloccare
+    const nextTest = allTests.find(test => 
+        test.unlock_mode === "automatic" &&
+        test.unlock_order === completedTest.unlock_order + 1 &&
+        test.status === "locked"
+    );
+
+    if (nextTest) {
+        console.log(`🔓 Auto-unlocking next test: ${nextTest.section} - ${nextTest.tipologia_esercizi} ${nextTest.progressivo}`);
+        
+        // Sblocca il test successivo
+        const { error: updateError } = await supabase
+            .from("student_tests")
+            .update({ status: "unlocked" })
+            .eq("id", nextTest.id);
+
+        if (!updateError) {
+            console.log("✅ Test auto-unlocked successfully!");
+            // Ricarica l'albero dei test per mostrare il cambiamento
+            await loadTestTree();
+        } else {
+            console.error("❌ Error auto-unlocking test:", updateError.message);
+        }
+    } else {
+        console.log("ℹ️ No next automatic test to unlock");
+    }
+}
+
+// Aggiungi cleanup quando l'utente lascia la pagina
+window.addEventListener("beforeunload", () => {
+    if (realtimeSubscription) {
+        console.log("🔌 Unsubscribing from realtime...");
+        realtimeSubscription.unsubscribe();
+    }
+});
+
+// Modifica la funzione loadTestTree esistente per rimuovere il vecchio codice auto-unlock
 async function loadTestTree() {
     const selectedTest = sessionStorage.getItem("selectedTestType");
 
@@ -70,39 +184,10 @@ async function loadTestTree() {
 
     console.log("📊 Student Progress Data:", studentTests);
     console.log("📊 Selected Test Type:", selectedTest);
-        // ——————— AUTO-UNLOCK PASS ———————
-    //
-    // For each automatic test, if the previous unlock_order
-    // (also automatic) is completed, unlock this one.
-    //
-    for (const test of studentTests) {
-      if (test.unlock_mode === "automatic" && test.unlock_order > 0) {
-        const prevOrder = test.unlock_order - 1;
-        const prevTest = studentTests.find(t => t.unlock_order === prevOrder);
-        if (
-          prevTest &&
-          prevTest.unlock_mode === "automatic" &&
-          prevTest.status === "completed" &&
-          test.status !== "completed"
-        ) {
-          const { error: updateError } = await supabase
-            .from("student_tests")
-            .update({ status: "unlocked" })
-            .eq("id", test.id);
-
-          if (!updateError) {
-            // update our local copy so the UI will render correctly
-            test.status = "unlocked";
-          } else {
-            console.error(
-              `❌ Auto-unlock failed for test id ${test.id}:`,
-              updateError.message
-            );
-          }
-        }
-      }
-    }
-    // —————————————————————————————————————
+    
+    // RIMOSSO IL VECCHIO CODICE AUTO-UNLOCK DA QUI
+    // L'auto-unlock ora viene gestito dalla subscription real-time
+    
     // ✅ Ensure only unique sections exist in test data
     studentTests = studentTests.filter((test, index, self) =>
         index === self.findIndex((t) =>
@@ -114,6 +199,7 @@ async function loadTestTree() {
 
     // ✅ Sort test data based on `ordine_sections`
     studentTests.sort((a, b) => ordineSections.indexOf(a.section) - ordineSections.indexOf(b.section));
+    
     // 1️⃣ Fetch Materia for each question
     const { data: questionsData, error: materiaError } = await supabase
     .from("questions")
@@ -121,209 +207,21 @@ async function loadTestTree() {
     .eq("tipologia_test", selectedTest);
 
     if (materiaError) {
-    console.error("❌ Error fetching Materia info:", materiaError.message);
+        console.error("❌ Error fetching Materia info:", materiaError.message);
     }
 
     // 2️⃣ Build a quick lookup: "section|tipologia|progressivo" → Materia
     const materiaMap = {};
     questionsData.forEach(q => {
-    materiaMap[`${q.section}|${q.tipologia_esercizi}|${q.progressivo}`] = q.Materia;
+        materiaMap[`${q.section}|${q.tipologia_esercizi}|${q.progressivo}`] = q.Materia;
     });
 
     // 3️⃣ Attach `Materia` to each studentTests record
     studentTests = studentTests.map(t => ({
-    ...t,
-    Materia: materiaMap[`${t.section}|${t.tipologia_esercizi}|${t.progressivo}`] || ""
+        ...t,
+        Materia: materiaMap[`${t.section}|${t.tipologia_esercizi}|${t.progressivo}`] || ""
     }));
 
     // Finally call your renderer with the enriched array
     displayTestTree(studentTests, studentTests, testType, selectedTest);
-}
-
-function displayTestTree(tests, studentTests, testType, selectedTest) {
-    const testTree = document.getElementById("testTree");
-    testTree.innerHTML = "";
-  
-    // 1️⃣ Group by Materia (blank → "Altro")
-    const byMateria = {};
-    tests.forEach(test => {
-      const mat = test.Materia || "Altro";
-      if (!byMateria[mat]) byMateria[mat] = [];
-      byMateria[mat].push(test);
-    });
-  
-    // 2️⃣ Decide ordering: Simulazioni first, then others α, then Altro last
-    const materiaKeys = Object.keys(byMateria).sort((a, b) => {
-        if (a === "Simulazioni") return  1;           // a goes after b
-        if (b === "Simulazioni") return -1;           // a goes before b
-        return a.localeCompare(b);                    // otherwise alphabetical
-      });
-  
-    materiaKeys.forEach(materia => {
-      const group = byMateria[materia];
-      // Section wrapper for this Materia
-      const matDiv = document.createElement("div");
-      matDiv.classList.add("materia-section");
-  
-      // Header
-      const h2 = document.createElement("h2");
-      h2.classList.add("materia-header");
-      h2.textContent = materia === "Altro" ? "Altre Materie" : materia;
-      matDiv.appendChild(h2);
-  
-      // If Simulazioni → flat list
-      if (materia === "Simulazioni") {
-        const flat = document.createElement("div");
-        flat.style.display = "flex";
-        flat.style.flexWrap = "wrap";
-        flat.style.gap = "8px";
-  
-        group.forEach(test => {
-          const studentEntry = studentTests.find(t => t.id === test.id);
-          const status = studentEntry?.status || "locked";
-  
-          const btn = document.createElement("button");
-          btn.textContent = btn.textContent = `Test ${test.progressivo}`;;          // only the number
-          if (status === "completed") btn.classList.add("completed");
-          else if (status === "locked") {
-            btn.disabled = true;
-            btn.classList.add("locked");
-          } else {
-            // same click handlers as before
-            if (testType === "pdf") {
-              btn.onclick = () => startPdfTest(test.section, test.tipologia_esercizi, test.progressivo, selectedTest, test.id);
-            } else {
-              btn.onclick = () => startBancaDatiTest(test.section, test.tipologia_esercizi, test.progressivo, selectedTest, test.id);
-            }
-          }
-          flat.appendChild(btn);
-        });
-  
-        matDiv.appendChild(flat);
-  
-      } else {
-        // Nested grouping (section → tipologia → progressivo)
-        const sectionsMap = {};
-        group.forEach(test => {
-          if (!sectionsMap[test.section]) sectionsMap[test.section] = {};
-          if (!sectionsMap[test.section][test.tipologia_esercizi]) {
-            sectionsMap[test.section][test.tipologia_esercizi] = [];
-          }
-          sectionsMap[test.section][test.tipologia_esercizi].push(test);
-        });
-  
-        Object.keys(sectionsMap).forEach(sectionKey => {
-          const sectionDiv = document.createElement("div");
-          sectionDiv.classList.add("section");
-          sectionDiv.innerHTML = `<h3>${sectionKey}</h3>`;
-  
-          const tipContainer = document.createElement("div");
-          tipContainer.style.display = "flex";
-          tipContainer.style.flexDirection = "column";
-          tipContainer.style.gap = "10px";
-  
-          // Order tipologie as before
-          const tipKeys = Object.keys(sectionsMap[sectionKey]).sort((a, b) => {
-            if (a === "Esercizi per casa") return -1;
-            if (b === "Esercizi per casa") return  1;
-            if (a === "Assessment")          return -1;
-            if (b === "Assessment")          return  1;
-            return 0;
-          });
-  
-          tipKeys.forEach(tip => {
-            const testsInTip = sectionsMap[sectionKey][tip];
-            const groups = {};
-            testsInTip.forEach(t => {
-              if (!groups[t.progressivo]) groups[t.progressivo] = [];
-              groups[t.progressivo].push(t);
-            });
-  
-            const tipLabel = document.createElement("h4");
-            tipLabel.textContent = tip;
-            tipContainer.appendChild(tipLabel);
-  
-            const colWrapper = document.createElement("div");
-            colWrapper.style.display = "flex";
-            colWrapper.style.gap = "20px";
-            colWrapper.style.marginBottom = "10px";
-  
-            Object.keys(groups).sort((a,b)=>a-b).forEach(prog => {
-              const col = document.createElement("div");
-              col.style.display = "flex";
-              col.style.flexDirection = "column";
-              col.style.alignItems = "center";
-  
-              groups[prog].forEach(test => {
-                const studentEntry = studentTests.find(t => t.id === test.id);
-                const status = studentEntry?.status || "locked";
-  
-                const btn = document.createElement("button");
-                btn.textContent = `${tip} ${test.progressivo}`;
-  
-                if (status === "completed") btn.classList.add("completed");
-                else if (status === "locked") {
-                  btn.disabled = true;
-                  btn.classList.add("locked");
-                } else {
-                  if (testType === "pdf") {
-                    btn.onclick = () => startPdfTest(test.section, test.tipologia_esercizi, test.progressivo, selectedTest, test.id);
-                  } else {
-                    btn.onclick = () => startBancaDatiTest(test.section, test.tipologia_esercizi, test.progressivo, selectedTest, test.id);
-                  }
-                }
-                col.appendChild(btn);
-              });
-  
-              colWrapper.appendChild(col);
-            });
-  
-            tipContainer.appendChild(colWrapper);
-          });
-  
-          sectionDiv.appendChild(tipContainer);
-          matDiv.appendChild(sectionDiv);
-        });
-      }
-  
-      testTree.appendChild(matDiv);
-    });
-  }
-
-// ✅ Start PDF test
-async function startPdfTest(section, tipologia_esercizi, testProgressivo, selectedTest, testId) {
-    console.log(`🚀 Starting PDF Test: ${section} - ${tipologia_esercizi} - ${testProgressivo} - ${selectedTest} - ${testId}`);
-    const { data: testQuestion, error } = await supabase
-        .from("questions")
-        .select("pdf_url")
-        .eq("section", section)
-        .eq("tipologia_esercizi", tipologia_esercizi)
-        .eq("progressivo", testProgressivo)
-        .eq("tipologia_test", selectedTest)
-        .limit(1)
-        .single();
-    
-
-    if (error || !testQuestion) {
-        console.error("❌ Error fetching PDF URL:", error?.message);
-        alert("Error loading test. Please try again.");
-        return;
-    }
-
-    sessionStorage.setItem("testPdf", testQuestion.pdf_url);
-    sessionStorage.setItem("currentSection", section);
-    sessionStorage.setItem("currentTipologiaEsercizi", tipologia_esercizi);
-    sessionStorage.setItem("currentTestProgressivo", testProgressivo);
-    sessionStorage.setItem("selectedTestId", testId);
-    window.location.href = "test.html";
-}
-
-// ✅ Start Banca Dati test
-async function startBancaDatiTest(section, tipologia_esercizi, testProgressivo, selectedTest, testId) {  
-    console.log(`🚀 Starting Banca Dati Test: ${section} - ${tipologia_esercizi} - ${testProgressivo} - ${selectedTest}`);   
-    sessionStorage.setItem("currentSection", section);
-    sessionStorage.setItem("currentTipologiaEsercizi", tipologia_esercizi);
-    sessionStorage.setItem("currentTestProgressivo", testProgressivo);
-    sessionStorage.setItem("selectedTestId", testId);
-    window.location.href = "test_bancaDati.html";
 }
