@@ -274,12 +274,38 @@ function displayTestTree(tests, studentTests, testType, selectedTest) {
     (byMat[mat] = byMat[mat]||[]).push(t);
   });
 
-  // Ordina materie (Simulazioni per ultima)
-  const mats = Object.keys(byMat).sort((a,b) => {
-    if (a==="Simulazioni") return 1;
-    if (b==="Simulazioni") return -1;
+// Ordina materie con ordine personalizzato
+const mats = Object.keys(byMat).sort((a,b) => {
+    // Definisci l'ordine prioritario
+    const priorityOrder = {
+        "Matematica": 1,
+        "Fisica": 2,
+        "Chimica": 3,
+        "Altre Materie": 4,
+        "Altro": 4  // stesso peso di "Altre Materie"
+    };
+    
+    // Simulazioni sempre per ultime
+    if (a === "Simulazioni") return 1;
+    if (b === "Simulazioni") return -1;
+    
+    // Controlla se entrambe hanno priorità definita
+    const priorityA = priorityOrder[a];
+    const priorityB = priorityOrder[b];
+    
+    if (priorityA && priorityB) {
+        return priorityA - priorityB;
+    }
+    
+    // Se solo A ha priorità, va prima
+    if (priorityA) return -1;
+    
+    // Se solo B ha priorità, va prima
+    if (priorityB) return 1;
+    
+    // Altrimenti ordine alfabetico
     return a.localeCompare(b);
-  });
+});
 
   mats.forEach(materia => {
     const section = document.createElement("div");
