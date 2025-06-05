@@ -644,12 +644,20 @@ async function enforceFullScreen() {
     }
 }
 
-// ✅ Detect Fullscreen Exit & Force Re-Entry
+// ✅ Detect Fullscreen Exit & Show Confirmation
 document.addEventListener("fullscreenchange", function () {
-    if (isSubmitting) return; // ✅ Skip if already submitting
-    if (!document.fullscreenElement) {
-        alert("⚠ The test has been cancelled. You are being redirected to your progress tree.");
-        window.location.href = "test_selection.html"; // ✅ Redirect immediately
+    if (isSubmitting) return;
+    if (!document.fullscreenElement && testEndTime) { // Solo se il test è iniziato
+        customConfirm("⚠️ Attenzione! Uscendo dallo schermo intero il test verrà annullato. Sei sicuro di voler uscire?")
+            .then(confirmExit => {
+                if (confirmExit) {
+                    alert("Il test è stato annullato.");
+                    window.location.href = "test_selection.html";
+                } else {
+                    // Torna in fullscreen
+                    enforceFullScreen();
+                }
+            });
     }
 });
 

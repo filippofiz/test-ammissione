@@ -170,6 +170,10 @@ function displayTestTree(tests, studentTests, testType, selectedTest) {
       h2.classList.add("materia-header");
       h2.textContent = materia === "Altro" ? "Altre Materie" : materia;
       matDiv.appendChild(h2);
+      
+      // ✨ NUOVO: Content wrapper per accordion
+      const contentDiv = document.createElement("div");
+      contentDiv.classList.add("materia-content");
   
       // If Simulazioni → flat list
       if (materia === "Simulazioni") {
@@ -183,7 +187,7 @@ function displayTestTree(tests, studentTests, testType, selectedTest) {
           const status = studentEntry?.status || "locked";
   
           const btn = document.createElement("button");
-          btn.textContent = btn.textContent = `Test ${test.progressivo}`;;          // only the number
+          btn.textContent = `Test ${test.progressivo}`;
           if (status === "completed") btn.classList.add("completed");
           else if (status === "locked") {
             btn.disabled = true;
@@ -199,7 +203,7 @@ function displayTestTree(tests, studentTests, testType, selectedTest) {
           flat.appendChild(btn);
         });
   
-        matDiv.appendChild(flat);
+        contentDiv.appendChild(flat);  // ✨ MODIFICATO
   
       } else {
         // Nested grouping (section → tipologia → progressivo)
@@ -245,8 +249,8 @@ function displayTestTree(tests, studentTests, testType, selectedTest) {
   
             const colWrapper = document.createElement("div");
             colWrapper.style.display = "flex";
-            colWrapper.style.gap = "20px";
-            colWrapper.style.marginBottom = "10px";
+            colWrapper.style.gap = "8px";  // ✨ MODIFICATO: ridotto gap
+            colWrapper.style.marginBottom = "8px";  // ✨ MODIFICATO: ridotto margin
   
             Object.keys(groups).sort((a,b)=>a-b).forEach(prog => {
               const col = document.createElement("div");
@@ -282,10 +286,12 @@ function displayTestTree(tests, studentTests, testType, selectedTest) {
           });
   
           sectionDiv.appendChild(tipContainer);
-          matDiv.appendChild(sectionDiv);
+          contentDiv.appendChild(sectionDiv);  // ✨ MODIFICATO
         });
       }
-  
+      
+      // ✨ NUOVO: Aggiungi il content wrapper al div principale
+      matDiv.appendChild(contentDiv);
       testTree.appendChild(matDiv);
     });
   }

@@ -1,28 +1,814 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Test Progress</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>Avanzamento Preparazione - Up to Ten</title>
+  <link rel="stylesheet" href="header.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh;
+      color: rgb(28, 37, 69);
+    }
+
+    .container {
+      max-width: 100%;
+      margin: 2rem 0;
+      padding: 0;
+    }
+
+    /* Layout principale con griglia */
+    .main-layout {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 2rem;
+      align-items: start;
+      max-width: calc(100% - 300px);
+      margin: 0 auto;
+    }
+    
+    @media (min-width: 1600px) {
+      .main-layout {
+        max-width: 1350px;
+      }
+    }
+
+    @media (max-width: 1024px) {
+      .main-layout {
+        grid-template-columns: 1fr;
+        max-width: calc(100% - 2rem);
+        margin: 0 1rem;
+      }
+      
+      .page-header {
+        max-width: calc(100% - 2rem);
+        margin: 0 1rem 2rem 1rem;
+      }
+      
+      .progress-sidebar {
+        order: -1;
+      }
+    }
+
+    /* Header della pagina - allineato con header principale */
+    .page-header {
+      background: linear-gradient(135deg, rgb(28, 37, 69), #1a2541);
+      color: white;
+      padding: 2rem 2.5rem;
+      border-radius: 16px;
+      margin-bottom: 2rem;
+      margin-left: auto;
+      margin-right: auto;
+      max-width: calc(100% - 300px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
+    }
+    
+    @media (min-width: 1600px) {
+      .page-header {
+        max-width: 1350px;
+      }
+    }
+
+    .page-header h2 {
+      font-size: 1.8rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .page-header p {
+      font-size: 1rem;
+      opacity: 0.9;
+    }
+
+    /* Container principale per il test tree */
+    .test-tree-section {
+      background: white;
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    }
+
+    #testTree {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* Sezioni per materia */
+    .materia-section {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      transition: all 0.3s ease;
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+
+    .materia-section:hover {
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    }
+
+    .materia-section.collapsed {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+
+    .materia-header {
+      font-size: 1.4rem;
+      color: rgb(28, 37, 69);
+      padding: 1.5rem 1.75rem 1.5rem 1.5rem;
+      margin: 0;
+      border-bottom: 3px solid #00a666;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.3s ease;
+    }
+
+    .materia-header:hover {
+      background: #f8f9fa;
+    }
+
+    /* Icona toggle */
+    .toggle-icon {
+      font-size: 1.2rem;
+      transition: transform 0.3s ease;
+      margin-right: 0.5rem;
+    }
+
+    .materia-section.collapsed .toggle-icon {
+      transform: rotate(-90deg);
+    }
+
+    /* Contenuto collassabile */
+    .materia-content {
+      padding: 1.5rem 1.75rem 1.5rem 1rem;
+      transition: all 0.3s ease;
+      max-height: 2000px;
+      opacity: 1;
+    }
+
+    .materia-section.collapsed .materia-content {
+      max-height: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+      opacity: 0;
+    }
+
+    /* Progress indicator per sezione */
+    .section-progress {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.9rem;
+      color: #6c757d;
+    }
+
+    .progress-bar-mini {
+      width: 100px;
+      height: 6px;
+      background: #e9ecef;
+      border-radius: 3px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-bar-mini-fill {
+      height: 100%;
+      background: #00a666;
+      border-radius: 3px;
+      transition: width 0.5s ease;
+    }
+
+    /* Sezioni interne con card design */
+    .section {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+      border: 1px solid #e9ecef;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .section::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: #00a666;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .section:hover {
+      background: white;
+      box-shadow: 0 4px 12px rgba(0, 166, 102, 0.15);
+      transform: translateX(6px);
+    }
+
+    .section:hover::before {
+      opacity: 1;
+    }
+
+    .section:last-child {
+      margin-bottom: 0;
+    }
+
+    .section h3 {
+      font-size: 1.15rem;
+      color: rgb(28, 37, 69);
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Icone per tipologie */
+    .section h4 {
+      font-size: 0.95rem;
+      color: #495057;
+      margin-bottom: 0.5rem;
+      margin-top: 0.75rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .section h4::before {
+      content: '📝';
+      font-size: 1.1rem;
+    }
+
+    .section h4:contains("Assessment")::before {
+      content: '📊';
+    }
+
+    /* Container per bottoni con layout migliorato */
+    .buttons-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 0.75rem;
+    }
+
+    /* Stile per Simulazioni - layout distintivo */
+    .simulazioni-container {
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin-top: 0.75rem;
+      border: 1px solid #dee2e6;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .simulazioni-container::before {
+      content: '🎯';
+      position: absolute;
+      right: 1rem;
+      top: 1rem;
+      font-size: 3rem;
+      opacity: 0.1;
+    }
+
+    .simulazioni-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 0.75rem;
+    }
+
+    /* Badge e indicatori */
+    .section-badge {
+      background: rgba(0, 166, 102, 0.1);
+      color: #00a666;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-left: auto;
+    }
+
+    .section h4:first-child {
+      margin-top: 0;
+    }
+
+    /* Bottoni dei test - più specifici per non interferire con header */
+    #testTree button {
+      padding: 0.6rem 1.2rem;
+      margin: 0.2rem;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      min-width: 140px;
+      position: relative;
+    }
+
+    #testTree button:not(.locked):not(.completed) {
+      background: white;
+      color: #00a666;
+      border: 2px solid #00a666;
+    }
+
+    #testTree button:not(.locked):not(.completed):hover {
+      background: #00a666;
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 166, 102, 0.3);
+    }
+
+    #testTree button.completed {
+      background: #00a666;
+      color: white;
+      border: 2px solid #00a666;
+      padding-right: 2.5rem;
+    }
+
+    #testTree button.completed::after {
+      content: '✓';
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1.1rem;
+    }
+
+    #testTree button.locked {
+      background: #e9ecef;
+      color: #adb5bd;
+      border: 2px solid #dee2e6;
+      cursor: not-allowed;
+      opacity: 0.7;
+      padding-right: 2.5rem;
+    }
+
+    #testTree button.locked::after {
+      content: '🔒';
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.9rem;
+    }
+
+    /* Sidebar progresso */
+    .progress-sidebar {
+      position: sticky;
+      top: 2rem;
+    }
+
+    .progress-card {
+      background: white;
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      text-align: center;
+    }
+
+    .progress-card h3 {
+      font-size: 1.2rem;
+      color: rgb(28, 37, 69);
+      margin-bottom: 1.5rem;
+    }
+
+    /* Progress Ring */
+    .progress-ring {
+      width: 180px;
+      height: 180px;
+      margin: 0 auto 1.5rem;
+      position: relative;
+    }
+
+    .progress-ring svg {
+      width: 100%;
+      height: 100%;
+      transform: rotate(-90deg);
+    }
+
+    .progress-ring-bg {
+      fill: none;
+      stroke: #e9ecef;
+      stroke-width: 12;
+    }
+
+    .progress-ring-fill {
+      fill: none;
+      stroke: #00a666;
+      stroke-width: 12;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 1s ease-in-out;
+    }
+
+    .progress-percentage {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: #00a666;
+    }
+
+    .progress-percentage small {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    /* Stats */
+    .progress-stats {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      background: #f8f9fa;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+    }
+
+    .stat-item:hover {
+      background: #e9ecef;
+      transform: translateX(4px);
+    }
+
+    .stat-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 500;
+      color: #495057;
+    }
+
+    .stat-value {
+      font-weight: 700;
+      color: rgb(28, 37, 69);
+    }
+
+    /* Motivational message */
+    .motivation-message {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      background: linear-gradient(135deg, #00a666, #00c97a);
+      color: white;
+      border-radius: 8px;
+      font-weight: 500;
+      font-size: 0.9rem;
+      text-align: center;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.9; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.02); }
+    }
+
+    /* Loading */
+    .loading-message {
+      text-align: center;
+      padding: 3rem;
+      color: #6c757d;
+      font-size: 1.1rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .container {
+        padding: 0 1rem;
+      }
+
+      .page-header {
+        padding: 1.5rem;
+      }
+
+      .page-header h2 {
+        font-size: 1.5rem;
+      }
+
+      .test-tree-section {
+        padding: 1.5rem;
+      }
+
+      @media (max-width: 768px) {
+        #testTree button {
+          min-width: 120px;
+          font-size: 0.85rem;
+          padding: 0.5rem 1rem;
+        }
+
+        #testTree button.completed,
+        #testTree button.locked {
+          padding-right: 2rem;
+        }
+      }
+
+      .progress-card {
+        padding: 1.5rem;
+      }
+
+      .progress-ring {
+        width: 150px;
+        height: 150px;
+      }
+
+      .progress-percentage {
+        font-size: 2rem;
+      }
+    }
+
+    /* Animazioni */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .materia-section {
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    /* Hover effects per le sezioni - rimosso duplicato */
+    
+    /* Container per i gruppi di bottoni con gap migliorato */
+    div[style*="display: flex"] {
+      gap: 0.5rem !important;
+      margin-top: 0.4rem;
+    }
+
+    /* Note per implementazione */
+    /* IMPORTANTE: Il file test_selection.js deve essere aggiornato per wrappare
+       il contenuto delle sezioni (tutto tranne l'header) in un div con classe "materia-content"
+       
+       Esempio struttura necessaria:
+       <div class="materia-section">
+         <h2 class="materia-header">Matematica</h2>
+         <div class="materia-content">
+           <!-- tutti i contenuti qui -->
+         </div>
+       </div>
+    */
+  </style>
 </head>
 <body>
-  <!-- Header con logo a sinistra e saluto in alto a destra -->
-  <header class="portale-header">
-    <div class="portale-header-content">
-      <img src="https://elrwpaezjnemmiegkyin.supabase.co/storage/v1/object/public/images//6_Logo_trasparente.png" alt="Logo" class="portale-logo">
-      <!-- Il saluto verrà aggiornato dinamicamente -->
-      <span class="greeting">Ciao, Utente</span>
-    </div>
-  </header>
+  <!-- Carica l'header dal file esterno -->
+  <div id="header-placeholder"></div>
 
-  <!-- Contenitore principale per il Test Progress -->
   <div class="container">
-    <h2>Avanzamento preparazione</h2>
-    <div id="testTree"></div>  <!-- ✅ The progress tree -->
+    <div class="page-header">
+      <h2>📚 Avanzamento Preparazione</h2>
+      <p>Monitora il tuo progresso e accedi ai test disponibili</p>
+    </div>
+    
+    <div class="main-layout">
+      <div class="test-tree-section">
+        <div id="testTree">
+          <div class="loading-message">
+            <p>⏳ Caricamento test in corso...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar Progresso -->
+      <div class="progress-sidebar">
+        <div class="progress-card">
+          <h3>📊 Il tuo progresso</h3>
+          
+          <div class="progress-ring">
+            <svg>
+              <circle class="progress-ring-bg" cx="90" cy="90" r="80"></circle>
+              <circle class="progress-ring-fill" cx="90" cy="90" r="80"
+                      stroke-dasharray="502.65"
+                      stroke-dashoffset="502.65"></circle>
+            </svg>
+            <div class="progress-percentage">
+              <span id="progressValue">0</span><small>%</small>
+            </div>
+          </div>
+
+          <div class="progress-stats">
+            <div class="stat-item">
+              <span class="stat-label">
+                <span>✅</span> Test completati
+              </span>
+              <span class="stat-value" id="completedTests">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">
+                <span>📝</span> Test totali
+              </span>
+              <span class="stat-value" id="totalTests">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">
+                <span>🔓</span> Test disponibili
+              </span>
+              <span class="stat-value" id="availableTests">0</span>
+            </div>
+          </div>
+
+          <div class="motivation-message" id="motivationMessage">
+            Continua così! 💪
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- Include Supabase e script per il test progress -->
+  <script>
+    // Carica l'header dal file esterno
+    fetch('header.html')
+      .then(response => response.text())
+      .then(data => {
+        document.getElementById('header-placeholder').innerHTML = data;
+      });
+
+    // Funzione per aggiornare il progresso
+    function updateProgress() {
+      setTimeout(() => {
+        const completedButtons = document.querySelectorAll('button.completed').length;
+        const totalButtons = document.querySelectorAll('button').length;
+        const availableButtons = document.querySelectorAll('button:not(.locked):not(.completed)').length;
+        
+        const percentage = totalButtons > 0 ? Math.round((completedButtons / totalButtons) * 100) : 0;
+        
+        // Aggiorna statistiche
+        document.getElementById('completedTests').textContent = completedButtons;
+        document.getElementById('totalTests').textContent = totalButtons;
+        document.getElementById('availableTests').textContent = availableButtons;
+        
+        // Anima il progress ring
+        const progressRing = document.querySelector('.progress-ring-fill');
+        const circumference = 2 * Math.PI * 80;
+        const offset = circumference - (percentage / 100) * circumference;
+        
+        progressRing.style.strokeDashoffset = offset;
+        
+        // Anima il numero percentuale
+        animateValue('progressValue', 0, percentage, 1500);
+        
+        // Aggiorna messaggio motivazionale
+        updateMotivationMessage(percentage);
+        
+        // Aggiorna progress bar per sezione
+        updateSectionProgress();
+      }, 500);
+    }
+
+    // Aggiorna progress bar per ogni sezione
+    function updateSectionProgress() {
+      document.querySelectorAll('.materia-section').forEach(section => {
+        const totalInSection = section.querySelectorAll('button').length;
+        const completedInSection = section.querySelectorAll('button.completed').length;
+        
+        if (totalInSection > 0) {
+          const sectionPercentage = Math.round((completedInSection / totalInSection) * 100);
+          
+          // Aggiungi progress indicator se non esiste
+          let progressContainer = section.querySelector('.section-progress');
+          if (!progressContainer && section.querySelector('.materia-header')) {
+            progressContainer = document.createElement('div');
+            progressContainer.className = 'section-progress';
+            progressContainer.innerHTML = `
+              <div class="progress-bar-mini">
+                <div class="progress-bar-mini-fill"></div>
+              </div>
+              <span>${completedInSection}/${totalInSection}</span>
+            `;
+            section.querySelector('.materia-header').appendChild(progressContainer);
+          }
+          
+          // Aggiorna progress bar
+          if (progressContainer) {
+            const fillBar = progressContainer.querySelector('.progress-bar-mini-fill');
+            if (fillBar) {
+              fillBar.style.width = `${sectionPercentage}%`;
+            }
+            const text = progressContainer.querySelector('span');
+            if (text) {
+              text.textContent = `${completedInSection}/${totalInSection}`;
+            }
+          }
+        }
+      });
+    }
+
+    // Animazione contatore
+    function animateValue(id, start, end, duration) {
+      const obj = document.getElementById(id);
+      const range = end - start;
+      const increment = end > start ? 1 : -1;
+      const stepTime = Math.abs(Math.floor(duration / range));
+      let current = start;
+      
+      const timer = setInterval(() => {
+        current += increment;
+        obj.textContent = current;
+        if (current === end) {
+          clearInterval(timer);
+        }
+      }, stepTime);
+    }
+
+    // Messaggi motivazionali
+    function updateMotivationMessage(percentage) {
+      const messages = {
+        0: "Inizia il tuo percorso! 🚀",
+        20: "Ottimo inizio! Continua così! 💪",
+        40: "Stai andando alla grande! 🌟",
+        60: "Sei oltre la metà! Non mollare! 🔥",
+        80: "Quasi alla fine! Forza! 🏃‍♂️",
+        100: "Fantastico! Hai completato tutto! 🎉"
+      };
+      
+      let message = messages[0];
+      for (const [threshold, msg] of Object.entries(messages)) {
+        if (percentage >= parseInt(threshold)) {
+          message = msg;
+        }
+      }
+      
+      document.getElementById('motivationMessage').textContent = message;
+    }
+
+    // Observer per rilevare quando i test vengono caricati
+    const observer = new MutationObserver((mutations) => {
+      if (document.querySelector('#testTree button')) {
+        updateProgress();
+        setupAccordion();
+        observer.disconnect();
+      }
+    });
+
+    observer.observe(document.getElementById('testTree'), {
+      childList: true,
+      subtree: true
+    });
+
+    // Setup accordion functionality
+    function setupAccordion() {
+      document.querySelectorAll('.materia-section').forEach((section, index) => {
+        const header = section.querySelector('.materia-header');
+        if (header) {
+          // Aggiungi icona toggle
+          const toggleIcon = document.createElement('span');
+          toggleIcon.className = 'toggle-icon';
+          toggleIcon.textContent = '▼';
+          header.insertBefore(toggleIcon, header.firstChild);
+          
+          // Aggiungi click handler
+          header.addEventListener('click', () => {
+            section.classList.toggle('collapsed');
+            
+            // Salva stato in sessionStorage
+            const sectionKey = `section_${header.textContent.trim()}_collapsed`;
+            if (section.classList.contains('collapsed')) {
+              sessionStorage.setItem(sectionKey, 'true');
+            } else {
+              sessionStorage.removeItem(sectionKey);
+            }
+          });
+          
+          // Ripristina stato precedente
+          const sectionKey = `section_${header.textContent.trim()}_collapsed`;
+          if (sessionStorage.getItem(sectionKey) === 'true') {
+            section.classList.add('collapsed');
+          }
+          
+          // Opzionale: collassa tutte tranne la prima all'inizio
+          // if (index > 0) {
+          //   section.classList.add('collapsed');
+          // }
+        }
+      });
+    }
+  </script>
+
   <script type="module">
     import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -31,33 +817,36 @@
 
     window.supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Una volta caricato il documento, aggiorna il saluto in base alla sessione (email)
-    document.addEventListener("DOMContentLoaded", async () => {
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError || !sessionData || !sessionData.session) {
-            console.log("🔄 No active session found. Redirecting to login...");
-            document.querySelector('.greeting').textContent = "Ciao, Utente";
-            return;
-        }
-
+    // Aspetta che l'header sia caricato, poi aggiorna il nome
+    setTimeout(async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData?.session) {
         const userId = sessionData.session.user.id;
-
-        // ✅ Query the "students" table to get the student's name
-        const { data: student, error: studentError } = await supabase
-            .from("students")
-            .select("name")
-            .eq("auth_uid", userId)
-            .single();
-
-        if (studentError || !student) {
-            console.error("❌ Error fetching student name:", studentError?.message);
-            document.querySelector('.greeting').textContent = "Ciao, Utente";
-        } else {
-            document.querySelector('.greeting').textContent = `Ciao, ${student.name}`;
+        
+        // Query the "students" table to get the student's name
+        const { data: student } = await supabase
+          .from("students")
+          .select("name")
+          .eq("auth_uid", userId)
+          .single();
+        
+        if (student?.name) {
+          const userNameElement = document.querySelector('.user-name');
+          if (userNameElement) {
+            userNameElement.textContent = student.name;
+          }
         }
-    });
+      }
+
+      // Aggiungi evento logout
+      document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+        await supabase.auth.signOut();
+        window.location.href = "login.html";
+      });
+    }, 100);
   </script>
 
+  <!-- Include lo script originale per il test progress -->
   <script type="module" src="test_selection.js"></script>
 </body>
 </html>

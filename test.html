@@ -1,60 +1,554 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>Mock Test</title>
-  <link rel="stylesheet" href="styles.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test - Up to Ten</title>
+  <link rel="stylesheet" href="header.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh;
+      color: rgb(28, 37, 69);
+      overflow: hidden;
+    }
+
+    /* Container principale */
+    .test-container {
+      display: grid;
+      grid-template-columns: 1.5fr 400px 250px;
+      gap: 1.5rem;
+      height: calc(100vh - 80px);
+      padding: 1.5rem;
+      max-width: 100%;
+      margin: 0 auto;
+    }
+
+    /* PDF Viewer */
+    .pdf-viewer {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      padding: 1.5rem;
+      position: relative;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #pdfCanvas {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+      cursor: grab;
+    }
+
+    #pdfCanvas:active {
+      cursor: grabbing;
+    }
+
+    /* PDF Controls */
+    .pdf-controls {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      display: flex;
+      gap: 0.5rem;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 0.5rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .pdf-controls button {
+      background: white;
+      border: 2px solid #00a666;
+      color: #00a666;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 0.9rem;
+    }
+
+    .pdf-controls button:hover {
+      background: #00a666;
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 166, 102, 0.3);
+    }
+
+    /* Question Section */
+    .question-section {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    #timer {
+      background: linear-gradient(135deg, rgb(28, 37, 69), #1a2541);
+      color: white;
+      padding: 1rem 1.5rem;
+      border-radius: 10px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 1.1rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .section-header {
+      background: #f8f9fa;
+      padding: 1rem 1.5rem;
+      border-radius: 10px;
+      border-left: 4px solid #00a666;
+      margin: -0.5rem 0 0.5rem 0;
+    }
+
+    .section-header p {
+      font-weight: 600;
+      color: rgb(28, 37, 69);
+      font-size: 1.1rem;
+    }
+
+    .navigation {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .navigation button {
+      flex: 1;
+      background: white;
+      border: 2px solid #00a666;
+      color: #00a666;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 0.95rem;
+    }
+
+    .navigation button:hover:not(:disabled) {
+      background: #00a666;
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 166, 102, 0.3);
+    }
+
+    .navigation button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Question Container */
+    #question-container {
+      flex: 1;
+      padding: 1rem 0;
+    }
+    
+    #question-container > div {
+      margin-bottom: 1.5rem;
+    }
+
+    #question-container h3 {
+      color: rgb(28, 37, 69);
+      margin-bottom: 1rem;
+      font-size: 1.2rem;
+    }
+
+    #question-container button {
+      display: inline-block;
+      width: auto;
+      min-width: 50px;
+      background: #f8f9fa;
+      border: 2px solid #e9ecef;
+      color: rgb(28, 37, 69);
+      padding: 0.6rem 1.2rem;
+      margin-right: 0.5rem;
+      margin-bottom: 0.5rem;
+      border-radius: 8px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-align: center;
+    }
+
+    #question-container button:hover {
+      background: #e9ecef;
+      border-color: #00a666;
+      transform: translateX(4px);
+    }
+
+    #question-container button[style*="green"] {
+      background: #00a666 !important;
+      color: white !important;
+      border-color: #00a666 !important;
+    }
+
+    #question-container button[style*="yellow"] {
+      background: #ffc107 !important;
+      color: #333 !important;
+      border-color: #ffc107 !important;
+    }
+
+    #question-container input[type="text"] {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 2px solid #e9ecef;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    #question-container input[type="text"]:focus {
+      outline: none;
+      border-color: #00a666;
+      box-shadow: 0 0 0 3px rgba(0, 166, 102, 0.1);
+    }
+
+    /* Start Test Button */
+    #startTestBtn {
+      background: #00a666;
+      color: white;
+      border: none;
+      padding: 1rem 2rem;
+      border-radius: 10px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 1rem;
+    }
+
+    #startTestBtn:hover {
+      background: #00c97a;
+      transform: translateY(-3px);
+      box-shadow: 0 6px 20px rgba(0, 166, 102, 0.4);
+    }
+
+    /* Navigation Container */
+    .nav-container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      height: fit-content;
+    }
+
+    .nav-container h3 {
+      color: rgb(28, 37, 69);
+      font-size: 1.2rem;
+      margin-bottom: 0.5rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 2px solid #00a666;
+    }
+
+    #questionNav {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0.3rem;
+      padding: 0.5rem 0;
+    }
+
+    .question-cell {
+      aspect-ratio: 1;
+      background: #f8f9fa;
+      border: 2px solid #e9ecef;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 35px;
+      width: 35px;
+    }
+
+    .question-cell:hover:not(:disabled) {
+      background: #e9ecef;
+      border-color: #00a666;
+      transform: scale(1.05);
+    }
+
+    .question-cell.current-question {
+      background: rgb(28, 37, 69);
+      color: white;
+      border-color: rgb(28, 37, 69);
+    }
+
+    .question-cell.answered {
+      background: #00a666;
+      color: white;
+      border-color: #00a666;
+    }
+
+    .question-cell[style*="yellow"] {
+      background: #ffc107 !important;
+      color: #333 !important;
+      border-color: #ffc107 !important;
+    }
+
+    .question-cell:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* Submit Button */
+    .submit-btn {
+      background: linear-gradient(135deg, #00a666, #00c97a);
+      color: white;
+      border: none;
+      padding: 1rem;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 16px rgba(0, 166, 102, 0.3);
+    }
+
+    .submit-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 166, 102, 0.4);
+    }
+
+    /* Custom Confirm Dialog */
+    .confirm-dialog {
+      background: white;
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      max-width: 400px;
+      text-align: center;
+    }
+
+    .confirm-dialog p {
+      font-size: 1.1rem;
+      color: rgb(28, 37, 69);
+      margin-bottom: 1.5rem;
+    }
+
+    .confirm-dialog button {
+      margin: 0 0.5rem;
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .confirm-dialog button:first-of-type {
+      background: #00a666;
+      color: white;
+    }
+
+    .confirm-dialog button:last-of-type {
+      background: #e9ecef;
+      color: rgb(28, 37, 69);
+    }
+
+    /* Responsive */
+    @media (max-width: 1400px) {
+      .test-container {
+        grid-template-columns: 1.2fr 380px 240px;
+      }
+    }
+    
+    @media (min-width: 1600px) {
+      .test-container {
+        grid-template-columns: 1.8fr 450px 280px;
+        max-width: 1800px;
+      }
+    }
+
+    @media (max-width: 1200px) {
+      .test-container {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr auto;
+        height: auto;
+        min-height: calc(100vh - 80px);
+      }
+      
+      .pdf-viewer {
+        display: none;
+      }
+      
+      .nav-container {
+        order: -1;
+        max-height: 200px;
+      }
+      
+      #questionNav {
+        grid-template-columns: repeat(8, 1fr);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .test-container {
+        padding: 1rem;
+        gap: 1rem;
+      }
+      
+      #questionNav {
+        grid-template-columns: repeat(6, 1fr);
+      }
+      
+      .navigation button {
+        padding: 0.6rem 1rem;
+        font-size: 0.85rem;
+      }
+    }
+
+    /* Fullscreen styles */
+    :fullscreen {
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    }
+    
+    :fullscreen #header-placeholder {
+      display: none;
+    }
+    
+    :fullscreen .test-container {
+      height: 100vh;
+      padding-top: 2rem;
+    }
+    
+    /* Previeni uscita accidentale */
+    :fullscreen::backdrop {
+      background: rgba(0, 0, 0, 0.9);
+    }
+
+    :-webkit-full-screen {
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    }
+    
+    :-webkit-full-screen #header-placeholder {
+      display: none;
+    }
+    
+    :-webkit-full-screen .test-container {
+      height: 100vh;
+      padding-top: 2rem;
+    }
+  </style>
 </head>
 <body>
-  <div class="test-container">
-    <!-- Left side: PDF Viewer -->
-    <div class="pdf-viewer">
-      <canvas id="pdfCanvas"></canvas>
-      <!-- PDF Controls placed inside pdf-viewer -->
-      <div class="pdf-controls">
-        <button id="zoomIn">➕ Zoom In</button>
-        <button id="zoomOut">➖ Zoom Out</button>
-      </div>
-    </div>
+  <!-- Container principale per fullscreen -->
+  <div id="testContainer">
+    <!-- Header placeholder - nascosto in fullscreen -->
+    <div id="header-placeholder"></div>
 
-    <!-- Middle: Question & Answer Section -->
-    <div class="question-section">
-      <div id="timer">⏳ Tempo: <span id="time-left"></span></div>
-
-      <div class="navigation">
-        <button id="prevPage" style="display: none;">Indietro</button>
-        <button id="nextPage" style="display: none;">Avanti</button>
+    <div class="test-container">
+      <!-- Left side: PDF Viewer -->
+      <div class="pdf-viewer">
+        <canvas id="pdfCanvas"></canvas>
+        <!-- PDF Controls -->
+        <div class="pdf-controls">
+          <button id="zoomIn">➕ Zoom In</button>
+          <button id="zoomOut">➖ Zoom Out</button>
+        </div>
       </div>
 
-      <h2 id="question-text"></h2>
-      <div id="question-container"></div>
-      <input type="text" id="open-ended-answer" placeholder="Type your answer" style="display: none;">
+      <!-- Middle: Question & Answer Section -->
+      <div class="question-section">
+        <div id="timer">⏳ Tempo rimasto: <span id="time-left">--:--</span></div>
 
-      <!-- <div class="submit-section">
-        <button id="submitAnswers" style="display: none;">Manda Risposte</button>
-        <p id="submissionMessage" style="color: green; display: none;"></p>
-      </div> -->
-    </div>
+        <div class="navigation">
+          <button id="prevPage" style="display: none;">Indietro</button>
+          <button id="nextPage" style="display: none;">Avanti</button>
+        </div>
 
-    <!-- Right side: Navigation Quiz -->
-    <div class="nav-container">
-      <h3>Navigazione quiz</h3>
-      <div id="questionNav"></div>
-      <!-- Manda Risposte button placed here -->
-      <button id="submitAnswers" class="submit-btn">Manda Risposte</button>
+        <div id="question-container"></div>
+      </div>
+
+      <!-- Right side: Navigation Quiz -->
+      <div class="nav-container">
+        <h3>📍 Navigazione quiz</h3>
+        <div id="questionNav"></div>
+        <button id="submitAnswers" class="submit-btn">📤 Manda Risposte</button>
+      </div>
     </div>
   </div>
 
-    <script type="module">
-        import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+  <script>
+    // Carica l'header dal file esterno solo se non in fullscreen
+    function loadHeader() {
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        fetch('header.html')
+          .then(response => response.text())
+          .then(data => {
+            document.getElementById('header-placeholder').innerHTML = data;
+          });
+      }
+    }
+    
+    // Carica header all'inizio
+    loadHeader();
+    
+    // Ricarica header quando si esce dal fullscreen
+    document.addEventListener('fullscreenchange', loadHeader);
+    document.addEventListener('webkitfullscreenchange', loadHeader);
+  </script>
 
-        const SUPABASE_URL = "https://elrwpaezjnemmiegkyin.supabase.co";  // Replace with actual Supabase URL
-        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVscndwYWV6am5lbW1pZWdreWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzAyMDUsImV4cCI6MjA1MzY0NjIwNX0.p6R2S1HK8kPFYiEAYtYaxIAH8XSmzjQBWQ_ywy3akdI";  // Replace with actual API key
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-        window.supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-    </script>
+    const SUPABASE_URL = "https://elrwpaezjnemmiegkyin.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVscndwYWV6am5lbW1pZWdreWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzAyMDUsImV4cCI6MjA1MzY0NjIwNX0.p6R2S1HK8kPFYiEAYtYaxIAH8XSmzjQBWQ_ywy3akdI";
 
-    <script type="module" src="test.js"></script>
+    window.supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Setup header dopo il caricamento
+    setTimeout(async () => {
+      if (!document.fullscreenElement) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData?.session) {
+          const userId = sessionData.session.user.id;
+          const { data: student } = await supabase
+            .from("students")
+            .select("name")
+            .eq("auth_uid", userId)
+            .single();
+          
+          if (student?.name) {
+            const userNameElement = document.querySelector('.user-name');
+            if (userNameElement) {
+              userNameElement.textContent = student.name;
+            }
+          }
+        }
+
+        // Event listener logout
+        document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+          await supabase.auth.signOut();
+          window.location.href = "login.html";
+        });
+      }
+    }, 100);
+  </script>
+
+  <script type="module" src="test.js"></script>
 </body>
 </html>
