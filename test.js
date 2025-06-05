@@ -100,6 +100,9 @@ async function loadTest() {
   
     // Load PDF first, but don't render yet.
     await loadPdf(pdfUrl);
+    
+    // ✅ Setup zoom and drag controls AFTER PDF is loaded
+    setupZoomAndDrag();
  
     // If tipologia_esercizi is "Simulazioni", fetch dynamic boundaries and section names.
     if (currentSection === "Simulazioni") {
@@ -287,49 +290,72 @@ function adjustScrolling() {
     pdfViewer.scrollTop = (canvas.height - pdfViewer.clientHeight) / 2;
 }
 
-// ✅ Zoom controls
-document.getElementById("zoomIn").addEventListener("click", () => {
-    zoomLevel = Math.min(zoomLevel + 0.2, 3.0); // Max zoom: 3.0x
-    renderPage(currentPage);
-});
+// ✅ Setup Zoom and Drag Controls - Chiamata DOPO che il PDF è caricato
+function setupZoomAndDrag() {
+    console.log("Setting up zoom and drag controls...");
+    
+    // ✅ Zoom controls
+    const zoomInBtn = document.getElementById("zoomIn");
+    const zoomOutBtn = document.getElementById("zoomOut");
+    
+    if (zoomInBtn && zoomOutBtn) {
+        zoomInBtn.addEventListener("click", () => {
+            console.log("Zoom In clicked! Current zoom:", zoomLevel);
+            zoomLevel = Math.min(zoomLevel + 0.2, 3.0); // Max zoom: 3.0x
+            isRendering = false; // Forza reset del flag se necessario
+            renderPage(currentPage);
+        });
 
-document.getElementById("zoomOut").addEventListener("click", () => {
-    zoomLevel = Math.max(zoomLevel - 0.2, 0.5); // Min zoom: 0.5x
-    renderPage(currentPage);
-});
+        zoomOutBtn.addEventListener("click", () => {
+            console.log("Zoom Out clicked! Current zoom:", zoomLevel);
+            zoomLevel = Math.max(zoomLevel - 0.2, 0.5); // Min zoom: 0.5x
+            isRendering = false; // Forza reset del flag se necessario
+            renderPage(currentPage);
+        });
+        
+        console.log("Zoom controls setup completed!");
+    } else {
+        console.error("Zoom buttons not found!");
+    }
+    
+    // ✅ Enable Drag Scrolling When Zoomed In
+    const pdfViewer = document.querySelector(".pdf-viewer");
+    
+    if (pdfViewer) {
+        pdfViewer.addEventListener("mousedown", (e) => {
+            // Non iniziare il drag se clicchi sui controlli
+            if (e.target.closest('.pdf-controls')) return;
+            
+            isDragging = true;
+            startX = e.pageX - pdfViewer.offsetLeft;
+            startY = e.pageY - pdfViewer.offsetTop;
+            scrollLeft = pdfViewer.scrollLeft;
+            scrollTop = pdfViewer.scrollTop;
+            pdfViewer.style.cursor = "grabbing";
+        });
 
-// ✅ Enable Drag Scrolling When Zoomed In
-const pdfViewer = document.querySelector(".pdf-viewer");
+        pdfViewer.addEventListener("mouseleave", () => {
+            isDragging = false;
+            pdfViewer.style.cursor = "grab";
+        });
 
-pdfViewer.addEventListener("mousedown", (e) => {
-    isDragging = true;
-    startX = e.pageX - pdfViewer.offsetLeft;
-    startY = e.pageY - pdfViewer.offsetTop;
-    scrollLeft = pdfViewer.scrollLeft;
-    scrollTop = pdfViewer.scrollTop;
-    pdfViewer.style.cursor = "grabbing";
-});
+        pdfViewer.addEventListener("mouseup", () => {
+            isDragging = false;
+            pdfViewer.style.cursor = "grab";
+        });
 
-pdfViewer.addEventListener("mouseleave", () => {
-    isDragging = false;
-    pdfViewer.style.cursor = "grab";
-});
-
-pdfViewer.addEventListener("mouseup", () => {
-    isDragging = false;
-    pdfViewer.style.cursor = "grab";
-});
-
-pdfViewer.addEventListener("mousemove", (e) => {
-    if (!isDragging) return;
-    e.preventDefault();
-    const x = e.pageX - pdfViewer.offsetLeft;
-    const y = e.pageY - pdfViewer.offsetTop;
-    const walkX = (x - startX) * 1.5; // Adjust scroll speed
-    const walkY = (y - startY) * 1.5;
-    pdfViewer.scrollLeft = scrollLeft - walkX;
-    pdfViewer.scrollTop = scrollTop - walkY;
-});
+        pdfViewer.addEventListener("mousemove", (e) => {
+            if (!isDragging) return;
+            e.preventDefault();
+            const x = e.pageX - pdfViewer.offsetLeft;
+            const y = e.pageY - pdfViewer.offsetTop;
+            const walkX = (x - startX) * 1.5; // Adjust scroll speed
+            const walkY = (y - startY) * 1.5;
+            pdfViewer.scrollLeft = scrollLeft - walkX;
+            pdfViewer.scrollTop = scrollTop - walkY;
+        });
+    }
+}
 
 
 function loadQuestionsForPage(page) {
@@ -644,20 +670,33 @@ async function enforceFullScreen() {
     }
 }
 
-// ✅ Detect Fullscreen Exit & Show Confirmation
-document.addEventListener("fullscreenchange", function () {
-    if (isSubmitting) return;
-    if (!document.fullscreenElement && testEndTime) { // Solo se il test è iniziato
+// ✅ Intercetta i tentativi di uscire dal fullscreen
+document.addEventListener('keydown', function(e) {
+    // Intercetta ESC key
+    if (e.key === 'Escape' && document.fullscreenElement && testEndTime && !isSubmitting) {
+        e.preventDefault();
+        e.stopPropagation();
+        
         customConfirm("⚠️ Attenzione! Uscendo dallo schermo intero il test verrà annullato. Sei sicuro di voler uscire?")
             .then(confirmExit => {
                 if (confirmExit) {
-                    alert("Il test è stato annullato.");
-                    window.location.href = "test_selection.html";
-                } else {
-                    // Torna in fullscreen
-                    enforceFullScreen();
+                    document.exitFullscreen().then(() => {
+                        alert("Il test è stato annullato.");
+                        window.location.href = "test_selection.html";
+                    });
                 }
+                // Se dice no, rimane in fullscreen
             });
+    }
+});
+
+// ✅ Gestisci uscite forzate (F11, etc) che non possiamo intercettare
+document.addEventListener("fullscreenchange", function () {
+    if (isSubmitting) return;
+    if (!document.fullscreenElement && testEndTime) {
+        // Se sono già uscito (tramite F11 o altro), annulla immediatamente
+        alert("Il test è stato annullato perché sei uscito dallo schermo intero.");
+        window.location.href = "test_selection.html";
     }
 });
 

@@ -32,7 +32,7 @@
       margin: 0 auto;
     }
 
-    /* PDF Viewer */
+    /* PDF Viewer - MANTENUTO COME L'ORIGINALE */
     .pdf-viewer {
       background: white;
       border-radius: 16px;
@@ -44,19 +44,9 @@
       flex-direction: column;
     }
 
-    #pdfCanvas {
-      max-width: 100%;
-      height: auto;
-      display: block;
-      margin: 0 auto;
-      cursor: grab;
-    }
+    /* #pdfCanvas ruleset removed as it was empty */
 
-    #pdfCanvas:active {
-      cursor: grabbing;
-    }
-
-    /* PDF Controls */
+    /* PDF Controls - MANTENUTO COME L'ORIGINALE */
     .pdf-controls {
       position: absolute;
       top: 1rem;
@@ -333,6 +323,12 @@
       box-shadow: 0 6px 20px rgba(0, 166, 102, 0.4);
     }
 
+    /* Hidden elements from original */
+    #question-text,
+    #open-ended-answer {
+      display: none;
+    }
+
     /* Custom Confirm Dialog */
     .confirm-dialog {
       background: white;
@@ -464,7 +460,7 @@
       <!-- Left side: PDF Viewer -->
       <div class="pdf-viewer">
         <canvas id="pdfCanvas"></canvas>
-        <!-- PDF Controls -->
+        <!-- PDF Controls placed inside pdf-viewer -->
         <div class="pdf-controls">
           <button id="zoomIn">➕ Zoom In</button>
           <button id="zoomOut">➖ Zoom Out</button>
@@ -473,20 +469,23 @@
 
       <!-- Middle: Question & Answer Section -->
       <div class="question-section">
-        <div id="timer">⏳ Tempo rimasto: <span id="time-left">--:--</span></div>
+        <div id="timer">⏳ Tempo: <span id="time-left"></span></div>
 
         <div class="navigation">
           <button id="prevPage" style="display: none;">Indietro</button>
           <button id="nextPage" style="display: none;">Avanti</button>
         </div>
 
+        <h2 id="question-text"></h2>
         <div id="question-container"></div>
+        <input type="text" id="open-ended-answer" placeholder="Type your answer" style="display: none;">
       </div>
 
       <!-- Right side: Navigation Quiz -->
       <div class="nav-container">
         <h3>📍 Navigazione quiz</h3>
         <div id="questionNav"></div>
+        <!-- Manda Risposte button placed here -->
         <button id="submitAnswers" class="submit-btn">📤 Manda Risposte</button>
       </div>
     </div>
