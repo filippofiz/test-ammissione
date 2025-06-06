@@ -60,7 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
     await initializeStudentTests(user.id, chosenTests);
   
     alert("✅ Signup successful! You can now log in.");
-    window.location.href = "index.html"; // Redirect to login
+    window.location.href = "login.html"; // Redirect to login
   }
   
   // Function to initialize test progress for a new student based on chosen tests.

@@ -43,7 +43,7 @@ async function updateTutorName() {
   // Add logout event
   document.getElementById('logoutBtn')?.addEventListener('click', async () => {
     await supabase.auth.signOut();
-    window.location.href = "index.html";
+    window.location.href = "login.html";
   });
 }
 
