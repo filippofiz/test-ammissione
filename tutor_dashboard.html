@@ -223,7 +223,7 @@
       // Aggiungi evento logout
       document.getElementById('logoutBtn')?.addEventListener('click', async () => {
         await supabase.auth.signOut();
-        window.location.href = "login.html";
+        window.location.href = "index.html";
       });
     }, 100);
 
@@ -231,7 +231,7 @@
       const { data: userData, error: authError } = await supabase.auth.getUser();
       if (authError || !userData || !userData.user) {
           alert("Sessione scaduta. Accedi di nuovo.");
-          window.location.href = "login.html";
+          window.location.href = "index.html";
           return null;
       }
       const authUid = userData.user.id;
