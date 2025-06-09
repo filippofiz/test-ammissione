@@ -17,7 +17,6 @@
   </div>
 </header>
 
-<!-- Script per aggiornare il nome utente -->
 <!-- Script per aggiornare il nome utente e gestire logout -->
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -36,8 +35,10 @@ window.updateHeaderGreeting = function(userName) {
   }
 }
 
+// SOSTITUISCI QUESTA PARTE ↓↓↓
 // Gestione logout con Supabase
-document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+document.getElementById('logoutBtn')?.addEventListener('click', async (e) => {
+  e.preventDefault(); // Previeni comportamenti default
   console.log('Logout clicked');
   
   // Esegui logout da Supabase
@@ -50,8 +51,13 @@ document.getElementById('logoutBtn')?.addEventListener('click', async () => {
     sessionStorage.clear();
     localStorage.clear();
     
-    // Redirect alla pagina di login
-    window.location.href = '/';
+    // Forza il redirect alla root del dominio corrente
+    const currentHost = window.location.host;
+    const protocol = window.location.protocol;
+    console.log('Redirecting to:', protocol + '//' + currentHost + '/');
+    
+    // Usa replace invece di href per evitare che rimanga nella history
+    window.location.replace(protocol + '//' + currentHost + '/');
   }
 });
 </script>
