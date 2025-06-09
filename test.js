@@ -88,7 +88,7 @@ async function loadTest() {
       if (sessionError || !sessionData || !sessionData.session) {
         console.error("❌ ERROR: No active session found.");
         alert("Session expired. Please log in again.");
-        window.location.href = "login.html";
+        window.location.href = "/";
         return;
       }
       studentId = sessionData.session.user.id;
@@ -515,7 +515,7 @@ async function submitAnswers() {
         if (sessionError || !sessionData || !sessionData.session) {
             console.error("❌ ERROR: No active session found.");
             alert("Session expired. Please log in again.");
-            window.location.href = "login.html";
+            window.location.href = "/";
             return;
         }
 

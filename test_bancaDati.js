@@ -269,7 +269,7 @@ async function submitAnswersBocconi() {
   const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
   if (sessionError || !sessionData || !sessionData.session) {
     alert("Session expired. Please log in again.");
-    window.location.href = "login.html";
+    window.location.href = "/";
     return;
   }
   studentId = sessionData.session.user.id;
@@ -320,7 +320,7 @@ async function startTimerBocconi() {
   const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
   if (sessionError || !sessionData || !sessionData.session) {
     alert("Session expired. Please log in again.");
-    window.location.href = "login.html";
+    window.location.href = "/";
     return;
   }
   studentId = sessionData.session.user.id;

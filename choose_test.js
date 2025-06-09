@@ -42,14 +42,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById('logoutBtn')?.addEventListener('click', async () => {
       await supabase.auth.signOut();
       sessionStorage.clear();
-      window.location.href = "login.html";
+      window.location.href = "/";
     });
   }, 100);
 
   const studentId = sessionStorage.getItem("studentId");
   if (!studentId) {
     alert("Nessuno studente selezionato. Verrai reindirizzato al login.");
-    window.location.href = "login.html";
+    window.location.href = "/";
     return;
   }
   
