@@ -378,7 +378,7 @@
       // Aggiungi evento logout
       document.getElementById('logoutBtn')?.addEventListener('click', async () => {
         await supabase.auth.signOut();
-        window.location.href = "login.html";
+        window.location.href = "/";
       });
     }, 100);
 
@@ -388,7 +388,7 @@
       if (authError || !userData || !userData.user) {
           console.error("❌ Error getting authenticated tutor:", authError);
           alert("Sessione scaduta. Accedi di nuovo.");
-          window.location.href = "login.html";
+          window.location.href = "/";
           return null;
       }
       const authUid = userData.user.id;
@@ -400,7 +400,7 @@
       if (tutorError || !tutorData) {
           console.error("❌ Error fetching tutor ID:", tutorError);
           alert("Account tutor non trovato.");
-          window.location.href = "login.html";
+          window.location.href = "/";
       }
       return tutorData.id;
     }

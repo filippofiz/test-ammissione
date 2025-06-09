@@ -22,7 +22,7 @@ async function loadTestTree() {
     if (sessionError || !sessionData || !sessionData.session) {
         console.error("❌ No active session:", sessionError?.message);
         alert("Session expired. Please log in again.");
-        window.location.href = "login.html";
+        window.location.href = "/";
         return;
     }
 
