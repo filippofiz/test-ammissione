@@ -18,18 +18,40 @@
 </header>
 
 <!-- Script per aggiornare il nome utente -->
-<script>
+<!-- Script per aggiornare il nome utente e gestire logout -->
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+// Inserisci le tue credenziali Supabase
+const SUPABASE_URL = 'https://elrwpaezjnemmiegkyin.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVscndwYWV6am5lbW1pZWdreWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzAyMDUsImV4cCI6MjA1MzY0NjIwNX0.p6R2S1HK8kPFYiEAYtYaxIAH8XSmzjQBWQ_ywy3akdI';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
 // Questa funzione può essere chiamata dopo aver recuperato i dati dell'utente
-function updateHeaderGreeting(userName) {
+window.updateHeaderGreeting = function(userName) {
   const userNameElement = document.querySelector('.user-name');
   if (userNameElement) {
     userNameElement.textContent = userName;
   }
 }
 
-// Gestione logout (da personalizzare con la tua logica Supabase)
+// Gestione logout con Supabase
 document.getElementById('logoutBtn')?.addEventListener('click', async () => {
-  // Aggiungi qui la logica di logout
   console.log('Logout clicked');
+  
+  // Esegui logout da Supabase
+  const { error } = await supabase.auth.signOut();
+  
+  if (error) {
+    console.error('Errore durante il logout:', error);
+  } else {
+    // Pulisci tutti i dati salvati
+    sessionStorage.clear();
+    localStorage.clear();
+    
+    // Redirect alla pagina di login
+    window.location.href = '/login.html';
+  }
 });
 </script>
