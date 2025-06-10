@@ -113,8 +113,70 @@
       }, 100);
     });
   </script>
+  <!-- Aggiungi questo script alla fine del tuo file HTML, prima del tag </body> -->
+<script>
+// Funzione per sostituire visualmente "Esercizi per casa" con "Training"
+function applyTextReplacement() {
+  // Per gli h4
+  document.querySelectorAll('.section h4').forEach(h4 => {
+    if (h4.textContent === 'Esercizi per casa') {
+      h4.setAttribute('data-text-replace', 'esercizi');
+    }
+  });
+  
+  // Per i bottoni
+  document.querySelectorAll('#testTree button').forEach(button => {
+    if (button.textContent.includes('Esercizi per casa')) {
+      const newText = button.textContent.replace('Esercizi per casa', 'Training');
+      button.setAttribute('data-text-replace', 'esercizi');
+      button.setAttribute('data-new-text', newText);
+    }
+  });
+  
+  // Per le liste di sblocco
+  document.querySelectorAll('.unlock-list li').forEach(li => {
+    if (li.textContent.includes('Esercizi per casa')) {
+      const newText = li.textContent.replace('Esercizi per casa', 'Training');
+      li.setAttribute('data-text-replace', 'esercizi');
+      li.setAttribute('data-new-text', newText);
+    }
+  });
+}
+
+// Applica quando il DOM cambia
+const observer = new MutationObserver(() => {
+  applyTextReplacement();
+});
+
+// Osserva i cambiamenti nel DOM
+observer.observe(document.body, {
+  childList: true,
+  subtree: true
+});
+
+// Prima applicazione dopo il caricamento
+window.addEventListener('load', () => {
+  setTimeout(applyTextReplacement, 100);
+});
+</script>
 
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <!-- Aggiungi questo script PRIMA del caricamento di view-tests-logic.js -->
+<script>
+// Salva il riferimento all'alert originale
+const originalAlert = window.alert;
+
+// Override della funzione alert
+window.alert = function(message) {
+  // Sostituisci "Esercizi per casa" con "Training" nel messaggio
+  if (typeof message === 'string' && message.includes('Esercizi per casa')) {
+    message = message.replace(/Esercizi per casa/g, 'Training');
+  }
+  
+  // Chiama l'alert originale con il messaggio modificato
+  originalAlert.call(window, message);
+};
+</script>
   <script type="module" src="view-tests-logic.js"></script>
   <script src="animated-background.js"></script>
 </body>

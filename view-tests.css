@@ -641,3 +641,47 @@ button.disabled-green, #testTree button.disabled-green {
     padding: 0.4rem 0.8rem;
   }
 }
+
+/* AGGIUNGI QUESTO ALLA FINE DEL TUO FILE view-tests.css */
+
+/* Soluzione per sostituire "Esercizi per casa" con "Training" */
+
+/* Per gli h4 che contengono "Esercizi per casa" */
+.section h4[data-text-replace="esercizi"] {
+  position: relative;
+  visibility: hidden;
+}
+
+.section h4[data-text-replace="esercizi"]::after {
+  content: "Training";
+  position: absolute;
+  left: 0;
+  top: 0;
+  visibility: visible;
+}
+
+/* Per i bottoni che contengono "Esercizi per casa" */
+#testTree button[data-text-replace="esercizi"] {
+  font-size: 0;
+  line-height: 44px; /* Mantiene l'altezza del bottone */
+}
+
+#testTree button[data-text-replace="esercizi"]::after {
+  content: attr(data-new-text);
+  font-size: 0.9rem;
+  display: inline-block;
+  line-height: normal;
+}
+
+/* Per le liste nel pannello di sblocco */
+.unlock-list li[data-text-replace="esercizi"] {
+  font-size: 0;
+  line-height: 1.5rem; /* Mantiene l'altezza dell'elemento */
+}
+
+.unlock-list li[data-text-replace="esercizi"]::after {
+  content: attr(data-new-text);
+  font-size: 1rem;
+  display: inline-block;
+  line-height: normal;
+}
