@@ -685,3 +685,280 @@ button.disabled-green, #testTree button.disabled-green {
   display: inline-block;
   line-height: normal;
 }
+
+/* Aggiungi questo CSS al file view-tests.css */
+
+/* Badge Training Styles */
+.test-column {
+  position: relative;
+}
+
+.training-badge-container {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  z-index: 10;
+}
+
+.training-badge {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 16px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  position: relative;
+}
+
+.training-badge:hover {
+  transform: scale(1.1);
+}
+
+.training-badge.passed {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+}
+
+.training-badge.failed {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+}
+
+.training-badge.passed::after {
+  content: '✓';
+}
+
+.training-badge.failed::after {
+  content: '✗';
+}
+
+/* Tooltip per mostrare il punteggio */
+.score-tooltip {
+  position: absolute;
+  bottom: -35px;
+  right: 0;
+  background: #1f2937;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.score-tooltip::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  right: 10px;
+  width: 8px;
+  height: 8px;
+  background: #1f2937;
+  transform: rotate(45deg);
+}
+
+.training-badge:hover + .score-tooltip,
+.score-tooltip:hover {
+  opacity: 1;
+}
+
+/* Stile per il punteggio espanso */
+.score-details {
+  position: absolute;
+  top: 35px;
+  right: 0;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  display: none;
+  z-index: 20;
+  min-width: 200px;
+}
+
+.score-details.show {
+  display: block;
+}
+
+.score-details h5 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  color: #374151;
+}
+
+.score-details .score-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.score-details .score-label {
+  color: #6b7280;
+}
+
+.score-details .score-value {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.score-details .score-percentage {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e5e7eb;
+  font-size: 16px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.score-percentage.passed {
+  color: #22c55e;
+}
+
+.score-percentage.failed {
+  color: #ef4444;
+}
+
+/* Animazione di caricamento */
+.training-badge.loading {
+  background: #9ca3af;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.training-badge.loading::after {
+  content: '...';
+  font-size: 12px;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Fix per evitare sovrapposizioni con la modalità correzione */
+.correction-mode .training-badge-container {
+  z-index: 5; /* Ridotto in modalità correzione */
+}
+/* Aggiungi questo CSS al file view-tests.css */
+
+/* Badge Assessment - Stile diverso dai Training */
+.assessment-badge-container {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  z-index: 10;
+}
+
+.assessment-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px; /* Quadrato con angoli arrotondati invece che cerchio */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 18px;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  position: relative;
+}
+
+.assessment-badge:hover {
+  transform: scale(1.1);
+}
+
+.assessment-badge.passed {
+  background: linear-gradient(135deg, #3b82f6, #2563eb); /* Blu invece di verde */
+  color: white;
+}
+
+.assessment-badge.failed {
+  background: linear-gradient(135deg, #f59e0b, #d97706); /* Arancione invece di rosso */
+  color: white;
+}
+
+.assessment-badge.passed::after {
+  content: '★'; /* Stella invece di check */
+}
+
+.assessment-badge.failed::after {
+  content: '!'; /* Esclamativo invece di X */
+}
+
+/* Badge per le sezioni con assessment passati */
+.section-passed-badge {
+  display: inline-block;
+  margin-left: 10px;
+  font-size: 20px;
+  vertical-align: middle;
+  animation: fadeIn 0.5s ease;
+}
+
+/* Stile aggiuntivo per le sezioni passate */
+.section.section-passed {
+  position: relative;
+  background: linear-gradient(to right, rgba(34, 197, 94, 0.05), transparent);
+  border-left: 4px solid #22c55e;
+  padding-left: 16px;
+  margin-left: -16px;
+}
+
+.section.section-passed h3 {
+  color: #166534;
+  font-weight: 600;
+}
+
+/* Animazione di apparizione */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Tooltip specifico per assessment */
+.assessment-badge-container .score-tooltip {
+  background: #1e40af; /* Blu scuro per assessment */
+}
+
+.assessment-badge-container .score-tooltip::before {
+  background: #1e40af;
+}
+
+/* Loading state per assessment */
+.assessment-badge.loading {
+  background: #94a3b8;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.assessment-badge.loading::after {
+  content: '...';
+  font-size: 14px;
+}
+
+/* Aggiustamenti per la modalità correzione */
+.correction-mode .assessment-badge-container {
+  z-index: 5;
+}
+
+/* Stile per evidenziare meglio le sezioni con progressi */
+.materia-section:has(.section-passed) {
+  background: rgba(34, 197, 94, 0.02);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 20px;
+}
