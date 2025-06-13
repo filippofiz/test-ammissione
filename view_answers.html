@@ -17,6 +17,10 @@
     };
   </script>
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+  
+  <!-- Librerie per generazione PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
   <!-- Header -->
@@ -40,49 +44,52 @@
         </div>
         <div class="header-actions">
           <button id="printBtn" class="action-btn print-btn">
-            🖨️ Stampa Report
+            🖨️ Genera PDF
           </button>
         </div>
       </div>
 
-      <!-- Statistiche -->
+      <!-- Statistiche/Filtri cliccabili -->
       <div class="stats-container">
-        <div class="stat-card correct">
+        <div class="filter-hint">
+          <span>💡 Clicca sui box per filtrare le risposte</span>
+        </div>
+        <div class="stat-card correct clickable-filter active" data-filter="correct">
           <div class="stat-icon">✅</div>
           <div class="stat-content">
             <div class="stat-number" id="correctCount">0</div>
             <div class="stat-label">Corrette</div>
           </div>
         </div>
-        <div class="stat-card wrong">
+        <div class="stat-card wrong clickable-filter active" data-filter="wrong">
           <div class="stat-icon">❌</div>
           <div class="stat-content">
             <div class="stat-number" id="wrongCount">0</div>
             <div class="stat-label">Errate</div>
           </div>
         </div>
-        <div class="stat-card unsure">
+        <div class="stat-card unsure clickable-filter active" data-filter="unsure">
           <div class="stat-icon">❓</div>
           <div class="stat-content">
             <div class="stat-number" id="unsureCount">0</div>
             <div class="stat-label">Insicuro</div>
           </div>
         </div>
-        <div class="stat-card no-idea">
+        <div class="stat-card no-idea clickable-filter active" data-filter="no-idea">
           <div class="stat-icon">🤷</div>
           <div class="stat-content">
             <div class="stat-number" id="noIdeaCount">0</div>
             <div class="stat-label">Non ho idea</div>
           </div>
         </div>
-        <div class="stat-card skipped">
+        <div class="stat-card skipped clickable-filter active" data-filter="skipped">
           <div class="stat-icon">⏭️</div>
           <div class="stat-content">
             <div class="stat-number" id="skippedCount">0</div>
             <div class="stat-label">Non date</div>
           </div>
         </div>
-        <div class="stat-card timeout">
+        <div class="stat-card timeout clickable-filter active" data-filter="timeout">
           <div class="stat-icon">⏱️</div>
           <div class="stat-content">
             <div class="stat-number" id="timeoutCount">0</div>
@@ -98,46 +105,10 @@
         </div>
       </div>
 
-      <!-- Filtri risposte -->
-      <div class="filters-container" id="filtersContainer" style="display: none;">
-        <h3>🔍 Filtra risposte:</h3>
-        <div class="filter-buttons">
-          <label class="filter-checkbox">
-            <input type="checkbox" id="filterCorrect" value="correct" checked>
-            <span class="filter-label correct">✅ Corrette</span>
-          </label>
-          <label class="filter-checkbox">
-            <input type="checkbox" id="filterWrong" value="wrong" checked>
-            <span class="filter-label wrong">❌ Errate</span>
-          </label>
-          <label class="filter-checkbox">
-            <input type="checkbox" id="filterUnsure" value="unsure" checked>
-            <span class="filter-label unsure">❓ Insicuro</span>
-          </label>
-          <label class="filter-checkbox">
-            <input type="checkbox" id="filterNoIdea" value="no-idea" checked>
-            <span class="filter-label no-idea">🤷 Non ho idea</span>
-          </label>
-          <label class="filter-checkbox">
-            <input type="checkbox" id="filterSkipped" value="skipped" checked>
-            <span class="filter-label skipped">⏭️ Non date</span>
-          </label>
-          <label class="filter-checkbox">
-            <input type="checkbox" id="filterTimeout" value="timeout" checked>
-            <span class="filter-label timeout">⏱️ Tempo esaurito</span>
-          </label>
-        </div>
-        <div class="filter-actions">
-          <button class="filter-btn" id="selectAll">Seleziona tutto</button>
-          <button class="filter-btn" id="deselectAll">Deseleziona tutto</button>
-        </div>
-      </div>
-
-      <!-- Bottone per mostrare/nascondere filtri -->
-      <div class="toggle-filters-container">
-        <button id="toggleFilters" class="toggle-filters-btn">
-          🔍 Mostra filtri
-        </button>
+      <!-- Info filtri attivi -->
+      <div class="filter-info" id="filterInfo">
+        <span id="filterInfoText">Mostrando tutte le domande</span>
+        <button class="reset-filters-btn" id="resetFilters">Mostra tutto</button>
       </div>
 
       <!-- Lista domande e risposte -->
@@ -202,42 +173,20 @@
       }
     });
 
-    // Funzione stampa
-    document.getElementById('printBtn').addEventListener('click', function() {
-      window.print();
-    });
+  
 
-    // Toggle filtri
-    document.getElementById('toggleFilters').addEventListener('click', function() {
-      const filtersContainer = document.getElementById('filtersContainer');
-      const toggleBtn = this;
-      
-      if (filtersContainer.style.display === 'none') {
-        filtersContainer.style.display = 'block';
-        toggleBtn.innerHTML = '🔍 Nascondi filtri';
-        // Applica i filtri quando vengono mostrati
-        setTimeout(() => {
-          const event = new Event('change');
-          document.querySelector('.filter-checkbox input[type="checkbox"]')?.dispatchEvent(event);
-        }, 100);
-      } else {
-        filtersContainer.style.display = 'none';
-        toggleBtn.innerHTML = '🔍 Mostra filtri';
-      }
-    });
-
-    // Setup filtri
-    function setupFilters() {
-      const checkboxes = document.querySelectorAll('.filter-checkbox input[type="checkbox"]');
-      const selectAllBtn = document.getElementById('selectAll');
-      const deselectAllBtn = document.getElementById('deselectAll');
+    // Setup filtri cliccabili sui box delle statistiche
+    function setupClickableFilters() {
+      const filterCards = document.querySelectorAll('.clickable-filter');
+      const resetBtn = document.getElementById('resetFilters');
+      const filterInfo = document.getElementById('filterInfoText');
       
       // Funzione per applicare i filtri
       function applyFilters() {
         const activeFilters = [];
-        checkboxes.forEach(checkbox => {
-          if (checkbox.checked) {
-            activeFilters.push(checkbox.value);
+        filterCards.forEach(card => {
+          if (card.classList.contains('active')) {
+            activeFilters.push(card.dataset.filter);
           }
         });
         
@@ -253,44 +202,45 @@
           item.style.display = hasActiveClass ? 'block' : 'none';
         });
         
-        // Aggiorna contatore visibile
+        // Aggiorna info filtri
         const visibleCount = document.querySelectorAll('.question-item:not([style*="display: none"])').length;
         const totalCount = document.querySelectorAll('.question-item').length;
         
-        // Aggiorna info nel container
-        let filterInfo = document.getElementById('filterInfo');
-        if (!filterInfo) {
-          filterInfo = document.createElement('div');
-          filterInfo.id = 'filterInfo';
-          filterInfo.className = 'filter-info';
-          document.querySelector('.filters-container').appendChild(filterInfo);
+        if (activeFilters.length === filterCards.length) {
+          filterInfo.textContent = `Mostrando tutte le ${totalCount} domande`;
+          document.querySelector('.filter-info').classList.remove('has-filters');
+        } else if (activeFilters.length === 0) {
+          filterInfo.textContent = 'Nessun filtro attivo - seleziona almeno una categoria';
+          document.querySelector('.filter-info').classList.add('has-filters');
+        } else {
+          filterInfo.textContent = `Mostrando ${visibleCount} di ${totalCount} domande`;
+          document.querySelector('.filter-info').classList.add('has-filters');
         }
-        filterInfo.textContent = `Mostrando ${visibleCount} di ${totalCount} domande`;
       }
       
-      // Event listener per ogni checkbox
-      checkboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', applyFilters);
+      // Click handler per ogni card
+      filterCards.forEach(card => {
+        card.addEventListener('click', function() {
+          // Toggle stato attivo
+          this.classList.toggle('active');
+          
+          // Applica filtri
+          applyFilters();
+        });
       });
       
-      // Seleziona tutto
-      selectAllBtn.addEventListener('click', () => {
-        checkboxes.forEach(checkbox => checkbox.checked = true);
+      // Reset filtri
+      resetBtn.addEventListener('click', () => {
+        filterCards.forEach(card => card.classList.add('active'));
         applyFilters();
       });
       
-      // Deseleziona tutto
-      deselectAllBtn.addEventListener('click', () => {
-        checkboxes.forEach(checkbox => checkbox.checked = false);
-        applyFilters();
-      });
-      
-      // Applica filtri iniziali (non eseguire all'avvio perché i filtri sono nascosti)
-      // setTimeout(applyFilters, 500); // Rimosso
+      // Applica filtri iniziali
+      applyFilters();
     }
     
     // Inizializza filtri quando il DOM è pronto
-    document.addEventListener('DOMContentLoaded', setupFilters);
+    document.addEventListener('DOMContentLoaded', setupClickableFilters);
   </script>
   
   <!-- Script principale per caricare le risposte -->

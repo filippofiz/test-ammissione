@@ -1,38 +1,151 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sign Up | Mock Test</title>
-  <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Registrazione Studente | Up to Ten</title>
+  <link rel="stylesheet" href="header.css" />
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh;
+      color: rgb(28, 37, 69);
+      position: relative;
+    }
+
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      opacity: 0.6;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 4rem auto;
+      padding: 2rem;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
+      position: relative;
+      z-index: 1;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+input, select, button {
+  width: 100%;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+  line-height: 1.2;
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+
+    select[multiple] {
+      height: auto;
+    }
+
+    button {
+      background: rgb(28, 37, 69);
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: 600;
+    }
+
+    button:hover {
+      background: #00a666;
+    }
+
+    .refresh-btn {
+      background: rgba(255, 255, 255, 0.2);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      color: rgb(28, 37, 69);
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+    }
+
+    .refresh-btn:hover {
+      background: #00a666;
+      color: white;
+      border-color: #00a666;
+    }
+
+    .form-footer {
+      text-align: center;
+      margin-top: 1rem;
+      font-size: 0.95rem;
+    }
+
+    .form-footer a {
+      color: rgb(28, 37, 69);
+      font-weight: bold;
+      text-decoration: none;
+    }
+
+    .form-footer a:hover {
+      text-decoration: underline;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.4rem;
+      font-weight: 500;
+    }
+  </style>
 </head>
 <body>
+
+  <!-- Optional background -->
+  <script src="animated-background.js"></script>
+
   <div class="container">
-    <h2>Sign Up</h2>
-    <input type="text" id="fullName" placeholder="Enter Full Name">
-    <input type="email" id="email" placeholder="Enter Email">
-    <input type="password" id="password" placeholder="Enter Password">
+    <h2>Registrazione Studente</h2>
+
+    <label for="fullName">Nome completo</label>
+    <input type="text" id="fullName" placeholder="Mario Rossi" />
+
+    <label for="email">Email</label>
+    <input type="email" id="email" placeholder="nome@email.com" />
+
+    <label for="password">Password</label>
+    <input type="password" id="password" placeholder="********" />
+
+    <label for="tutorDropdown">Seleziona il tutor</label>
     <select id="tutorDropdown">
-      <option value="">Select Your Tutor</option>
+      <option value="">-- Scegli un tutor --</option>
     </select>
 
-    <!-- New multi-select for test selection -->
-    <label for="testsDropdown">Select Tests (you can choose more than one):</label>
-    <select id="testsDropdown" multiple size="4">
-      <!-- Options will be populated dynamically -->
-    </select>        
+    <label for="testsDropdown">Seleziona i test (puoi sceglierne più di uno):</label>
+    <select id="testsDropdown" multiple size="4"></select>
 
-    <button id="refreshTutors">🔄 Refresh List</button>
-    <button id="signupBtn">Sign Up</button>
-    <p>Already have an account? <a href="/">Login</a></p>
+    <button id="refreshTutors" class="refresh-btn">🔄 Aggiorna tutor</button>
+    <button id="signupBtn">Registrazione</button>
+
   </div>
 
-  <!-- Include Supabase -->
+  <!-- Supabase -->
   <script type="module">
     import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
     const SUPABASE_URL = "https://elrwpaezjnemmiegkyin.supabase.co"; 
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVscndwYWV6am5lbW1pZWdreWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzAyMDUsImV4cCI6MjA1MzY0NjIwNX0.p6R2S1HK8kPFYiEAYtYaxIAH8XSmzjQBWQ_ywy3akdI";  
-    window.supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    window.supabase = supabase;
   </script>
 
   <script type="module" src="signup.js"></script>
