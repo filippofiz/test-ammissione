@@ -87,6 +87,184 @@
       z-index: 1;
     }
 
+    /* Simulation Estimate Card - Nuovo stile omologato */
+.simulation-estimate {
+  background: white;
+  color: #2d3748;
+  padding: 1.5rem;
+  border-radius: 16px;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  display: none;
+  border-top: 4px solid #667eea;
+}
+
+.simulation-estimate h2 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  color: #2d3748;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.simulation-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+
+.simulation-stat {
+  background: #f8fafc;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.simulation-stat:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  background: #f1f5f9;
+}
+
+.simulation-stat h3 {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #64748b;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.simulation-value {
+  font-size: 2.2rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+  color: #1e293b;
+}
+
+.simulation-subtext {
+  font-size: 0.875rem;
+  color: #94a3b8;
+}
+
+/* Final Estimate box - stile con colori brand */
+#finalEstimate {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border: 2px solid rgb(28, 37, 69);
+  border-radius: 16px;
+  padding: 2rem;
+  text-align: center;
+  margin-bottom: 1.5rem;
+  color: #1e293b;
+  box-shadow: 0 10px 30px rgba(0, 166, 102, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Aggiungi un elemento decorativo */
+#finalEstimate::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -10%;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(0, 166, 102, 0.1) 0%, transparent 70%);
+  animation: pulse 4s ease-in-out infinite;
+}
+
+/* Info icon for methodology */
+.simulation-stat::after {
+  content: "ℹ";
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 20px;
+  height: 20px;
+  background: #e2e8f0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: #64748b;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.simulation-stat:hover::after {
+  opacity: 1;
+}
+
+/* Timeline chart container */
+.timeline-container {
+  background: #f8fafc;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  margin-top: 1.5rem;
+}
+
+.timeline-container h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 1rem;
+}
+
+/* Methodology hint */
+.methodology-hint {
+  margin-top: 1.5rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #64748b;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+/* Outlier alert */
+#outlierAlert {
+  margin-top: 1.5rem;
+}
+
+#outlierAlert > div {
+  background: #fef2f2 !important;
+  padding: 1rem;
+  border-radius: 12px;
+  border: 1px solid #fecaca !important;
+}
+
+#outlierAlert h4 {
+  color: #dc2626 !important;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+#outlierAlert p {
+  color: #7f1d1d !important;
+  line-height: 1.6;
+}
+
+/* Colori specifici per le metriche */
+#media-box { border-left: 4px solid #3b82f6; }
+#mediana-box { border-left: 4px solid #06b6d4; }
+#var-box { border-left: 4px solid #8b5cf6; }
+#simulazioni-box { border-left: 4px solid #10b981; }
+#trend-box { border-left: 4px solid #f59e0b; }
+#consistenza-box { border-left: 4px solid #ec4899; }
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .simulation-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
     /* Filtri */
     .filters-section {
       background: white;
@@ -387,6 +565,10 @@
       .stats-grid {
         grid-template-columns: repeat(2, 1fr);
       }
+      
+      .simulation-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
     }
   </style>
 </head>
@@ -400,6 +582,108 @@
       <h1 id="dashboardTitle">Dashboard Risultati</h1>
       <p>Analisi dettagliata delle performance e progressi</p>
     </div>
+
+    <!-- Simulation Estimate Card -->
+    <div class="simulation-estimate" id="simulationEstimate">
+      <h2>🎯 Analisi Statistica delle Simulazioni</h2>
+      
+      <!-- Final Estimate - Most Prominent -->
+      <div id="finalEstimate">
+  <!-- Populated by JavaScript -->
+</div>
+      
+      <!-- Primary Info Grid - Most important metrics first -->
+      <div class="simulation-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 1rem;">
+        <div class="simulation-stat" id="simulazioni-box">
+          <h3>Simulazioni</h3>
+          <div class="simulation-value" id="simulationCount">0</div>
+          <div class="simulation-subtext">test completati</div>
+        </div>
+        
+        <div class="simulation-stat" id="trend-box">
+          <h3>Trend</h3>
+          <div class="simulation-value" id="scoreTrend">→ Stabile</div>
+          <div class="simulation-subtext">ultime simulazioni</div>
+        </div>
+        
+        <div class="simulation-stat" id="consistenza-box">
+          <h3>Consistenza</h3>
+          <div class="simulation-value" id="consistency">Media</div>
+          <div class="simulation-subtext">stabilità risultati</div>
+        </div>
+      </div>
+      
+      <!-- Statistical Metrics Grid -->
+      <div class="simulation-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));">
+        <div class="simulation-stat" id="media-box">
+          <h3>Media</h3>
+          <div class="simulation-value" id="estimatedScore">0</div>
+          <div class="simulation-subtext" id="estimatedPercentage">μ = 0</div>
+        </div>
+        
+        <div class="simulation-stat" id="mediana-box">
+          <h3>Mediana</h3>
+          <div class="simulation-value" id="medianScore">0</div>
+          <div class="simulation-subtext">valore centrale</div>
+        </div>
+        
+        <div class="simulation-stat" id="var-box">
+          <h3>VaR (5%)</h3>
+          <div class="simulation-value" id="scoreRange">0</div>
+          <div class="simulation-subtext" id="stdDeviation">minimo probabile</div>
+        </div>
+        
+        <!-- Hidden stats for advanced calculation -->
+        <div style="display: none;">
+          <div id="weightedScore">0</div>
+        </div>
+      </div>
+      
+      <!-- Timeline chart will be inserted here by JavaScript -->
+      
+      <!-- Alert for outliers -->
+      <div id="outlierAlert" style="display: none; grid-column: 1 / -1;"></div>
+      
+      <!-- Methodology hint -->
+      <div style="margin-top: 1rem; text-align: center; font-size: 0.85rem; opacity: 0.7;">
+        💡 Clicca su qualsiasi metrica per vedere la metodologia di calcolo
+      </div>
+    </div>
+    
+    <style>
+    /* Add hover info icon to stat cards */
+    .simulation-stat {
+      position: relative;
+    }
+    
+    .simulation-stat::after {
+      content: "ℹ";
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      width: 20px;
+      height: 20px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    
+    .simulation-stat:hover::after {
+      opacity: 0.7;
+    }
+    
+    /* Mobile responsive */
+    @media (max-width: 768px) {
+      .simulation-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+      }
+    }
+    </style>
 
     <!-- Filtri -->
     <div class="filters-section">

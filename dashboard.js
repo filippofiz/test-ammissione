@@ -47,9 +47,851 @@ async function updateTutorName() {
   });
 }
 
+// Calculate simulation score estimate with advanced statistics
+async function calculateSimulationEstimate() {
+  // Get all tests where tipologia_esercizi = "Test"
+  const simulationTests = studentTestsData.filter(test => 
+    test.tipologia_esercizi === "Test" && test.status === "completed"
+  );
+  
+  if (simulationTests.length === 0) {
+    document.getElementById("simulationEstimate").style.display = "none";
+    return;
+  }
+  
+  // Get all test IDs for simulations
+  const simulationTestIds = simulationTests.map(test => test.id);
+  
+  // Get all answers for these simulation tests
+  const simulationAnswers = globalAnswers.filter(ans => 
+    simulationTestIds.includes(ans.test_id)
+  );
+  
+  // Group answers by test_id to calculate score per simulation
+  const scoresByTest = {};
+  const testsWithTime = [];
+  
+  simulationTestIds.forEach(testId => {
+    const testAnswers = simulationAnswers.filter(ans => ans.test_id === testId);
+    if (testAnswers.length > 0) {
+      // Calculate score using standard modality (1 point for correct, 0 for others)
+      const score = testAnswers.reduce((acc, ans) => {
+        return acc + (ans.auto_score === 1 ? 1 : 0);
+      }, 0);
+      
+      // Find earliest submission time
+      const earliestTime = testAnswers.reduce((min, ans) => {
+        return (!min || ans.submitted_at < min) ? ans.submitted_at : min;
+      }, null);
+      
+      const data = {
+        score: score,
+        total: testAnswers.length,
+        percentage: (score / testAnswers.length) * 100,
+        time: earliestTime,
+        testId: testId
+      };
+      
+      scoresByTest[testId] = data;
+      testsWithTime.push(data);
+    }
+  });
+  
+  // Sort by time for chronological analysis
+  testsWithTime.sort((a, b) => a.time.localeCompare(b.time));
+  
+  const scores = Object.values(scoresByTest);
+  if (scores.length === 0) {
+    document.getElementById("simulationEstimate").style.display = "none";
+    return;
+  }
+  
+  // Statistical calculations
+  const allScores = scores.map(s => s.score);
+  const allPercentages = scores.map(s => s.percentage);
+  const n = allScores.length;
+  
+  // Mean and Median
+  const mean = allScores.reduce((a, b) => a + b, 0) / n;
+  const sortedScores = [...allScores].sort((a, b) => a - b);
+  const median = n % 2 === 0
+    ? (sortedScores[n / 2 - 1] + sortedScores[n / 2]) / 2
+    : sortedScores[Math.floor(n / 2)];
+  
+  // Variance and Standard Deviation
+  const variance = allScores.reduce((acc, score) => {
+    return acc + Math.pow(score - mean, 2);
+  }, 0) / (n - 1); // Using sample variance (n-1)
+  const stdDev = Math.sqrt(variance);
+  const stdError = stdDev / Math.sqrt(n);
+  
+  // Coefficient of Variation
+  const coefficientOfVariation = (stdDev / mean) * 100;
+  
+  // Confidence Intervals (95% and 68%)
+  // Using t-distribution for small samples
+  const tValue95 = getTValue(n - 1, 0.95);
+  const tValue68 = getTValue(n - 1, 0.68);
+  
+  const ci95Lower = mean - (tValue95 * stdError);
+  const ci95Upper = mean + (tValue95 * stdError);
+  const ci68Lower = mean - (tValue68 * stdError);
+  const ci68Upper = mean + (tValue68 * stdError);
+  
+  // Value at Risk (VaR) - 5th percentile
+  const var5 = getPercentile(sortedScores, 5);
+  const var10 = getPercentile(sortedScores, 10);
+  
+  // Expected Shortfall (Conditional VaR)
+  const scoresBelow5th = allScores.filter(s => s <= var5);
+  const expectedShortfall = scoresBelow5th.length > 0 
+    ? scoresBelow5th.reduce((a, b) => a + b, 0) / scoresBelow5th.length 
+    : var5;
+  
+  // Trend Analysis with Linear Regression
+  let trend = { slope: 0, interpretation: "Stabile", confidence: "Bassa" };
+  if (n >= 3) {
+    const regression = calculateLinearRegression(testsWithTime);
+    trend = regression;
+  }
+  
+  // Calculate weighted average (exponential weighting for recency)
+  let weightedSum = 0;
+  let weightTotal = 0;
+  testsWithTime.forEach((test, index) => {
+    const weight = Math.exp(index / n); // Exponential weight
+    weightedSum += test.score * weight;
+    weightTotal += weight;
+  });
+  const weightedAvg = weightedSum / weightTotal;
+  
+  // Outlier Detection using IQR method
+  const q1 = getPercentile(sortedScores, 25);
+  const q3 = getPercentile(sortedScores, 75);
+  const iqr = q3 - q1;
+  const outlierLowerBound = q1 - 1.5 * iqr;
+  const outlierUpperBound = q3 + 1.5 * iqr;
+  const outliers = scores.filter(s => 
+    s.score < outlierLowerBound || s.score > outlierUpperBound
+  );
+  
+  // Bootstrap for robust estimates (if enough data)
+  let bootstrapEstimates = null;
+  if (n >= 5) {
+    bootstrapEstimates = performBootstrap(allScores, 1000);
+  }
+  
+  // Check for high variability even without statistical outliers
+  if (outliers.length === 0 && n <= 5 && coefficientOfVariation > 30) {
+    const minScore = Math.min(...allScores);
+    const maxScore = Math.max(...allScores);
+    const range = maxScore - minScore;
+    
+    // If range is more than 50% of max score, show variability alert
+    if (range > maxScore * 0.5) {
+      const variabilityAlert = document.createElement('div');
+      variabilityAlert.innerHTML = `
+        <div style="background: rgba(251, 191, 36, 0.1); padding: 1rem; border-radius: 8px; margin-top: 1rem; border: 1px solid rgba(251, 191, 36, 0.3);">
+          <h4 style="color: #fbbf24; font-weight: 600; margin-bottom: 0.5rem;">
+            ⚠️ Alta Variabilità nei Risultati
+          </h4>
+          <div style="color: rgba(255,255,255,0.9);">
+            <p>I punteggi variano significativamente: da <strong>${minScore}</strong> a <strong>${maxScore}</strong> punti.</p>
+            <p style="font-size: 0.85rem; margin-top: 0.5rem;">
+              Con solo ${n} simulazioni, questa variabilità è statisticamente accettabile ma indica prestazioni inconsistenti.
+            </p>
+            <p style="font-size: 0.85rem; margin-top: 0.5rem; opacity: 0.8;">
+              💡 <strong>Consiglio:</strong> Completare almeno 5-6 simulazioni per avere stime più affidabili e identificare meglio eventuali anomalie.
+            </p>
+          </div>
+        </div>
+      `;
+      
+      // Insert after the timeline chart
+      setTimeout(() => {
+        const outlierAlertDiv = document.getElementById("outlierAlert");
+        outlierAlertDiv.innerHTML = variabilityAlert.innerHTML;
+        outlierAlertDiv.style.display = "block";
+      }, 200);
+    }
+  }
+  
+  // Performance Stability Index
+  const stabilityIndex = calculateStabilityIndex(testsWithTime);
+  
+  // Calculate interval width based on sample size and variability
+  const intervalWidth = calculateDynamicInterval(n, coefficientOfVariation, stdDev);
+  
+  // Update UI Elements
+  updateBasicStats(mean, median, weightedAvg, n, var5, trend, stabilityIndex);
+  updateAdvancedStats(ci95Lower, ci95Upper, ci68Lower, ci68Upper, var10, expectedShortfall, coefficientOfVariation);
+  updateFinalEstimate(mean, median, weightedAvg, intervalWidth, n, trend, bootstrapEstimates);
+  
+  // Add timeline chart
+  const simulationGrid = document.querySelector('.simulation-estimate .simulation-grid');
+  const timelineContainer = createSimulationTimeline(testsWithTime);
+  simulationGrid.parentNode.insertBefore(timelineContainer, document.getElementById("outlierAlert"));
+setTimeout(() => initTimelineChart(testsWithTime, mean, weightedAvg, intervalWidth), 100);  // Show outlier alert if needed
+  if (outliers.length > 0) {
+    showOutlierAlert(outliers, outlierLowerBound, outlierUpperBound);
+  }
+  
+  // Show the estimation card
+  document.getElementById("simulationEstimate").style.display = "block";
+}
+
+// Helper Functions
+
+function getTValue(df, confidence) {
+  // Approximation for t-distribution critical values
+  const tTable = {
+    0.68: { 1: 1.84, 2: 1.32, 3: 1.20, 4: 1.14, 5: 1.11, 10: 1.05, 20: 1.03, 30: 1.02 },
+    0.95: { 1: 12.71, 2: 4.30, 3: 3.18, 4: 2.78, 5: 2.57, 10: 2.23, 20: 2.09, 30: 2.04 }
+  };
+  
+  if (df >= 30) return confidence === 0.95 ? 1.96 : 1.0;
+  if (df >= 20) return tTable[confidence][20];
+  if (df >= 10) return tTable[confidence][10];
+  if (df >= 5) return tTable[confidence][5];
+  return tTable[confidence][Math.min(df, 5)];
+}
+
+function getPercentile(sortedArray, percentile) {
+  const index = (percentile / 100) * (sortedArray.length - 1);
+  const lower = Math.floor(index);
+  const upper = Math.ceil(index);
+  const weight = index % 1;
+  
+  if (lower === upper) return sortedArray[lower];
+  return sortedArray[lower] * (1 - weight) + sortedArray[upper] * weight;
+}
+
+function calculateLinearRegression(testsWithTime) {
+  const n = testsWithTime.length;
+  let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+  
+  testsWithTime.forEach((test, index) => {
+    sumX += index;
+    sumY += test.score;
+    sumXY += index * test.score;
+    sumX2 += index * index;
+  });
+  
+  const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+  const intercept = (sumY - slope * sumX) / n;
+  
+  // Calculate R-squared
+  const yMean = sumY / n;
+  let ssTotal = 0, ssResidual = 0;
+  
+  testsWithTime.forEach((test, index) => {
+    const yPred = slope * index + intercept;
+    ssTotal += Math.pow(test.score - yMean, 2);
+    ssResidual += Math.pow(test.score - yPred, 2);
+  });
+  
+  const rSquared = 1 - (ssResidual / ssTotal);
+  
+  // Interpret trend
+  let interpretation = "Stabile";
+  let confidence = "Bassa";
+  
+  if (rSquared > 0.7) confidence = "Alta";
+  else if (rSquared > 0.4) confidence = "Media";
+  
+  if (Math.abs(slope) > 0.5 && confidence !== "Bassa") {
+    interpretation = slope > 0 ? "Miglioramento" : "Peggioramento";
+  }
+  
+  return { slope, intercept, rSquared, interpretation, confidence };
+}
+
+function performBootstrap(data, iterations) {
+  const bootstrapMeans = [];
+  const n = data.length;
+  
+  for (let i = 0; i < iterations; i++) {
+    const sample = [];
+    for (let j = 0; j < n; j++) {
+      sample.push(data[Math.floor(Math.random() * n)]);
+    }
+    const mean = sample.reduce((a, b) => a + b, 0) / n;
+    bootstrapMeans.push(mean);
+  }
+  
+  bootstrapMeans.sort((a, b) => a - b);
+  
+  return {
+    mean: bootstrapMeans.reduce((a, b) => a + b, 0) / iterations,
+    ci95Lower: getPercentile(bootstrapMeans, 2.5),
+    ci95Upper: getPercentile(bootstrapMeans, 97.5),
+    ci68Lower: getPercentile(bootstrapMeans, 16),
+    ci68Upper: getPercentile(bootstrapMeans, 84)
+  };
+}
+
+function calculateStabilityIndex(testsWithTime) {
+  if (testsWithTime.length < 2) return { value: "N/A", label: "Dati insufficienti" };
+  
+  // Calculate moving range
+  let sumMovingRange = 0;
+  for (let i = 1; i < testsWithTime.length; i++) {
+    sumMovingRange += Math.abs(testsWithTime[i].score - testsWithTime[i-1].score);
+  }
+  const avgMovingRange = sumMovingRange / (testsWithTime.length - 1);
+  const avgScore = testsWithTime.reduce((sum, t) => sum + t.score, 0) / testsWithTime.length;
+  
+  const stabilityRatio = avgMovingRange / avgScore;
+  
+  if (stabilityRatio < 0.1) return { value: stabilityRatio.toFixed(3), label: "Eccellente" };
+  if (stabilityRatio < 0.2) return { value: stabilityRatio.toFixed(3), label: "Buona" };
+  if (stabilityRatio < 0.3) return { value: stabilityRatio.toFixed(3), label: "Media" };
+  return { value: stabilityRatio.toFixed(3), label: "Bassa" };
+}
+
+function calculateDynamicInterval(n, cv, stdDev) {
+  // Base interval width - starts at 5 and decreases with more data
+  let baseWidth = 5;
+  
+  // Adjust for sample size - smaller intervals with more simulations
+  if (n >= 20) baseWidth = 2;
+  else if (n >= 15) baseWidth = 2.5;
+  else if (n >= 10) baseWidth = 3;
+  else if (n >= 7) baseWidth = 3.5;
+  else if (n >= 5) baseWidth = 4;
+  else if (n >= 3) baseWidth = 4.5;
+  // n < 3 keeps baseWidth = 5
+  
+  // Small adjustment for very high variability only
+  if (cv > 40) baseWidth *= 1.2;
+  
+  return baseWidth;
+}
+
+function updateBasicStats(mean, median, weightedAvg, n, var5, trend, stabilityIndex) {
+  document.getElementById("estimatedScore").textContent = mean.toFixed(1);
+  document.getElementById("estimatedPercentage").textContent = `valore atteso`;  document.getElementById("medianScore").textContent = median.toFixed(1);
+  document.getElementById("weightedScore").textContent = weightedAvg.toFixed(1);
+  document.getElementById("simulationCount").textContent = n;
+  
+  // Update VaR display
+  document.getElementById("scoreRange").textContent = var5.toFixed(1);
+  document.getElementById("stdDeviation").textContent = `punteggio minimo probabile`;
+  
+  // Update trend with confidence - FIXED OVERFLOW
+  const trendElement = document.getElementById("scoreTrend");
+  const trendColors = {
+    "Miglioramento": "#10b981",
+    "Peggioramento": "#ef4444",
+    "Stabile": "#6b7280"
+  };
+  
+  // Shorter text to prevent overflow
+  const trendSymbols = {
+    "Miglioramento": "↑",
+    "Peggioramento": "↓",
+    "Stabile": "→"
+  };
+  
+  const trendText = {
+    "Miglioramento": "In crescita",
+    "Peggioramento": "In calo",
+    "Stabile": "Stabile"
+  };
+  
+  trendElement.innerHTML = `
+    <span style="color: ${trendColors[trend.interpretation]};">
+      ${trendSymbols[trend.interpretation]} ${trendText[trend.interpretation]}
+    </span>
+    <div style="font-size: 0.7rem; opacity: 0.7; margin-top: 0.2rem;">${trend.confidence}</div>
+  `;
+  
+  // Update consistency with stability index
+  const consistencyElement = document.getElementById("consistency");
+  const stabilityColors = {
+    "Eccellente": "#10b981",
+    "Buona": "#22c55e",
+    "Media": "#f59e0b",
+    "Bassa": "#ef4444",
+    "Dati insufficienti": "#6b7280"
+  };
+  consistencyElement.innerHTML = `
+    <span style="color: ${stabilityColors[stabilityIndex.label]};">${stabilityIndex.label}</span>
+  `;
+}
+
+function updateAdvancedStats(ci95Lower, ci95Upper, ci68Lower, ci68Upper, var10, expectedShortfall, cv) {
+  // Remove this function - we don't want to add extra stats
+  // Keep the display cleaner
+}
+
+function updateFinalEstimate(mean, median, weightedAvg, intervalWidth, n, trend, bootstrap) {
+  const lowerBound = Math.round(weightedAvg - intervalWidth / 2);
+  const upperBound = Math.round(weightedAvg + intervalWidth / 2);
+  
+  let confidenceLevel = "Bassa";
+  if (n >= 10) confidenceLevel = "Alta";
+  else if (n >= 5) confidenceLevel = "Media";
+  
+  document.getElementById("finalEstimate").innerHTML = `
+    <h3 style="color: rgb(28, 37, 69); margin-bottom: 1rem; font-size: 1.2rem; position: relative; z-index: 1;">
+      📊 INTERVALLO DI PRESTAZIONE PROBABILE
+    </h3>
+    
+    <div id="interval-box" style="
+      text-align: center; 
+      margin-bottom: 1rem;
+      cursor: pointer;
+      padding: 1.5rem;
+      border-radius: 12px;
+      transition: all 0.3s ease;
+      background: linear-gradient(135deg, rgba(0, 166, 102, 0.05) 0%, rgba(28, 37, 69, 0.05) 100%);
+      border: 1px solid rgba(0, 166, 102, 0.3);
+      position: relative;
+      z-index: 1;
+    " onmouseover="this.style.background='linear-gradient(135deg, rgba(0, 166, 102, 0.1) 0%, rgba(28, 37, 69, 0.1) 100%)'; this.style.borderColor='#00a666'" 
+       onmouseout="this.style.background='linear-gradient(135deg, rgba(0, 166, 102, 0.05) 0%, rgba(28, 37, 69, 0.05) 100%)'; this.style.borderColor='rgba(0, 166, 102, 0.3)'">
+      <div style="font-size: 3.5rem; font-weight: 800; color:rgb(28, 37, 69); line-height: 1; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">
+        ${lowerBound} - ${upperBound}
+      </div>
+      <div style="font-size: 1rem; margin-top: 0.5rem; color: rgb(28, 37, 69); font-weight: 500;">
+        Range basato su ${n} simulazioni
+      </div>
+      <div style="font-size: 0.75rem; margin-top: 0.3rem; color: #64748b;">
+        🔍 Clicca per vedere come è calcolato
+      </div>
+    </div>
+    
+    <div style="font-size: 0.85rem; line-height: 1.6; color: #475569; position: relative; z-index: 1;">
+      <strong style="color: rgb(28, 37, 69);">Nota:</strong> Questo intervallo rappresenta il range di punteggi più probabile.
+      ${n < 5 ? "Con più simulazioni l'intervallo diventerà più preciso." : ""}
+    </div>
+  `;
+  
+  // Add click handler for interval methodology
+  setTimeout(() => {
+    const intervalBox = document.getElementById('interval-box');
+    if (intervalBox) {
+      intervalBox.addEventListener('click', () => {
+        showMethodologyModal({
+          title: 'Calcolo Intervallo di Prestazione',
+  description: `
+          <div style="line-height: 1.8;">
+            <p style="margin-bottom: 1rem;">
+              L'intervallo rappresenta il <strong>range di punteggi più probabile</strong> per il prossimo test, 
+              calcolato con un approccio statistico adattivo che bilancia precisione e utilità pratica.
+            </p>
+            
+            <h4 style="color: #00a666; margin-bottom: 0.5rem; font-size: 1.1rem;">📊 Come funziona il calcolo</h4>
+            
+            <p style="margin-bottom: 0.5rem;"><strong>Punto centrale:</strong> Media pesata di ${weightedAvg.toFixed(1)} punti</p>
+            <p style="margin-bottom: 1rem;"><strong>Ampiezza base:</strong> ±${(intervalWidth/2).toFixed(1)} punti</p>
+            
+            <h4 style="color: #00a666; margin-bottom: 0.5rem; font-size: 1.1rem;">📈 Precisione progressiva</h4>
+            <p style="margin-bottom: 0.5rem;">L'intervallo si <strong>restringe</strong> con più simulazioni completate:</p>
+            <ul style="margin-left: 1.5rem; margin-bottom: 1rem;">
+              <li><strong>1-2 simulazioni:</strong> ±2.5 punti (massima incertezza)</li>
+              <li><strong>3-4 simulazioni:</strong> ±2.25 punti</li>
+              <li><strong>5-6 simulazioni:</strong> ±2 punti</li>
+              <li><strong>7-9 simulazioni:</strong> ±1.75 punti</li>
+              <li><strong>10-14 simulazioni:</strong> ±1.5 punti</li>
+              <li><strong>15-19 simulazioni:</strong> ±1.25 punti</li>
+              <li><strong>20+ simulazioni:</strong> ±1 punto (massima precisione)</li>
+            </ul>
+            
+            <h4 style="color: #00a666; margin-bottom: 0.5rem; font-size: 1.1rem;">⚠️ Aggiustamento per alta variabilità</h4>
+            <p style="margin-bottom: 1rem;">
+              Se i tuoi punteggi sono <strong>molto irregolari</strong> (coefficiente di variazione >40%), 
+              l'intervallo viene <strong>ampliato del 20%</strong> per riflettere questa incertezza aggiuntiva.
+              <br><em style="color: #64748b; font-size: 0.9rem;">
+              Esempio: se ottieni 10, 25, 12, 28 punti, i risultati sono troppo variabili per fare previsioni strette.
+              </em>
+            </p>
+            
+            <div style="background: #f0fdf4; padding: 1rem; border-radius: 8px; border-left: 4px solid #00a666;">
+              <p style="margin: 0;">
+                <strong>Il tuo stato attuale:</strong><br>
+                ✓ ${n} simulazioni completate<br>
+                ✓ Livello di confidenza: <strong>${confidenceLevel}</strong><br>
+                ✓ Intervallo attuale: <strong>${lowerBound} - ${upperBound}</strong> punti
+              </p>
+            </div>
+            
+            <p style="margin-top: 1rem; font-size: 0.9rem; color: #64748b; font-style: italic;">
+              💡 <strong>Suggerimento:</strong> ${n < 5 ? 'Completa almeno 5-6 simulazioni per avere stime più affidabili.' : n < 10 ? 'Con altre ' + (10-n) + ' simulazioni raggiungerai il livello di confidenza "Alta".' : 'Hai raggiunto un ottimo numero di simulazioni per stime affidabili!'}
+            </p>
+          </div>
+        `
+      });
+    });
+  }
+  }, 100);
+}
+
+// Add methodology tooltips
+function addMethodologyTooltips() {
+  const methodologies = {
+    'media-box': {
+      title: 'Media Aritmetica',
+      description: 'Somma di tutti i punteggi diviso il numero di simulazioni. Rappresenta il valore centrale atteso ma può essere influenzato da risultati estremi.'
+    },
+    'mediana-box': {
+      title: 'Mediana', 
+      description: 'Il valore centrale quando i punteggi sono ordinati. Più robusta della media perché non risente di valori estremi.'
+    },
+    'simulazioni-box': {
+      title: 'Numero Simulazioni',
+      description: 'Totale dei test completati. Più simulazioni = stime più affidabili e intervalli più stretti.'
+    },
+    'var-box': {
+      title: 'Value at Risk (5%)',
+      description: 'Il punteggio che hai il 95% di probabilità di superare. Utile per capire il "caso peggiore" statisticamente probabile.'
+    },
+    'trend-box': {
+      title: 'Analisi Trend',
+      description: 'Basata su regressione lineare delle ultime simulazioni. La confidenza dipende dal coefficiente R² (>0.7 = Alta, >0.4 = Media).'
+    },
+    'consistenza-box': {
+      title: 'Indice di Consistenza',
+      description: 'Misura la stabilità dei risultati basata sul Moving Range medio. Eccellente = variazioni <10%, Buona <20%, Media <30%, Bassa >30%.'
+    }
+  };
+  
+  // Add click handlers
+  Object.keys(methodologies).forEach(id => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.style.cursor = 'pointer';
+      element.style.transition = 'all 0.3s ease';
+      
+      element.addEventListener('click', () => {
+        showMethodologyModal(methodologies[id]);
+      });
+      
+      element.addEventListener('mouseenter', () => {
+        element.style.transform = 'translateY(-2px)';
+        element.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.15)';
+      });
+      
+      element.addEventListener('mouseleave', () => {
+        element.style.transform = 'translateY(0)';
+        element.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.08)';
+      });
+    }
+  });
+}
+
+// Show methodology modal
+function showMethodologyModal(methodology) {
+  // Remove existing modal if any
+  const existingModal = document.getElementById('methodology-modal');
+  if (existingModal) existingModal.remove();
+  
+  const modal = document.createElement('div');
+  modal.id = 'methodology-modal';
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: fadeIn 0.3s ease;
+  `;
+  
+  modal.innerHTML = `
+    <div style="
+      background: white;
+      padding: 2rem;
+      border-radius: 16px;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      animation: slideIn 0.3s ease;
+    ">
+      <h3 style="color: #1c2545; margin-bottom: 1rem; font-size: 1.4rem;">
+        📊 ${methodology.title}
+      </h3>
+      <p style="color: #4a5568; line-height: 1.6;">
+        ${methodology.description}
+      </p>
+      <button onclick="this.closest('#methodology-modal').remove()" style="
+        margin-top: 1.5rem;
+        background: #3b82f6;
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      " onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">
+        Chiudi
+      </button>
+    </div>
+  `;
+  
+  // Add animations
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes slideIn {
+      from { transform: translateY(-20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+  `;
+  document.head.appendChild(style);
+  
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.remove();
+  });
+  
+  document.body.appendChild(modal);
+}
+
+// Add timeline chart for simulation results
+function createSimulationTimeline(testsWithTime) {
+  const chartContainer = document.createElement('div');
+  chartContainer.className = 'timeline-container';
+  chartContainer.style.cssText = 'grid-column: 1 / -1;';
+  
+  chartContainer.innerHTML = `
+    <h3>📈 Andamento Cronologico Simulazioni</h3>
+    <div id="simulationTimelineChart" style="width: 100%; height: 200px;"></div>
+  `;
+  
+  return chartContainer;
+}
+
+// Initialize timeline chart with ECharts
+function initTimelineChart(testsWithTime, mean, weightedAvg, intervalWidth) {
+  const chartDom = document.getElementById('simulationTimelineChart');
+  if (!chartDom) return;
+  
+  const timelineChart = echarts.init(chartDom);
+  
+  // Prepare data
+  const dates = testsWithTime.map(test => {
+    const date = new Date(test.time);
+    return date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
+  });
+  
+  const scores = testsWithTime.map(test => test.score);
+  
+  // Add future projection
+  const lastDate = new Date(testsWithTime[testsWithTime.length - 1].time);
+  const futureDate = new Date(lastDate);
+  futureDate.setDate(futureDate.getDate() + 7); // +7 giorni
+  dates.push(futureDate.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }));
+  
+  // Calculate bounds for visualization
+  const lowerBound = Math.round(weightedAvg - intervalWidth / 2);
+  const upperBound = Math.round(weightedAvg + intervalWidth / 2);
+  const minScore = Math.min(...scores);
+  const maxScore = Math.max(...scores);
+  
+  const option = {
+    backgroundColor: 'transparent',
+    grid: {
+      top: 40,
+      right: 80,
+      bottom: 40,
+      left: 60
+    },
+    xAxis: {
+      type: 'category',
+      data: dates,
+      axisLine: { lineStyle: { color: '#e2e8f0' } },
+      axisLabel: { 
+        color: '#64748b',
+        fontSize: 11
+      }
+    },
+    yAxis: {
+      type: 'value',
+      min: Math.max(0, Math.min(minScore, lowerBound) - 5),
+      max: Math.max(maxScore, upperBound) + 5,
+      axisLine: { lineStyle: { color: '#e2e8f0' } },
+      axisLabel: { 
+        color: '#64748b',
+        fontSize: 11
+      },
+      splitLine: { lineStyle: { color: '#f1f5f9' } }
+    },
+    series: [
+      {
+        name: 'Punteggi effettivi',
+        data: scores,
+        type: 'line',
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 10,
+        lineStyle: {
+          color: '#3b82f6',
+          width: 3
+        },
+        itemStyle: {
+          color: '#3b82f6',
+          borderColor: '#fff',
+          borderWidth: 2
+        },
+        label: {
+          show: true,
+          formatter: '{c}',
+          color: '#1e293b',
+          fontSize: 12,
+          fontWeight: 'bold'
+        }
+      },
+      {
+        name: 'Stima futura',
+        type: 'line',
+        data: [...scores.slice(0, -1).map(() => null), scores[scores.length - 1], weightedAvg],
+        lineStyle: {
+          color: '#8b5cf6',
+          width: 2,
+          type: 'dashed'
+        },
+        symbol: 'none',
+        symbolSize: 0
+      },
+      {
+        name: 'Range previsto',
+        type: 'line',
+        data: [...scores.map(() => null), upperBound],
+        lineStyle: {
+          color: 'transparent'
+        },
+        areaStyle: {
+          color: 'rgba(59, 130, 246, 0.1)'
+        },
+        symbol: 'none',
+        stack: 'confidence',
+        silent: true
+      },
+      {
+        name: 'Range previsto min',
+        type: 'line',
+        data: [...scores.map(() => null), lowerBound],
+        lineStyle: {
+          color: 'transparent'
+        },
+        areaStyle: {
+          color: 'transparent'
+        },
+        symbol: 'none',
+        stack: 'confidence',
+        silent: true
+      },
+      {
+        name: 'Punto stima',
+        type: 'scatter',
+        data: [[dates.length - 1, weightedAvg]],
+        symbolSize: 12,
+        itemStyle: {
+          color: '#8b5cf6',
+          borderColor: '#fff',
+          borderWidth: 2
+        },
+        label: {
+          show: true,
+          formatter: `Stima: ${Math.round(weightedAvg)}`,
+          position: 'top',
+          color: '#8b5cf6',
+          fontSize: 12,
+          fontWeight: 'bold'
+        }
+      },
+      {
+        name: 'Range markers',
+        type: 'scatter',
+        data: [
+          [dates.length - 1, upperBound],
+          [dates.length - 1, lowerBound]
+        ],
+        symbol: 'rect',
+        symbolSize: [40, 3],
+        itemStyle: {
+          color: '#8b5cf6'
+        },
+        label: {
+          show: true,
+          formatter: function(params) {
+            return params.value[1] === upperBound ? upperBound : lowerBound;
+          },
+          position: function(params) {
+            return params.value[1] === upperBound ? 'top' : 'bottom';
+          },
+          color: '#64748b',
+          fontSize: 10
+        }
+      }
+    ],
+    markLine: {
+      data: [
+        {
+          yAxis: mean,
+          name: 'Media',
+          label: {
+            formatter: `Media: ${mean.toFixed(1)}`,
+            position: 'end',
+            color: '#94a3b8',
+            fontSize: 10
+          },
+          lineStyle: {
+            color: '#cbd5e1',
+            type: 'dashed',
+            width: 1
+          }
+        }
+      ]
+    },
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(255,255,255,0.95)',
+      borderColor: '#e2e8f0',
+      borderWidth: 1,
+      textStyle: { color: '#1e293b' },
+      formatter: function(params) {
+        const dataIndex = params[0].dataIndex;
+        if (dataIndex < testsWithTime.length) {
+          const test = testsWithTime[dataIndex];
+          return `
+            <div style="font-weight: 600; margin-bottom: 4px;">${params[0].name}</div>
+            <div>Punteggio: <strong>${params[0].value}</strong></div>
+            <div style="color: #64748b;">Percentuale: ${test.percentage.toFixed(1)}%</div>
+          `;
+        } else {
+          return `
+            <div style="font-weight: 600; margin-bottom: 4px;">Previsione prossimo test</div>
+            <div>Stima centrale: <strong>${Math.round(weightedAvg)}</strong></div>
+            <div>Range atteso: <strong>${lowerBound} - ${upperBound}</strong></div>
+            <div style="color: #64748b; font-size: 11px;">Basato su ${testsWithTime.length} simulazioni</div>
+          `;
+        }
+      }
+    }
+  };
+  
+  timelineChart.setOption(option);
+  
+  // Resize on window resize
+  window.addEventListener('resize', () => timelineChart.resize());
+  
+  return timelineChart;
+
+}
 async function loadDashboard() {
   // Update tutor name after a delay to ensure header is loaded
   setTimeout(updateTutorName, 200);
+
   
   // Make sure all filters are visible.
   document.getElementById("sectionFilter").style.display = "inline-block";
@@ -99,6 +941,11 @@ async function loadDashboard() {
     return;
   }
   studentTestsData = testsData;
+
+  // Calculate simulation estimate AFTER loading all data
+  await calculateSimulationEstimate();
+  // Add event listeners for methodology tooltips
+  setTimeout(addMethodologyTooltips, 100);
 
   populateFiltersFromStudentTests(studentTestsData);
 
@@ -1014,6 +1861,28 @@ window.addEventListener('resize', () => {
   });
 });
 
+function showOutlierAlert(outliers, lowerBound, upperBound) {
+  const outlierScores = outliers.map(o => o.score).join(", ");
+  const outlierElement = document.getElementById("outlierAlert");
+  
+  outlierElement.innerHTML = `
+    <div style="background: rgba(239, 68, 68, 0.1); padding: 1rem; border-radius: 8px; margin-top: 1rem; border: 1px solid rgba(239, 68, 68, 0.3);">
+      <h4 style="color: #ef4444; font-weight: 600; margin-bottom: 0.5rem;">⚠️ Rilevamento Anomalie Statistiche</h4>
+      <div style="color: rgba(255,255,255,0.9);">
+        <p>Identificate ${outliers.length} prestazioni anomale: <strong>${outlierScores} punti</strong></p>
+        <p style="font-size: 0.85rem; margin-top: 0.5rem;">
+          Range normale: ${lowerBound.toFixed(1)} - ${upperBound.toFixed(1)} (basato su IQR × 1.5)
+        </p>
+        <p style="font-size: 0.85rem; margin-top: 0.5rem; opacity: 0.8;">
+          Questi risultati sono stati identificati ma rimangono nell'analisi per non distorcere la valutazione complessiva.
+        </p>
+      </div>
+    </div>
+  `;
+  outlierElement.style.display = "block";
+}
+
+// Questa riga già esiste nel tuo file:
 loadDashboard();
 window.goBack = goBack;
 window.openReport = openReport;
