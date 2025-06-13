@@ -260,6 +260,7 @@ async function loadTestTree() {
   
   // Uniforma le larghezze dopo l'ultimo displayTestTree
   uniformTestButtonWidths();
+  addTestBadges(); // <-- Nuova funzione che gestisce sia Training che Assessment
 }
 
 // Display test tree - MODIFICATA
@@ -329,7 +330,285 @@ const mats = Object.keys(byMat).sort((a,b) => {
 
   // AGGIUNGI: Uniforma le larghezze dopo aver costruito l'albero
   uniformTestButtonWidths();
+  addTestBadges(); // <-- Nuova funzione che gestisce sia Training che Assessment
+
 }
+
+
+// Funzione per aggiungere badge sia ai Training che agli Assessment
+async function addTestBadges() {
+  console.log('🏆 Aggiunta badge ai test...');
+  
+  // Trova tutti i bottoni dei training E degli assessment
+  const testButtons = Array.from(document.querySelectorAll('#testTree button'))
+    .filter(btn => {
+      const text = btn.textContent;
+      return (text.includes('Training') || 
+              text.includes('Esercizi per casa') || 
+              text.includes('Assessment'));
+    });
+  
+  console.log(`Found ${testButtons.length} test buttons (Training + Assessment)`);
+  
+  // Mappa per salvare i risultati degli assessment per sezione
+  const sectionAssessmentResults = new Map();
+  
+  for (const button of testButtons) {
+    const buttonText = button.textContent;
+    const match = buttonText.match(/(\d+)/);
+    if (!match) continue;
+    
+    const progressivo = parseInt(match[1]);
+    const parentCol = button.parentElement;
+    
+    // Controlla se il test è completato
+    if (!button.classList.contains('completed')) continue;
+    
+    console.log(`Processing completed test: ${buttonText}`);
+    
+    // Determina il tipo di test
+    const isAssessment = buttonText.includes('Assessment');
+    const tipologiaEsercizi = isAssessment ? 'Assessment' : 'Esercizi per casa';
+    
+    // Rimuovi badge esistenti per evitare duplicati
+    const existingBadge = parentCol.querySelector('.test-badge-container');
+    if (existingBadge) {
+      existingBadge.remove();
+    }
+    
+    // Aggiungi classe per posizionamento relativo
+    parentCol.style.position = 'relative';
+    
+    // Crea il container del badge
+    const badgeContainer = document.createElement('div');
+    badgeContainer.className = isAssessment ? 'assessment-badge-container' : 'training-badge-container';
+    badgeContainer.classList.add('test-badge-container');
+    
+    // Crea il badge con stato di caricamento
+    const badge = document.createElement('div');
+    badge.className = isAssessment ? 'assessment-badge loading' : 'training-badge loading';
+    
+    // Crea il tooltip
+    const tooltip = document.createElement('div');
+    tooltip.className = 'score-tooltip';
+    tooltip.textContent = 'Caricamento...';
+    
+    // Crea il pannello dettagli
+    const details = document.createElement('div');
+    details.className = 'score-details';
+    
+    badgeContainer.appendChild(badge);
+    badgeContainer.appendChild(tooltip);
+    badgeContainer.appendChild(details);
+    parentCol.appendChild(badgeContainer);
+    
+    // Trova la sezione corretta
+    let section = null;
+    let currentElement = button.parentElement;
+    while (currentElement && !section) {
+      const h3 = currentElement.querySelector('h3');
+      if (h3) {
+        section = h3.textContent;
+        break;
+      }
+      let sibling = currentElement.previousElementSibling;
+      while (sibling && !section) {
+        const siblingH3 = sibling.querySelector('h3');
+        if (siblingH3) {
+          section = siblingH3.textContent;
+          break;
+        }
+        sibling = sibling.previousElementSibling;
+      }
+      currentElement = currentElement.parentElement;
+    }
+    
+    if (!section) {
+      console.error('Section not found for button:', buttonText);
+      badge.className = badge.className.replace('loading', 'failed');
+      tooltip.textContent = 'Sezione non trovata';
+      continue;
+    }
+    
+    console.log(`Found section: ${section} for ${tipologiaEsercizi} ${progressivo}`);
+    
+    try {
+      const selectedTest = sessionStorage.getItem("selectedTestType");
+      const score = await getTestScore(section, progressivo, selectedTest, tipologiaEsercizi);
+      
+      console.log('Score retrieved:', score);
+      
+      // Aggiorna il badge
+      updateTestBadge(badge, tooltip, details, score, isAssessment);
+      
+      // Per gli assessment, salva il risultato per la sezione
+      if (isAssessment) {
+        if (!sectionAssessmentResults.has(section)) {
+          sectionAssessmentResults.set(section, []);
+        }
+        sectionAssessmentResults.get(section).push(score);
+      }
+      
+      // Aggiungi evento click per espandere i dettagli
+      badge.addEventListener('click', (e) => {
+        e.stopPropagation();
+        details.classList.toggle('show');
+      });
+      
+    } catch (error) {
+      console.error('Errore nel recupero del punteggio:', error);
+      badge.className = badge.className.replace('loading', 'failed');
+      tooltip.textContent = 'Errore caricamento';
+    }
+  }
+  
+  // Aggiungi badge alle sezioni che hanno assessment passati
+  addSectionBadges(sectionAssessmentResults);
+  
+  // Aggiungi listener globale per chiudere i dettagli
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.test-badge-container')) {
+      document.querySelectorAll('.score-details.show').forEach(detail => {
+        detail.classList.remove('show');
+      });
+    }
+  }, { once: true });
+}
+
+// Funzione per recuperare il punteggio di un test (Training o Assessment)
+async function getTestScore(section, progressivo, selectedTest, tipologiaEsercizi) {
+  console.log(`Getting score for: section=${section}, progressivo=${progressivo}, test=${selectedTest}, tipo=${tipologiaEsercizi}`);
+  
+  const isTestPDF = selectedTest.includes("PDF");
+  const questionsTable = isTestPDF ? "questions" : "questions_bancaDati";
+  const answersTable = isTestPDF ? "student_answers" : "studentbocconi_answers";
+  
+  // Recupera le domande del test
+  const { data: questions, error: questionsError } = await supabase
+    .from(questionsTable)
+    .select("id")
+    .eq("section", section)
+    .eq("tipologia_esercizi", tipologiaEsercizi)
+    .eq("progressivo", progressivo)
+    .eq("tipologia_test", selectedTest);
+  
+  if (questionsError) {
+    throw new Error(`Errore query domande: ${questionsError.message}`);
+  }
+  
+  if (!questions || questions.length === 0) {
+    throw new Error('Nessuna domanda trovata');
+  }
+  
+  const questionIds = questions.map(q => q.id);
+  const totalQuestions = questions.length;
+  
+  // Recupera le risposte dello studente con auto_score
+  const { data: answers, error: answersError } = await supabase
+    .from(answersTable)
+    .select("question_id, auto_score")
+    .eq("auth_uid", studentId)
+    .in("question_id", questionIds);
+  
+  if (answersError) {
+    throw new Error(`Errore query risposte: ${answersError.message}`);
+  }
+  
+  let correctAnswers = 0;
+  let answeredQuestions = 0;
+  
+  if (answers && answers.length > 0) {
+    answeredQuestions = answers.length;
+    correctAnswers = answers.filter(a => a.auto_score === 1).length;
+  }
+  
+  const wrongAnswers = totalQuestions - correctAnswers;
+  const percentage = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
+  
+  return {
+    totalQuestions,
+    correctAnswers,
+    wrongAnswers,
+    answeredQuestions,
+    percentage,
+    passed: percentage >= 60
+  };
+}
+
+// Funzione per aggiornare il badge con i dati
+function updateTestBadge(badge, tooltip, details, score, isAssessment) {
+  // Rimuovi lo stato di caricamento
+  badge.classList.remove('loading');
+  
+  // Aggiungi la classe appropriata
+  badge.classList.add(score.passed ? 'passed' : 'failed');
+  
+  // Aggiorna il tooltip
+  tooltip.textContent = `${score.percentage}% (${score.correctAnswers}/${score.totalQuestions})`;
+  
+  // Aggiorna i dettagli
+  const testType = isAssessment ? 'Assessment' : 'Training';
+  details.innerHTML = `
+    <h5>📊 Dettagli ${testType}</h5>
+    <div class="score-row">
+      <span class="score-label">Domande totali:</span>
+      <span class="score-value">${score.totalQuestions}</span>
+    </div>
+    <div class="score-row">
+      <span class="score-label">Risposte corrette:</span>
+      <span class="score-value" style="color: #22c55e;">${score.correctAnswers}</span>
+    </div>
+    <div class="score-row">
+      <span class="score-label">Risposte errate:</span>
+      <span class="score-value" style="color: #ef4444;">${score.wrongAnswers}</span>
+    </div>
+    <div class="score-percentage ${score.passed ? 'passed' : 'failed'}">
+      ${score.percentage}%
+    </div>
+  `;
+}
+
+// Funzione per aggiungere badge alle sezioni con assessment passati
+function addSectionBadges(sectionAssessmentResults) {
+  console.log('🎯 Aggiunta badge alle sezioni con assessment passati...');
+  
+  sectionAssessmentResults.forEach((assessments, sectionName) => {
+    // Controlla se almeno un assessment è passato
+    const hasPassedAssessment = assessments.some(score => score.passed);
+    
+    if (hasPassedAssessment) {
+      // Trova l'header della sezione
+      const sectionHeaders = document.querySelectorAll('.section h3');
+      const sectionHeader = Array.from(sectionHeaders).find(h3 => h3.textContent === sectionName);
+      
+      if (sectionHeader) {
+        // Rimuovi badge esistenti
+        const existingBadge = sectionHeader.querySelector('.section-passed-badge');
+        if (existingBadge) {
+          existingBadge.remove();
+        }
+        
+        // Crea il badge per la sezione
+        const sectionBadge = document.createElement('span');
+        sectionBadge.className = 'section-passed-badge';
+        sectionBadge.innerHTML = '✅';
+        sectionBadge.title = 'Sezione superata (almeno un Assessment passato)';
+        
+        // Aggiungi il badge all'header
+        sectionHeader.appendChild(sectionBadge);
+        
+        // Aggiungi anche una classe alla sezione per styling aggiuntivo
+        const sectionDiv = sectionHeader.parentElement;
+        if (sectionDiv) {
+          sectionDiv.classList.add('section-passed');
+        }
+      }
+    }
+  });
+}
+
+// IMPORTANTE: Sostituisci la vecchia funzione addTrainingBadges con addTestBadges
+// nelle chiamate in displayTestTree e loadTestTree
 
 // Display simulazioni
 function displaySimulazioni(section, group, studentTests, selectedTest) {
