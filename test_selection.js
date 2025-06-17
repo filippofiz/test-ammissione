@@ -29,23 +29,23 @@ async function loadTestTree() {
     const user = sessionData.session.user;
     console.log("👤 Logged-in User ID:", user.id);
 
-    // ✅ Fetch the student's section order from `ordine_sections`
-    const { data: studentTestOrder, error: studentTestOrderError } = await supabase
-        .from("ordine_sections")
-        .select("ordine")
-        .eq("auth_uid", user.id)
-        .eq("tipologia_test", selectedTest);
+   // ✅ Fetch the section order from `ordine_sections_global` (not student-specific)
+const { data: globalTestOrder, error: globalTestOrderError } = await supabase
+    .from("ordine_sections_global")
+    .select("ordine")
+    .eq("tipologia_test", selectedTest)
+    .single();  // Aggiungo .single() perché dovrebbe esserci un solo record per tipo di test
 
-    if (studentTestOrderError || !studentTestOrder || studentTestOrder.length === 0) {
-        console.error("❌ Error fetching student's section order:", studentTestOrderError?.message);
-        window.location.href = "choose_test.html";
-        alert("Section order not found. Please contact support.");
-        return;
-    }
+if (globalTestOrderError || !globalTestOrder) {
+    console.error("❌ Error fetching global section order:", globalTestOrderError?.message);
+    alert("Section order not found. Please contact support.");
+    window.location.href = "choose_test.html";
+    return;
+}
 
-    // ✅ Ensure `ordineSections` contains only unique values
-    let ordineSections = [...new Set(studentTestOrder[0].ordine)];
-    console.log("📊 Section Order (Unique):", ordineSections);
+// ✅ Ensure `ordineSections` contains only unique values
+let ordineSections = [...new Set(globalTestOrder.ordine)];
+console.log("📊 Global Section Order (Unique):", ordineSections);
 
     if (!ordineSections || ordineSections.length === 0) {
         console.error("❌ ordine_sections is empty or missing.");
