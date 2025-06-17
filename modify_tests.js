@@ -339,14 +339,21 @@ const allTests = [...qData, ...bData];
   uniqueTests.forEach(test => tipologiaSet.add(test.tipologia_test));
   const tipologiaArray = Array.from(tipologiaSet).sort();
 
-  // Create (or reuse) a container for the dropdown and list.
-  let container = document.getElementById("uploadedTestsContainer");
-  if (!container) {
-    container = document.createElement("div");
-    container.id = "uploadedTestsContainer";
-    // Optionally, style or append the container where desired (e.g., at the end of the page).
+  // NUOVO CODICE:
+let container = document.getElementById("uploadedTestsContainer");
+if (!container) {
+  container = document.createElement("div");
+  container.id = "uploadedTestsContainer";
+  
+  // Invece di appendere al body, appendiamo al container principale
+  const mainContainer = document.querySelector('.container');
+  if (mainContainer) {
+    mainContainer.appendChild(container);
+  } else {
+    // Fallback se non trova il container
     document.body.appendChild(container);
   }
+}
   container.innerHTML = "<h3>Test già caricati</h3>";
 
   // Create the dropdown for tipologia_test.

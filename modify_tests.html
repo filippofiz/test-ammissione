@@ -498,27 +498,19 @@
   <script type="module" src="modify_tests.js"></script>
   
   <style>
-    /* Stili aggiuntivi per il container dei test già caricati che verrà creato dal JS */
-    #uploadedTestsContainer {
-      background: white;
-      padding: 2rem;
-      border-radius: 16px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-      margin: 2rem auto;
-      max-width: 1200px;
-      position: relative;
-      z-index: 1;
-    }
+    /* Usa invece questi stili unificati che erediteranno le dimensioni dal container padre: */
+.upload-section, #uploadedTestsContainer {
+  background: white;
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  margin-bottom: 2rem;
+  /* Nessuna max-width o margin auto - erediterà dal .container padre */
+}
     
     /* Fix per il floating button - deve stare dietro */
     .floating-back-button {
       z-index: 0 !important;
-    }
-    
-    @media (min-width: 1600px) {
-      #uploadedTestsContainer {
-        max-width: 1400px;
-      }
     }
     
     #uploadedTestsContainer h3 {
