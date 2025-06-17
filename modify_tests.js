@@ -373,30 +373,47 @@ const allTests = [...qData, ...bData];
   }
 
   // Function to update the list based on the selected tipologia_test.
-  function updateUploadedTestsList(selectedTipologia) {
-    // Filter tests by selected tipologia
-    const filteredTests = uniqueTests.filter(test => test.tipologia_test === selectedTipologia);
+ function updateUploadedTestsList(selectedTipologia) {
+  // Filter tests by selected tipologia
+  const filteredTests = uniqueTests.filter(test => test.tipologia_test === selectedTipologia);
 
-    // Sort filtered tests alphabetically by `section` (or change to another field if needed)
-    filteredTests.sort((a, b) => a.section.localeCompare(b.section, undefined, { sensitivity: 'base' }));
+  // Sort filtered tests alphabetically by `section`
+  filteredTests.sort((a, b) => a.section.localeCompare(b.section, undefined, { sensitivity: 'base' }));
 
-    // Clear the list container
-    listContainer.innerHTML = "";
+  // Clear the list container
+  listContainer.innerHTML = "";
 
-    // Populate list with sorted tests
-    filteredTests.forEach(test => {
-      const li = document.createElement("li");
-      li.textContent = `${test.section}: ${test.tipologia_esercizi} ${test.progressivo}`;
+  // Populate list with sorted tests
+  filteredTests.forEach(test => {
+    const li = document.createElement("li");
+    li.textContent = `${test.section}: ${test.tipologia_esercizi} ${test.progressivo}`;
 
-      const deleteBtn = document.createElement("button");
-      deleteBtn.textContent = "Elimina";
-      deleteBtn.classList.add("delete-test-btn");
-      deleteBtn.addEventListener("click", () => deleteTestGroup(test));
+    // Contenitore per i pulsanti
+    const buttonContainer = document.createElement("div");
+    buttonContainer.style.display = "inline-flex";
+    buttonContainer.style.gap = "0.5rem";
+    buttonContainer.style.marginLeft = "1rem";
 
-      li.appendChild(deleteBtn);
-      listContainer.appendChild(li);
-    });
-  }
+    // Pulsante Modifica (solo per test PDF, non per Banca Dati)
+    if (test.sourceTable === "questions") {
+      const modifyBtn = document.createElement("button");
+      modifyBtn.textContent = "Modifica PDF";
+      modifyBtn.classList.add("modify-test-btn");
+      modifyBtn.addEventListener("click", () => modifyTestPdf(test));
+      buttonContainer.appendChild(modifyBtn);
+    }
+
+    // Pulsante Elimina
+    const deleteBtn = document.createElement("button");
+    deleteBtn.textContent = "Elimina";
+    deleteBtn.classList.add("delete-test-btn");
+    deleteBtn.addEventListener("click", () => deleteTestGroup(test));
+    buttonContainer.appendChild(deleteBtn);
+
+    li.appendChild(buttonContainer);
+    listContainer.appendChild(li);
+  });
+}
 
   async function deleteTestGroup(test) {
     const ok = confirm(
@@ -456,6 +473,113 @@ const allTests = [...qData, ...bData];
 document.addEventListener("DOMContentLoaded", () => {
   fetchUploadedTests();
 });
+
+// Aggiungi questa funzione dopo la funzione deleteTestGroup nel file modify_tests.js
+
+async function modifyTestPdf(test) {
+  // Crea un input file nascosto per il nuovo PDF
+  const fileInput = document.createElement("input");
+  fileInput.type = "file";
+  fileInput.accept = "application/pdf";
+  fileInput.style.display = "none";
+  document.body.appendChild(fileInput);
+  
+  fileInput.onchange = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const ok = confirm(
+      `Vuoi sostituire il PDF per:\n` +
+      `${test.tipologia_test}, ${test.section}: ${test.tipologia_esercizi} ${test.progressivo}?\n\n` +
+      `I dati e i progressi degli studenti rimarranno invariati.`
+    );
+    if (!ok) return;
+    
+    try {
+      // 1️⃣ Carica il nuovo PDF su Supabase Storage
+      const filePath = `${test.section}_${test.tipologia_esercizi}_${test.progressivo}_${test.tipologia_test}_${Date.now()}.pdf`.replace(/\s+/g, "_");
+      
+      const { data: uploadData, error: uploadError } = await supabase
+        .storage
+        .from("tolc_i")
+        .upload(filePath, file);
+        
+      if (uploadError) {
+        alert("Errore durante il caricamento del PDF: " + uploadError.message);
+        console.error("Errore upload PDF:", uploadError);
+        return;
+      }
+      
+      // 2️⃣ Ottieni l'URL pubblico del nuovo PDF
+      const { data, error: urlError } = supabase
+        .storage
+        .from("tolc_i")
+        .getPublicUrl(filePath);
+        
+      if (urlError) {
+        alert("Errore nella generazione dell'URL: " + urlError.message);
+        console.error("Errore URL:", urlError);
+        return;
+      }
+      
+      const newPdfUrl = data.publicUrl;
+      console.log("Nuovo PDF caricato:", newPdfUrl);
+      
+      // 3️⃣ Aggiorna l'URL del PDF nel database
+      // Determina quale tabella aggiornare in base a sourceTable
+      const tableToUpdate = test.sourceTable || "questions";
+      
+      const { error: updateError } = await supabase
+        .from(tableToUpdate)
+        .update({ pdf_url: newPdfUrl })
+        .eq("section", test.section)
+        .eq("tipologia_esercizi", test.tipologia_esercizi)
+        .eq("progressivo", test.progressivo)
+        .eq("tipologia_test", test.tipologia_test);
+        
+      if (updateError) {
+        alert("Errore nell'aggiornamento del database: " + updateError.message);
+        console.error("Errore update:", updateError);
+        return;
+      }
+      
+      // 4️⃣ (Opzionale) Elimina il vecchio PDF dal bucket se vuoi risparmiare spazio
+      // Per fare questo, dovresti prima recuperare il vecchio pdf_url dal database
+      // const { data: oldData } = await supabase
+      //   .from(tableToUpdate)
+      //   .select("pdf_url")
+      //   .eq("section", test.section)
+      //   .eq("tipologia_esercizi", test.tipologia_esercizi)
+      //   .eq("progressivo", test.progressivo)
+      //   .eq("tipologia_test", test.tipologia_test)
+      //   .single();
+      // 
+      // if (oldData?.pdf_url) {
+      //   // Estrai il nome del file dall'URL
+      //   const oldFileName = oldData.pdf_url.split('/').pop();
+      //   await supabase.storage.from("tolc_i").remove([oldFileName]);
+      // }
+      
+      alert("✅ PDF aggiornato con successo!");
+      
+      // Ricarica la lista dei test
+      fetchUploadedTests();
+      
+    } catch (error) {
+      alert("Errore durante la modifica del PDF: " + error.message);
+      console.error("Errore generale:", error);
+    }
+    
+    // Rimuovi l'input file dal DOM
+    document.body.removeChild(fileInput);
+  };
+  
+  // Attiva la selezione del file
+  fileInput.click();
+}
+
+// Esponi la funzione al contesto globale
+window.modifyTestPdf = modifyTestPdf;
 
 async function uploadImageForGroupQuestion(groupKey, groupIdx, questionNumber) {
   // Create (or reuse) a hidden file input for the image upload.
