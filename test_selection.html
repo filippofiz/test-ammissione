@@ -648,36 +648,31 @@
         document.getElementById('header-placeholder').innerHTML = data;
       });
 
-    // Funzione per aggiornare il progresso
+    // Funzione per aggiornare il progresso - SENZA ANIMAZIONE
     function updateProgress() {
-      setTimeout(() => {
-        const completedButtons = document.querySelectorAll('button.completed').length;
-        const totalButtons = document.querySelectorAll('button').length;
-        const availableButtons = document.querySelectorAll('button:not(.locked):not(.completed)').length;
-        
-        const percentage = totalButtons > 0 ? Math.round((completedButtons / totalButtons) * 100) : 0;
-        
-        // Aggiorna statistiche
-        document.getElementById('completedTests').textContent = completedButtons;
-        document.getElementById('totalTests').textContent = totalButtons;
-        document.getElementById('availableTests').textContent = availableButtons;
-        
-        // Anima il progress ring
-        const progressRing = document.querySelector('.progress-ring-fill');
-        const circumference = 2 * Math.PI * 80;
-        const offset = circumference - (percentage / 100) * circumference;
-        
-        progressRing.style.strokeDashoffset = offset;
-        
-        // Anima il numero percentuale
-        animateValue('progressValue', 0, percentage, 1500);
-        
-        // Aggiorna messaggio motivazionale
-        updateMotivationMessage(percentage);
-        
-        // Aggiorna progress bar per sezione
-        updateSectionProgress();
-      }, 500);
+      const completedButtons = document.querySelectorAll('#testTree button.completed').length;
+      const totalButtons = document.querySelectorAll('#testTree button').length;
+      const availableButtons = document.querySelectorAll('#testTree button:not(.locked):not(.completed)').length;
+      
+      const percentage = totalButtons > 0 ? Math.round((completedButtons / totalButtons) * 100) : 0;
+      
+      // Aggiorna statistiche DIRETTAMENTE senza animazione
+      document.getElementById('completedTests').textContent = completedButtons;
+      document.getElementById('totalTests').textContent = totalButtons;
+      document.getElementById('availableTests').textContent = availableButtons;
+      document.getElementById('progressValue').textContent = percentage;
+      
+      // Anima il progress ring
+      const progressRing = document.querySelector('.progress-ring-fill');
+      const circumference = 2 * Math.PI * 80;
+      const offset = circumference - (percentage / 100) * circumference;
+      progressRing.style.strokeDashoffset = offset;
+      
+      // Aggiorna messaggio motivazionale
+      updateMotivationMessage(percentage);
+      
+      // Aggiorna progress bar per sezione
+      updateSectionProgress();
     }
 
     // Aggiorna progress bar per ogni sezione
@@ -718,23 +713,6 @@
       });
     }
 
-    // Animazione contatore
-    function animateValue(id, start, end, duration) {
-      const obj = document.getElementById(id);
-      const range = end - start;
-      const increment = end > start ? 1 : -1;
-      const stepTime = Math.abs(Math.floor(duration / range));
-      let current = start;
-      
-      const timer = setInterval(() => {
-        current += increment;
-        obj.textContent = current;
-        if (current === end) {
-          clearInterval(timer);
-        }
-      }, stepTime);
-    }
-
     // Messaggi motivazionali
     function updateMotivationMessage(percentage) {
       const messages = {
@@ -756,19 +734,14 @@
       document.getElementById('motivationMessage').textContent = message;
     }
 
-    // Observer per rilevare quando i test vengono caricati
-    const observer = new MutationObserver((mutations) => {
+    // Aspetta che i test siano caricati, poi aggiorna UNA SOLA VOLTA
+    let checkInterval = setInterval(() => {
       if (document.querySelector('#testTree button')) {
+        clearInterval(checkInterval);
         updateProgress();
         setupAccordion();
-        observer.disconnect();
       }
-    });
-
-    observer.observe(document.getElementById('testTree'), {
-      childList: true,
-      subtree: true
-    });
+    }, 100);
 
     // Setup accordion functionality
     function setupAccordion() {
@@ -799,11 +772,6 @@
           if (sessionStorage.getItem(sectionKey) === 'true') {
             section.classList.add('collapsed');
           }
-          
-          // Opzionale: collassa tutte tranne la prima all'inizio
-          // if (index > 0) {
-          //   section.classList.add('collapsed');
-          // }
         }
       });
     }
