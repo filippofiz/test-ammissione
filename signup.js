@@ -102,7 +102,9 @@ document.addEventListener("DOMContentLoaded", () => {
           tipologia_esercizi: test.tipologia_esercizi,
           progressivo: test.progressivo,
           tipologia_test: test.tipologia_test,
-          status: test.progressivo === 1 ? "unlocked" : "locked"
+          //prima: status: "test.progressivo === 1 ? "unlocked" : "locked""
+          //dopo
+          status: "locked"
         });
       });
     }
