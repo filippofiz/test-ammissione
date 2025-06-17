@@ -370,6 +370,43 @@
       background: #dc3545;
       color: white;
     }
+
+.modify-test-btn {
+  background: white;
+  color: #007bff;
+  border: 1.5px solid #007bff;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: all 0.3s ease;
+}
+
+.modify-test-btn:hover {
+  background: #007bff;
+  color: white;
+}
+
+/* Aggiustamento per il layout dei pulsanti nella lista */
+#uploadedTestsList li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 10px;
+  margin-bottom: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+#uploadedTestsList li div {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
   </style>
 </head>
 <body>
