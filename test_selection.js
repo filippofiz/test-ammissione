@@ -152,12 +152,14 @@ function displayTestTree(tests, studentTests, testType, selectedTest) {
       byMateria[mat].push(test);
     });
   
-    // 2️⃣ Decide ordering: Simulazioni first, then others α, then Altro last
+    // 2️⃣ MODIFICATO: Nuovo ordinamento con Matematica prima
     const materiaKeys = Object.keys(byMateria).sort((a, b) => {
-        if (a === "Simulazioni") return  1;           // a goes after b
-        if (b === "Simulazioni") return -1;           // a goes before b
-        return a.localeCompare(b);                    // otherwise alphabetical
-      });
+        if (a === "Matematica") return -1;            // Matematica sempre prima
+        if (b === "Matematica") return 1;
+        if (a === "Simulazioni") return  1;           // Simulazioni dopo tutto il resto
+        if (b === "Simulazioni") return -1;
+        return a.localeCompare(b);                    // altrimenti alfabetico
+    });
   
     materiaKeys.forEach(materia => {
       const group = byMateria[materia];
@@ -244,7 +246,8 @@ function displayTestTree(tests, studentTests, testType, selectedTest) {
             });
   
             const tipLabel = document.createElement("h4");
-            tipLabel.textContent = tip;
+            // MODIFICATO: Cambia solo la visualizzazione di "Esercizi per casa" in "Training"
+            tipLabel.textContent = tip === "Esercizi per casa" ? "Training" : tip;
             tipContainer.appendChild(tipLabel);
   
             const colWrapper = document.createElement("div");
@@ -263,7 +266,9 @@ function displayTestTree(tests, studentTests, testType, selectedTest) {
                 const status = studentEntry?.status || "locked";
   
                 const btn = document.createElement("button");
-                btn.textContent = `${tip} ${test.progressivo}`;
+                // MODIFICATO: Anche nel testo del bottone sostituisci "Esercizi per casa" con "Training"
+                const displayTip = tip === "Esercizi per casa" ? "Training" : tip;
+                btn.textContent = `${displayTip} ${test.progressivo}`;
   
                 if (status === "completed") btn.classList.add("completed");
                 else if (status === "locked") {
