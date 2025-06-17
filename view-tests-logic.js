@@ -161,6 +161,7 @@ function setupEventListeners() {
 }
 
 // Carica l'albero dei test
+// Carica l'albero dei test
 async function loadTestTree() {
   console.log("👤 Viewing tests for Student UID:", studentId);
   const selectedTest = sessionStorage.getItem("selectedTestType");
@@ -176,24 +177,24 @@ async function loadTestTree() {
   const testType = selectedTest.includes("PDF") ? "pdf" : "banca_dati";
   console.log(`📌 Determined Test Type: ${testType}`);
 
-  // Fetch ordine sezioni
-  const { data: studentTestOrder, error: studentTestOrderError } = await supabase
-      .from("ordine_sections")
+  // MODIFICATO: Fetch ordine sezioni dalla tabella globale
+  const { data: globalTestOrder, error: globalTestOrderError } = await supabase
+      .from("ordine_sections_global")
       .select("ordine")
-      .eq("auth_uid", studentId)
-      .eq("tipologia_test", selectedTest);
+      .eq("tipologia_test", selectedTest)
+      .single();
 
-  if (studentTestOrderError || !studentTestOrder || studentTestOrder.length === 0) {
-    console.error("❌ Error fetching student's section order:", studentTestOrderError?.message);
+  if (globalTestOrderError || !globalTestOrder) {
+    console.error("❌ Error fetching global section order:", globalTestOrderError?.message);
     alert("Ordine sezioni non trovato. Contatta il supporto.");
     return;
   }
   
-  let ordineSections = [...new Set(studentTestOrder[0].ordine)];
-  console.log("📊 Section Order (Unique):", ordineSections);
+  let ordineSections = [...new Set(globalTestOrder.ordine)];
+  console.log("📊 Global Section Order (Unique):", ordineSections);
 
   if (!ordineSections || ordineSections.length === 0) {
-      console.error("❌ ordine_sections is empty or missing.");
+      console.error("❌ ordine_sections_global is empty or missing.");
       alert("Nessun ordine sezioni disponibile. Contatta il supporto.");
       return;
   }
