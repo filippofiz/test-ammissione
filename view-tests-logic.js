@@ -154,10 +154,6 @@ function setupEventListeners() {
     loadTestTree();
   });
 
-  // Back button
-  document.getElementById("backButton").addEventListener("click", () => {
-    window.location.href = "tutor_dashboard.html";
-  });
 }
 
 // Carica l'albero dei test

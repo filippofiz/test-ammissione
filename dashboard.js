@@ -1844,10 +1844,6 @@ function updateInteractiveTable() {
   generateInteractiveTable(filteredQuestions, filteredAnswers);
 }
 
-function goBack() {
-  window.history.back();
-}
-
 function openReport() {
   // Salva il file HTML del report
   const reportHTML = 'student-report.html';
@@ -1884,5 +1880,4 @@ function showOutlierAlert(outliers, lowerBound, upperBound) {
 
 // Questa riga già esiste nel tuo file:
 loadDashboard();
-window.goBack = goBack;
-window.openReport = openReport;
+indow.openReport = openReport;

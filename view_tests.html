@@ -6,6 +6,7 @@
   <title>Visualizza Test Studente - Up to Ten</title>
   <link rel="stylesheet" href="header.css">
   <link rel="stylesheet" href="view-tests.css">
+  <link rel="stylesheet" href="floating-back-button.css">
 </head>
 <body>
   <!-- Container principale che si sposta -->
@@ -37,9 +38,6 @@
       <div id="testTree">
         <!-- Populated dynamically -->
       </div>
-
-      <!-- Back Button -->
-      <button id="backButton">⬅ Torna alla Dashboard Tutor</button>
     </div>
   </div>
 
@@ -115,7 +113,7 @@
   </script>
   <!-- Aggiungi questo script alla fine del tuo file HTML, prima del tag </body> -->
 <script>
-// Funzione per sostituire visualmente "Esercizi per casa" con "Training"
+// Funzione per sostituire visivamente "Esercizi per casa" con "Training"
 function applyTextReplacement() {
   // Per gli h4
   document.querySelectorAll('.section h4').forEach(h4 => {
@@ -179,5 +177,14 @@ window.alert = function(message) {
 </script>
   <script type="module" src="view-tests-logic.js"></script>
   <script src="animated-background.js"></script>
+  <script src="floating-back-button.js"></script>
+  <script>
+    // Crea il bottone floating per tornare alla dashboard
+    document.addEventListener('DOMContentLoaded', function() {
+      createFloatingBackButton({
+        targetUrl: 'tutor_dashboard.html',
+        tooltip: 'Torna alla Dashboard Tutor'
+      });
+    });
+  </script>
 </body>
-</html>
