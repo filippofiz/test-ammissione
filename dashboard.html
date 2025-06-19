@@ -6,6 +6,7 @@
   <title>Dashboard Risultati - Up to Ten</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="header.css">
+  <link rel="stylesheet" href="floating-back-button.css">
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <style>
     * {
@@ -474,29 +475,6 @@
     .x-answer { background-color: #3b82f6; color: white; font-weight: 600; }
     .y-answer { background-color: #f59e0b; color: white; font-weight: 600; }
     .z-answer { background-color: #6b7280; color: white; font-weight: 600; }
-
-    /* Back button */
-    .back-button {
-      background: rgba(28, 37, 69, 0.1);
-      color: rgb(28, 37, 69);
-      border: 2px solid rgb(28, 37, 69);
-      padding: 1rem 2rem;
-      border-radius: 12px;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin: 2rem 1rem;
-    }
-
-    .back-button:hover {
-      background: rgb(28, 37, 69);
-      color: white;
-      transform: translateX(-4px);
-    }
     
     /* Report button */
     .report-button {
@@ -512,7 +490,7 @@
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
-      margin: 2rem 1rem;
+      margin: 2rem auto;
       box-shadow: 0 4px 16px rgba(0, 166, 102, 0.2);
     }
 
@@ -525,6 +503,7 @@
     .button-container {
       text-align: center;
       margin-top: 2rem;
+      padding-bottom: 4rem; /* Aggiungi padding per evitare sovrapposizione con floating button */
     }
 
     /* Progress bar */
@@ -568,6 +547,39 @@
       
       .simulation-grid {
         grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
+    /* Add hover info icon to stat cards */
+    .simulation-stat {
+      position: relative;
+    }
+    
+    .simulation-stat::after {
+      content: "ℹ";
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      width: 20px;
+      height: 20px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    
+    .simulation-stat:hover::after {
+      opacity: 0.7;
+    }
+    
+    /* Mobile responsive */
+    @media (max-width: 768px) {
+      .simulation-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
       }
     }
   </style>
@@ -649,41 +661,6 @@
         💡 Clicca su qualsiasi metrica per vedere la metodologia di calcolo
       </div>
     </div>
-    
-    <style>
-    /* Add hover info icon to stat cards */
-    .simulation-stat {
-      position: relative;
-    }
-    
-    .simulation-stat::after {
-      content: "ℹ";
-      position: absolute;
-      top: 0.5rem;
-      right: 0.5rem;
-      width: 20px;
-      height: 20px;
-      background: rgba(255, 255, 255, 0.2);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.75rem;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-    }
-    
-    .simulation-stat:hover::after {
-      opacity: 0.7;
-    }
-    
-    /* Mobile responsive */
-    @media (max-width: 768px) {
-      .simulation-grid {
-        grid-template-columns: repeat(2, 1fr) !important;
-      }
-    }
-    </style>
 
     <!-- Filtri -->
     <div class="filters-section">
@@ -785,10 +762,6 @@
 
     <!-- Buttons -->
     <div class="button-container">
-      <button class="back-button" onclick="goBack()">
-        ⬅ Torna alla Dashboard Tutor
-      </button>
-      
       <button class="report-button" onclick="openReport()">
         📄 Genera Report PDF
       </button>
@@ -810,5 +783,15 @@
       });
   </script>
   <script type="module" src="dashboard.js"></script>
+  <script src="floating-back-button.js"></script>
+  <script>
+    // Crea il bottone floating per tornare alla dashboard
+    document.addEventListener('DOMContentLoaded', function() {
+      createFloatingBackButton({
+        targetUrl: 'tutor_dashboard.html',
+        tooltip: 'Torna alla Dashboard Tutor'
+      });
+    });
+  </script>
 </body>
 </html>
