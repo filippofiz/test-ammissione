@@ -87,6 +87,7 @@
       display: flex;
       flex-direction: column;
       gap: 1.5rem;
+      overflow-y: auto;  /* AGGIUNGI QUESTA RIGA */
     }
 
     #timer {
@@ -379,41 +380,122 @@
       }
     }
 
+    /* Tablet Layout (768px - 1200px) */
     @media (max-width: 1200px) {
       .test-container {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto 1fr auto;
-        height: auto;
-        min-height: calc(100vh - 80px);
+        display: grid;
+        grid-template-columns: 1.5fr 1fr;
+        grid-template-rows: auto;
+        gap: 1rem;
+        height: calc(100vh - 80px);
+        padding: 1rem;
       }
       
+      /* PDF a sinistra */
       .pdf-viewer {
-        display: none;
+        display: block !important;
+        height: calc(100vh - 100px);
+        grid-column: 1;
+        grid-row: 1;
       }
       
+      /* Domande a destra */
+      .question-section {
+        grid-column: 2;
+        grid-row: 1;
+        height: calc(100vh - 100px);
+        overflow-y: auto;
+        padding: 1rem;
+      }
+      
+      /* Navigazione come drawer */
       .nav-container {
-        order: -1;
-        max-height: 200px;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        border-radius: 16px 16px 0 0;
+        box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.2);
+        padding: 1rem;
+        transform: translateY(calc(100% - 60px));
+        transition: transform 0.3s ease;
+        z-index: 100;
+        max-height: 300px;
+      }
+      
+      /* Stato aperto della navigazione */
+      .nav-container.open {
+        transform: translateY(0);
+      }
+      
+      /* Handle per aprire/chiudere */
+      .nav-container::before {
+        content: "☰ Navigazione Quiz";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f8f9fa;
+        border-radius: 16px 16px 0 0;
+        cursor: pointer;
+        font-weight: 600;
+        color: rgb(28, 37, 69);
+      }
+      
+      .nav-container h3 {
+        margin-top: 60px;
       }
       
       #questionNav {
-        grid-template-columns: repeat(8, 1fr);
+        grid-template-columns: repeat(10, 1fr);
+        max-height: 150px;
+        overflow-y: auto;
+      }
+      
+      /* Riduci dimensioni bottoni */
+      #question-container button {
+        padding: 0.5rem 0.8rem;
+        font-size: 0.85rem;
+        margin-right: 0.3rem;
+        margin-bottom: 0.3rem;
+      }
+      
+      /* Timer più compatto */
+      #timer {
+        padding: 0.75rem 1rem;
+        font-size: 1rem;
+      }
+      
+      /* Navigazione più compatta */
+      .navigation button {
+        padding: 0.6rem 1rem;
+        font-size: 0.85rem;
       }
     }
 
-    @media (max-width: 768px) {
+    /* Mobile (sotto 768px) - nasconde PDF */
+    @media (max-width: 767px) {
       .test-container {
-        padding: 1rem;
-        gap: 1rem;
+        grid-template-columns: 1fr;
+        padding: 0.5rem;
+      }
+      
+      .pdf-viewer {
+        display: none !important;
+      }
+      
+      .question-section {
+        grid-column: 1;
+        height: calc(100vh - 150px);
       }
       
       #questionNav {
         grid-template-columns: repeat(6, 1fr);
-      }
-      
-      .navigation button {
-        padding: 0.6rem 1rem;
-        font-size: 0.85rem;
       }
     }
 
@@ -542,7 +624,7 @@
         // Event listener logout
         document.getElementById('logoutBtn')?.addEventListener('click', async () => {
           await supabase.auth.signOut();
-          window.location.href = "/";
+          window.location.href = "login.html";
         });
       }
     }, 100);

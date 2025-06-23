@@ -14,6 +14,59 @@ const testId = sessionStorage.getItem("selectedTestId");
 let globalCurrentSection = "";
 let sectionNames = null;
 
+// Gestione drawer navigazione per tablet
+function setupTabletNavigation() {
+    const navContainer = document.querySelector('.nav-container');
+    
+    if (!navContainer) return;
+    
+    // Aggiungi click handler per aprire/chiudere
+    navContainer.addEventListener('click', function(e) {
+        // Solo se clicchi sull'area del handle (i primi 60px)
+        if (e.offsetY < 60 || e.target === navContainer) {
+            this.classList.toggle('open');
+        }
+    });
+    
+    // Chiudi quando clicchi su un numero di domanda
+    const questionCells = navContainer.querySelectorAll('.question-cell');
+    questionCells.forEach(cell => {
+        cell.addEventListener('click', () => {
+            setTimeout(() => {
+                navContainer.classList.remove('open');
+            }, 300);
+        });
+    });
+}
+
+// Sposta il bottone submit nella navigazione per tablet
+function moveSubmitButtonForTablet() {
+    if (window.innerWidth <= 1200) {
+        const submitBtn = document.getElementById("submitAnswers");
+        const navigation = document.querySelector(".navigation");
+        
+        if (submitBtn && navigation) {
+            // Clona il bottone per mantenere gli event listener
+            const submitClone = submitBtn.cloneNode(true);
+            submitClone.style.fontSize = "0.85rem";
+            submitClone.style.padding = "0.6rem 1rem";
+            submitClone.innerHTML = "📤 Manda";
+            
+            // Aggiungi evento click
+            submitClone.addEventListener("click", async () => {
+                console.log("Submit button clicked!");
+                await submitAnswers();
+            });
+            
+            // Aggiungi alla navigazione
+            navigation.appendChild(submitClone);
+            
+            // Nascondi l'originale
+            submitBtn.style.display = "none";
+        }
+    }
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
     console.log("DOM fully loaded. Initializing test...");
     console.log("Selected Test ID:", testId);
@@ -62,6 +115,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     //Load test and PDF
     await loadTest();
+    if (window.innerWidth <= 1200) {
+        setupTabletNavigation();
+        moveSubmitButtonForTablet();  // AGGIUNGI QUESTA RIGA
+    }
 });
 
 async function loadTest() {
@@ -88,7 +145,7 @@ async function loadTest() {
       if (sessionError || !sessionData || !sessionData.session) {
         console.error("❌ ERROR: No active session found.");
         alert("Session expired. Please log in again.");
-        window.location.href = "/";
+        window.location.href = "login.html";
         return;
       }
       studentId = sessionData.session.user.id;
@@ -393,7 +450,9 @@ function loadQuestionsForPage(page) {
         prevPageBtn.style.display = "none";
         nextPageBtn.style.display = "none";
         if (submitButton) submitButton.style.display = "none";
-
+        if (window.innerWidth <= 1200) {
+            moveSubmitButtonForTablet();
+        }
 
         // Attach event listener to "Inizia Test"
         document.getElementById("startTestBtn").addEventListener("click", async () => {
@@ -515,7 +574,7 @@ async function submitAnswers() {
         if (sessionError || !sessionData || !sessionData.session) {
             console.error("❌ ERROR: No active session found.");
             alert("Session expired. Please log in again.");
-            window.location.href = "/";
+            window.location.href = "login.html";
             return;
         }
 
