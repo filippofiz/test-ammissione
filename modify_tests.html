@@ -424,32 +424,36 @@
     </div>
 
     <div class="upload-section">
-      <h3>📤 Carica Domande</h3>
-      <!-- Radio buttons to choose test type -->
-      <p>Seleziona Tipo di Test:</p>
-      <label>
-        <input type="radio" name="csvTestType" value="PDF" checked>
-        PDF
-      </label>
-      <label>
-        <input type="radio" name="csvTestType" value="Banca Dati">
-        Banca Dati
-      </label>
-      <br><br>
-      <button id="templateBtn">
-        📄 Apri il template
-      </button>
-      <br>
-      <!-- File input for CSV -->
-      <input type="file" id="csvFileInput" accept=".csv">
-      <!-- Button to trigger upload and parse -->
-      <button id="uploadCsvBtn">📤 Carica CSV</button>
-      <div id="uploadMessage"></div>
-      <div id="uploadSummary" class="summary"></div>
-    </div>
-
-    <!-- Container per i test già caricati verrà aggiunto dal JavaScript -->
-  </div>
+  <h3>📤 Carica Domande</h3>
+  <!-- Radio buttons to choose test type -->
+  <p>Seleziona Tipo di Test:</p>
+  <label>
+    <input type="radio" name="csvTestType" value="PDF" checked>
+    PDF
+  </label>
+  <label>
+    <input type="radio" name="csvTestType" value="Banca Dati">
+    Banca Dati
+  </label>
+  <br><br>
+  
+  <!-- Bottoni nell'ordine corretto: Template poi Caricamento Avanzato -->
+  <button id="templateBtn">
+    📄 Apri il template
+  </button>
+  
+  <button id="newUploadBtn" style="background: #ff6b6b; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.85rem; margin-bottom: 1rem; margin-left: 1rem; transition: all 0.3s ease;">
+    🚀 Caricamento Avanzato (in sviluppo-non funzionante)
+  </button>
+  
+  <br>
+  <!-- File input for CSV -->
+  <input type="file" id="csvFileInput" accept=".csv">
+  <!-- Button to trigger upload and parse -->
+  <button id="uploadCsvBtn">📤 Carica CSV</button>
+  <div id="uploadMessage"></div>
+  <div id="uploadSummary" class="summary"></div>
+</div>
   
   <script>
     // Carica l'header dal file esterno
@@ -522,5 +526,7 @@
   
   <script src="floating-back-button.js"></script>
   <script src="animated-background.js"></script>
+  <script src="excel-form-pdf.js"></script>
+
 </body>
 </html>
