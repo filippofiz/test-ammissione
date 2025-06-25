@@ -30,6 +30,15 @@
             <li><span class="legend-box locked"></span> Bloccato</li>
           </ul>
         </div>
+        
+        <!-- Container per esigenze speciali - NUOVO -->
+        <div class="special-needs-container">
+          <label>
+            <input type="checkbox" id="specialNeedsCheckbox">
+            <span>⏱️ Esigenze speciali (+30% tempo)</span>
+          </label>
+        </div>
+        
         <!-- Toggle Button dentro il box -->
         <button id="toggleViewAnswers">👁️ Vedi risposte dello studente</button>
       </div>
@@ -113,7 +122,7 @@
   </script>
   <!-- Aggiungi questo script alla fine del tuo file HTML, prima del tag </body> -->
 <script>
-// Funzione per sostituire visivamente "Esercizi per casa" con "Training"
+// Funzione per sostituire visualmente "Esercizi per casa" con "Training"
 function applyTextReplacement() {
   // Per gli h4
   document.querySelectorAll('.section h4').forEach(h4 => {
@@ -188,3 +197,4 @@ window.alert = function(message) {
     });
   </script>
 </body>
+</html>

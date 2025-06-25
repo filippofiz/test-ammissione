@@ -89,6 +89,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Carica l'albero dei test
   await loadTestTree();
 
+// Setup flag esigenze speciali
+await setupSpecialNeedsToggle();
+
   // Aggiungi MutationObserver per monitorare cambiamenti nel testTree
   const testTree = document.getElementById('testTree');
   if (testTree) {
@@ -105,6 +108,83 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 });
+
+// Gestione flag esigenze speciali
+async function setupSpecialNeedsToggle() {
+  const checkbox = document.getElementById('specialNeedsCheckbox');
+  if (!checkbox) return;
+  
+  // Carica stato corrente
+  const { data: student } = await supabase
+    .from('students')
+    .select('esigenze_speciali')
+    .eq('auth_uid', studentId)
+    .single();
+  
+  checkbox.checked = student?.esigenze_speciali || false;
+  
+  // Gestisci il cambio di stato
+  checkbox.addEventListener('change', async (e) => {
+    const isChecked = e.target.checked;
+    
+    // Salva nel database
+    const { error } = await supabase
+      .from('students')
+      .update({ esigenze_speciali: isChecked })
+      .eq('auth_uid', studentId);
+    
+    if (error) {
+      alert('Errore nell\'aggiornamento: ' + error.message);
+      checkbox.checked = !isChecked; // Ripristina stato precedente
+      return;
+    }
+    
+    // Aggiorna tutti i valori di durata
+    const durationInputs = document.querySelectorAll('.duration-input');
+    
+    for (const input of durationInputs) {
+      const currentValue = parseInt(input.value);
+      if (currentValue && currentValue > 0) {
+        let newValue;
+        
+        if (isChecked) {
+          // Applica +30%
+          newValue = Math.round(currentValue * 1.3);
+        } else {
+          // Rimuovi il 30% (torna al valore originale)
+          newValue = Math.round(currentValue / 1.3);
+        }
+        
+        input.value = newValue;
+        // Salva automaticamente
+        input.dispatchEvent(new Event('change'));
+      }
+    }
+    
+    const message = isChecked 
+      ? '✅ Tempo extra del 30% applicato a tutti i test' 
+      : '✅ Tempo normale ripristinato per tutti i test';
+    
+    // Mostra un messaggio discreto invece di alert
+    const msgDiv = document.createElement('div');
+    msgDiv.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #00a666;
+      color: white;
+      padding: 15px 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      z-index: 1000;
+      animation: slideIn 0.3s ease;
+    `;
+    msgDiv.textContent = message;
+    document.body.appendChild(msgDiv);
+    
+    setTimeout(() => msgDiv.remove(), 3000);
+  });
+}
 
 // Aggiorna il nome del tutor nell'header
 async function updateTutorName() {
