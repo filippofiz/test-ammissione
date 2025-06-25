@@ -765,6 +765,11 @@ function buildQuestionNav() {
     if (!questionNav) return;
     questionNav.innerHTML = ""; // Clear existing buttons
   
+    // Determina il tipo di test
+    const selectedTest = sessionStorage.getItem("selectedTestType");
+    const testType = selectedTest.includes("TOLC") ? "tolc" : "bocconi";
+    const testModality = selectedTest.includes("PDF") ? "pdf" : "banca_dati";
+  
     // Compute the "minimum allowed page" for the current section.
     // We sort all the section boundaries and choose the highest boundary that is less than the current page.
     let minPage = 1;
@@ -788,35 +793,59 @@ function buildQuestionNav() {
   
       // Highlight answered questions.
       if (studentAnswers[q.id]) {
-        if (studentAnswers[q.id] === "x" || studentAnswers[q.id] === "y") {
-          btn.style.backgroundColor = "yellow";
+        // Per Bocconi: sempre verde, per TOLC: mantieni giallo per x/y
+        if (testType === "bocconi") {
+          btn.classList.add("answered");  // Sempre verde per Bocconi
         } else {
-          btn.classList.add("answered");
+          // Logica originale per TOLC
+          if (studentAnswers[q.id] === "x" || studentAnswers[q.id] === "y") {
+            btn.style.backgroundColor = "yellow";
+          } else {
+            btn.classList.add("answered");
+          }
         }
       }
   
-      // If the student is beyond the boundary, disable navigation for questions on or before that boundary.
-      const targetSection = getSectionForQuestionNumber(q.question_number);
-      const currentQuestion = questions.find(qq => qq.page_number === currentPage);
-      const currentSectionNumber = getSectionForQuestionNumber(currentQuestion?.question_number || 1);
-      
-      if (targetSection < currentSectionNumber) {
-        // ✅ Disable all buttons for previous sections
+      // NUOVO: Disabilita navigazione indietro per Bocconi PDF
+      if (testType === "bocconi" && testModality === "pdf" && q.page_number < currentPage) {
         btn.disabled = true;
-      } else {
+        btn.style.opacity = "0.5";
+        btn.style.cursor = "not-allowed";
+        // Non aggiungere event listener per questi pulsanti
+      } 
+      // Logica esistente per TOLC
+      else if (testType === "tolc" && sessionStorage.getItem("currentSection") === "Simulazioni") {
+        // If the student is beyond the boundary, disable navigation for questions on or before that boundary.
+        const targetSection = getSectionForQuestionNumber(q.question_number);
+        const currentQuestion = questions.find(qq => qq.page_number === currentPage);
+        const currentSectionNumber = getSectionForQuestionNumber(currentQuestion?.question_number || 1);
+        
+        if (targetSection < currentSectionNumber) {
+          // ✅ Disable all buttons for previous sections
+          btn.disabled = true;
+          btn.style.opacity = "0.5";
+          btn.style.cursor = "not-allowed";
+        } else {
+          btn.addEventListener("click", () => {
+              if (targetSection > currentSectionNumber) {
+                customConfirm("Stai per passare alla prossima sezione. Vuoi continuare?")
+                  .then(confirmChange => {
+                    if (confirmChange) {
+                      loadQuestionsForPage(q.page_number);
+                    }
+                    // else: do nothing, remain on the current page
+                  });
+              } else {
+                loadQuestionsForPage(q.page_number);
+              }
+            });
+        }
+      }
+      // Per tutti gli altri casi (Bocconi banca_dati o domande non precedenti)
+      else {
         btn.addEventListener("click", () => {
-            if (targetSection > currentSectionNumber) {
-              customConfirm("Stai per passare alla prossima sezione. Vuoi continuare?")
-                .then(confirmChange => {
-                  if (confirmChange) {
-                    loadQuestionsForPage(q.page_number);
-                  }
-                  // else: do nothing, remain on the current page
-                });
-            } else {
-              loadQuestionsForPage(q.page_number);
-            }
-          });
+          loadQuestionsForPage(q.page_number);
+        });
       }
   
       questionNav.appendChild(btn);
