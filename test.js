@@ -164,47 +164,58 @@ async function loadTest() {
     // If tipologia_esercizi is "Simulazioni", fetch dynamic boundaries and section names.
     if (currentSection === "Simulazioni") {
       globalCurrentSection = currentSection; // store it globally
-      const { data: simulazioniData, error: simulazioniError } = await supabase
-        .from("simulazioni_parti")
-        .select("boundaries, nome_parti")
-        .eq("tipologia_test", selectedTestType)
-        .single();
-      if (simulazioniError || !simulazioniData) {
-        console.error("Error fetching simulazioni boundaries:", simulazioniError);
-        return;
-      }
-      const boundariesFilter = simulazioniData.boundaries; // expects an array of integers
-      sectionNames = simulazioniData.nome_parti; // expects an array of section names
-      console.log("Fetched dynamic boundaries:", boundariesFilter);
-      console.log("Fetched section names:", sectionNames);
-
-      // Now fetch the page numbers for questions whose question_number is in our dynamic boundaries array.
-      const { data: boundaries, error: boundaryError } = await supabase
-        .from("questions")
-        .select("question_number, page_number")
-        .eq("pdf_url", pdfUrl)
-        .in("question_number", boundariesFilter)
-        .order("question_number");
-      if (boundaryError) {
-        console.error("❌ Error fetching section boundaries:", boundaryError.message);
-        return;
-      }
-      console.log("📌 Section Boundaries (Page Numbers):", boundaries);
-
-      // Reset the section boundaries objects.
-      sectionPageBoundaries = {};
-      sectionPageStartPages = {};
-
-      // Map the fetched boundaries to section numbers.
-      boundaries.forEach(q => {
-        const index = boundariesFilter.indexOf(q.question_number);
-        if (index !== -1) {
-          const sectionNumber = index + 2; // first boundary becomes section 2, etc.
-          sectionPageBoundaries[sectionNumber] = q.question_number;
-          sectionPageStartPages[sectionNumber] = q.page_number;
+      
+      // Solo TOLC ha sezioni, Bocconi no
+      if (selectedTestType.includes("TOLC")) {
+        const { data: simulazioniData, error: simulazioniError } = await supabase
+          .from("simulazioni_parti")
+          .select("boundaries, nome_parti")
+          .eq("tipologia_test", selectedTestType)
+          .single();
+          
+        if (simulazioniError || !simulazioniData) {
+          console.error("Error fetching simulazioni boundaries:", simulazioniError);
+          return;
         }
-      });
-      console.log("Section Boundaries Loaded:", sectionPageBoundaries);
+        
+        const boundariesFilter = simulazioniData.boundaries; // expects an array of integers
+        sectionNames = simulazioniData.nome_parti; // expects an array of section names
+        console.log("Fetched dynamic boundaries:", boundariesFilter);
+        console.log("Fetched section names:", sectionNames);
+
+        // Now fetch the page numbers for questions whose question_number is in our dynamic boundaries array.
+        const { data: boundaries, error: boundaryError } = await supabase
+          .from("questions")
+          .select("question_number, page_number")
+          .eq("pdf_url", pdfUrl)
+          .in("question_number", boundariesFilter)
+          .order("question_number");
+        if (boundaryError) {
+          console.error("❌ Error fetching section boundaries:", boundaryError.message);
+          return;
+        }
+        console.log("📌 Section Boundaries (Page Numbers):", boundaries);
+
+        // Reset the section boundaries objects.
+        sectionPageBoundaries = {};
+        sectionPageStartPages = {};
+
+        // Map the fetched boundaries to section numbers.
+        boundaries.forEach(q => {
+          const index = boundariesFilter.indexOf(q.question_number);
+          if (index !== -1) {
+            const sectionNumber = index + 2; // first boundary becomes section 2, etc.
+            sectionPageBoundaries[sectionNumber] = q.question_number;
+            sectionPageStartPages[sectionNumber] = q.page_number;
+          }
+        });
+        console.log("Section Boundaries Loaded:", sectionPageBoundaries);
+      } else {
+        // Bocconi non ha sezioni
+        sectionPageBoundaries = {};
+        sectionPageStartPages = {};
+        console.log("Bocconi test - no sections");
+      }
     } else {
       // If not Simulazioni, clear boundaries (they're not used)
       sectionPageBoundaries = {};
@@ -258,7 +269,6 @@ async function loadTest() {
     console.log(`Test loaded successfully! Total pages: ${totalPages}`);
     loadQuestionsForPage(1);
   }
-
 async function loadPdf(pdfUrl) {
     console.log("Loading PDF from:", pdfUrl);
 
