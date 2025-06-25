@@ -443,7 +443,7 @@
   </button>
   
   <button id="newUploadBtn" style="background: #ff6b6b; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.85rem; margin-bottom: 1rem; margin-left: 1rem; transition: all 0.3s ease;">
-    🚀 Caricamento Avanzato (in sviluppo-non funzionante)
+    🚀 Caricamento Avanzato (Beta - non funzionante)
   </button>
   
   <br>
@@ -527,6 +527,55 @@
   <script src="floating-back-button.js"></script>
   <script src="animated-background.js"></script>
   <script src="excel-form-pdf.js"></script>
+<!-- Aggiungi questo script PRIMA del tag </body> nel file modify_tests.html -->
 
+<script>
+  // Gestione del nuovo bottone per il caricamento avanzato
+  window.addEventListener('load', function() {
+    // Usa window.onload per essere sicuri che TUTTO sia caricato
+    const newUploadBtn = document.getElementById('newUploadBtn');
+    
+    if (newUploadBtn) {
+      console.log('Bottone Caricamento Avanzato trovato!');
+      
+      // Aggiungi effetto hover
+      newUploadBtn.addEventListener('mouseenter', function() {
+        this.style.background = '#ff5252';
+        this.style.transform = 'translateY(-2px)';
+        this.style.boxShadow = '0 4px 12px rgba(255, 107, 107, 0.3)';
+      });
+      
+      newUploadBtn.addEventListener('mouseleave', function() {
+        this.style.background = '#ff6b6b';
+        this.style.transform = 'translateY(0)';
+        this.style.boxShadow = 'none';
+      });
+      
+      // Gestione click
+      newUploadBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        console.log('Click su Caricamento Avanzato!');
+        
+        const testType = document.querySelector('input[name="csvTestType"]:checked').value;
+        console.log('Tipo test selezionato:', testType);
+        
+        if (testType === 'PDF') {
+          // Verifica che excelFormPDF sia disponibile
+          if (typeof excelFormPDF !== 'undefined' && excelFormPDF.open) {
+            console.log('Apertura form Excel...');
+            excelFormPDF.open();
+          } else {
+            console.error('excelFormPDF non trovato!');
+            alert('⚠️ Il modulo di caricamento avanzato non è ancora caricato. Ricarica la pagina e riprova.');
+          }
+        } else {
+          alert('⚠️ Il caricamento avanzato per Banca Dati è ancora in sviluppo!');
+        }
+      });
+    } else {
+      console.error('Bottone newUploadBtn non trovato!');
+    }
+  });
+</script>
 </body>
 </html>
