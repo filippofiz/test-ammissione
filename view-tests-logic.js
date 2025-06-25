@@ -473,6 +473,8 @@ async function addTestBadges() {
 }
 
 // Funzione per recuperare il punteggio di un test (Training o Assessment)
+// Funzione per recuperare il punteggio di un test (Training o Assessment)
+// VERSIONE CORRETTA che gestisce i duplicati
 async function getTestScore(section, progressivo, selectedTest, tipologiaEsercizi) {
   console.log(`Getting score for: section=${section}, progressivo=${progressivo}, test=${selectedTest}, tipo=${tipologiaEsercizi}`);
   
@@ -497,29 +499,57 @@ async function getTestScore(section, progressivo, selectedTest, tipologiaEserciz
     throw new Error('Nessuna domanda trovata');
   }
   
-  const questionIds = questions.map(q => q.id);
-  const totalQuestions = questions.length;
+  // Rimuovi eventuali domande duplicate
+  const uniqueQuestionIds = [...new Set(questions.map(q => q.id))];
+  const totalQuestions = uniqueQuestionIds.length;
+  
+  // Log di debug per assessment algebra
+  if (section.toLowerCase().includes('algebra') && tipologiaEsercizi === 'Assessment') {
+    console.log('🔍 DEBUG Assessment Algebra:');
+    console.log(`- Domande totali trovate: ${questions.length}`);
+    console.log(`- Domande uniche: ${uniqueQuestionIds.length}`);
+    if (questions.length !== uniqueQuestionIds.length) {
+      console.warn('⚠️ Trovate domande duplicate nel database!');
+    }
+  }
   
   // Recupera le risposte dello studente con auto_score
   const { data: answers, error: answersError } = await supabase
     .from(answersTable)
     .select("question_id, auto_score")
     .eq("auth_uid", studentId)
-    .in("question_id", questionIds);
+    .in("question_id", uniqueQuestionIds);
   
   if (answersError) {
     throw new Error(`Errore query risposte: ${answersError.message}`);
   }
   
-  let correctAnswers = 0;
-  let answeredQuestions = 0;
-  
+  // Gestisci eventuali risposte duplicate per la stessa domanda
+  // (prendi solo l'ultima risposta per ogni domanda)
+  const answerMap = new Map();
   if (answers && answers.length > 0) {
-    answeredQuestions = answers.length;
-    correctAnswers = answers.filter(a => a.auto_score === 1).length;
+    answers.forEach(answer => {
+      answerMap.set(answer.question_id, answer);
+    });
   }
   
-  const wrongAnswers = totalQuestions - correctAnswers;
+  // Converti la mappa in array di risposte uniche
+  const uniqueAnswers = Array.from(answerMap.values());
+  const answeredQuestions = uniqueAnswers.length;
+  const correctAnswers = uniqueAnswers.filter(a => a.auto_score === 1).length;
+  
+  // Log di debug per assessment algebra
+  if (section.toLowerCase().includes('algebra') && tipologiaEsercizi === 'Assessment') {
+    console.log(`- Risposte totali trovate: ${answers ? answers.length : 0}`);
+    console.log(`- Risposte uniche: ${uniqueAnswers.length}`);
+    console.log(`- Risposte corrette: ${correctAnswers}`);
+    if (answers && answers.length !== uniqueAnswers.length) {
+      console.warn('⚠️ Trovate risposte duplicate per le stesse domande!');
+    }
+  }
+  
+  const wrongAnswers = answeredQuestions - correctAnswers;
+  const unansweredQuestions = totalQuestions - answeredQuestions;
   const percentage = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
   
   return {
@@ -527,6 +557,7 @@ async function getTestScore(section, progressivo, selectedTest, tipologiaEserciz
     correctAnswers,
     wrongAnswers,
     answeredQuestions,
+    unansweredQuestions, // Aggiungo anche le domande non risposte
     percentage,
     passed: percentage >= 60
   };
