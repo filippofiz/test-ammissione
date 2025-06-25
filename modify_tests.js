@@ -7,7 +7,7 @@
 // sorts the groups in the desired order, and displays a summary.
 // For each group, an "Upload PDF" button is provided. When clicked, the user selects a PDF file which is uploaded to the
 // Supabase storage bucket "tolc_i" and its public URL is saved for that group.
-// Finally, when the user clicks "Conferma Upload CSV", each CSV row’s pdf_url is set based on its group, and the CSV data is inserted.
+// Finally, when the user clicks "Conferma Upload CSV", each CSV row's pdf_url is set based on its group, and the CSV data is inserted.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const SUPABASE_URL = "https://elrwpaezjnemmiegkyin.supabase.co"; 
@@ -380,47 +380,72 @@ if (!container) {
   }
 
   // Function to update the list based on the selected tipologia_test.
- function updateUploadedTestsList(selectedTipologia) {
-  // Filter tests by selected tipologia
-  const filteredTests = uniqueTests.filter(test => test.tipologia_test === selectedTipologia);
+  function updateUploadedTestsList(selectedTipologia) {
+    // Filter tests by selected tipologia
+    const filteredTests = uniqueTests.filter(test => test.tipologia_test === selectedTipologia);
 
-  // Sort filtered tests alphabetically by `section`
-  filteredTests.sort((a, b) => a.section.localeCompare(b.section, undefined, { sensitivity: 'base' }));
+    // Sort filtered tests alphabetically by `section`
+    filteredTests.sort((a, b) => a.section.localeCompare(b.section, undefined, { sensitivity: 'base' }));
 
-  // Clear the list container
-  listContainer.innerHTML = "";
+    // Clear the list container
+    listContainer.innerHTML = "";
 
-  // Populate list with sorted tests
-  filteredTests.forEach(test => {
-    const li = document.createElement("li");
-    li.textContent = `${test.section}: ${test.tipologia_esercizi} ${test.progressivo}`;
+    // Populate list with sorted tests
+    filteredTests.forEach(test => {
+      const li = document.createElement("li");
+      li.textContent = `${test.section}: ${test.tipologia_esercizi} ${test.progressivo}`;
 
-    // Contenitore per i pulsanti
-    const buttonContainer = document.createElement("div");
-    buttonContainer.style.display = "inline-flex";
-    buttonContainer.style.gap = "0.5rem";
-    buttonContainer.style.marginLeft = "1rem";
+      // Contenitore per i pulsanti
+      const buttonContainer = document.createElement("div");
+      buttonContainer.style.display = "inline-flex";
+      buttonContainer.style.gap = "0.5rem";
+      buttonContainer.style.marginLeft = "1rem";
 
-    // Pulsante Modifica (solo per test PDF, non per Banca Dati)
-    if (test.sourceTable === "questions") {
-      const modifyBtn = document.createElement("button");
-      modifyBtn.textContent = "Modifica PDF";
-      modifyBtn.classList.add("modify-test-btn");
-      modifyBtn.addEventListener("click", () => modifyTestPdf(test));
-      buttonContainer.appendChild(modifyBtn);
-    }
+      // Pulsante Copia (per tutti i test)
+      const copyBtn = document.createElement("button");
+      copyBtn.textContent = "Copia";
+      copyBtn.style.cssText = `
+        background: white;
+        color: #28a745;
+        border: 1.5px solid #28a745;
+        padding: 0.4rem 0.8rem;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.75rem;
+        transition: all 0.3s ease;
+      `;
+      copyBtn.addEventListener('mouseenter', function() {
+        this.style.background = '#28a745';
+        this.style.color = 'white';
+      });
+      copyBtn.addEventListener('mouseleave', function() {
+        this.style.background = 'white';
+        this.style.color = '#28a745';
+      });
+      copyBtn.addEventListener("click", () => copyTest(test));
+      buttonContainer.appendChild(copyBtn);
 
-    // Pulsante Elimina
-    const deleteBtn = document.createElement("button");
-    deleteBtn.textContent = "Elimina";
-    deleteBtn.classList.add("delete-test-btn");
-    deleteBtn.addEventListener("click", () => deleteTestGroup(test));
-    buttonContainer.appendChild(deleteBtn);
+      // Pulsante Modifica (solo per test PDF, non per Banca Dati)
+      if (test.sourceTable === "questions") {
+        const modifyBtn = document.createElement("button");
+        modifyBtn.textContent = "Modifica PDF";
+        modifyBtn.classList.add("modify-test-btn");
+        modifyBtn.addEventListener("click", () => modifyTestPdf(test));
+        buttonContainer.appendChild(modifyBtn);
+      }
 
-    li.appendChild(buttonContainer);
-    listContainer.appendChild(li);
-  });
-}
+      // Pulsante Elimina
+      const deleteBtn = document.createElement("button");
+      deleteBtn.textContent = "Elimina";
+      deleteBtn.classList.add("delete-test-btn");
+      deleteBtn.addEventListener("click", () => deleteTestGroup(test));
+      buttonContainer.appendChild(deleteBtn);
+
+      li.appendChild(buttonContainer);
+      listContainer.appendChild(li);
+    });
+  }
 
   async function deleteTestGroup(test) {
     const ok = confirm(
@@ -461,7 +486,7 @@ if (!container) {
     }
   
     alert("✅ Test e progressi eliminati con successo.");
-    // 3️⃣ Refresh the “Test già caricati” panel
+    // 3️⃣ Refresh the "Test già caricati" panel
     fetchUploadedTests();
   }
 
@@ -585,8 +610,273 @@ async function modifyTestPdf(test) {
   fileInput.click();
 }
 
-// Esponi la funzione al contesto globale
+// Sostituisci la funzione copyTest in modify_tests.js con questa versione migliorata
+
+async function copyTest(test) {
+  // Lista delle tipologie disponibili
+  const tipologieDisponibili = [
+    'BOCCONI',
+    'TOLC I',
+    'TOLC E',
+    'TOL',
+    'MEDICINA',
+    'CATTOLICA',
+    'BOCCONI MAGISTRALE',
+    'BOCCONI LAW'
+  ];
+  
+  // Rimuovi la tipologia attuale dalla lista
+  const altriTipi = tipologieDisponibili.filter(t => t !== test.tipologia_test);
+  
+  // Crea il modal se non esiste
+  let modal = document.getElementById('copyTestModal');
+  if (!modal) {
+    // Crea la struttura del modal
+    modal = document.createElement('div');
+    modal.id = 'copyTestModal';
+    modal.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    `;
+    
+    const modalContent = document.createElement('div');
+    modalContent.style.cssText = `
+      background: white;
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      max-width: 500px;
+      width: 90%;
+    `;
+    
+    modalContent.innerHTML = `
+      <h3 style="margin-bottom: 1rem; color: rgb(28, 37, 69);">📋 Copia Test</h3>
+      <div id="copyTestInfo" style="margin-bottom: 1.5rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; font-size: 0.9rem;"></div>
+      
+      <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: rgb(28, 37, 69);">
+        Seleziona la nuova tipologia test:
+      </label>
+      
+      <select id="copyTestSelect" style="
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        margin-bottom: 1.5rem;
+        cursor: pointer;
+        background: white;
+      ">
+        <option value="">-- Seleziona tipologia --</option>
+      </select>
+      
+      <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+        <button id="copyTestCancel" style="
+          background: white;
+          color: #666;
+          border: 1px solid #ddd;
+          padding: 0.75rem 1.5rem;
+          border-radius: 8px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        ">
+          Annulla
+        </button>
+        <button id="copyTestConfirm" style="
+          background: #28a745;
+          color: white;
+          border: none;
+          padding: 0.75rem 1.5rem;
+          border-radius: 8px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        ">
+          Conferma Copia
+        </button>
+      </div>
+    `;
+    
+    modal.appendChild(modalContent);
+    document.body.appendChild(modal);
+    
+    // Event listener per chiudere il modal cliccando fuori
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.style.display = 'none';
+      }
+    });
+  }
+  
+  // Mostra le informazioni del test da copiare
+  document.getElementById('copyTestInfo').innerHTML = `
+    <strong>Stai copiando:</strong><br>
+    📚 ${test.tipologia_test}<br>
+    📁 ${test.section}: ${test.tipologia_esercizi} ${test.progressivo}
+  `;
+  
+  // Popola il select con le opzioni
+  const select = document.getElementById('copyTestSelect');
+  select.innerHTML = '<option value="">-- Seleziona tipologia --</option>';
+  altriTipi.forEach(tipo => {
+    const option = document.createElement('option');
+    option.value = tipo;
+    option.textContent = tipo;
+    select.appendChild(option);
+  });
+  
+  // Mostra il modal
+  modal.style.display = 'flex';
+  
+  // Rimuovi i vecchi event listener per evitare duplicati
+  const newCancelBtn = document.getElementById('copyTestCancel').cloneNode(true);
+  const newConfirmBtn = document.getElementById('copyTestConfirm').cloneNode(true);
+  document.getElementById('copyTestCancel').replaceWith(newCancelBtn);
+  document.getElementById('copyTestConfirm').replaceWith(newConfirmBtn);
+  
+  // Event listener per annulla
+  newCancelBtn.addEventListener('click', () => {
+    modal.style.display = 'none';
+  });
+  
+  // Event listener per conferma
+  newConfirmBtn.addEventListener('click', async () => {
+    const nuovaTipologia = select.value;
+    
+    if (!nuovaTipologia) {
+      alert('Seleziona una tipologia test!');
+      return;
+    }
+    
+    // Chiudi il modal
+    modal.style.display = 'none';
+    
+    // Conferma finale
+    const conferma = confirm(
+      `Confermi di voler copiare TUTTE le domande?\n\n` +
+      `Da: ${test.tipologia_test}\n` +
+      `A: ${nuovaTipologia}\n\n` +
+      `Sezione: ${test.section}\n` +
+      `Tipo: ${test.tipologia_esercizi} ${test.progressivo}`
+    );
+    
+    if (!conferma) return;
+    
+    try {
+      // 1. Prima recupera tutte le domande del test originale
+      const { data: domande, error: fetchError } = await supabase
+        .from(test.sourceTable)
+        .select('*')
+        .eq("section", test.section)
+        .eq("tipologia_esercizi", test.tipologia_esercizi)
+        .eq("progressivo", test.progressivo)
+        .eq("tipologia_test", test.tipologia_test);
+      
+      if (fetchError) {
+        alert("Errore nel recupero delle domande: " + fetchError.message);
+        console.error(fetchError);
+        return;
+      }
+      
+      if (!domande || domande.length === 0) {
+        alert("Nessuna domanda trovata per questo test");
+        return;
+      }
+      
+      console.log(`Trovate ${domande.length} domande da copiare`);
+      
+      // 2. Prepara le domande per la copia
+      const domandeNuove = domande.map(domanda => {
+        // Rimuovi i campi auto-generati
+        const { id, created_at, updated_at, ...domandaDaCopiare } = domanda;
+        
+        // Cambia la tipologia test
+        return {
+          ...domandaDaCopiare,
+          tipologia_test: nuovaTipologia
+        };
+      });
+      
+      // 3. Verifica se esiste già un test con questi parametri
+      const { data: testEsistente, error: checkError } = await supabase
+        .from(test.sourceTable)
+        .select('id')
+        .eq("section", test.section)
+        .eq("tipologia_esercizi", test.tipologia_esercizi)
+        .eq("progressivo", test.progressivo)
+        .eq("tipologia_test", nuovaTipologia)
+        .limit(1);
+      
+      if (checkError) {
+        alert("Errore nella verifica: " + checkError.message);
+        return;
+      }
+      
+      if (testEsistente && testEsistente.length > 0) {
+        const sovrascrivi = confirm(
+          `⚠️ ATTENZIONE: Esiste già un test con questi parametri!\n\n` +
+          `${nuovaTipologia}, ${test.section}: ${test.tipologia_esercizi} ${test.progressivo}\n\n` +
+          `Vuoi SOVRASCRIVERE il test esistente?`
+        );
+        
+        if (!sovrascrivi) return;
+        
+        // Elimina il test esistente prima di inserire il nuovo
+        const { error: deleteError } = await supabase
+          .from(test.sourceTable)
+          .delete()
+          .eq("section", test.section)
+          .eq("tipologia_esercizi", test.tipologia_esercizi)
+          .eq("progressivo", test.progressivo)
+          .eq("tipologia_test", nuovaTipologia);
+        
+        if (deleteError) {
+          alert("Errore nell'eliminazione del test esistente: " + deleteError.message);
+          return;
+        }
+      }
+      
+      // 4. Inserisci le nuove domande
+      const { error: insertError } = await supabase
+        .from(test.sourceTable)
+        .insert(domandeNuove);
+      
+      if (insertError) {
+        alert("Errore nella copia delle domande: " + insertError.message);
+        console.error(insertError);
+        return;
+      }
+      
+      alert(
+        `✅ Test copiato con successo!\n\n` +
+        `Da: ${test.tipologia_test}\n` +
+        `A: ${nuovaTipologia}\n` +
+        `Domande copiate: ${domandeNuove.length}\n\n` +
+        `Il test è ora disponibile in "${nuovaTipologia}"`
+      );
+      
+      // 5. Aggiorna la lista dei test
+      fetchUploadedTests();
+      
+    } catch (error) {
+      alert("Errore durante la copia del test: " + error.message);
+      console.error("Errore generale:", error);
+    }
+  });
+}
+
+// Esponi le funzioni al contesto globale
 window.modifyTestPdf = modifyTestPdf;
+window.copyTest = copyTest;
 
 async function uploadImageForGroupQuestion(groupKey, groupIdx, questionNumber) {
   // Create (or reuse) a hidden file input for the image upload.
