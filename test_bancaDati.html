@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Test Bocconi</title>
+  <title>Test Banca Dati</title>
   <link rel="stylesheet" href="styles.css">
   <script>
     window.MathJax = {
@@ -21,8 +21,9 @@
       <!-- Timer (hidden on welcome page) -->
       <div id="timer" class="bocconi-timer" style="visibility: hidden;">⏳ Tempo: <span id="time-left"></span></div>
       
-      <!-- Navigation Buttons: Only "Next" is used -->
+      <!-- Navigation Buttons: Both Previous and Next -->
       <div class="bocconi-navigation">
+        <button id="prevPage" style="display: none;">Indietro</button>
         <button id="nextPage" style="display: none;">Avanti</button>
       </div>
       
