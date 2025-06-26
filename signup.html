@@ -41,19 +41,18 @@
       margin-bottom: 2rem;
     }
 
-input, select, button {
-  width: 100%;
-  padding: 0.75rem;
-  margin-bottom: 1rem;
-  border-radius: 10px;
-  border: 1px solid #ccc;
-  font-size: 1rem;
-  line-height: 1.2;
-  box-sizing: border-box;
-  appearance: none;
-  -webkit-appearance: none;
-}
-
+    input, select, button {
+      width: 100%;
+      padding: 0.75rem;
+      margin-bottom: 1rem;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+      line-height: 1.2;
+      box-sizing: border-box;
+      appearance: none;
+      -webkit-appearance: none;
+    }
 
     select[multiple] {
       height: auto;
@@ -107,6 +106,32 @@ input, select, button {
       margin-bottom: 0.4rem;
       font-weight: 500;
     }
+
+    .password-info {
+      font-size: 0.85rem;
+      color: #666;
+      margin-bottom: 1rem;
+    }
+
+    .error-message {
+      color: #d32f2f;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+      padding: 0.5rem;
+      background-color: #ffebee;
+      border-radius: 4px;
+      display: none;
+    }
+
+    .success-message {
+      color: #388e3c;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+      padding: 0.5rem;
+      background-color: #e8f5e9;
+      border-radius: 4px;
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -117,6 +142,9 @@ input, select, button {
   <div class="container">
     <h2>Registrazione Studente</h2>
 
+    <div id="errorMessage" class="error-message"></div>
+    <div id="successMessage" class="success-message"></div>
+
     <label for="fullName">Nome completo</label>
     <input type="text" id="fullName" placeholder="Mario Rossi" />
 
@@ -124,7 +152,11 @@ input, select, button {
     <input type="email" id="email" placeholder="nome@email.com" />
 
     <label for="password">Password</label>
-    <input type="password" id="password" placeholder="********" />
+    <input type="password" id="password" placeholder="Inserisci password" />
+    
+    <label for="confirmPassword">Conferma Password</label>
+    <input type="password" id="confirmPassword" placeholder="Conferma password" />
+    <p class="password-info">La password deve essere di almeno 6 caratteri</p>
 
     <label for="tutorDropdown">Seleziona il tutor</label>
     <select id="tutorDropdown">
@@ -135,8 +167,11 @@ input, select, button {
     <select id="testsDropdown" multiple size="4"></select>
 
     <button id="refreshTutors" class="refresh-btn">🔄 Aggiorna tutor</button>
-    <button id="signupBtn">Registrazione</button>
+    <button id="signupBtn">Registra Studente</button>
 
+    <div class="form-footer">
+      <p>Lo studente potrà accedere con email e password</p>
+    </div>
   </div>
 
   <!-- Supabase -->

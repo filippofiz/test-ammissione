@@ -115,14 +115,20 @@ console.log("📊 Global Section Order (Unique):", ordineSections);
     // ✅ Sort test data based on `ordine_sections`
     studentTests.sort((a, b) => ordineSections.indexOf(a.section) - ordineSections.indexOf(b.section));
     // 1️⃣ Fetch Materia for each question
-    const { data: questionsData, error: materiaError } = await supabase
-    .from("questions")
+   // 1️⃣ Determina quale tabella usare basandosi sul tipo di test
+const questionsTable = testType === "pdf" ? "questions" : "questions_bancaDati";
+
+console.log(`📊 Cercando Materia nella tabella: ${questionsTable}`);
+
+// Fetch Materia dalla tabella appropriata
+const { data: questionsData, error: materiaError } = await supabase
+    .from(questionsTable)
     .select("section, tipologia_esercizi, progressivo, Materia")
     .eq("tipologia_test", selectedTest);
 
-    if (materiaError) {
-    console.error("❌ Error fetching Materia info:", materiaError.message);
-    }
+if (materiaError) {
+    console.error(`❌ Error fetching Materia info from ${questionsTable}:`, materiaError.message);
+}
 
     // 2️⃣ Build a quick lookup: "section|tipologia|progressivo" → Materia
     const materiaMap = {};

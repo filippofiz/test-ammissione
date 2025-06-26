@@ -1,3 +1,5 @@
+const supabase = window.supabase;
+
 document.addEventListener("DOMContentLoaded", () => {
     const signupBtn = document.getElementById("signupBtn");
   
@@ -9,132 +11,197 @@ document.addEventListener("DOMContentLoaded", () => {
     signupBtn.addEventListener("click", async () => {
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value.trim();
+      const confirmPassword = document.getElementById("confirmPassword").value.trim();
       const fullName = document.getElementById("fullName").value.trim();
       const tutorId = document.getElementById("tutorDropdown").value;
-      // Get the chosen tests as an array from the multi-select.
       const testsDropdown = document.getElementById("testsDropdown");
       const chosenTests = Array.from(testsDropdown.selectedOptions).map(opt => opt.value);
+      
+      // Reset messaggi
+      hideMessages();
   
-      if (!email || !password || !fullName || !tutorId || chosenTests.length === 0) {
-        alert("Please fill in all fields, including selecting at least one test.");
+      // Validazioni
+      if (!email || !password || !confirmPassword || !fullName || !tutorId || chosenTests.length === 0) {
+        showError("Per favore compila tutti i campi e seleziona almeno un test.");
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        showError("Le password non coincidono.");
+        return;
+      }
+
+      if (password.length < 6) {
+        showError("La password deve essere di almeno 6 caratteri.");
+        return;
+      }
+
+      // Validazione email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        showError("Inserisci un indirizzo email valido.");
         return;
       }
   
-      await signUpStudent(email, password, fullName, tutorId, chosenTests);
+      await registerStudent(email, password, fullName, tutorId, chosenTests);
     });
-  });
-  
-  // Function to Sign Up a Student and Store in Database
-  async function signUpStudent(email, password, fullName, tutorId, chosenTests) {
-    const { data, error } = await supabase.auth.signUp({ email, password });
-  
-    if (error) {
-      console.error("❌ Signup failed:", error.message);
-      alert("Signup failed: " + error.message);
-      return;
+});
+
+async function registerStudent(email, password, fullName, tutorId, chosenTests) {
+    try {
+        console.log("🔄 Registrazione studente:", email);
+        
+        // Disabilita il bottone durante la registrazione
+        const signupBtn = document.getElementById("signupBtn");
+        signupBtn.disabled = true;
+        signupBtn.textContent = "Registrazione in corso...";
+        
+        // Registra l'utente con Supabase Auth
+        const { data, error } = await supabase.auth.signUp({ 
+            email, 
+            password,
+            options: {
+                data: {
+                    full_name: fullName
+                }
+            }
+        });
+
+        if (error) {
+            console.error("❌ Registrazione fallita:", error.message);
+            
+            if (error.message.includes("already registered")) {
+                showError("Questo indirizzo email è già registrato nel sistema.");
+            } else {
+                showError("Errore durante la registrazione: " + error.message);
+            }
+            return;
+        }
+
+        const user = data.user;
+        console.log("✅ Utente creato! Auth UID:", user.id);
+
+        // Attendi un momento per assicurarsi che Supabase abbia processato l'utente
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // Inserisci lo studente nel database
+        const { error: insertError } = await supabase
+            .from("students")
+            .insert([{ 
+                auth_uid: user.id, 
+                email, 
+                name: fullName, 
+                tutor_id: tutorId, 
+                tests: chosenTests,
+                password_set: true // La password è già stata impostata
+            }]);
+
+        if (insertError) {
+            console.error("❌ Errore salvataggio info studente:", insertError.message);
+            showError("Errore nel salvataggio delle informazioni. L'account è stato creato ma contatta il supporto.");
+            return;
+        }
+
+        // Inizializza i test per lo studente
+        try {
+            await initializeStudentTests(user.id, chosenTests);
+        } catch (testError) {
+            console.error("❌ Errore inizializzazione test:", testError);
+            // Non bloccare il processo se l'inizializzazione test fallisce
+        }
+        
+        // Successo!
+        showSuccess(`✅ Studente registrato con successo!\n\nLo studente può ora accedere con:\nEmail: ${email}\nPassword: quella appena impostata`);
+
+        // Pulisci il form
+        clearForm();
+
+    } catch (err) {
+        console.error("❌ Errore imprevisto:", err);
+        showError("Si è verificato un errore imprevisto. Riprova.");
+    } finally {
+        // Riabilita il bottone
+        const signupBtn = document.getElementById("signupBtn");
+        signupBtn.disabled = false;
+        signupBtn.textContent = "Registra Studente";
     }
-  
-    const user = data.user;
-    console.log("✅ Signup successful! Auth UID:", user.id);
-  
-    // Wait until the user exists in `auth.users`
-    await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds
-  
-    if (!tutorId) {
-      alert("Please select a tutor.");
-      return;
-    }
-  
-    // Insert student with selected tutor and chosen tests (save in 'tests' column as array of text)
-    const { error: insertError } = await supabase
-      .from("students")
-      .insert([{ auth_uid: user.id, email, name: fullName, tutor_id: tutorId, tests: chosenTests }]);
-  
-    if (insertError) {
-      console.error("❌ Error saving student info:", insertError.message);
-      alert("Error saving student info.");
-      return;
-    }
-  
-    // Initialize test progress in student_tests for each chosen test.
-    await initializeStudentTests(user.id, chosenTests);
-  
-    alert("✅ Signup successful! You can now log in.");
-    window.location.href = "/"; // Redirect to login
-  }
-  
-  // Function to initialize test progress for a new student based on chosen tests.
-  // For each chosen test (tipologia_test), we query the appropriate table(s)
-  // and create entries in the student_tests table with the column tipologia_test set accordingly.
-  async function initializeStudentTests(authUid, chosenTests) {
-    console.log("📌 Initializing tests for user:", authUid, "with chosen tests:", chosenTests);
+}
+
+// Funzione per inizializzare i test dello studente
+async function initializeStudentTests(authUid, chosenTests) {
+    console.log("📌 Inizializzazione test per:", authUid);
   
     const testEntries = [];
   
-    // Process chosen tests from the tolc_i table.
-    const { data: tolcTests, error: tolcError } = await supabase
+    // Recupera test dalle domande PDF
+    const { data: pdfTests, error: pdfError } = await supabase
       .from("questions")
       .select("section, tipologia_esercizi, progressivo, tipologia_test")
       .in("tipologia_test", chosenTests)
       .order("progressivo");
   
-    if (tolcError) {
-      console.error("❌ Error fetching tolc_i test structure:", tolcError.message);
-    } else if (tolcTests) {
-      // Remove duplicates manually.
-      const uniqueTolcTests = Array.from(
-        new Set(tolcTests.map(test => `${test.section}|${test.tipologia_esercizi}|${test.progressivo}|${test.tipologia_test}`))
-        ).map(key => {
-            const parts = key.split("|");
-            return { 
-                section: parts[0], 
-                tipologia_esercizi: parts[1], 
-                progressivo: Number(parts[2]), 
-                tipologia_test: parts[3]
-            };
-        });
+    if (pdfError) {
+      console.error("❌ Errore recupero test PDF:", pdfError.message);
+    } else if (pdfTests) {
+      // Rimuovi duplicati
+      const uniquePdfTests = Array.from(
+        new Set(pdfTests.map(test => `${test.section}|${test.tipologia_esercizi}|${test.progressivo}|${test.tipologia_test}`))
+      ).map(key => {
+        const parts = key.split("|");
+        return { 
+            section: parts[0], 
+            tipologia_esercizi: parts[1], 
+            progressivo: Number(parts[2]), 
+            tipologia_test: parts[3]
+        };
+      });
   
-      uniqueTolcTests.forEach(test => {
-        // Unlock tests with progressivo === 1 (first test for that tipologia) and lock others.
+      uniquePdfTests.forEach(test => {
         testEntries.push({
           auth_uid: authUid,
           section: test.section,
           tipologia_esercizi: test.tipologia_esercizi,
           progressivo: test.progressivo,
           tipologia_test: test.tipologia_test,
-          //prima: status: "test.progressivo === 1 ? "unlocked" : "locked""
-          //dopo
-          status: "locked"
+          status: "locked",
+          unlock_mode: "manual",
+          unlock_order: 0
         });
       });
     }
   
-    // Process chosen tests from the bocconi table.
-    const { data: bocconiTests, error: bocconiError } = await supabase
+    // Recupera test dalla banca dati
+    const { data: bancaDatiTests, error: bancaDatiError } = await supabase
       .from("questions_bancaDati")
-      .select("section, tipologia_esercizi, tipologia_test")
+      .select("section, tipologia_esercizi, progressivo, tipologia_test")
       .in("tipologia_test", chosenTests)
       .order("progressivo");
   
-    if (bocconiError) {
-      console.error("❌ Error fetching bocconi test structure:", bocconiError.message);
-    } else if (bocconiTests) {
-      const uniqueBocconiTests = Array.from(
-        new Set(bocconiTests.map(test => `${test.section}-${test.tipologia_esercizi}-${test.tipologia_test}`))
+    if (bancaDatiError) {
+      console.error("❌ Errore recupero test banca dati:", bancaDatiError.message);
+    } else if (bancaDatiTests) {
+      const uniqueBancaDatiTests = Array.from(
+        new Set(bancaDatiTests.map(test => `${test.section}|${test.tipologia_esercizi}|${test.progressivo || 1}|${test.tipologia_test}`))
       ).map(key => {
-        const [section, tipologia_esercizi, tipologia_test] = key.split("-").map((v, i) => i < 2 ? Number(v) : v);
-        return { section, tipologia_esercizi, tipologia_test };
+        const parts = key.split("|");
+        return { 
+            section: parts[0], 
+            tipologia_esercizi: parts[1], 
+            progressivo: Number(parts[2]), 
+            tipologia_test: parts[3]
+        };
       });
   
-      uniqueBocconiTests.forEach(test => {
-        // For bocconi, we don’t have progressivo so we can set a default value (e.g., 1)
+      uniqueBancaDatiTests.forEach(test => {
         testEntries.push({
           auth_uid: authUid,
           section: test.section,
           tipologia_esercizi: test.tipologia_esercizi,
           progressivo: test.progressivo,
           tipologia_test: test.tipologia_test,
-          status: "locked" // or you might want to unlock the first one; adjust as needed
+          status: "locked",
+          unlock_mode: "manual",
+          unlock_order: 0
         });
       });
     }
@@ -145,29 +212,65 @@ document.addEventListener("DOMContentLoaded", () => {
         .insert(testEntries);
   
       if (insertError) {
-        console.error("❌ Error initializing student tests:", insertError.message);
+        console.error("❌ Errore inizializzazione test:", insertError.message);
+        throw insertError;
       } else {
-        console.log("✅ Student test entries created!");
+        console.log("✅ Test inizializzati con successo!");
       }
-    } else {
-      console.log("No test entries to create.");
     }
-  }
-  
-  async function loadTutors() {
+}
+
+// Funzioni di utilità
+function showError(message) {
+    const errorDiv = document.getElementById("errorMessage");
+    errorDiv.textContent = message;
+    errorDiv.style.display = "block";
+    // Nascondi dopo 5 secondi
+    setTimeout(() => {
+        errorDiv.style.display = "none";
+    }, 5000);
+}
+
+function showSuccess(message) {
+    const successDiv = document.getElementById("successMessage");
+    successDiv.textContent = message;
+    successDiv.style.display = "block";
+    // Nascondi dopo 10 secondi
+    setTimeout(() => {
+        successDiv.style.display = "none";
+    }, 10000);
+}
+
+function hideMessages() {
+    document.getElementById("errorMessage").style.display = "none";
+    document.getElementById("successMessage").style.display = "none";
+}
+
+function clearForm() {
+    document.getElementById("email").value = "";
+    document.getElementById("password").value = "";
+    document.getElementById("confirmPassword").value = "";
+    document.getElementById("fullName").value = "";
+    document.getElementById("tutorDropdown").value = "";
+    Array.from(document.getElementById("testsDropdown").options).forEach(opt => opt.selected = false);
+}
+
+// Carica i tutor disponibili
+async function loadTutors() {
     const tutorDropdown = document.getElementById("tutorDropdown");
   
     const { data, error } = await supabase
       .from("tutors")
-      .select("id, name");
+      .select("id, name")
+      .order("name");
   
     if (error) {
-      console.error("❌ Error fetching tutors:", error.message);
-      alert("Failed to load tutors.");
+      console.error("❌ Errore caricamento tutor:", error.message);
+      showError("Errore nel caricamento dei tutor.");
       return;
     }
   
-    tutorDropdown.innerHTML = '<option value="">Select Your Tutor</option>';
+    tutorDropdown.innerHTML = '<option value="">-- Scegli un tutor --</option>';
   
     data.forEach(tutor => {
       let option = document.createElement("option");
@@ -175,51 +278,67 @@ document.addEventListener("DOMContentLoaded", () => {
       option.textContent = tutor.name;
       tutorDropdown.appendChild(option);
     });
-  }
-  
-  async function loadTestOptions() {
-    // This function queries both tables to get unique tipologia_test values.
-    const { data: tolcData, error: tolcError } = await supabase
+}
+
+// Carica le opzioni dei test
+async function loadTestOptions() {
+    const { data: questionsData, error: questionsError } = await supabase
       .from("questions")
       .select("tipologia_test");
-    const { data: bocconiData, error: bocconiError } = await supabase
+    
+    const { data: bancaDatiData, error: bancaDatiError } = await supabase
       .from("questions_bancaDati")
       .select("tipologia_test");
   
-    if (tolcError) {
-      console.error("❌ Error fetching tolc_i test options:", tolcError.message);
+    if (questionsError) {
+      console.error("❌ Errore caricamento test PDF:", questionsError.message);
     }
-    if (bocconiError) {
-      console.error("❌ Error fetching bocconi test options:", bocconiError.message);
+    if (bancaDatiError) {
+      console.error("❌ Errore caricamento test banca dati:", bancaDatiError.message);
     }
   
     let options = [];
-    if (tolcData) {
-      tolcData.forEach(row => {
-        if (row.tipologia_test && !options.includes(row.tipologia_test)) {
-          options.push(row.tipologia_test);
-        }
-      });
-    }
-    if (bocconiData) {
-      bocconiData.forEach(row => {
+    
+    // Aggiungi test unici dalle domande PDF
+    if (questionsData) {
+      questionsData.forEach(row => {
         if (row.tipologia_test && !options.includes(row.tipologia_test)) {
           options.push(row.tipologia_test);
         }
       });
     }
     
-    // Populate the multi-select element.
+    // Aggiungi test unici dalla banca dati
+    if (bancaDatiData) {
+      bancaDatiData.forEach(row => {
+        if (row.tipologia_test && !options.includes(row.tipologia_test)) {
+          options.push(row.tipologia_test);
+        }
+      });
+    }
+    
+    // Ordina alfabeticamente
+    options.sort();
+    
+    // Popola il dropdown
     const testsDropdown = document.getElementById("testsDropdown");
-    testsDropdown.innerHTML = ""; // Clear existing options.
-    options.forEach(opt => {
-      const optionEl = document.createElement("option");
-      optionEl.value = opt;
-      optionEl.textContent = opt;
-      testsDropdown.appendChild(optionEl);
-    });
-  }
-  
-  document.getElementById("refreshTutors").addEventListener("click", loadTutors);
-  document.addEventListener("DOMContentLoaded", loadTutors);
-  document.addEventListener("DOMContentLoaded", loadTestOptions);
+    testsDropdown.innerHTML = "";
+    
+    if (options.length === 0) {
+        testsDropdown.innerHTML = '<option disabled>Nessun test disponibile</option>';
+    } else {
+        options.forEach(opt => {
+          const optionEl = document.createElement("option");
+          optionEl.value = opt;
+          optionEl.textContent = opt;
+          testsDropdown.appendChild(optionEl);
+        });
+    }
+}
+
+// Event listeners
+document.getElementById("refreshTutors").addEventListener("click", loadTutors);
+document.addEventListener("DOMContentLoaded", () => {
+    loadTutors();
+    loadTestOptions();
+});
