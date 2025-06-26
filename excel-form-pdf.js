@@ -39,6 +39,31 @@
 //   - Tipologia = dropdown (Esercizi per casa/Assessment)
 //   - Argomento = readonly uguale alla sezione selezionata
 
+// Configurazione Supabase
+const SUPABASE_URL = "https://elrwpaezjnemmiegkyin.supabase.co"; 
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVscndwYWV6am5lbW1pZWdreWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzAyMDUsImV4cCI6MjA1MzY0NjIwNX0.p6R2S1HK8kPFYiEAYtYaxIAH8XSmzjQBWQ_ywy3akdI";
+
+// Inizializza Supabase client
+let supabase;
+
+// Attendi che Supabase sia disponibile
+function initSupabase() {
+  // Prova prima a usare l'istanza globale se esiste
+  if (window.supabase) {
+    supabase = window.supabase;
+    return true;
+  }
+  
+  // Altrimenti prova a creare una nuova istanza
+  if (window.supabaseClient && window.supabaseClient.createClient) {
+    supabase = window.supabaseClient.createClient(SUPABASE_URL, SUPABASE_KEY);
+    window.supabase = supabase; // Salva globalmente
+    return true;
+  }
+  
+  return false;
+}
+
 class ExcelFormPDF {
   constructor() {
     this.overlay = null;
@@ -1882,6 +1907,12 @@ class ExcelFormPDF {
   }
 
   async uploadPDF() {
+    // Inizializza Supabase se non è già fatto
+    if (!supabase && !initSupabase()) {
+      alert('Errore: Supabase non disponibile. Ricarica la pagina.');
+      return;
+    }
+    
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.accept = 'application/pdf';
@@ -1899,37 +1930,68 @@ class ExcelFormPDF {
       
       console.log('PDF selezionato:', file.name, 'Dimensione:', (file.size / 1024 / 1024).toFixed(2) + 'MB');
       
-      // Simula caricamento con progress
       const statusDiv = document.getElementById('pdfUploadStatus');
       if (statusDiv) {
-        statusDiv.innerHTML = '<p style="color: #1976d2;">⏳ Caricamento in corso...</p>';
+        statusDiv.innerHTML = '<p style="color: #1976d2;">⏳ Caricamento in corso...<span class="excel-pdf-loading"></span></p>';
         
-        // Simula upload dopo 1 secondo
-        setTimeout(() => {
+        try {
+          // Crea un nome file unico usando i dati del test
           const timestamp = new Date().getTime();
           const safeFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-          const simulatedUrl = `https://uptoten-storage.com/test-pdf/${timestamp}_${safeFileName}`;
+          // Usa la struttura: tipologia_sezione_tipologia_esercizi_progressivo_timestamp.pdf
+          const filePath = `${this.commonData.tipologia_test}_${this.commonData.section}_${this.commonData.tipologia_esercizi}_${this.commonData.progressivo}_${timestamp}_${safeFileName}`.replace(/\s+/g, '_');
           
-          statusDiv.innerHTML = `<p class="pdf-status">✅ PDF caricato con successo!</p>
-                                <p style="font-size: 0.8rem; color: #666; margin-top: 0.5rem;">
-                                  <strong>File:</strong> ${file.name}<br>
-                                  <strong>Dimensione:</strong> ${(file.size / 1024 / 1024).toFixed(2)}MB
-                                </p>`;
+          // Carica il file su Supabase Storage nel bucket "tolc_i"
+          const { data: uploadData, error: uploadError } = await supabase
+            .storage
+            .from('tolc_i')
+            .upload(filePath, file);
           
-          // Salva URL
-          this.commonData.pdf_url = simulatedUrl;
+          if (uploadError) {
+            statusDiv.innerHTML = `<p style="color: #dc3545;">❌ Errore nel caricamento: ${uploadError.message}</p>`;
+            console.error('Errore upload PDF:', uploadError);
+            return;
+          }
+          
+          // Ottieni l'URL pubblico del file caricato
+          const { data } = supabase
+            .storage
+            .from('tolc_i')
+            .getPublicUrl(filePath);
+          
+          if (!data || !data.publicUrl) {
+            statusDiv.innerHTML = '<p style="color: #dc3545;">❌ Errore nella generazione dell\'URL</p>';
+            return;
+          }
+          
+          const publicUrl = data.publicUrl;
+          console.log('PDF caricato con successo:', publicUrl);
+          
+          // Salva l'URL
+          this.commonData.pdf_url = publicUrl;
           
           // Aggiorna tutti i record
           this.tableData.forEach(row => {
-            row.pdf_url = this.commonData.pdf_url;
+            row.pdf_url = publicUrl;
           });
           
-          console.log('PDF URL salvato:', this.commonData.pdf_url);
+          // Mostra successo
+          statusDiv.innerHTML = `
+            <p class="pdf-status">✅ PDF caricato con successo!</p>
+            <p style="font-size: 0.8rem; color: #666; margin-top: 0.5rem;">
+              <strong>File:</strong> ${file.name}<br>
+              <strong>Dimensione:</strong> ${(file.size / 1024 / 1024).toFixed(2)}MB<br>
+              <strong>URL:</strong> <a href="${publicUrl}" target="_blank" style="color: #00a666;">Visualizza PDF</a>
+            </p>`;
           
-          // Aggiorna info del test (tutti i dati sono già presenti)
+          // Aggiorna info del test
           document.getElementById('pdfTestInfo').textContent = 
             `${this.commonData.tipologia_test} | ${this.commonData.Materia} | ${this.commonData.section}: ${this.commonData.tipologia_esercizi} ${this.commonData.progressivo}`;
-        }, 1000);
+            
+        } catch (error) {
+          console.error('Errore durante il caricamento:', error);
+          statusDiv.innerHTML = '<p style="color: #dc3545;">❌ Errore durante il caricamento. Riprova.</p>';
+        }
       }
     };
     
@@ -1999,6 +2061,12 @@ class ExcelFormPDF {
   }
 
   async save() {
+    // Inizializza Supabase se non è già fatto
+    if (!supabase && !initSupabase()) {
+      alert('Errore: Supabase non disponibile. Ricarica la pagina.');
+      return;
+    }
+    
     const errors = this.validate();
     
     if (errors.length > 0) {
@@ -2011,29 +2079,66 @@ class ExcelFormPDF {
     }
     
     try {
+      // Mostra stato di caricamento
+      const statusDiv = document.getElementById('uploadMessage') || document.createElement('div');
+      statusDiv.innerHTML = '<p style="color: #1976d2;">⏳ Salvataggio in corso...<span class="excel-pdf-loading"></span></p>';
+      
       // Prepara i dati per il salvataggio
-      const dataToSave = this.tableData.map(row => ({
-        ...row,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }));
+      const dataToSave = this.tableData.map(row => {
+        // Crea una copia pulita del record
+        const cleanRow = {};
+        
+        // Copia solo i campi rilevanti (escludi campi UI)
+        this.columns.forEach(col => {
+          if (row.hasOwnProperty(col)) {
+            // Gestisci conversioni speciali
+            if (col === 'is_open_ended') {
+              cleanRow[col] = Boolean(row[col]);
+            } else if (col === 'page_number' || col === 'question_number' || col === 'progressivo') {
+              cleanRow[col] = parseInt(row[col]) || 0;
+            } else if (col === 'wrong_answers' && typeof row[col] === 'string' && row[col].startsWith('{')) {
+              // È già nel formato PostgreSQL array
+              cleanRow[col] = row[col];
+            } else {
+              cleanRow[col] = row[col];
+            }
+          }
+        });
+        
+        return cleanRow;
+      });
       
       console.log('Dati pronti per il salvataggio:', dataToSave);
+      
+      // Inserisci i dati nella tabella questions
+      const { data, error } = await supabase
+        .from('questions')
+        .insert(dataToSave);
+      
+      if (error) {
+        console.error('Errore Supabase:', error);
+        alert(`❌ Errore durante il salvataggio:\n${error.message}\n\nDettagli: ${error.details || 'Nessun dettaglio disponibile'}`);
+        return;
+      }
       
       // Mostra messaggio di successo
       alert(`✅ Test PDF salvato con successo!\n\n` +
         `Test: ${this.commonData.tipologia_test}\n` +
         `Materia: ${this.commonData.Materia}\n` +
         `Test: ${this.commonData.section}: ${this.commonData.tipologia_esercizi} ${this.commonData.progressivo}\n` +
-        `Domande: ${this.tableData.length}\n\n` +
-        `I dati sono pronti per essere inviati al database.`);
+        `Domande salvate: ${dataToSave.length}`);
       
       // Chiudi il form dopo il salvataggio
       this.overlay.style.display = 'none';
       
+      // Ricarica la pagina per aggiornare la lista
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+      
     } catch (error) {
       console.error('Errore durante il salvataggio:', error);
-      alert('❌ Errore durante il salvataggio. Riprova.');
+      alert(`❌ Errore durante il salvataggio:\n${error.message || 'Errore sconosciuto'}`);
     }
   }
 }
@@ -2044,3 +2149,13 @@ excelFormPDF.init();
 
 // Esponi globalmente
 window.excelFormPDF = excelFormPDF;
+
+// Aggiungi questa funzione helper per verificare che Supabase sia pronto
+window.addEventListener('load', () => {
+  // Prova a inizializzare Supabase dopo che la pagina è caricata
+  setTimeout(() => {
+    if (!supabase) {
+      initSupabase();
+    }
+  }, 500);
+});

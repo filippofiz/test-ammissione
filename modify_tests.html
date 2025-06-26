@@ -490,6 +490,12 @@
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+    // IMPORTANTE: Esponi Supabase globalmente per i form Excel
+    window.SUPABASE_URL = SUPABASE_URL;
+    window.SUPABASE_KEY = SUPABASE_KEY;
+    window.supabase = supabase;
+    window.supabaseClient = { createClient };
+
     // Aspetta che l'header sia caricato, poi aggiorna il nome
     setTimeout(async () => {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -545,16 +551,32 @@
   <script src="floating-back-button.js"></script>
   <script src="animated-background.js"></script>
   <script src="excel-form-pdf.js"></script>
+<script>
+  // Carica lo script in modo asincrono con gestione errori
+  (function() {
+    const script = document.createElement('script');
+    script.src = 'excel-form-bancadati.js';
+    script.onload = function() {
+      console.log('✅ excel-form-bancadati.js caricato con successo!');
+    };
+    script.onerror = function() {
+      console.error('❌ Errore nel caricare excel-form-bancadati.js');
+    };
+    document.head.appendChild(script);
+  })();
+</script>
 <!-- Aggiungi questo script PRIMA del tag </body> nel file modify_tests.html -->
 
 <script>
   // Gestione del nuovo bottone per il caricamento avanzato
   window.addEventListener('load', function() {
-    // Usa window.onload per essere sicuri che TUTTO sia caricato
     const newUploadBtn = document.getElementById('newUploadBtn');
     
     if (newUploadBtn) {
       console.log('Bottone Caricamento Avanzato trovato!');
+      
+      // Rimuovi "(Beta - non funzionante)" dal testo del bottone ora che funziona
+      newUploadBtn.textContent = '🚀 Caricamento Avanzato';
       
       // Aggiungi effetto hover
       newUploadBtn.addEventListener('mouseenter', function() {
@@ -578,16 +600,23 @@
         console.log('Tipo test selezionato:', testType);
         
         if (testType === 'PDF') {
-          // Verifica che excelFormPDF sia disponibile
+          // Apri form PDF
           if (typeof excelFormPDF !== 'undefined' && excelFormPDF.open) {
-            console.log('Apertura form Excel...');
+            console.log('Apertura form Excel PDF...');
             excelFormPDF.open();
           } else {
             console.error('excelFormPDF non trovato!');
-            alert('⚠️ Il modulo di caricamento avanzato non è ancora caricato. Ricarica la pagina e riprova.');
+            alert('⚠️ Il modulo di caricamento PDF non è ancora caricato. Ricarica la pagina e riprova.');
           }
-        } else {
-          alert('⚠️ Il caricamento avanzato per Banca Dati è ancora in sviluppo!');
+        } else if (testType === 'Banca Dati') {
+          // Apri form Banca Dati
+          if (typeof excelFormBancaDati !== 'undefined' && excelFormBancaDati.open) {
+            console.log('Apertura form Excel Banca Dati...');
+            excelFormBancaDati.open();
+          } else {
+            console.error('excelFormBancaDati non trovato!');
+            alert('⚠️ Il modulo di caricamento Banca Dati non è ancora caricato. Ricarica la pagina e riprova.');
+          }
         }
       });
     } else {
