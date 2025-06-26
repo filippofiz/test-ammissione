@@ -1,58 +1,100 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Test Banca Dati</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>Test Banca Dati - Up to Ten</title>
+  <link rel="stylesheet" href="header.css">
+  <link rel="stylesheet" href="test_bancaDati.css">
   <script>
     window.MathJax = {
       tex: {
-        inlineMath: [['$', '$'], ['\\(', '\\)']]
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
       }
     };
   </script>
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
 </head>
 <body>
-  <div class="test-bocconi-container" id="testContainer" tabindex="0">
-    <!-- Expanded Question Section -->
-    <div class="bocconi-question-section">
-      <!-- Timer (hidden on welcome page) -->
-      <div id="timer" class="bocconi-timer" style="visibility: hidden;">⏳ Tempo: <span id="time-left"></span></div>
-      
-      <!-- Navigation Buttons: Both Previous and Next -->
-      <div class="bocconi-navigation">
-        <button id="prevPage" style="display: none;">Indietro</button>
-        <button id="nextPage" style="display: none;">Avanti</button>
-      </div>
-      
-      <!-- Question & Answer Container -->
-      <div id="question-container"></div>
-      
-      <!-- Submit Section -->
-      <div class="bocconi-submit-section">
-        <button id="submitAnswers" style="display: none;">Manda Risposte</button>
-        <p id="submissionMessage" style="color: green; display: none;"></p>
-      </div>
-    </div>
+  <!-- Container principale per fullscreen -->
+  <div id="testContainer">
+    <!-- Header placeholder - nascosto in fullscreen -->
+    <div id="header-placeholder"></div>
 
-    <!-- Right Side Navigation Quiz -->
-    <div class="bocconi-nav-container">
-      <h3>Navigazione quiz</h3>
-      <div id="questionNav"></div>
+    <div class="test-container">
+      <!-- Area principale domande (più grande senza PDF) -->
+      <div class="question-section">
+        <div id="timer" style="visibility: hidden;">
+          ⏳ Tempo: <span id="time-left">--:--</span>
+        </div>
+
+        <div class="navigation" style="display: none;">
+          <button id="prevPage">Indietro</button>
+          <button id="nextPage">Avanti</button>
+        </div>
+
+        <div id="question-container">
+          <!-- Contenuto generato dinamicamente da JS -->
+        </div>
+      </div>
+
+      <!-- Navigazione quiz laterale -->
+      <div class="nav-container">
+        <h3>📍 Navigazione quiz</h3>
+        <div id="questionNav"></div>
+        <button id="submitAnswers" class="submit-btn" style="display: none;">
+          📤 Invia Test
+        </button>
+      </div>
     </div>
   </div>
 
-  <!-- Include Supabase -->
+  <script>
+    // Carica l'header dal file esterno
+    fetch('header.html')
+      .then(response => response.text())
+      .then(data => {
+        document.getElementById('header-placeholder').innerHTML = data;
+      });
+  </script>
+
+  <!-- Supabase -->
   <script type="module">
     import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
     const SUPABASE_URL = "https://elrwpaezjnemmiegkyin.supabase.co"; 
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVscndwYWV6am5lbW1pZWdreWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzAyMDUsImV4cCI6MjA1MzY0NjIwNX0.p6R2S1HK8kPFYiEAYtYaxIAH8XSmzjQBWQ_ywy3akdI";  
-
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVscndwYWV6am5lbW1pZWdreWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzAyMDUsImV4cCI6MjA1MzY0NjIwNX0.p6R2S1HK8kPFYiEAYtYaxIAH8XSmzjQBWQ_ywy3akdI";
     window.supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-  </script>
 
+    // Setup header dopo il caricamento
+    setTimeout(async () => {
+      if (!document.fullscreenElement) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData?.session) {
+          const userId = sessionData.session.user.id;
+          const { data: student } = await supabase
+            .from("students")
+            .select("name")
+            .eq("auth_uid", userId)
+            .single();
+          
+          if (student?.name) {
+            const userNameElement = document.querySelector('.user-name');
+            if (userNameElement) {
+              userNameElement.textContent = student.name;
+            }
+          }
+        }
+
+        // Event listener logout
+        document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+          await supabase.auth.signOut();
+          window.location.href = "login.html";
+        });
+      }
+    }, 100);
+  </script>
+  
   <script type="module" src="test_bancaDati.js"></script>
 </body>
 </html>
