@@ -70,19 +70,13 @@ function moveSubmitButtonForTablet() {
 document.addEventListener("DOMContentLoaded", async () => {
     console.log("DOM fully loaded. Initializing test...");
     console.log("Selected Test ID:", testId);
-    const submitBtn = document.getElementById("submitAnswers");
-
-    if (!submitBtn) {
-        console.error("ERROR: 'submitAnswers' button not found in HTML.");
-        return;
+       const submitBtn = document.getElementById("submitAnswers");
+    if (submitBtn) {
+        submitBtn.addEventListener("click", async () => {
+            console.log("Submit button clicked!");
+            await submitAnswers(false); // false = non è scaduto il tempo
+        });
     }
-
-    console.log("Submit button found!");
-
-    submitBtn.addEventListener("click", async () => {
-        console.log("Submit button clicked!");
-        await submitAnswers();
-    });
 
     // Ensure navigation buttons exist
     const prevPageBtn = document.getElementById("prevPage");
@@ -567,11 +561,15 @@ function selectAnswer(questionId, answer, btn) {
     });
   }
 
-async function submitAnswers() {
-    // Ask the student to confirm before submission.
-    if (!confirm("Sei sicuro di voler inviare le risposte?")) {
-        return; // If they cancel, do nothing.
+async function submitAnswers(timeExpired = false) {
+    // Se NON è scaduto il tempo, chiedi conferma con dialog personalizzato
+    if (!timeExpired) {
+        const confirmSubmit = await customConfirm("Sei sicuro di voler inviare le risposte?");
+        if (!confirmSubmit) {
+            return;
+        }
     }
+    
     isSubmitting = true;
     let studentId = sessionStorage.getItem("studentId");
 
@@ -583,33 +581,32 @@ async function submitAnswers() {
 
         if (sessionError || !sessionData || !sessionData.session) {
             console.error("❌ ERROR: No active session found.");
-            alert("Session expired. Please log in again.");
+            showCustomAlert("Sessione scaduta. Effettua nuovamente il login.");
             window.location.href = "login.html";
             return;
         }
 
         studentId = sessionData.session.user.id;
-        sessionStorage.setItem("studentId", studentId); // ✅ Save it again
+        sessionStorage.setItem("studentId", studentId);
         console.log("✅ Student ID restored:", studentId);
     }
 
-    if (Object.keys(studentAnswers).length === 0) {
-        alert("No answers selected. Please answer at least one question.");
+    if (Object.keys(studentAnswers).length === 0 && !timeExpired) {
+        showCustomAlert("Nessuna risposta selezionata. Rispondi ad almeno una domanda.");
+        isSubmitting = false;
         return;
     }
 
     console.log("📌 Submitting answers for student:", studentId);
 
-    // Instead of mapping over studentAnswers, loop over all questions:
     const submissions = questions.map(q => {
-        // If no answer selected for this question, assign "z"
         const answer = (q.id in studentAnswers) ? studentAnswers[q.id] : "z";
         let auto_score = null;
         if (!q.is_open_ended) {
             auto_score = answer === q.correct_answer ? 1 : 0;
         }
         return {
-            auth_uid: studentId,  // Using auth_uid
+            auth_uid: studentId,
             question_id: q.id,
             answer: answer,
             auto_score: auto_score,
@@ -626,13 +623,14 @@ async function submitAnswers() {
 
     if (error) {
         console.error("❌ ERROR submitting answers:", error);
-        alert("Submission failed. Please try again.");
+        showCustomAlert("Invio fallito. Riprova.");
+        isSubmitting = false;
+        return;
     } else {
         console.log("✅ Answers submitted successfully!", data);
-        alert("Answers submitted successfully!");
     }
 
-    // ✅ Mark test as completed in `student_tests`
+    // ✅ Mark test as completed
     await supabase
         .from("student_tests")
         .update({ status: "completed" })
@@ -645,9 +643,107 @@ async function submitAnswers() {
 
     console.log("✅ Test marked as completed!");
 
-    // ✅ Turn test button green in `test-selection.html`
+    // ✅ Messaggio diverso se il tempo è scaduto
+    if (timeExpired) {
+        await showCustomAlert("⏰ Tempo scaduto! Le tue risposte sono state inviate automaticamente.", true);
+    } else {
+        await showCustomAlert("✅ Risposte inviate con successo!");
+    }
+
+    // ✅ Esci dal fullscreen SOLO dopo aver mostrato il messaggio
+    if (document.fullscreenElement) {
+        await document.exitFullscreen();
+    }
+
     sessionStorage.setItem("testCompleted", "true");
-    window.location.href = "test_selection.html";    
+    window.location.href = "test_selection.html";
+}
+
+function showCustomAlert(message, isTimeExpired = false) {
+    return new Promise(resolve => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100000;
+        `;
+
+        const dialog = document.createElement('div');
+        dialog.style.cssText = `
+            background: white;
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 450px;
+            animation: slideIn 0.3s ease-out;
+        `;
+
+        // Aggiungi animazione
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateY(-20px);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateY(0);
+                    opacity: 1;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        dialog.innerHTML = `
+            <div style="font-size: 3rem; margin-bottom: 1rem;">
+                ${isTimeExpired ? '⏰' : '✅'}
+            </div>
+            <p style="font-size: 1.2rem; color: rgb(28, 37, 69); margin-bottom: 1.5rem; line-height: 1.5;">
+                ${message}
+            </p>
+            <button style="
+                background: #00a666;
+                color: white;
+                border: none;
+                padding: 0.75rem 2rem;
+                border-radius: 8px;
+                font-size: 1rem;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            " onmouseover="this.style.background='#00c97a'" 
+               onmouseout="this.style.background='#00a666'">
+                OK
+            </button>
+        `;
+
+        const button = dialog.querySelector('button');
+        button.addEventListener('click', () => {
+            document.body.removeChild(overlay);
+            resolve();
+        });
+
+        overlay.appendChild(dialog);
+        document.body.appendChild(overlay);
+
+        // Auto-close dopo 5 secondi se è scaduto il tempo
+        if (isTimeExpired) {
+            setTimeout(() => {
+                if (document.body.contains(overlay)) {
+                    document.body.removeChild(overlay);
+                    resolve();
+                }
+            }, 5000);
+        }
+    });
 }
 
 // ✅ Function to Update the Timer Display
@@ -663,11 +759,11 @@ function updateTimer() {
         const now = new Date().getTime();
         const endTime = new Date(testEndTime).getTime();
 
-        const timeLeft = endTime - now; // ✅ Correct calculation
+        const timeLeft = endTime - now;
 
         if (timeLeft <= 0) {
             console.log("⏳ Time's up! Auto-submitting answers...");
-            submitAnswers();  // ✅ Auto-submit when time runs out
+            submitAnswers(true);  // ✅ Passa true per indicare che è scaduto il tempo
             clearInterval(timerInterval);
             return;
         }
@@ -678,8 +774,8 @@ function updateTimer() {
         timerElement.textContent = `Tempo rimasto: ${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
     }
 
-    const timerInterval = setInterval(tick, 1000); // ✅ Update every second
-    tick(); // ✅ Call once immediately
+    const timerInterval = setInterval(tick, 1000);
+    tick();
 }
 
 let currentSubsection = 1; // Track which subsection the student is on
