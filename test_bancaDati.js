@@ -316,7 +316,7 @@ function getQuestionsForPage(page) {
   return pageQuestions;
 }
 
-function loadQuestionsForPage(page) {
+async function loadQuestionsForPage(page) {
   currentPage = page;
   sessionStorage.setItem("currentPage", currentPage);
   const questionContainer = document.getElementById("question-container");
@@ -325,17 +325,14 @@ function loadQuestionsForPage(page) {
 
   // Pagina di benvenuto
   if (page === 1) {
-    const isSimulazione = sessionStorage.getItem("currentSection") === "Simulazioni";
-    const isAssessment = sessionStorage.getItem("currentSection") === "Assessment Iniziale";
-    let testTypeName = "Banca Dati";
-    if (isSimulazione) testTypeName = "di Simulazione";
-    else if (isAssessment) testTypeName = "Assessment Iniziale";
+    const currentSection = sessionStorage.getItem("currentSection");
     
     const welcomeDiv = document.createElement("div");
     welcomeDiv.className = "welcome-page";
     
+    // Titolo - solo nome del test
     const title = document.createElement("h2");
-    title.textContent = `Benvenuto al Test ${testTypeName}`;
+    title.textContent = currentSection;
     welcomeDiv.appendChild(title);
     
     // Box istruzioni
@@ -347,19 +344,64 @@ function loadQuestionsForPage(page) {
     instructionsBox.appendChild(instructionsTitle);
     
     const instructionsList = document.createElement("ul");
-    const instructions = [
-      "Il test prevede <strong>3 domande per pagina</strong>",
+    const instructions = [];
+    
+    // Recupera e aggiungi la durata come prima istruzione
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData?.session) {
+        const studentId = sessionData.session.user.id;
+        const currentTipologiaEsercizi = sessionStorage.getItem("currentTipologiaEsercizi");
+        const currentTestProgressivo = sessionStorage.getItem("currentTestProgressivo");
+        const selectedTestType = sessionStorage.getItem("selectedTestType");
+        
+        const { data: testData } = await supabase
+          .from("student_tests")
+          .select("duration")
+          .eq("auth_uid", studentId)
+          .eq("section", currentSection)
+          .eq("tipologia_esercizi", currentTipologiaEsercizi)
+          .eq("progressivo", currentTestProgressivo)
+          .eq("tipologia_test", selectedTestType)
+          .single();
+        
+        if (testData?.duration) {
+          const totalSeconds = testData.duration;
+          const minutes = Math.floor(totalSeconds / 60);
+          const seconds = totalSeconds % 60;
+          let durationText = "";
+          
+          if (minutes > 0 && seconds > 0) {
+            durationText = `<strong>${minutes} minuti e ${seconds} secondi</strong>`;
+          } else if (minutes > 0) {
+            durationText = `<strong>${minutes} minuti</strong>`;
+          } else {
+            durationText = `<strong>${seconds} secondi</strong>`;
+          }
+          
+          instructions.push(`Durata del test: ${durationText}`);
+        }
+      }
+    } catch (error) {
+      console.error("Errore nel recupero durata:", error);
+    }
+    
+    // Aggiungi le altre istruzioni
+    instructions.push("Il test prevede <strong>3 domande per pagina</strong>");
+    
+    instructions.push(
       isBocconiTest ? 
         "Non potrai tornare indietro: la navigazione è <strong>solo in avanti</strong>" :
         hasSections ? 
           "Puoi navigare <strong>solo all'interno della sezione corrente</strong>" :
-          "Puoi navigare liberamente tra le domande",
-      "Il test va svolto a <strong>schermo intero</strong>",
-      "Ogni tentativo di uscita <strong>annulla il test</strong>"
-    ];
+          "Puoi navigare liberamente tra le domande"
+    );
     
-    if (hasSections) {
-      instructions.push(`Le domande sono organizzate in <strong>${sectionNames.length || Object.keys(sectionBoundaries).length} sezioni</strong>`);
+    instructions.push("Il test va svolto a <strong>schermo intero</strong>");
+    instructions.push("Ogni tentativo di uscita <strong>annulla il test</strong>");
+    
+    if (hasSections && sectionNames.length > 0) {
+      instructions.push(`Le domande sono organizzate in <strong>${sectionNames.length} sezioni</strong>`);
     }
     
     instructions.forEach(text => {
@@ -397,6 +439,7 @@ function loadQuestionsForPage(page) {
     startBtn.textContent = "🚀 Inizia Test";
     startBtn.addEventListener("click", async () => {
       timerStarted = true;
+      sessionStorage.setItem('timerStarted', 'true');
       expiredSections.clear();
       await enforceFullScreen();
       await startTimerBocconi();
@@ -630,13 +673,29 @@ function createNavigationContainer() {
     if (currentPage < totalPages) navigateToNextPage();
   });
   
-  // Bottone Submit
+  // Bottone Submit - SEMPRE VISIBILE
   const submitBtn = document.createElement("button");
   submitBtn.id = "submitAnswers";
-  submitBtn.textContent = "Invia Test";
-  submitBtn.addEventListener("click", async () => {
-    await submitAnswersBocconi();
-  });
+  submitBtn.textContent = "📤 Invia Test";
+  
+  // Controlla se siamo nell'ultima sezione
+  const currentSection = getCurrentSectionForPage(currentPage);
+  const totalSections = hasSections ? Math.max(...Object.keys(sectionBoundaries).map(k => parseInt(k))) : 1;
+  const isLastSection = !hasSections || currentSection >= totalSections;
+  
+  if (!isLastSection) {
+    // Non nell'ultima sezione - disabilita il bottone
+    submitBtn.disabled = true;
+    submitBtn.classList.add("disabled");
+    submitBtn.title = "Disponibile solo nell'ultima sezione";
+    submitBtn.style.opacity = "0.5";
+    submitBtn.style.cursor = "not-allowed";
+  } else {
+    // Ultima sezione - abilita il bottone
+    submitBtn.addEventListener("click", async () => {
+      await submitAnswersBocconi();
+    });
+  }
   
   navContainer.appendChild(prevBtn);
   navContainer.appendChild(nextBtn);
@@ -644,7 +703,6 @@ function createNavigationContainer() {
   
   return navContainer;
 }
-
 function navigateToPrevPage() {
   if (isBocconiTest) return;
   
