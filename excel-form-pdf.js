@@ -547,7 +547,8 @@ class ExcelFormPDF {
         'Geometria',
         'Funzioni',
         'Pensiero critico',
-        'Ragionamento numerico'
+        'Ragionamento numerico',
+        'Comprensione verbale'
       ];
       
       let selectHTML = '<select id="configPDFSection" style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6; border-radius: 6px;">';
@@ -1679,7 +1680,8 @@ class ExcelFormPDF {
         'Geometria',
         'Funzioni',
         'Pensiero critico',
-        'Ragionamento numerico'
+        'Ragionamento numerico',
+        'Comprensione verbale'
       ];
       
       // Popola il datalist
@@ -2021,7 +2023,8 @@ class ExcelFormPDF {
       'Geometria',
       'Funzioni',
       'Pensiero critico',
-      'Ragionamento numerico'
+      'Ragionamento numerico',
+      'Comprensione verbale'
     ];
     
     // Valori validi per risposte
