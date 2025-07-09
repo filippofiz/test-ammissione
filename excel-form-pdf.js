@@ -76,7 +76,6 @@ class ExcelFormPDF {
       'section',
       'tipologia_esercizi',
       'progressivo',
-      'criptato',
       'page_number',
       'question_number',
       'correct_answer',
@@ -1380,7 +1379,6 @@ class ExcelFormPDF {
     // Dati della riga
     const rowData = {
       ...this.commonData,
-      criptato: false,
       page_number: '',  // Vuoto di default
       question_number: rowIndex + 1,
       correct_answer: '',
@@ -1937,11 +1935,11 @@ class ExcelFormPDF {
         statusDiv.innerHTML = '<p style="color: #1976d2;">⏳ Caricamento in corso...<span class="excel-pdf-loading"></span></p>';
         
         try {
-          // Crea un nome file unico usando i dati del test
-          const timestamp = new Date().getTime();
-          const safeFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-          // Usa la struttura: tipologia_sezione_tipologia_esercizi_progressivo_timestamp.pdf
-          const filePath = `${this.commonData.tipologia_test}_${this.commonData.section}_${this.commonData.tipologia_esercizi}_${this.commonData.progressivo}_${timestamp}_${safeFileName}`.replace(/\s+/g, '_');
+          // USA ESATTAMENTE LO STESSO FORMATO DI modify_tests.js
+          const groupKey = `${this.commonData.section}||${this.commonData.tipologia_esercizi}||${this.commonData.progressivo}||${this.commonData.tipologia_test}`;
+          const filePath = `${groupKey.replace(/\|\|/g, "_")}_${Date.now()}.pdf`;
+          
+          console.log('FilePath generato:', filePath);
           
           // Carica il file su Supabase Storage nel bucket "tolc_i"
           const { data: uploadData, error: uploadError } = await supabase
@@ -1950,10 +1948,12 @@ class ExcelFormPDF {
             .upload(filePath, file);
           
           if (uploadError) {
-            statusDiv.innerHTML = `<p style="color: #dc3545;">❌ Errore nel caricamento: ${uploadError.message}</p>`;
             console.error('Errore upload PDF:', uploadError);
+            statusDiv.innerHTML = `<p style="color: #dc3545;">❌ Errore nel caricamento: ${uploadError.message}</p>`;
             return;
           }
+          
+          console.log('Upload completato:', uploadData);
           
           // Ottieni l'URL pubblico del file caricato
           const { data } = supabase
