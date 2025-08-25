@@ -572,19 +572,95 @@ class ExcelFormPDF {
       `;
       // Trigger calcolo progressivo dopo aver impostato il valore
       setTimeout(() => this.checkAndCalculateProgressivo(), 0);
-    } else if (materia === 'Altro' || materia === 'Matematica' || materia === 'Assessment Iniziale') {
-      // Per Altro, Matematica e Assessment Iniziale: dropdown con tutte le opzioni matematiche
+    } else if (materia === 'Assessment Iniziale') {
+      // Per Assessment Iniziale: campo readonly
+      sectionField.innerHTML = `
+        <input type="text" id="configPDFSection" value="Assessment Iniziale" readonly 
+               style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6; 
+                      border-radius: 6px; background: #f0f0f0; color: #666;">
+      `;
+      // Trigger calcolo progressivo dopo aver impostato il valore
+      setTimeout(() => this.checkAndCalculateProgressivo(), 0);
+    } else if (materia === 'Fisica') {
+      // Per Fisica: opzioni specifiche
       const sectionOptions = [
         '',
+        'Cinematica e vettori',
+        'Dinamica e energia',
+        'Fluidi termodinamica e onde',
+        'Elettromagnetismo'
+      ];
+      
+      let selectHTML = '<select id="configPDFSection" style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6; border-radius: 6px;">';
+      selectHTML += '<option value="">Seleziona...</option>';
+      sectionOptions.forEach(option => {
+        if (option) {
+          selectHTML += `<option value="${option}">${option}</option>`;
+        }
+      });
+      selectHTML += '</select>';
+      
+      sectionField.innerHTML = selectHTML;
+      
+      // Aggiungi event listener al nuovo select
+      document.getElementById('configPDFSection').addEventListener('change', () => this.checkAndCalculateProgressivo());
+    } else if (materia === 'Scienze') {
+      // Per Scienze: opzioni specifiche
+      const sectionOptions = [
+        '',
+        'Atomo, tavola periodica e materia',
+        'Chimica organica e biochimica',
+        'Nomenclatura e legami',
+        'Stechiometria e soluzioni'
+      ];
+      
+      let selectHTML = '<select id="configPDFSection" style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6; border-radius: 6px;">';
+      selectHTML += '<option value="">Seleziona...</option>';
+      sectionOptions.forEach(option => {
+        if (option) {
+          selectHTML += `<option value="${option}">${option}</option>`;
+        }
+      });
+      selectHTML += '</select>';
+      
+      sectionField.innerHTML = selectHTML;
+      
+      // Aggiungi event listener al nuovo select
+      document.getElementById('configPDFSection').addEventListener('change', () => this.checkAndCalculateProgressivo());
+    } else if (materia === 'Altro') {
+      // Per Altro: solo opzioni generali
+      const sectionOptions = [
+        '',
+        'Pensiero critico',
+        'Ragionamento numerico',
+        'Comprensione verbale',
+        'Logica'
+      ];
+      
+      let selectHTML = '<select id="configPDFSection" style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6; border-radius: 6px;">';
+      selectHTML += '<option value="">Seleziona...</option>';
+      sectionOptions.forEach(option => {
+        if (option) {
+          selectHTML += `<option value="${option}">${option}</option>`;
+        }
+      });
+      selectHTML += '</select>';
+      
+      sectionField.innerHTML = selectHTML;
+      
+      // Aggiungi event listener al nuovo select
+      document.getElementById('configPDFSection').addEventListener('change', () => this.checkAndCalculateProgressivo());
+    } else if (materia === 'Matematica') {
+      // Per Matematica: opzioni matematiche
+      const sectionOptions = [
+        '',
+        'Logica e insiemi',
         'Algebra',
         'Logaritmi ed esponenziali',
         'Probabilità, combinatoria e statistica',
         'Goniometria e trigonometria',
         'Geometria',
-        'Funzioni',
-        'Pensiero critico',
-        'Ragionamento numerico',
-        'Comprensione verbale'
+        'Funzioni'
       ];
       
       let selectHTML = '<select id="configPDFSection" style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6; border-radius: 6px;">';
@@ -617,6 +693,15 @@ class ExcelFormPDF {
       // Per Simulazioni: campo readonly con valore "Test"
       tipologiaField.innerHTML = `
         <input type="text" id="configPDFTipologia" value="Test" readonly 
+               style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6; 
+                      border-radius: 6px; background: #f0f0f0; color: #666;">
+      `;
+      // Trigger calcolo progressivo dopo aver impostato il valore
+      setTimeout(() => this.checkAndCalculateProgressivo(), 0);
+    } else if (materia === 'Assessment Iniziale') {
+      // Per Assessment Iniziale: campo readonly con valore "Assessment"
+      tipologiaField.innerHTML = `
+        <input type="text" id="configPDFTipologia" value="Assessment" readonly 
                style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6; 
                       border-radius: 6px; background: #f0f0f0; color: #666;">
       `;
@@ -678,6 +763,8 @@ class ExcelFormPDF {
           <select id="configPDFMateria" style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6; border-radius: 6px;">
             <option value="">Seleziona...</option>
             <option value="Matematica">Matematica</option>
+            <option value="Fisica">Fisica</option>
+            <option value="Scienze">Scienze</option>
             <option value="Assessment Iniziale">Assessment Iniziale</option>
             <option value="Simulazioni">Simulazioni</option>
             <option value="Altro">Altro</option>
@@ -1200,8 +1287,8 @@ class ExcelFormPDF {
       ℹ️ <strong>Nota:</strong> Tutti i campi comuni sono stati impostati nella configurazione iniziale.
       Compila solo le informazioni specifiche per ogni domanda.`;
     
-    // Aggiungi nota speciale per Simulazioni
-    if (this.commonData.Materia === 'Simulazioni') {
+    // Aggiungi nota speciale per Simulazioni e Assessment Iniziale
+    if (this.commonData.Materia === 'Simulazioni' || this.commonData.Materia === 'Assessment Iniziale') {
       bannerText += `<br><br>💡 <strong>Suggerimento per l'argomento:</strong>
         <br>&nbsp;&nbsp;• <strong>Cliccare sul campo</strong> per vedere tutte le opzioni
         <br>&nbsp;&nbsp;• <strong>Doppio click o freccia ↓</strong> per rivedere le opzioni quando sei già nel campo
@@ -1421,7 +1508,7 @@ class ExcelFormPDF {
       correct_answer: '',
       wrong_answers: '',
       is_open_ended: false,
-      argomento: this.commonData.Materia === 'Simulazioni' ? '' : this.commonData.section
+      argomento: (this.commonData.Materia === 'Simulazioni' || this.commonData.Materia === 'Assessment Iniziale') ? '' : this.commonData.section
     };
     
     // Crea celle per colonne visibili
@@ -1694,37 +1781,62 @@ class ExcelFormPDF {
     // Argomento - condizionale in base alla macro-sezione
     const tdArgomento = document.createElement('td');
     
-    if (rowData.Materia === 'Simulazioni') {
-      // Per Simulazioni: input con datalist (dropdown + input)
-      const argomentoInput = document.createElement('input');
-      argomentoInput.type = 'text';
-      argomentoInput.placeholder = 'Clicca o inizia a digitare...';
-      argomentoInput.value = rowData.argomento || '';
-      argomentoInput.setAttribute('list', `argomento-list-${rowIndex}`);
+    if (rowData.Materia === 'Simulazioni' || rowData.Materia === 'Assessment Iniziale') {
+      // Per Simulazioni e Assessment Iniziale: usa CustomDropdown
       
-      // Crea datalist per il dropdown
-      const datalist = document.createElement('datalist');
-      datalist.id = `argomento-list-${rowIndex}`;
-      
-      // Lista valori validi
-      const validArgomenti = [
-        'Algebra',
-        'Logaritmi ed esponenziali',
-        'Probabilità, combinatoria e statistica',
-        'Goniometria e trigonometria',
-        'Geometria',
-        'Funzioni',
-        'Pensiero critico',
-        'Ragionamento numerico',
-        'Comprensione verbale'
+      // Lista valori validi con categorie per organizzazione visiva
+      const argomentiConCategoria = [
+        // Matematica
+        { value: 'Logica e insiemi', category: 'MAT', color: '#1976d2' },
+        { value: 'Algebra', category: 'MAT', color: '#1976d2' },
+        { value: 'Logaritmi ed esponenziali', category: 'MAT', color: '#1976d2' },
+        { value: 'Probabilità, combinatoria e statistica', category: 'MAT', color: '#1976d2' },
+        { value: 'Goniometria e trigonometria', category: 'MAT', color: '#1976d2' },
+        { value: 'Geometria', category: 'MAT', color: '#1976d2' },
+        { value: 'Funzioni', category: 'MAT', color: '#1976d2' },
+        // Fisica
+        { value: 'Cinematica e vettori', category: 'FIS', color: '#2e7d32' },
+        { value: 'Dinamica e energia', category: 'FIS', color: '#2e7d32' },
+        { value: 'Fluidi termodinamica e onde', category: 'FIS', color: '#2e7d32' },
+        { value: 'Elettromagnetismo', category: 'FIS', color: '#2e7d32' },
+        // Scienze
+        { value: 'Atomo, tavola periodica e materia', category: 'SCI', color: '#d84315' },
+        { value: 'Chimica organica e biochimica', category: 'SCI', color: '#d84315' },
+        { value: 'Nomenclatura e legami', category: 'SCI', color: '#d84315' },
+        { value: 'Stechiometria e soluzioni', category: 'SCI', color: '#d84315' },
+        // Altri
+        { value: 'Pensiero critico', category: 'GEN', color: '#6a1b9a' },
+        { value: 'Ragionamento numerico', category: 'GEN', color: '#6a1b9a' },
+        { value: 'Comprensione verbale', category: 'GEN', color: '#6a1b9a' },
+        { value: 'Logica', category: 'GEN', color: '#6a1b9a' }
       ];
       
-      // Popola il datalist
-      validArgomenti.forEach(arg => {
-        const option = document.createElement('option');
-        option.value = arg;
-        datalist.appendChild(option);
+      // Lista dei valori validi (senza prefissi) per validazione
+      const validArgomenti = argomentiConCategoria.map(item => item.value);
+      
+      // Crea container per il dropdown custom
+      const dropdownContainer = document.createElement('div');
+      dropdownContainer.style.width = '100%';
+      
+      // Inizializza CustomDropdown
+      const customDropdown = new CustomDropdown(dropdownContainer, {
+        value: rowData.argomento || '',
+        placeholder: 'Clicca o inizia a digitare...',
+        items: argomentiConCategoria,
+        id: `argomento-dropdown-${rowIndex}`,
+        onChange: (value) => {
+          this.updateCell(rowIndex, 'argomento', value);
+        },
+        onBlur: (value) => {
+          // Normalizza il valore quando l'utente esce dal campo
+          const normalized = normalizeArgomento(value);
+          customDropdown.setValue(normalized);
+          this.updateCell(rowIndex, 'argomento', normalized);
+        }
       });
+      
+      // Salva riferimento al dropdown per gestione paste
+      dropdownContainer.customDropdown = customDropdown;
       
       // Funzione per normalizzare il testo
       const normalizeArgomento = (text) => {
@@ -1733,6 +1845,8 @@ class ExcelFormPDF {
         
         // Mappa per gestire casi speciali
         const specialCases = {
+          // Matematica
+          'logica e insiemi': 'Logica e insiemi',
           'algebra': 'Algebra',
           'logaritmi ed esponenziali': 'Logaritmi ed esponenziali',
           'probabilità, combinatoria e statistica': 'Probabilità, combinatoria e statistica',
@@ -1742,8 +1856,22 @@ class ExcelFormPDF {
           'goniometria e trigonometria': 'Goniometria e trigonometria',
           'geometria': 'Geometria',
           'funzioni': 'Funzioni',
+          // Fisica
+          'cinematica e vettori': 'Cinematica e vettori',
+          'dinamica e energia': 'Dinamica e energia',
+          'fluidi termodinamica e onde': 'Fluidi termodinamica e onde',
+          'elettromagnetismo': 'Elettromagnetismo',
+          // Scienze
+          'atomo, tavola periodica e materia': 'Atomo, tavola periodica e materia',
+          'atomo tavola periodica e materia': 'Atomo, tavola periodica e materia',
+          'chimica organica e biochimica': 'Chimica organica e biochimica',
+          'nomenclatura e legami': 'Nomenclatura e legami',
+          'stechiometria e soluzioni': 'Stechiometria e soluzioni',
+          // Altri
           'pensiero critico': 'Pensiero critico',
-          'ragionamento numerico': 'Ragionamento numerico'
+          'ragionamento numerico': 'Ragionamento numerico',
+          'comprensione verbale': 'Comprensione verbale',
+          'logica': 'Logica'
         };
         
         // Cerca corrispondenza (anche parziale)
@@ -1757,72 +1885,8 @@ class ExcelFormPDF {
         return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
       };
       
-      // Validazione in tempo reale
-      const validateArgomento = (value) => {
-        const isValid = validArgomenti.includes(value.trim()) || value.trim() === '';
-        if (!isValid && value.trim() !== '') {
-          argomentoInput.classList.add('invalid-argomento');
-          argomentoInput.title = '⚠️ Valore non valido! Opzioni: ' + validArgomenti.join(', ');
-        } else {
-          argomentoInput.classList.remove('invalid-argomento');
-          argomentoInput.title = 'Clicca per opzioni. Doppio click o ↓ per vedere tutto. Puoi anche incollare da Excel.';
-        }
-        return isValid || value.trim() === '';
-      };
-      
-      // Event listeners
-      argomentoInput.addEventListener('input', (e) => {
-        validateArgomento(e.target.value);
-        this.updateCell(rowIndex, 'argomento', e.target.value.trim());
-      });
-      
-      // Mostra sempre tutte le opzioni quando clicchi sul campo
-      argomentoInput.addEventListener('focus', (e) => {
-        // Salva il valore corrente
-        e.target.setAttribute('data-current-value', e.target.value);
-        // Svuota temporaneamente per mostrare tutte le opzioni
-        e.target.value = '';
-      });
-      
-      // Doppio click per mostrare sempre il dropdown (anche se già nel campo)
-      argomentoInput.addEventListener('dblclick', (e) => {
-        e.target.setAttribute('data-current-value', e.target.value);
-        e.target.value = '';
-      });
-      
-      // Tasto freccia giù per mostrare il dropdown (solo se ha valore)
-      argomentoInput.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowDown' && e.target.value) {
-          e.stopPropagation(); // Previeni la navigazione normale
-          e.target.setAttribute('data-current-value', e.target.value);
-          e.target.value = '';
-        }
-      });
-      
-      // Ripristina il valore se non è stato cambiato
-      argomentoInput.addEventListener('blur', (e) => {
-        // Se il campo è vuoto e aveva un valore salvato
-        if (!e.target.value && e.target.getAttribute('data-current-value')) {
-          e.target.value = e.target.getAttribute('data-current-value');
-        }
-        // Normalizza il testo quando l'utente esce dal campo
-        const normalized = normalizeArgomento(e.target.value);
-        e.target.value = normalized;
-        validateArgomento(normalized);
-        this.updateCell(rowIndex, 'argomento', normalized);
-        // Rimuovi l'attributo temporaneo
-        e.target.removeAttribute('data-current-value');
-      });
-      
-      // Gestisci la selezione dal dropdown
-      argomentoInput.addEventListener('change', (e) => {
-        // Se è stata fatta una selezione dal dropdown
-        e.target.removeAttribute('data-current-value');
-        validateArgomento(e.target.value);
-        this.updateCell(rowIndex, 'argomento', e.target.value);
-      });
-      
-      argomentoInput.addEventListener('paste', (e) => {
+      // Gestisci paste event sull'input del dropdown
+      customDropdown.input.addEventListener('paste', (e) => {
         e.preventDefault();
         const pastedData = (e.clipboardData || window.clipboardData).getData('text');
         
@@ -1837,27 +1901,18 @@ class ExcelFormPDF {
           rows.forEach((value, index) => {
             const targetRowIndex = rowIndex + index;
             
-            // Verifica che la riga esista e che sia ancora una simulazione
-            if (targetRowIndex < this.tableData.length && this.tableData[targetRowIndex].Materia === 'Simulazioni') {
+            // Verifica che la riga esista e che sia una simulazione o assessment iniziale
+            if (targetRowIndex < this.tableData.length && (this.tableData[targetRowIndex].Materia === 'Simulazioni' || this.tableData[targetRowIndex].Materia === 'Assessment Iniziale')) {
               // Normalizza il valore prima di salvarlo
               const normalizedValue = normalizeArgomento(value);
               this.updateCell(targetRowIndex, 'argomento', normalizedValue);
               
-              // Aggiorna anche l'input visuale se è nella tabella
+              // Aggiorna anche il dropdown visuale se è nella tabella
               if (allRows[targetRowIndex]) {
                 const targetCell = allRows[targetRowIndex].cells[10]; // Colonna argomento
-                const targetInput = targetCell.querySelector('input');
-                if (targetInput && targetInput.getAttribute('list')) {
-                  targetInput.value = normalizedValue;
-                  // Valida il nuovo valore
-                  const isValid = validArgomenti.includes(normalizedValue) || normalizedValue === '';
-                  if (!isValid && normalizedValue !== '') {
-                    targetInput.classList.add('invalid-argomento');
-                    targetInput.title = '⚠️ Valore non valido! Opzioni: ' + validArgomenti.join(', ');
-                  } else {
-                    targetInput.classList.remove('invalid-argomento');
-                    targetInput.title = 'Clicca per opzioni. Doppio click o ↓ per vedere tutto. Puoi anche incollare da Excel.';
-                  }
+                const targetDropdownContainer = targetCell.querySelector('div');
+                if (targetDropdownContainer && targetDropdownContainer.customDropdown) {
+                  targetDropdownContainer.customDropdown.setValue(normalizedValue);
                 }
               }
             }
@@ -1869,21 +1924,12 @@ class ExcelFormPDF {
         } else {
           // Incollaggio singolo
           const normalized = normalizeArgomento(rows[0] || '');
-          argomentoInput.value = normalized;
-          validateArgomento(normalized);
+          customDropdown.setValue(normalized);
           this.updateCell(rowIndex, 'argomento', normalized);
         }
       });
       
-      // Validazione iniziale
-      validateArgomento(argomentoInput.value);
-      
-      // Tooltip con opzioni valide
-      argomentoInput.title = 'Clicca per vedere tutte le opzioni. Puoi anche incollare da Excel.';
-      argomentoInput.placeholder = 'Clicca o inizia a digitare...';
-      
-      tdArgomento.appendChild(argomentoInput);
-      tdArgomento.appendChild(datalist);
+      tdArgomento.appendChild(dropdownContainer);
     } else {
       // Per altre macro-sezioni: readonly uguale alla sezione
       const argomentoInput = document.createElement('input');
