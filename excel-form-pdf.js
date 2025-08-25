@@ -107,19 +107,22 @@ class ExcelFormPDF {
         background: rgba(0, 0, 0, 0.5);
         display: none;
         z-index: 1000;
-        overflow: auto;
+        overflow-y: auto;
+        padding: 20px 0;
       }
 
       .excel-pdf-container {
         background: white;
-        margin: 20px auto;
+        margin: 0 auto;
         max-width: 95%;
+        width: 95%;
         border-radius: 16px;
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-        max-height: calc(100vh - 40px);
-        overflow: hidden;
+        min-height: 200px;
+        max-height: none;
         display: flex;
         flex-direction: column;
+        position: relative;
       }
 
       .excel-pdf-header {
@@ -175,10 +178,9 @@ class ExcelFormPDF {
       }
 
       .excel-pdf-table-wrapper {
-        flex: 1;
-        overflow: auto;
         padding: 1rem;
         background: #f8f9fa;
+        min-height: 400px;
       }
 
       .excel-pdf-table {
@@ -452,6 +454,41 @@ class ExcelFormPDF {
         background: #ffebee !important;
         border-color: #f44336 !important;
         color: #d32f2f !important;
+      }
+      
+      /* Responsive adjustments */
+      @media (max-height: 768px) {
+        .excel-pdf-overlay {
+          padding: 10px 0;
+        }
+        
+        .excel-pdf-header {
+          padding: 1rem;
+        }
+        
+        .excel-pdf-header h3 {
+          font-size: 1.1rem;
+        }
+        
+        .excel-pdf-table-wrapper {
+          min-height: 300px;
+        }
+      }
+      
+      @media (max-width: 768px) {
+        .excel-pdf-container {
+          max-width: 98%;
+          margin: 10px auto;
+        }
+        
+        .excel-pdf-table {
+          font-size: 0.75rem;
+        }
+        
+        .excel-pdf-table th,
+        .excel-pdf-table td {
+          padding: 0.4rem 0.2rem;
+        }
       }
       
       .excel-pdf-table input.invalid-argomento:focus {
