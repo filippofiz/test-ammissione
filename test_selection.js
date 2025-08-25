@@ -120,11 +120,26 @@ const questionsTable = testType === "pdf" ? "questions" : "questions_bancaDati";
 
 console.log(`📊 Cercando Materia nella tabella: ${questionsTable}`);
 
-// Fetch Materia dalla tabella appropriata
-const { data: questionsData, error: materiaError } = await supabase
-    .from(questionsTable)
-    .select("section, tipologia_esercizi, progressivo, Materia")
-    .eq("tipologia_test", selectedTest);
+// Fetch Materia dalla tabella appropriata con paginazione
+let questionsData = [];
+let page = 0;
+let hasMore = true;
+while (hasMore) {
+    const { data, error } = await supabase
+        .from(questionsTable)
+        .select("section, tipologia_esercizi, progressivo, Materia")
+        .eq("tipologia_test", selectedTest)
+        .range(page * 1000, (page + 1) * 1000 - 1);
+    
+    if (error || !data || data.length === 0) {
+        hasMore = false;
+    } else {
+        questionsData = [...questionsData, ...data];
+        if (data.length < 1000) hasMore = false;
+        page++;
+    }
+}
+const materiaError = null;
 
 if (materiaError) {
     console.error(`❌ Error fetching Materia info from ${questionsTable}:`, materiaError.message);
