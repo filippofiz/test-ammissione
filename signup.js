@@ -134,11 +134,27 @@ async function initializeStudentTests(authUid, chosenTests) {
     const testEntries = [];
   
     // Recupera test dalle domande PDF
-    const { data: pdfTests, error: pdfError } = await supabase
-      .from("questions")
-      .select("section, tipologia_esercizi, progressivo, tipologia_test")
-      .in("tipologia_test", chosenTests)
-      .order("progressivo");
+    // Fetch PDF tests with pagination
+    let pdfTests = [];
+    let page = 0;
+    let hasMore = true;
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from("questions")
+        .select("section, tipologia_esercizi, progressivo, tipologia_test")
+        .in("tipologia_test", chosenTests)
+        .order("progressivo")
+        .range(page * 1000, (page + 1) * 1000 - 1);
+      
+      if (error || !data || data.length === 0) {
+        hasMore = false;
+      } else {
+        pdfTests = [...pdfTests, ...data];
+        if (data.length < 1000) hasMore = false;
+        page++;
+      }
+    }
+    const pdfError = null;
   
     if (pdfError) {
       console.error("❌ Errore recupero test PDF:", pdfError.message);
@@ -171,11 +187,27 @@ async function initializeStudentTests(authUid, chosenTests) {
     }
   
     // Recupera test dalla banca dati
-    const { data: bancaDatiTests, error: bancaDatiError } = await supabase
-      .from("questions_bancaDati")
-      .select("section, tipologia_esercizi, progressivo, tipologia_test")
-      .in("tipologia_test", chosenTests)
-      .order("progressivo");
+    // Fetch Banca Dati tests with pagination
+    let bancaDatiTests = [];
+    page = 0;
+    hasMore = true;
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from("questions_bancaDati")
+        .select("section, tipologia_esercizi, progressivo, tipologia_test")
+        .in("tipologia_test", chosenTests)
+        .order("progressivo")
+        .range(page * 1000, (page + 1) * 1000 - 1);
+      
+      if (error || !data || data.length === 0) {
+        hasMore = false;
+      } else {
+        bancaDatiTests = [...bancaDatiTests, ...data];
+        if (data.length < 1000) hasMore = false;
+        page++;
+      }
+    }
+    const bancaDatiError = null;
   
     if (bancaDatiError) {
       console.error("❌ Errore recupero test banca dati:", bancaDatiError.message);
@@ -282,13 +314,45 @@ async function loadTutors() {
 
 // Carica le opzioni dei test
 async function loadTestOptions() {
-    const { data: questionsData, error: questionsError } = await supabase
-      .from("questions")
-      .select("tipologia_test");
+    // Fetch questions with pagination
+    let questionsData = [];
+    let page = 0;
+    let hasMore = true;
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from("questions")
+        .select("tipologia_test")
+        .range(page * 1000, (page + 1) * 1000 - 1);
+      
+      if (error || !data || data.length === 0) {
+        hasMore = false;
+      } else {
+        questionsData = [...questionsData, ...data];
+        if (data.length < 1000) hasMore = false;
+        page++;
+      }
+    }
+    const questionsError = null;
     
-    const { data: bancaDatiData, error: bancaDatiError } = await supabase
-      .from("questions_bancaDati")
-      .select("tipologia_test");
+    // Fetch banca dati with pagination
+    let bancaDatiData = [];
+    page = 0;
+    hasMore = true;
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from("questions_bancaDati")
+        .select("tipologia_test")
+        .range(page * 1000, (page + 1) * 1000 - 1);
+      
+      if (error || !data || data.length === 0) {
+        hasMore = false;
+      } else {
+        bancaDatiData = [...bancaDatiData, ...data];
+        if (data.length < 1000) hasMore = false;
+        page++;
+      }
+    }
+    const bancaDatiError = null;
   
     if (questionsError) {
       console.error("❌ Errore caricamento test PDF:", questionsError.message);

@@ -302,11 +302,26 @@ async function loadTestTree() {
   // Ordina per sezione
   studentTests.sort((a, b) => ordineSections.indexOf(a.section) - ordineSections.indexOf(b.section));
 
-  // Fetch materie
-  const { data: questionsData, error: materiaError } = await supabase
-    .from("questions")
-    .select("section, tipologia_esercizi, progressivo, Materia")
-    .eq("tipologia_test", selectedTest);
+  // Fetch materie with pagination
+  let questionsData = [];
+  let page = 0;
+  let hasMore = true;
+  while (hasMore) {
+    const { data, error } = await supabase
+      .from("questions")
+      .select("section, tipologia_esercizi, progressivo, Materia")
+      .eq("tipologia_test", selectedTest)
+      .range(page * 1000, (page + 1) * 1000 - 1);
+    
+    if (error || !data || data.length === 0) {
+      hasMore = false;
+    } else {
+      questionsData = [...questionsData, ...data];
+      if (data.length < 1000) hasMore = false;
+      page++;
+    }
+  }
+  const materiaError = null;
     
   if (materiaError) {
     console.error("❌ Error fetching Materia:", materiaError.message);

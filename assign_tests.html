@@ -456,16 +456,46 @@
         assignedCompositeSet.add(key);
       });
       
-      // Query available tests from both tables
-      let { data: availableTests } = await supabase
-        .from("questions")
-        .select("section, tipologia_esercizi, progressivo, tipologia_test")
-        .in("tipologia_test", studentTests);
+      // Query available tests from both tables with pagination
+      // Fetch from questions table with pagination
+      let availableTests = [];
+      let page = 0;
+      let hasMore = true;
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from("questions")
+          .select("section, tipologia_esercizi, progressivo, tipologia_test")
+          .in("tipologia_test", studentTests)
+          .range(page * 1000, (page + 1) * 1000 - 1);
+        
+        if (error || !data || data.length === 0) {
+          hasMore = false;
+        } else {
+          availableTests = [...availableTests, ...data];
+          if (data.length < 1000) hasMore = false;
+          page++;
+        }
+      }
       
-      let { data: bocconiTests } = await supabase
-        .from("questions_bancaDati")
-        .select("section, tipologia_esercizi, tipologia_test")
-        .in("tipologia_test", studentTests);
+      // Fetch from questions_bancaDati table with pagination
+      let bocconiTests = [];
+      page = 0;
+      hasMore = true;
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from("questions_bancaDati")
+          .select("section, tipologia_esercizi, tipologia_test")
+          .in("tipologia_test", studentTests)
+          .range(page * 1000, (page + 1) * 1000 - 1);
+        
+        if (error || !data || data.length === 0) {
+          hasMore = false;
+        } else {
+          bocconiTests = [...bocconiTests, ...data];
+          if (data.length < 1000) hasMore = false;
+          page++;
+        }
+      }
 
       // Transform and combine tests
       const tests1 = (availableTests || []).map(test => {
@@ -538,14 +568,42 @@
       const testContainer = document.getElementById("unassignedIngressoTests");
       testContainer.innerHTML = '<div class="loading"></div>';
 
-      // Query all available test types
-      const { data: questionsData } = await supabase
-        .from("questions")
-        .select("tipologia_test");
+      // Query all available test types with pagination
+      let questionsData = [];
+      let page = 0;
+      let hasMore = true;
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from("questions")
+          .select("tipologia_test")
+          .range(page * 1000, (page + 1) * 1000 - 1);
+        
+        if (error || !data || data.length === 0) {
+          hasMore = false;
+        } else {
+          questionsData = [...questionsData, ...data];
+          if (data.length < 1000) hasMore = false;
+          page++;
+        }
+      }
 
-      const { data: bocconiData } = await supabase
-        .from("questions_bancaDati")
-        .select("tipologia_test");
+      let bocconiData = [];
+      page = 0;
+      hasMore = true;
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from("questions_bancaDati")
+          .select("tipologia_test")
+          .range(page * 1000, (page + 1) * 1000 - 1);
+        
+        if (error || !data || data.length === 0) {
+          hasMore = false;
+        } else {
+          bocconiData = [...bocconiData, ...data];
+          if (data.length < 1000) hasMore = false;
+          page++;
+        }
+      }
 
       // Combine and deduplicate
       let allTests = [];

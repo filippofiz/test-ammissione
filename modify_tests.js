@@ -304,13 +304,50 @@ window.uploadPdfForGroup = uploadPdfForGroup;
 // --- Addition: List of Already Uploaded Tests ---
 
 async function fetchUploadedTests() {
-  // Query both tables for the desired fields.
-  const { data: questionsData, error: error1 } = await supabase
-    .from("questions")
-    .select("section, tipologia_esercizi, progressivo, tipologia_test");
-  const { data: bancaData, error: error2 } = await supabase
-    .from("questions_bancaDati")
-    .select("section, tipologia_esercizi, progressivo, tipologia_test");
+  // Query both tables with pagination to get ALL records
+  let allQuestionsData = [];
+  let allBancaData = [];
+  
+  // Fetch questions table with pagination
+  let page = 0;
+  let hasMore = true;
+  while (hasMore) {
+    const { data, error } = await supabase
+      .from("questions")
+      .select("section, tipologia_esercizi, progressivo, tipologia_test")
+      .range(page * 1000, (page + 1) * 1000 - 1);
+    
+    if (error || !data || data.length === 0) {
+      hasMore = false;
+    } else {
+      allQuestionsData = [...allQuestionsData, ...data];
+      if (data.length < 1000) hasMore = false;
+      page++;
+    }
+  }
+  
+  // Fetch questions_bancaDati table with pagination
+  page = 0;
+  hasMore = true;
+  while (hasMore) {
+    const { data, error } = await supabase
+      .from("questions_bancaDati")
+      .select("section, tipologia_esercizi, progressivo, tipologia_test")
+      .range(page * 1000, (page + 1) * 1000 - 1);
+    
+    if (error || !data || data.length === 0) {
+      hasMore = false;
+    } else {
+      allBancaData = [...allBancaData, ...data];
+      if (data.length < 1000) hasMore = false;
+      page++;
+    }
+  }
+  
+  const questionsData = allQuestionsData;
+  const bancaData = allBancaData;
+  const error1 = null;
+  const error2 = null;
 
 // Tag source table so we know where to delete later
 const qData = questionsData.map(t => ({ ...t, sourceTable: "questions" }));
