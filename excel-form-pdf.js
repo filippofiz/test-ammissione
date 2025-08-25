@@ -634,7 +634,8 @@ class ExcelFormPDF {
         'Pensiero critico',
         'Ragionamento numerico',
         'Comprensione verbale',
-        'Logica'
+        'Logica',
+        'Inglese'
       ];
       
       let selectHTML = '<select id="configPDFSection" style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6; border-radius: 6px;">';
@@ -1808,7 +1809,8 @@ class ExcelFormPDF {
         { value: 'Pensiero critico', category: 'GEN', color: '#6a1b9a' },
         { value: 'Ragionamento numerico', category: 'GEN', color: '#6a1b9a' },
         { value: 'Comprensione verbale', category: 'GEN', color: '#6a1b9a' },
-        { value: 'Logica', category: 'GEN', color: '#6a1b9a' }
+        { value: 'Logica', category: 'GEN', color: '#6a1b9a' },
+        { value: 'Inglese', category: 'GEN', color: '#6a1b9a' }
       ];
       
       // Lista dei valori validi (senza prefissi) per validazione
@@ -1871,7 +1873,8 @@ class ExcelFormPDF {
           'pensiero critico': 'Pensiero critico',
           'ragionamento numerico': 'Ragionamento numerico',
           'comprensione verbale': 'Comprensione verbale',
-          'logica': 'Logica'
+          'logica': 'Logica',
+          'inglese': 'Inglese'
         };
         
         // Cerca corrispondenza (anche parziale)
