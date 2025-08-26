@@ -70,6 +70,38 @@ class ExcelFormPDF {
     this.container = null;
     this.tableData = [];
     this.commonData = {};
+    
+    // Lista argomenti validi con categorie - definita una volta sola
+    this.argomentiConCategoria = [
+      // Matematica
+      { value: 'Logica e insiemi', category: 'MAT', color: '#1976d2' },
+      { value: 'Algebra', category: 'MAT', color: '#1976d2' },
+      { value: 'Logaritmi ed esponenziali', category: 'MAT', color: '#1976d2' },
+      { value: 'Probabilità, combinatoria e statistica', category: 'MAT', color: '#1976d2' },
+      { value: 'Goniometria e trigonometria', category: 'MAT', color: '#1976d2' },
+      { value: 'Geometria', category: 'MAT', color: '#1976d2' },
+      { value: 'Funzioni', category: 'MAT', color: '#1976d2' },
+      // Fisica
+      { value: 'Cinematica e vettori', category: 'FIS', color: '#2e7d32' },
+      { value: 'Dinamica e energia', category: 'FIS', color: '#2e7d32' },
+      { value: 'Fluidi termodinamica e onde', category: 'FIS', color: '#2e7d32' },
+      { value: 'Elettromagnetismo', category: 'FIS', color: '#2e7d32' },
+      // Scienze
+      { value: 'Atomo, tavola periodica e materia', category: 'SCI', color: '#d84315' },
+      { value: 'Chimica organica e biochimica', category: 'SCI', color: '#d84315' },
+      { value: 'Nomenclatura e legami', category: 'SCI', color: '#d84315' },
+      { value: 'Stechiometria e soluzioni', category: 'SCI', color: '#d84315' },
+      // Altri
+      { value: 'Pensiero critico', category: 'GEN', color: '#6a1b9a' },
+      { value: 'Ragionamento numerico', category: 'GEN', color: '#6a1b9a' },
+      { value: 'Comprensione verbale', category: 'GEN', color: '#6a1b9a' },
+      { value: 'Logica', category: 'GEN', color: '#6a1b9a' },
+      { value: 'Inglese', category: 'GEN', color: '#6a1b9a' }
+    ];
+    
+    // Lista dei valori validi estratti (usata per validazioni)
+    this.validArgomenti = this.argomentiConCategoria.map(item => item.value);
+    
     this.columns = [
       'tipologia_test',
       'Materia',
@@ -1785,36 +1817,9 @@ class ExcelFormPDF {
     if (rowData.Materia === 'Simulazioni' || rowData.Materia === 'Assessment Iniziale') {
       // Per Simulazioni e Assessment Iniziale: usa CustomDropdown
       
-      // Lista valori validi con categorie per organizzazione visiva
-      const argomentiConCategoria = [
-        // Matematica
-        { value: 'Logica e insiemi', category: 'MAT', color: '#1976d2' },
-        { value: 'Algebra', category: 'MAT', color: '#1976d2' },
-        { value: 'Logaritmi ed esponenziali', category: 'MAT', color: '#1976d2' },
-        { value: 'Probabilità, combinatoria e statistica', category: 'MAT', color: '#1976d2' },
-        { value: 'Goniometria e trigonometria', category: 'MAT', color: '#1976d2' },
-        { value: 'Geometria', category: 'MAT', color: '#1976d2' },
-        { value: 'Funzioni', category: 'MAT', color: '#1976d2' },
-        // Fisica
-        { value: 'Cinematica e vettori', category: 'FIS', color: '#2e7d32' },
-        { value: 'Dinamica e energia', category: 'FIS', color: '#2e7d32' },
-        { value: 'Fluidi termodinamica e onde', category: 'FIS', color: '#2e7d32' },
-        { value: 'Elettromagnetismo', category: 'FIS', color: '#2e7d32' },
-        // Scienze
-        { value: 'Atomo, tavola periodica e materia', category: 'SCI', color: '#d84315' },
-        { value: 'Chimica organica e biochimica', category: 'SCI', color: '#d84315' },
-        { value: 'Nomenclatura e legami', category: 'SCI', color: '#d84315' },
-        { value: 'Stechiometria e soluzioni', category: 'SCI', color: '#d84315' },
-        // Altri
-        { value: 'Pensiero critico', category: 'GEN', color: '#6a1b9a' },
-        { value: 'Ragionamento numerico', category: 'GEN', color: '#6a1b9a' },
-        { value: 'Comprensione verbale', category: 'GEN', color: '#6a1b9a' },
-        { value: 'Logica', category: 'GEN', color: '#6a1b9a' },
-        { value: 'Inglese', category: 'GEN', color: '#6a1b9a' }
-      ];
-      
-      // Lista dei valori validi (senza prefissi) per validazione
-      const validArgomenti = argomentiConCategoria.map(item => item.value);
+      // Usa la lista definita nel constructor
+      const argomentiConCategoria = this.argomentiConCategoria;
+      const validArgomenti = this.validArgomenti;
       
       // Crea container per il dropdown custom
       const dropdownContainer = document.createElement('div');
@@ -2100,18 +2105,8 @@ class ExcelFormPDF {
       errors.push('Devi caricare il PDF prima di salvare');
     }
     
-    // Lista valori validi per argomento
-    const validArgomenti = [
-      'Algebra',
-      'Logaritmi ed esponenziali',
-      'Probabilità, combinatoria e statistica',
-      'Goniometria e trigonometria',
-      'Geometria',
-      'Funzioni',
-      'Pensiero critico',
-      'Ragionamento numerico',
-      'Comprensione verbale'
-    ];
+    // Usa la lista validi argomenti definita nel constructor
+    const validArgomenti = this.validArgomenti;
     
     // Valori validi per risposte
     const validRisposte = ['a', 'b', 'c', 'd', 'e'];
