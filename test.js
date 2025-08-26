@@ -159,8 +159,8 @@ async function loadTest() {
     if (currentSection === "Simulazioni") {
       globalCurrentSection = currentSection; // store it globally
       
-      // Solo TOLC ha sezioni, Bocconi no
-      if (selectedTestType.includes("TOLC")) {
+      // TOLC e CATTOLICA hanno sezioni, Bocconi no
+      if (selectedTestType.includes("TOLC") || selectedTestType.includes("CATTOLICA")) {
         const { data: simulazioniData, error: simulazioniError } = await supabase
           .from("simulazioni_parti")
           .select("boundaries, nome_parti")
@@ -797,19 +797,20 @@ function updateNavigationButtons() {
     const currentSection = sessionStorage.getItem("currentSection");
     if (testType === "tolc") {
         // TOLC and CATTOLICA navigation using section boundaries.
-        const isSectionBoundary = Object.values(sectionPageStartPages).includes(currentPage);
-        const isPastBoundary = Object.values(sectionPageStartPages).some(
-            boundary => boundary && currentPage === boundary + 1
-        );
+        // Controlla se la PROSSIMA pagina è l'inizio di una nuova sezione
+        const nextPageStartsNewSection = Object.values(sectionPageStartPages).includes(currentPage + 1);
         
-        if (sessionStorage.getItem("currentSection") === "Simulazioni" && isSectionBoundary) {
+        // Controlla se siamo appena passati a una nuova sezione (pagina corrente è l'inizio di una sezione)
+        const currentPageIsNewSection = Object.values(sectionPageStartPages).includes(currentPage);
+        
+        if (sessionStorage.getItem("currentSection") === "Simulazioni" && nextPageStartsNewSection) {
             nextPageBtn.textContent = "Prossima Sezione";
         } else {
             nextPageBtn.textContent = "Avanti";
         }
         
-        // Disable previous button if we are just past a section boundary.
-        if (sessionStorage.getItem("currentSection") === "Simulazioni" && isPastBoundary) {
+        // Disable previous button if we are at the start of a new section (can't go back to previous section)
+        if (sessionStorage.getItem("currentSection") === "Simulazioni" && currentPageIsNewSection && currentPage > 2) {
             prevPageBtn.disabled = true;
         } else {
             prevPageBtn.disabled = false;
@@ -873,9 +874,9 @@ function buildQuestionNav() {
     if (!questionNav) return;
     questionNav.innerHTML = ""; // Clear existing buttons
   
-    // Determina il tipo di test
+    // Determina il tipo di test - CATTOLICA si comporta come TOLC
     const selectedTest = sessionStorage.getItem("selectedTestType");
-    const testType = selectedTest.includes("TOLC") ? "tolc" : "bocconi";
+    const testType = (selectedTest.includes("TOLC") || selectedTest.includes("CATTOLICA")) ? "tolc" : "bocconi";
     const testModality = selectedTest.includes("PDF") ? "pdf" : "banca_dati";
   
     // Compute the "minimum allowed page" for the current section.
@@ -917,11 +918,11 @@ function buildQuestionNav() {
       // NUOVO: Disabilita navigazione indietro per Bocconi PDF
       if (testType === "bocconi" && testModality === "pdf" && q.page_number < currentPage) {
         btn.disabled = true;
-        btn.style.opacity = "0.5";
-        btn.style.cursor = "not-allowed";
+        btn.classList.add("non-navigabile");
+        btn.title = "Non puoi tornare a questa domanda";
         // Non aggiungere event listener per questi pulsanti
       } 
-      // Logica esistente per TOLC
+      // Logica esistente per TOLC e CATTOLICA
       else if (testType === "tolc" && sessionStorage.getItem("currentSection") === "Simulazioni") {
         // If the student is beyond the boundary, disable navigation for questions on or before that boundary.
         const targetSection = getSectionForQuestionNumber(q.question_number);
@@ -931,22 +932,27 @@ function buildQuestionNav() {
         if (targetSection < currentSectionNumber) {
           // ✅ Disable all buttons for previous sections
           btn.disabled = true;
-          btn.style.opacity = "0.5";
-          btn.style.cursor = "not-allowed";
-        } else {
+          btn.classList.add("sezione-precedente");
+          btn.title = "Sezione precedente - non accessibile";
+        } else if (targetSection === currentSectionNumber) {
+          // Stessa sezione - navigabile liberamente
+          btn.classList.add("sezione-corrente");
+          btn.title = `Domanda ${q.question_number} - Sezione corrente`;
           btn.addEventListener("click", () => {
-              if (targetSection > currentSectionNumber) {
-                customConfirm("Stai per passare alla prossima sezione. Vuoi continuare?")
-                  .then(confirmChange => {
-                    if (confirmChange) {
-                      loadQuestionsForPage(q.page_number);
-                    }
-                    // else: do nothing, remain on the current page
-                  });
-              } else {
-                loadQuestionsForPage(q.page_number);
-              }
-            });
+            loadQuestionsForPage(q.page_number);
+          });
+        } else {
+          // Sezione successiva - richiede conferma
+          btn.classList.add("sezione-successiva");
+          btn.title = `Domanda ${q.question_number} - Sezione successiva`;
+          btn.addEventListener("click", () => {
+            customConfirm("Stai per passare alla prossima sezione. Vuoi continuare?")
+              .then(confirmChange => {
+                if (confirmChange) {
+                  loadQuestionsForPage(q.page_number);
+                }
+              });
+          });
         }
       }
       // Per tutti gli altri casi (Bocconi banca_dati o domande non precedenti)
@@ -961,14 +967,15 @@ function buildQuestionNav() {
   }
 
   function getSectionForPage(page) {
-    const boundariesArr = Object.values(sectionPageBoundaries)
-      .map(b => Number(b))
-      .sort((a, b) => a - b);
+    // Usa sectionPageStartPages che contiene i numeri di PAGINA, non di domanda
+    const boundariesArr = Object.entries(sectionPageStartPages)
+      .map(([section, pageNum]) => ({ section: Number(section), pageNum: Number(pageNum) }))
+      .sort((a, b) => a.pageNum - b.pageNum);
   
     let section = 1;
     for (const boundary of boundariesArr) {
-      if (page < boundary) break;
-      section++;
+      if (page < boundary.pageNum) break;
+      section = boundary.section;
     }
     return section;
   }
@@ -980,7 +987,9 @@ function buildQuestionNav() {
   
     let section = 1;
     for (const b of boundaries) {
-      if (questionNumber - 1 < b.qNum) break;
+      // Se il questionNumber è minore del boundary, siamo ancora nella sezione precedente
+      if (questionNumber < b.qNum) break;
+      // Altrimenti passiamo alla sezione del boundary
       section = b.section;
     }
     return section;
