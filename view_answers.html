@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visualizza Risposte - Up to Ten</title>
+  <link rel="stylesheet" href="header.css">
+  <link rel="stylesheet" href="view-answers.css">
+  <link rel="stylesheet" href="floating-back-button.css">
+  
+  <!-- MathJax per formule matematiche -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']]
+      }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+  
+  <!-- Librerie per generazione PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+  <!-- Header -->
+  <div id="header-placeholder"></div>
+
+  <!-- Container principale -->
+  <div class="main-container" id="mainContainer">
+    <!-- Pannello sinistro: PDF viewer (se disponibile) -->
+    <div id="pdfPanel" class="pdf-panel">
+      <button class="toggle-panel-btn" id="togglePdfPanel" title="Nascondi PDF">◀</button>
+      <iframe id="pdfFrame" class="pdf-frame"></iframe>
+    </div>
+    
+    <!-- Pannello destro: Risposte -->
+    <div id="answersPanel" class="answers-panel">
+      <!-- Header della sezione risposte -->
+      <div class="answers-header">
+        <div class="header-content">
+          <h2 id="testTitle">Risposte dello studente</h2>
+          <p id="testInfo" class="test-info"></p>
+        </div>
+        <div class="header-actions">
+          <button id="printBtn" class="action-btn print-btn">
+            🖨️ Genera PDF
+          </button>
+        </div>
+      </div>
+
+      <!-- Statistiche/Filtri cliccabili -->
+      <div class="stats-container">
+        <div class="filter-hint">
+          <span>💡 Clicca sui box per filtrare le risposte</span>
+        </div>
+        <div class="stat-card correct clickable-filter active" data-filter="correct">
+          <div class="stat-icon">✅</div>
+          <div class="stat-content">
+            <div class="stat-number" id="correctCount">0</div>
+            <div class="stat-label">Corrette</div>
+          </div>
+        </div>
+        <div class="stat-card wrong clickable-filter active" data-filter="wrong">
+          <div class="stat-icon">❌</div>
+          <div class="stat-content">
+            <div class="stat-number" id="wrongCount">0</div>
+            <div class="stat-label">Errate</div>
+          </div>
+        </div>
+        <div class="stat-card unsure clickable-filter active" data-filter="unsure">
+          <div class="stat-icon">❓</div>
+          <div class="stat-content">
+            <div class="stat-number" id="unsureCount">0</div>
+            <div class="stat-label">Insicuro</div>
+          </div>
+        </div>
+        <div class="stat-card no-idea clickable-filter active" data-filter="no-idea">
+          <div class="stat-icon">🤷</div>
+          <div class="stat-content">
+            <div class="stat-number" id="noIdeaCount">0</div>
+            <div class="stat-label">Non ho idea</div>
+          </div>
+        </div>
+        <div class="stat-card skipped clickable-filter active" data-filter="skipped">
+          <div class="stat-icon">⏭️</div>
+          <div class="stat-content">
+            <div class="stat-number" id="skippedCount">0</div>
+            <div class="stat-label">Non date</div>
+          </div>
+        </div>
+        <div class="stat-card timeout clickable-filter active" data-filter="timeout">
+          <div class="stat-icon">⏱️</div>
+          <div class="stat-content">
+            <div class="stat-number" id="timeoutCount">0</div>
+            <div class="stat-label">Tempo esaurito</div>
+          </div>
+        </div>
+        <div class="stat-card percentage">
+          <div class="stat-icon">📊</div>
+          <div class="stat-content">
+            <div class="stat-number" id="percentageScore">0%</div>
+            <div class="stat-label">Punteggio</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Info filtri attivi -->
+      <div class="filter-info" id="filterInfo">
+        <span id="filterInfoText">Mostrando tutte le domande</span>
+        <button class="reset-filters-btn" id="resetFilters">Mostra tutto</button>
+      </div>
+
+      <!-- Lista domande e risposte -->
+      <div id="questionsContainer" class="questions-container">
+        <div id="questionsList" class="questions-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading overlay -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-spinner"></div>
+    <p>Caricamento risposte...</p>
+  </div>
+
+  <!-- Scripts -->
+  <script>
+    // Carica l'header
+    fetch('header.html')
+      .then(response => response.text())
+      .then(data => {
+        document.getElementById('header-placeholder').innerHTML = data;
+      });
+    
+    // Toggle pannello PDF
+    document.getElementById('togglePdfPanel').addEventListener('click', function() {
+      const pdfPanel = document.getElementById('pdfPanel');
+      const answersPanel = document.getElementById('answersPanel');
+      const btn = this;
+      
+      if (pdfPanel.classList.contains('collapsed')) {
+        // Mostra il pannello PDF
+        pdfPanel.classList.remove('collapsed');
+        answersPanel.classList.remove('expanded');
+        btn.textContent = '◀';
+        btn.title = 'Nascondi PDF';
+        // Rimuovi il bottone mostra PDF se esiste
+        answersPanel.querySelector('.toggle-pdf-btn')?.remove();
+      } else {
+        // Nascondi il pannello PDF
+        pdfPanel.classList.add('collapsed');
+        answersPanel.classList.add('expanded');
+        btn.style.display = 'none'; // Nascondi anche il bottone toggle
+        
+        // Aggiungi bottone per mostrare PDF nell'header delle risposte
+        if (!answersPanel.querySelector('.toggle-pdf-btn')) {
+          const headerActions = answersPanel.querySelector('.header-actions');
+          if (headerActions) {
+            const showPdfBtn = document.createElement('button');
+            showPdfBtn.className = 'action-btn toggle-pdf-btn';
+            showPdfBtn.innerHTML = '📄 Mostra PDF';
+            showPdfBtn.onclick = () => {
+              pdfPanel.classList.remove('collapsed');
+              answersPanel.classList.remove('expanded');
+              btn.textContent = '◀';
+              btn.style.display = 'block'; // Mostra di nuovo il bottone toggle
+              showPdfBtn.remove();
+            };
+            headerActions.insertBefore(showPdfBtn, headerActions.firstChild);
+          }
+        }
+      }
+    });
+
+  
+
+    // Setup filtri cliccabili sui box delle statistiche
+    function setupClickableFilters() {
+      const filterCards = document.querySelectorAll('.clickable-filter');
+      const resetBtn = document.getElementById('resetFilters');
+      const filterInfo = document.getElementById('filterInfoText');
+      
+      // Funzione per applicare i filtri
+      function applyFilters() {
+        const activeFilters = [];
+        filterCards.forEach(card => {
+          if (card.classList.contains('active')) {
+            activeFilters.push(card.dataset.filter);
+          }
+        });
+        
+        // Mostra/nascondi domande in base ai filtri
+        document.querySelectorAll('.question-item').forEach(item => {
+          const hasActiveClass = activeFilters.some(filter => 
+            item.classList.contains(filter) || 
+            (filter === 'skipped' && !item.classList.contains('correct') && 
+             !item.classList.contains('wrong') && !item.classList.contains('unsure') && 
+             !item.classList.contains('no-idea') && !item.classList.contains('timeout'))
+          );
+          
+          item.style.display = hasActiveClass ? 'block' : 'none';
+        });
+        
+        // Aggiorna info filtri
+        const visibleCount = document.querySelectorAll('.question-item:not([style*="display: none"])').length;
+        const totalCount = document.querySelectorAll('.question-item').length;
+        
+        if (activeFilters.length === filterCards.length) {
+          filterInfo.textContent = `Mostrando tutte le ${totalCount} domande`;
+          document.querySelector('.filter-info').classList.remove('has-filters');
+        } else if (activeFilters.length === 0) {
+          filterInfo.textContent = 'Nessun filtro attivo - seleziona almeno una categoria';
+          document.querySelector('.filter-info').classList.add('has-filters');
+        } else {
+          filterInfo.textContent = `Mostrando ${visibleCount} di ${totalCount} domande`;
+          document.querySelector('.filter-info').classList.add('has-filters');
+        }
+      }
+      
+      // Click handler per ogni card
+      filterCards.forEach(card => {
+        card.addEventListener('click', function() {
+          // Toggle stato attivo
+          this.classList.toggle('active');
+          
+          // Applica filtri
+          applyFilters();
+        });
+      });
+      
+      // Reset filtri
+      resetBtn.addEventListener('click', () => {
+        filterCards.forEach(card => card.classList.add('active'));
+        applyFilters();
+      });
+      
+      // Applica filtri iniziali
+      applyFilters();
+    }
+    
+    // Inizializza filtri quando il DOM è pronto
+    document.addEventListener('DOMContentLoaded', setupClickableFilters);
+  </script>
+  
+  <!-- Script principale per caricare le risposte -->
+  <script type="module" src="view-answers-logic.js"></script>
+  <script src="floating-back-button.js"></script>
+  <script>
+    // Crea il bottone floating per tornare alla dashboard
+    document.addEventListener('DOMContentLoaded', function() {
+      createFloatingBackButton({
+        targetUrl: 'view_tests.html',
+        tooltip: 'Torna alla visualizzazione test'
+      });
+    });
+  </script>
+</body>
+</html>

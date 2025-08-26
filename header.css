@@ -1,0 +1,246 @@
+/* header.css - Stili per l'header Up to Ten */
+
+/* Reset base per l'header */
+.uptoten-header * {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Variabili colori aziendali */
+:root {
+  --uptoten-green: #00a666;
+  --uptoten-dark: rgb(28, 37, 69);
+  --uptoten-light-green: #00c775;
+  --uptoten-dark-blue: #1a2541;
+  --white: #ffffff;
+  --gray-light: #f8f9fa;
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Header principale */
+.uptoten-header {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-sm);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  width: 100%;
+}
+
+/* Contenitore interno header */
+.uptoten-header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.75rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 60px;
+}
+
+/* Adatta larghezza per schermi molto grandi */
+@media (min-width: 1600px) {
+  .uptoten-header-content {
+    max-width: 1400px;
+  }
+}
+
+/* Padding ridotto per schermi medi */
+@media (max-width: 1280px) {
+  .uptoten-header-content {
+    padding: 0.75rem 1.5rem;
+  }
+}
+
+/* Logo */
+.logo-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.uptoten-logo {
+  height: 40px;
+  width: auto;
+  transition: var(--transition);
+  cursor: pointer;
+  display: block;
+}
+
+.uptoten-logo:hover {
+  transform: scale(1.05);
+}
+
+/* Parte destra header */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+/* Saluto */
+.greeting {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--uptoten-dark);
+  white-space: nowrap;
+}
+
+/* Emoji animata */
+.greeting::after {
+  content: '👋';
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-size: 1rem;
+  animation: wave 2s ease-in-out infinite;
+  transform-origin: 70% 70%;
+}
+
+@keyframes wave {
+  0%, 100% { transform: rotate(0deg); }
+  10%, 30% { transform: rotate(14deg); }
+  20% { transform: rotate(-8deg); }
+  40% { transform: rotate(-4deg); }
+  50% { transform: rotate(10deg); }
+  60% { transform: rotate(0deg); }
+}
+
+/* Pulsante Logout */
+.logout-btn {
+  background: linear-gradient(135deg, var(--uptoten-green), var(--uptoten-light-green));
+  color: white;
+  border: none;
+  padding: 0.5rem 1.25rem;
+  border-radius: 50px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+/* Effetto shimmer sul logout */
+.logout-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  transition: left 0.6s;
+}
+
+.logout-btn:hover::before {
+  left: 100%;
+}
+
+.logout-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 166, 102, 0.3);
+}
+
+.logout-btn:active {
+  transform: translateY(-1px);
+}
+
+/* Responsive - Tablet */
+@media (max-width: 768px) {
+  .uptoten-header-content {
+    padding: 0.75rem 1.5rem;
+  }
+  
+  .header-right {
+    gap: 1rem;
+  }
+  
+  .greeting {
+    font-size: 0.9rem;
+  }
+  
+  .logout-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+  }
+}
+
+/* Responsive - Mobile */
+@media (max-width: 480px) {
+  .uptoten-header-content {
+    padding: 0.75rem 1rem;
+    min-height: 56px;
+  }
+  
+  .uptoten-logo {
+    height: 32px;
+  }
+  
+  .header-right {
+    gap: 0.75rem;
+    /* Fix allineamento su mobile */
+    flex-shrink: 0;
+  }
+  
+  .greeting {
+    font-size: 0.85rem;
+    /* Nascondi "Ciao," su schermi molto piccoli */
+    display: flex;
+    align-items: center;
+  }
+  
+  /* Su schermi molto piccoli mostra solo il nome */
+  @media (max-width: 360px) {
+    .greeting::before {
+      content: '';
+    }
+    .greeting {
+      font-size: 0.8rem;
+    }
+    .greeting::after {
+      display: none;
+    }
+  }
+  
+  .logout-btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+  }
+}
+
+/* Animazione di entrata */
+.uptoten-header {
+  animation: slideDown 0.6s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Supporto per browser che non supportano backdrop-filter */
+@supports not (backdrop-filter: blur(20px)) {
+  .uptoten-header {
+    background: rgba(255, 255, 255, 0.98);
+  }
+}
+
+/* Fix per iOS Safari */
+@supports (-webkit-touch-callout: none) {
+  .uptoten-header {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+}

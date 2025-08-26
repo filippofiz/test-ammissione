@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visualizza Test Studente - Up to Ten</title>
+  <link rel="stylesheet" href="header.css">
+  <link rel="stylesheet" href="view-tests.css">
+  <link rel="stylesheet" href="floating-back-button.css">
+</head>
+<body>
+  <!-- Container principale che si sposta -->
+  <div class="page-container" id="pageContainer">
+    <!-- Header esterno -->
+    <div id="header-placeholder"></div>
+
+    <div class="container">
+      <!-- Page Header -->
+      <div class="page-header">
+        <h2 id="studentTestProgressTitle">Avanzamento preparazione</h2>
+      </div>
+      
+      <!-- Legend Section con Toggle Button dentro -->
+      <div id="legend">
+        <div class="legend-content">
+          <h4>📋 Legenda:</h4>
+          <ul>
+            <li><span class="legend-box completed"></span> Completato</li>
+            <li><span class="legend-box unlocked"></span> Sbloccato</li>
+            <li><span class="legend-box locked"></span> Bloccato</li>
+          </ul>
+        </div>
+        
+        <!-- Container per esigenze speciali - NUOVO -->
+        <div class="special-needs-container">
+          <label>
+            <input type="checkbox" id="specialNeedsCheckbox">
+            <span>⏱️ Esigenze speciali (+30% tempo)</span>
+          </label>
+        </div>
+        
+        <!-- Toggle Button dentro il box -->
+        <button id="toggleViewAnswers">👁️ Vedi risposte dello studente</button>
+      </div>
+      
+      <!-- Test Tree -->
+      <div id="testTree">
+        <!-- Populated dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Indicatore modalità correzione -->
+  <div class="correction-indicator">
+    ✏️ MODALITÀ CORREZIONE ATTIVA
+  </div>
+
+  <!-- Toggle Button per Unlock Panel - FUORI dal container -->
+  <button class="unlock-toggle-btn" id="unlockToggle">
+    ⚙️ Modalità sblocco
+  </button>
+
+  <!-- Unlock Panel - Nascosto di default - FUORI dal container -->
+  <div id="unlockPanel">
+    <div class="unlock-header">
+      <h3>⚙️ Modalità di sblocco</h3>
+    </div>
+    
+    <div class="unlock-content">
+      <div class="unlock-columns">
+        <div class="unlock-column">
+          <h4>🔓 Manuale</h4>
+          <ul id="manualList" class="unlock-list"></ul>
+        </div>
+        <div class="unlock-column">
+          <h4>🔄 Automatico</h4>
+          <ul id="autoList" class="unlock-list"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script>
+    // Toggle unlock panel
+    document.getElementById('unlockToggle').addEventListener('click', function() {
+      const panel = document.getElementById('unlockPanel');
+      const container = document.getElementById('pageContainer');
+      
+      if (panel.classList.contains('open')) {
+        panel.classList.remove('open');
+        container.classList.remove('shifted');
+        this.classList.remove('open');
+      } else {
+        panel.classList.add('open');
+        container.classList.add('shifted');
+        this.classList.add('open');
+      }
+    });
+
+    // Carica l'header
+    fetch('header.html')
+      .then(response => response.text())
+      .then(data => {
+        document.getElementById('header-placeholder').innerHTML = data;
+      });
+      
+    // Gestione modalità correzione
+    document.getElementById('toggleViewAnswers').addEventListener('click', function() {
+      console.log('Click su toggle view answers');
+      // Aggiungiamo/rimuoviamo la modalità correzione in base al testo del bottone
+      setTimeout(() => {
+        if (this.textContent.includes('Nascondi')) {
+          console.log('Attivo modalità correzione');
+          document.body.classList.add('correction-mode');
+        } else {
+          console.log('Disattivo modalità correzione');
+          document.body.classList.remove('correction-mode');
+        }
+      }, 100);
+    });
+  </script>
+  <!-- Aggiungi questo script alla fine del tuo file HTML, prima del tag </body> -->
+<script>
+// Funzione per sostituire visualmente "Esercizi per casa" con "Training"
+function applyTextReplacement() {
+  // Per gli h4
+  document.querySelectorAll('.section h4').forEach(h4 => {
+    if (h4.textContent === 'Esercizi per casa') {
+      h4.setAttribute('data-text-replace', 'esercizi');
+    }
+  });
+  
+  // Per i bottoni
+  document.querySelectorAll('#testTree button').forEach(button => {
+    if (button.textContent.includes('Esercizi per casa')) {
+      const newText = button.textContent.replace('Esercizi per casa', 'Training');
+      button.setAttribute('data-text-replace', 'esercizi');
+      button.setAttribute('data-new-text', newText);
+    }
+  });
+  
+  // Per le liste di sblocco
+  document.querySelectorAll('.unlock-list li').forEach(li => {
+    if (li.textContent.includes('Esercizi per casa')) {
+      const newText = li.textContent.replace('Esercizi per casa', 'Training');
+      li.setAttribute('data-text-replace', 'esercizi');
+      li.setAttribute('data-new-text', newText);
+    }
+  });
+}
+
+// Applica quando il DOM cambia
+const observer = new MutationObserver(() => {
+  applyTextReplacement();
+});
+
+// Osserva i cambiamenti nel DOM
+observer.observe(document.body, {
+  childList: true,
+  subtree: true
+});
+
+// Prima applicazione dopo il caricamento
+window.addEventListener('load', () => {
+  setTimeout(applyTextReplacement, 100);
+});
+</script>
+
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <!-- Aggiungi questo script PRIMA del caricamento di view-tests-logic.js -->
+<script>
+// Salva il riferimento all'alert originale
+const originalAlert = window.alert;
+
+// Override della funzione alert
+window.alert = function(message) {
+  // Sostituisci "Esercizi per casa" con "Training" nel messaggio
+  if (typeof message === 'string' && message.includes('Esercizi per casa')) {
+    message = message.replace(/Esercizi per casa/g, 'Training');
+  }
+  
+  // Chiama l'alert originale con il messaggio modificato
+  originalAlert.call(window, message);
+};
+</script>
+  <script type="module" src="view-tests-logic.js"></script>
+  <script src="animated-background.js"></script>
+  <script src="floating-back-button.js"></script>
+  <script>
+    // Crea il bottone floating per tornare alla dashboard
+    document.addEventListener('DOMContentLoaded', function() {
+      createFloatingBackButton({
+        targetUrl: 'tutor_dashboard.html',
+        tooltip: 'Torna alla Dashboard Tutor'
+      });
+    });
+  </script>
+</body>
+</html>
