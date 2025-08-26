@@ -787,14 +787,16 @@ function updateNavigationButtons() {
 
     // Determine test type based on the presence of "PDF" in the test name
     const selectedTest = sessionStorage.getItem("selectedTestType");
-    const testType = selectedTest.includes("TOLC") ? "tolc" : "bocconi";
+    
+    // CATTOLICA si comporta come TOLC per la navigazione
+    const testType = (selectedTest.includes("TOLC") || selectedTest.includes("CATTOLICA")) ? "tolc" : "bocconi";
     const testModality = selectedTest.includes("PDF") ? "pdf" : "banca_dati";
 
-    console.log(`📌 Test Type Determined: ${testType}`);
+    console.log(`📌 Test Type Determined: ${testType} (${selectedTest})`);
 
     const currentSection = sessionStorage.getItem("currentSection");
     if (testType === "tolc") {
-        // TOLC navigation using section boundaries.
+        // TOLC and CATTOLICA navigation using section boundaries.
         const isSectionBoundary = Object.values(sectionPageStartPages).includes(currentPage);
         const isPastBoundary = Object.values(sectionPageStartPages).some(
             boundary => boundary && currentPage === boundary + 1
