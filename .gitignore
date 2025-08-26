@@ -36,4 +36,7 @@ package-lock.json
 
 # ignore excel
 *.xlsx
-*.csvbackup-*/
+*.csv
+
+# ignore backup folders
+backup-*/
