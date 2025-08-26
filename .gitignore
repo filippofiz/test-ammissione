@@ -25,6 +25,9 @@ Thumbs.db
 .idea/
 *.swp
 
+# Claude Code settings
+.claude/settings.local.json
+
 # Ignore database files if needed
 database_questions.csv
 
