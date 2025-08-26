@@ -14,7 +14,10 @@
       "Bash(git rm:*)",
       "Bash(git remote add:*)",
       "Bash(git pull:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(fc:*)",
+      "Read(/C:\\/**)",
+      "Bash(git log:*)"
     ],
     "deny": [],
     "ask": []
