@@ -938,8 +938,8 @@ class ExcelFormPDF {
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     try {
-      // Cerca SEMPRE i test esistenti nell'interfaccia (non memorizzare mai)
-      let maxProgressivo = 0;
+      // Raccogli TUTTI i progressivi esistenti (non solo il max)
+      const progressiviTrovati = new Set();
       
       // Pattern semplificato: "sezione: tipologia_esercizi progressivo"
       // Es: "Algebra: Esercizi per casa 3"
@@ -964,10 +964,8 @@ class ExcelFormPDF {
             const match = text.match(new RegExp(`${searchPattern}\\s+(\\d+)`));
             if (match && match[1]) {
               const num = parseInt(match[1]);
-              if (num > maxProgressivo) {
-                maxProgressivo = num;
-                console.log(`Trovato nella lista filtrata: "${searchPattern} ${num}"`);
-              }
+              progressiviTrovati.add(num);
+              console.log(`Trovato nella lista filtrata: "${searchPattern} ${num}"`);
             }
           }
         });
@@ -975,7 +973,7 @@ class ExcelFormPDF {
       
       // FALLBACK: Se la lista non corrisponde o è vuota, cerca nel DOM generale
       // ma solo elementi che contengono ANCHE la tipologia test
-      if (!dropdownMatchesForm || testListItems.length === 0 || maxProgressivo === 0) {
+      if (!dropdownMatchesForm || testListItems.length === 0 || progressiviTrovati.size === 0) {
         const allElements = document.querySelectorAll('td, li, div, span, p, a, h1, h2, h3, h4, h5, h6');
         
         allElements.forEach(element => {
@@ -989,25 +987,67 @@ class ExcelFormPDF {
             const match = text.match(new RegExp(`${searchPattern}\\s+(\\d+)`));
             if (match && match[1]) {
               const num = parseInt(match[1]);
-              if (num > maxProgressivo) {
-                maxProgressivo = num;
-                console.log(`Trovato nel DOM: "${tipologiaTest}" + "${searchPattern} ${num}"`);
-              }
+              progressiviTrovati.add(num);
+              console.log(`Trovato nel DOM: "${tipologiaTest}" + "${searchPattern} ${num}"`);
             }
           }
         });
       }
       
+      // Converti Set in array ordinato
+      const progressiviOrdinati = Array.from(progressiviTrovati).sort((a, b) => a - b);
+      
+      // Trova i buchi nella sequenza
+      const buchi = [];
+      if (progressiviOrdinati.length > 0) {
+        // Controlla buchi dal 1 al primo progressivo trovato
+        for (let i = 1; i < progressiviOrdinati[0]; i++) {
+          buchi.push(i);
+        }
+        
+        // Controlla buchi tra i progressivi
+        for (let i = 0; i < progressiviOrdinati.length - 1; i++) {
+          const current = progressiviOrdinati[i];
+          const next = progressiviOrdinati[i + 1];
+          for (let j = current + 1; j < next; j++) {
+            buchi.push(j);
+          }
+        }
+      }
+      
+      const maxProgressivo = progressiviOrdinati.length > 0 ? Math.max(...progressiviOrdinati) : 0;
       const newProgressivo = maxProgressivo + 1;
       
-      // Aggiorna il campo progressivo
-      progressivoInput.value = newProgressivo;
-      
-      // Aggiorna UI con messaggio più descrittivo
-      progressivoInfo.textContent = maxProgressivo === 0 
-        ? `✨ Primo test per "${section}: ${tipologiaEsercizi}" (${tipologiaTest})` 
-        : `📊 Trovati ${maxProgressivo} test esistenti → Progressivo: ${newProgressivo}`;
-      progressivoInfo.style.color = '#00a666';
+      // Se ci sono buchi, mostra il dialog per la scelta
+      if (buchi.length > 0) {
+        const sceltaProgressivo = await this.mostraDialogSceltaProgressivo(
+          section, 
+          tipologiaEsercizi, 
+          newProgressivo, 
+          buchi, 
+          progressiviOrdinati
+        );
+        
+        // Aggiorna il campo progressivo con la scelta dell'utente
+        progressivoInput.value = sceltaProgressivo;
+        
+        // Aggiorna UI con messaggio
+        if (buchi.includes(sceltaProgressivo)) {
+          progressivoInfo.textContent = `🔧 Riempito buco: progressivo ${sceltaProgressivo} (${buchi.length} buchi trovati)`;
+        } else {
+          progressivoInfo.textContent = `📊 Nuovo progressivo: ${sceltaProgressivo} (saltati ${buchi.length} buchi)`;
+        }
+        progressivoInfo.style.color = '#00a666';
+      } else {
+        // Nessun buco: usa il progressivo successivo automaticamente
+        progressivoInput.value = newProgressivo;
+        
+        // Aggiorna UI con messaggio più descrittivo
+        progressivoInfo.textContent = maxProgressivo === 0 
+          ? `✨ Primo test per "${section}: ${tipologiaEsercizi}" (${tipologiaTest})` 
+          : `📊 Trovati ${maxProgressivo} test esistenti → Progressivo: ${newProgressivo}`;
+        progressivoInfo.style.color = '#00a666';
+      }
       
       // Abilita il pulsante Continua ora che il progressivo è stato calcolato
       if (continueButton) {
@@ -1045,6 +1085,119 @@ class ExcelFormPDF {
       `${this.commonData.tipologia_test} | ${this.commonData.Materia} | ${this.commonData.section}: ${this.commonData.tipologia_esercizi} ${this.commonData.progressivo}`;
   }
 
+  // Nuova funzione per mostrare il dialog di scelta progressivo
+  async mostraDialogSceltaProgressivo(section, tipologiaEsercizi, nuovoProgressivo, buchi, esistenti) {
+    return new Promise((resolve) => {
+      // Crea overlay
+      const overlay = document.createElement('div');
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+      `;
+      
+      // Crea dialog
+      const dialog = document.createElement('div');
+      dialog.style.cssText = `
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        max-width: 500px;
+        width: 90%;
+        max-height: 70vh;
+        overflow-y: auto;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      `;
+      
+      // Costruisci contenuto
+      let html = `
+        <h3 style="margin: 0 0 16px 0; color: #1976d2;">
+          🔢 Scegli il progressivo per "${section}: ${tipologiaEsercizi}"
+        </h3>
+        <p style="margin: 0 0 20px 0; color: #666;">
+          Sono stati rilevati dei "buchi" nella numerazione dei test esistenti.<br>
+          Puoi scegliere di riempire un buco o usare il progressivo successivo.
+        </p>
+        
+        <div style="margin-bottom: 16px; padding: 12px; background: #f5f5f5; border-radius: 8px;">
+          <strong>Test esistenti:</strong> ${esistenti.length > 0 ? esistenti.join(', ') : 'Nessuno'}<br>
+          <strong>Buchi rilevati:</strong> <span style="color: #ff6b6b;">${buchi.join(', ')}</span>
+        </div>
+        
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+      `;
+      
+      // Aggiungi opzione per il nuovo progressivo
+      html += `
+        <button class="progressivo-choice" data-value="${nuovoProgressivo}" 
+                style="padding: 12px; border: 2px solid #00a666; background: #e8f5e9; 
+                       border-radius: 8px; cursor: pointer; text-align: left;
+                       transition: all 0.2s; font-size: 14px;"
+                onmouseover="this.style.background='#c8e6c9'" 
+                onmouseout="this.style.background='#e8f5e9'">
+          <strong style="color: #00a666;">✅ Usa progressivo successivo: ${nuovoProgressivo}</strong><br>
+          <small style="color: #666;">Continua la numerazione normale</small>
+        </button>
+      `;
+      
+      // Aggiungi opzioni per i buchi (massimo 10 per non appesantire)
+      const buchiDaMostrare = buchi.slice(0, 10);
+      buchiDaMostrare.forEach(buco => {
+        html += `
+          <button class="progressivo-choice" data-value="${buco}" 
+                  style="padding: 12px; border: 2px solid #1976d2; background: #e3f2fd; 
+                         border-radius: 8px; cursor: pointer; text-align: left;
+                         transition: all 0.2s; font-size: 14px;"
+                  onmouseover="this.style.background='#bbdefb'" 
+                  onmouseout="this.style.background='#e3f2fd'">
+            <strong style="color: #1976d2;">🔧 Riempi buco: ${buco}</strong><br>
+            <small style="color: #666;">Completa la sequenza numerica</small>
+          </button>
+        `;
+      });
+      
+      if (buchi.length > 10) {
+        html += `
+          <p style="text-align: center; color: #999; font-size: 12px; margin: 8px 0;">
+            ... e altri ${buchi.length - 10} buchi disponibili
+          </p>
+        `;
+      }
+      
+      html += '</div>';
+      
+      dialog.innerHTML = html;
+      overlay.appendChild(dialog);
+      document.body.appendChild(overlay);
+      
+      // Aggiungi event listeners
+      dialog.querySelectorAll('.progressivo-choice').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const value = parseInt(btn.dataset.value);
+          document.body.removeChild(overlay);
+          resolve(value);
+        });
+      });
+      
+      // Permetti chiusura con ESC (usa il progressivo successivo di default)
+      const handleEsc = (e) => {
+        if (e.key === 'Escape') {
+          document.body.removeChild(overlay);
+          document.removeEventListener('keydown', handleEsc);
+          resolve(nuovoProgressivo);
+        }
+      };
+      document.addEventListener('keydown', handleEsc);
+    });
+  }
+
   async calculateProgressivo(tipologiaTest, materia, section, tipologiaEsercizi) {
     // Trova elemento per mostrare info progressivo
     const progressivoInfoElements = document.querySelectorAll('[id*="progressivoInfo"]');
@@ -1057,8 +1210,8 @@ class ExcelFormPDF {
     progressivoInfo.style.color = '#1976d2';
     
     try {
-      // Cerca i test esistenti nell'interfaccia
-      let maxProgressivo = 0;
+      // Raccogli TUTTI i progressivi esistenti (non solo il max)
+      const progressiviTrovati = new Set();
       
       // Costruisci il pattern da cercare: "section: tipologia_esercizi"
       const searchPattern = `${section}: ${tipologiaEsercizi}`;
@@ -1072,22 +1225,19 @@ class ExcelFormPDF {
         // Verifica se il testo contiene il pattern esatto
         if (text.includes(searchPattern)) {
           // Estrai il numero progressivo che segue il pattern
-          // Cerca numeri dopo il pattern
           const afterPattern = text.substring(text.indexOf(searchPattern) + searchPattern.length);
           const numberMatch = afterPattern.match(/\s*(\d+)/);
           
           if (numberMatch && numberMatch[1]) {
             const num = parseInt(numberMatch[1]);
-            if (num > maxProgressivo) {
-              maxProgressivo = num;
-              console.log(`Trovato: "${searchPattern} ${num}"`);
-            }
+            progressiviTrovati.add(num);
+            console.log(`Trovato: "${searchPattern} ${num}"`);
           }
         }
       });
       
       // Se non trovato con pattern esatto, prova con variazioni
-      if (maxProgressivo === 0) {
+      if (progressiviTrovati.size === 0) {
         const alternativePatterns = [
           `${section.toLowerCase()}: ${tipologiaEsercizi.toLowerCase()}`,
           `${section}: ${tipologiaEsercizi}`,
@@ -1106,12 +1256,12 @@ class ExcelFormPDF {
                 matches.forEach(match => {
                   const num = parseInt(match);
                   // Considera solo numeri ragionevoli per progressivi (1-99)
-                  if (num > 0 && num < 100 && num > maxProgressivo) {
+                  if (num > 0 && num < 100) {
                     // Verifica che il numero sia vicino al pattern
                     const numberIndex = text.indexOf(match);
                     const patternIndex = textLower.indexOf(pattern.toLowerCase());
                     if (numberIndex > patternIndex && (numberIndex - patternIndex) < 20) {
-                      maxProgressivo = num;
+                      progressiviTrovati.add(num);
                       console.log(`Trovato con pattern alternativo: "${pattern}" → ${num}`);
                     }
                   }
@@ -1123,19 +1273,67 @@ class ExcelFormPDF {
         });
       }
       
+      // Converti Set in array ordinato
+      const progressiviOrdinati = Array.from(progressiviTrovati).sort((a, b) => a - b);
+      
+      // Trova i buchi nella sequenza
+      const buchi = [];
+      if (progressiviOrdinati.length > 0) {
+        // Controlla buchi dal 1 al primo progressivo trovato
+        for (let i = 1; i < progressiviOrdinati[0]; i++) {
+          buchi.push(i);
+        }
+        
+        // Controlla buchi tra i progressivi
+        for (let i = 0; i < progressiviOrdinati.length - 1; i++) {
+          const current = progressiviOrdinati[i];
+          const next = progressiviOrdinati[i + 1];
+          for (let j = current + 1; j < next; j++) {
+            buchi.push(j);
+          }
+        }
+      }
+      
+      const maxProgressivo = progressiviOrdinati.length > 0 ? Math.max(...progressiviOrdinati) : 0;
       const newProgressivo = maxProgressivo + 1;
       
-      // Aggiorna il progressivo in tutti i dati
-      this.commonData.progressivo = newProgressivo;
-      this.tableData.forEach(row => {
-        row.progressivo = newProgressivo;
-      });
-      
-      // Aggiorna UI con messaggio più descrittivo
-      progressivoInfo.textContent = maxProgressivo === 0 
-        ? `✨ Primo test per "${section}: ${tipologiaEsercizi}"` 
-        : `📊 Trovati ${maxProgressivo} test esistenti per "${section}: ${tipologiaEsercizi}" → Nuovo progressivo: ${newProgressivo}`;
-      progressivoInfo.style.color = '#00a666';
+      // Se ci sono buchi, chiedi all'utente quale progressivo usare
+      if (buchi.length > 0) {
+        // Crea un dialog per la scelta
+        const sceltaProgressivo = await this.mostraDialogSceltaProgressivo(
+          section, 
+          tipologiaEsercizi, 
+          newProgressivo, 
+          buchi, 
+          progressiviOrdinati
+        );
+        
+        // Usa il progressivo scelto
+        this.commonData.progressivo = sceltaProgressivo;
+        this.tableData.forEach(row => {
+          row.progressivo = sceltaProgressivo;
+        });
+        
+        // Aggiorna messaggio UI
+        if (buchi.includes(sceltaProgressivo)) {
+          progressivoInfo.textContent = `🔧 Riempito buco: "${section}: ${tipologiaEsercizi} ${sceltaProgressivo}"`;
+        } else {
+          progressivoInfo.textContent = `📊 Nuovo progressivo: "${section}: ${tipologiaEsercizi} ${sceltaProgressivo}"`;
+        }
+        progressivoInfo.style.color = '#00a666';
+      } else {
+        // Nessun buco: procedi automaticamente
+        this.commonData.progressivo = newProgressivo;
+        this.tableData.forEach(row => {
+          row.progressivo = newProgressivo;
+        });
+        
+        // Aggiorna UI con messaggio più descrittivo
+        progressivoInfo.textContent = maxProgressivo === 0 
+          ? `✨ Primo test per "${section}: ${tipologiaEsercizi}"` 
+          : `📊 Trovati ${maxProgressivo} test esistenti per "${section}: ${tipologiaEsercizi}" → Nuovo progressivo: ${newProgressivo}`;
+        progressivoInfo.style.color = '#00a666';
+      }
       
       // Aggiorna tutte le celle progressivo nella tabella
       const tbody = document.getElementById('excelPDFTableBody');
@@ -1146,7 +1344,7 @@ class ExcelFormPDF {
           if (progressivoCell) {
             const input = progressivoCell.querySelector('input');
             if (input) {
-              input.value = newProgressivo;
+              input.value = this.commonData.progressivo;
             }
           }
         }
@@ -1154,7 +1352,7 @@ class ExcelFormPDF {
       
       // Aggiorna info header
       document.getElementById('pdfTestInfo').textContent = 
-        `${tipologiaTest} | ${materia} | ${section}: ${tipologiaEsercizi} ${newProgressivo}`;
+        `${tipologiaTest} | ${materia} | ${section}: ${tipologiaEsercizi} ${this.commonData.progressivo}`;
       
     } catch (error) {
       console.error('Errore nel calcolo del progressivo:', error);
