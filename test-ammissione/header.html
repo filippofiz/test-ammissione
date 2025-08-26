@@ -1,0 +1,63 @@
+<!-- header.html -->
+<!-- 
+  Header riutilizzabile per tutte le pagine del portale Up to Ten
+  Include questo file in ogni pagina con un server-side include o copialo
+-->
+<header class="uptoten-header">
+  <div class="uptoten-header-content">
+    <a href="tutor_dashboard.html" class="logo-link">
+      <img src="https://elrwpaezjnemmiegkyin.supabase.co/storage/v1/object/public/images//6_Logo_trasparente.png" 
+           alt="Logo Up to Ten" 
+           class="uptoten-logo">
+    </a>
+    <div class="header-right">
+      <span class="greeting">Ciao, <span class="user-name">Utente</span></span>
+      <button id="logoutBtn" class="logout-btn">Logout</button>
+    </div>
+  </div>
+</header>
+
+<!-- Script per aggiornare il nome utente e gestire logout -->
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+// Inserisci le tue credenziali Supabase
+const SUPABASE_URL = 'https://elrwpaezjnemmiegkyin.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVscndwYWV6am5lbW1pZWdreWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzAyMDUsImV4cCI6MjA1MzY0NjIwNX0.p6R2S1HK8kPFYiEAYtYaxIAH8XSmzjQBWQ_ywy3akdI';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Questa funzione può essere chiamata dopo aver recuperato i dati dell'utente
+window.updateHeaderGreeting = function(userName) {
+  const userNameElement = document.querySelector('.user-name');
+  if (userNameElement) {
+    userNameElement.textContent = userName;
+  }
+}
+
+// SOSTITUISCI QUESTA PARTE ↓↓↓
+// Gestione logout con Supabase
+document.getElementById('logoutBtn')?.addEventListener('click', async (e) => {
+  e.preventDefault(); // Previeni comportamenti default
+  console.log('Logout clicked');
+  
+  // Esegui logout da Supabase
+  const { error } = await supabase.auth.signOut();
+  
+  if (error) {
+    console.error('Errore durante il logout:', error);
+  } else {
+    // Pulisci tutti i dati salvati
+    sessionStorage.clear();
+    localStorage.clear();
+    
+    // Forza il redirect alla root del dominio corrente
+    const currentHost = window.location.host;
+    const protocol = window.location.protocol;
+    console.log('Redirecting to:', protocol + '//' + currentHost + '/');
+    
+    // Usa replace invece di href per evitare che rimanga nella history
+    window.location.replace(protocol + '//' + currentHost + '/');
+  }
+});
+</script>

@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Interactive Student Answers Table</title>
+  <style>
+    table { 
+      border-collapse: collapse; 
+      width: 100%; 
+      margin-top: 20px;
+    }
+    th, td { 
+      border: 1px solid #ccc; 
+      padding: 5px; 
+      text-align: center; 
+      min-width: 40px;
+    }
+    /* CSS classes for answer coloring */
+    .correct   { background-color: green;  color: white; }
+    .incorrect { background-color: red;    color: white; }
+    .x-answer  { background-color: blue;   color: white; }
+    .y-answer  { background-color: yellow; color: black; }
+    .z-answer  { background-color: gray;   color: white; }
+    /* Filter styling */
+    #filters {
+      margin-bottom: 10px;
+    }
+    #filters select {
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Interactive Student Answers Table</h1>
+  
+  <!-- Filters -->
+  <div id="filters">
+    Section: <select id="filter-section"></select>
+    Tipologia: <select id="filter-tipologia"></select>
+    Progressivo: <select id="filter-progressivo"></select>
+    Answers: <select id="filter-answers"></select>
+    Argomento: <select id="filter-argomento"></select>
+  </div>
+  
+  <div id="table-container"></div>
+
+  <script>
+    /********* MOCK DATA *********/
+    // Each question has: id, section, tipologia_esercizi, argomento, and progressivo.
+    const questions = [
+      { id: 1, section: "1", tipologia_esercizi: "A", argomento: "Math",    progressivo: "1" },
+      { id: 2, section: "1", tipologia_esercizi: "A", argomento: "Science", progressivo: "1" },
+      { id: 3, section: "1", tipologia_esercizi: "B", argomento: "Math",    progressivo: "2" },
+      { id: 4, section: "2", tipologia_esercizi: "C", argomento: "History", progressivo: "1" },
+      { id: 5, section: "2", tipologia_esercizi: "C", argomento: "Math",    progressivo: "1" },
+      { id: 6, section: "2", tipologia_esercizi: "D", argomento: "Science", progressivo: "2" }
+    ];
+
+    // Each student answer ties a question_id to an answer.
+    // Valid answer values: "correct", "incorrect", "x", "y", "z"
+    const student_answers = [
+      { question_id: 1, answer: "correct" },
+      { question_id: 2, answer: "x" },
+      { question_id: 3, answer: "incorrect" },
+      { question_id: 4, answer: "y" },
+      { question_id: 5, answer: "z" },
+      { question_id: 6, answer: "correct" }
+    ];
+
+    /********* HELPER FUNCTIONS *********/
+    // Build a nested structure: section > tipologia_esercizi > Set of progressivo values.
+    function buildHeaderStructure(questionsData) {
+      const structure = {};
+      questionsData.forEach(q => {
+        if (!structure[q.section]) {
+          structure[q.section] = {};
+        }
+        if (!structure[q.section][q.tipologia_esercizi]) {
+          structure[q.section][q.tipologia_esercizi] = new Set();
+        }
+        structure[q.section][q.tipologia_esercizi].add(q.progressivo);
+      });
+      // Convert sets to sorted arrays.
+      for (const section in structure) {
+        for (const tipologia in structure[section]) {
+          structure[section][tipologia] = Array.from(structure[section][tipologia]).sort();
+        }
+      }
+      return structure;
+    }
+
+    // Flatten the nested header structure into an ordered array.
+    // Each element is an object: { section, tipologia, progressivo }.
+    function buildHeaderDefinitions(structure) {
+      const headerDefs = [];
+      const sections = Object.keys(structure).sort();
+      sections.forEach(section => {
+        const tipologie = Object.keys(structure[section]).sort();
+        tipologie.forEach(tipologia => {
+          structure[section][tipologia].forEach(progressivo => {
+            headerDefs.push({ section, tipologia, progressivo });
+          });
+        });
+      });
+      return headerDefs;
+    }
+
+    /********* TABLE GENERATION *********/
+    function generateTable(questionsData, studentAnswersData) {
+      const container = document.getElementById("table-container");
+      container.innerHTML = ""; // Clear previous content
+
+      const table = document.createElement("table");
+
+      // Build header structure and definitions from filtered questions.
+      const headerStructure = buildHeaderStructure(questionsData);
+      const headerDefs = buildHeaderDefinitions(headerStructure);
+
+      /***** Create Table Header *****/
+      const thead = document.createElement("thead");
+
+      // First header row: Sections
+      const headerRow1 = document.createElement("tr");
+      // Top-left cell for alignment (rowSpan 4) but left blank.
+      const emptyTh = document.createElement("th");
+      emptyTh.rowSpan = 4;
+      emptyTh.textContent = "";
+      headerRow1.appendChild(emptyTh);
+      Object.keys(headerStructure).sort().forEach(section => {
+        let colCount = 0;
+        const tipologie = headerStructure[section];
+        for (const tipologia in tipologie) {
+          colCount += tipologie[tipologia].length * 5; // each progressivo has 5 sub-columns
+        }
+        const th = document.createElement("th");
+        th.textContent = "Section " + section;
+        th.colSpan = colCount;
+        headerRow1.appendChild(th);
+      });
+      thead.appendChild(headerRow1);
+
+      // Second header row: Tipologia_esercizi.
+      const headerRow2 = document.createElement("tr");
+      Object.keys(headerStructure).sort().forEach(section => {
+        const tipologie = headerStructure[section];
+        Object.keys(tipologie).sort().forEach(tipologia => {
+          const colCount = tipologie[tipologia].length * 5;
+          const th = document.createElement("th");
+          th.textContent = "Tipologia " + tipologia;
+          th.colSpan = colCount;
+          headerRow2.appendChild(th);
+        });
+      });
+      thead.appendChild(headerRow2);
+
+      // Third header row: Progressivo numbers.
+      const headerRow3 = document.createElement("tr");
+      Object.keys(headerStructure).sort().forEach(section => {
+        const tipologie = headerStructure[section];
+        Object.keys(tipologie).sort().forEach(tipologia => {
+          const progressivi = tipologie[tipologia];
+          progressivi.forEach(progressivo => {
+            const th = document.createElement("th");
+            th.textContent = "P " + progressivo;
+            th.colSpan = 5;
+            headerRow3.appendChild(th);
+          });
+        });
+      });
+      thead.appendChild(headerRow3);
+
+      // Fourth header row: Category labels for each progressivo.
+      const headerRow4 = document.createElement("tr");
+      headerDefs.forEach(() => {
+        ["Correct", "Incorrect", "X", "Y", "Z"].forEach(label => {
+          const th = document.createElement("th");
+          th.textContent = label;
+          headerRow4.appendChild(th);
+        });
+      });
+      thead.appendChild(headerRow4);
+
+      table.appendChild(thead);
+
+      /***** Create Table Body *****/
+      // Build a map of student answers keyed by question id.
+      const answersMap = {};
+      studentAnswersData.forEach(ans => {
+        answersMap[ans.question_id] = ans.answer;
+      });
+
+      // Build a map for questions keyed by composite key: section|tipologia|progressivo|argomento.
+      const questionsMap = {};
+      questionsData.forEach(q => {
+        const key = q.section + "|" + q.tipologia_esercizi + "|" + q.progressivo + "|" + q.argomento;
+        questionsMap[key] = q;
+      });
+
+      // Get unique argomenti from filtered questions.
+      const argomenti = Array.from(new Set(questionsData.map(q => q.argomento))).sort();
+
+      // Prepare totals structure: for each header definition, an array of 5 counts.
+      const totals = {};
+      headerDefs.forEach((def, idx) => {
+        totals[idx] = [0, 0, 0, 0, 0];
+      });
+
+      const tbody = document.createElement("tbody");
+
+      // For each argomento, create a row. The first cell prints the argomento.
+      argomenti.forEach(argomento => {
+        const tr = document.createElement("tr");
+        const thArg = document.createElement("th");
+        thArg.textContent = argomento;
+        tr.appendChild(thArg);
+
+        headerDefs.forEach((def, idx) => {
+          const key = def.section + "|" + def.tipologia + "|" + def.progressivo + "|" + argomento;
+          if (questionsMap[key]) {
+            const q = questionsMap[key];
+            const ans = answersMap[q.id];
+            let categoryIndex = -1;
+            if (ans === "correct")       categoryIndex = 0;
+            else if (ans === "incorrect") categoryIndex = 1;
+            else if (ans === "x")         categoryIndex = 2;
+            else if (ans === "y")         categoryIndex = 3;
+            else if (ans === "z")         categoryIndex = 4;
+            for (let i = 0; i < 5; i++) {
+              const td = document.createElement("td");
+              if (i === categoryIndex) {
+                td.textContent = "1";
+                if (i === 0) td.classList.add("correct");
+                else if (i === 1) td.classList.add("incorrect");
+                else if (i === 2) td.classList.add("x-answer");
+                else if (i === 3) td.classList.add("y-answer");
+                else if (i === 4) td.classList.add("z-answer");
+                totals[idx][i]++;
+              }
+              tr.appendChild(td);
+            }
+          } else {
+            // No question for this header combination: add five empty cells.
+            for (let i = 0; i < 5; i++) {
+              const td = document.createElement("td");
+              tr.appendChild(td);
+            }
+          }
+        });
+        tbody.appendChild(tr);
+      });
+
+      // Totale row: summarizes counts for each header group.
+      const totalTr = document.createElement("tr");
+      const thTotal = document.createElement("th");
+      thTotal.textContent = "Totale";
+      totalTr.appendChild(thTotal);
+      headerDefs.forEach((def, idx) => {
+        totals[idx].forEach((count, catIndex) => {
+          const td = document.createElement("td");
+          if (count > 0) {
+            td.textContent = count;
+            if (catIndex === 0) td.classList.add("correct");
+            else if (catIndex === 1) td.classList.add("incorrect");
+            else if (catIndex === 2) td.classList.add("x-answer");
+            else if (catIndex === 3) td.classList.add("y-answer");
+            else if (catIndex === 4) td.classList.add("z-answer");
+          }
+          totalTr.appendChild(td);
+        });
+      });
+      tbody.appendChild(totalTr);
+
+      table.appendChild(tbody);
+      container.appendChild(table);
+    }
+
+    /********* FILTERING FUNCTIONS *********/
+    function updateFilterOptions() {
+      // Populate filter dropdowns based on the master questions data.
+      const sectionSelect = document.getElementById("filter-section");
+      const tipologiaSelect = document.getElementById("filter-tipologia");
+      const progressivoSelect = document.getElementById("filter-progressivo");
+      const answerSelect = document.getElementById("filter-answers");
+      const argomentoSelect = document.getElementById("filter-argomento");
+
+      // Clear current options.
+      sectionSelect.innerHTML = "";
+      tipologiaSelect.innerHTML = "";
+      progressivoSelect.innerHTML = "";
+      answerSelect.innerHTML = "";
+      argomentoSelect.innerHTML = "";
+
+      // Helper to add an option.
+      function addOption(select, value) {
+        const opt = document.createElement("option");
+        opt.value = value;
+        opt.textContent = value;
+        select.appendChild(opt);
+      }
+
+      // Add an "all" option.
+      addOption(sectionSelect, "all");
+      addOption(tipologiaSelect, "all");
+      addOption(progressivoSelect, "all");
+      addOption(answerSelect, "all");
+      addOption(argomentoSelect, "all");
+
+      // Populate with unique values from master data.
+      const sections = Array.from(new Set(questions.map(q => q.section))).sort();
+      sections.forEach(s => addOption(sectionSelect, s));
+
+      const tipologie = Array.from(new Set(questions.map(q => q.tipologia_esercizi))).sort();
+      tipologie.forEach(t => addOption(tipologiaSelect, t));
+
+      const progressivi = Array.from(new Set(questions.map(q => q.progressivo))).sort();
+      progressivi.forEach(p => addOption(progressivoSelect, p));
+
+      const answers = ["correct", "incorrect", "x", "y", "z"];
+      answers.forEach(a => addOption(answerSelect, a));
+
+      const argomenti = Array.from(new Set(questions.map(q => q.argomento))).sort();
+      argomenti.forEach(a => addOption(argomentoSelect, a));
+    }
+
+    function filterAndGenerateTable() {
+      // Get selected filter values.
+      const sectionVal = document.getElementById("filter-section").value;
+      const tipologiaVal = document.getElementById("filter-tipologia").value;
+      const progressivoVal = document.getElementById("filter-progressivo").value;
+      const answerVal = document.getElementById("filter-answers").value;
+      const argomentoVal = document.getElementById("filter-argomento").value;
+
+      // Start with master questions.
+      let filteredQuestions = questions.slice();
+
+      // Apply filters on questions.
+      if (sectionVal !== "all") {
+        filteredQuestions = filteredQuestions.filter(q => q.section === sectionVal);
+      }
+      if (tipologiaVal !== "all") {
+        filteredQuestions = filteredQuestions.filter(q => q.tipologia_esercizi === tipologiaVal);
+      }
+      if (progressivoVal !== "all") {
+        filteredQuestions = filteredQuestions.filter(q => q.progressivo === progressivoVal);
+      }
+      if (argomentoVal !== "all") {
+        filteredQuestions = filteredQuestions.filter(q => q.argomento === argomentoVal);
+      }
+      // For the answers filter, only keep questions whose student answer equals the selected answer.
+      if (answerVal !== "all") {
+        filteredQuestions = filteredQuestions.filter(q => {
+          const ansRecord = student_answers.find(a => a.question_id === q.id);
+          return ansRecord && ansRecord.answer === answerVal;
+        });
+      }
+
+      // Also, filter the student answers to include only those for the filtered questions.
+      const filteredStudentAnswers = student_answers.filter(a => 
+        filteredQuestions.some(q => q.id === a.question_id)
+      );
+
+      // Generate the table using filtered data.
+      generateTable(filteredQuestions, filteredStudentAnswers);
+    }
+
+    /********* EVENT LISTENERS *********/
+    // Attach change events to filters.
+    document.getElementById("filter-section").addEventListener("change", filterAndGenerateTable);
+    document.getElementById("filter-tipologia").addEventListener("change", filterAndGenerateTable);
+    document.getElementById("filter-progressivo").addEventListener("change", filterAndGenerateTable);
+    document.getElementById("filter-answers").addEventListener("change", filterAndGenerateTable);
+    document.getElementById("filter-argomento").addEventListener("change", filterAndGenerateTable);
+
+    /********* INITIALIZATION *********/
+    // Populate filter options and generate the initial table.
+    updateFilterOptions();
+    filterAndGenerateTable();
+  </script>
+</body>
+</html>

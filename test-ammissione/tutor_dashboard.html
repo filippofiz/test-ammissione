@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Tutor - Up to Ten</title>
+  <link rel="stylesheet" href="header.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh;
+      color: rgb(28, 37, 69);
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Canvas per animated background */
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      opacity: 0.6;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 2rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Responsive container per schermi grandi */
+    @media (min-width: 1600px) {
+      .container {
+        max-width: 1400px;
+      }
+    }
+
+    @media (max-width: 1280px) {
+      .container {
+        padding: 0 1.5rem;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        margin: 1rem auto;
+        padding: 0 1rem;
+      }
+    }
+
+    .dashboard-header {
+      background: linear-gradient(135deg, rgb(28, 37, 69), #1a2541);
+      color: white;
+      padding: 2rem 2.5rem;
+      border-radius: 16px;
+      margin-bottom: 2rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
+      position: relative;
+      z-index: 2;
+    }
+
+    .dashboard-header h2 {
+      font-size: 1.8rem;
+      margin-bottom: 1rem;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .modify-btn {
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      color: white;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      padding: 0.75rem 1.5rem;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .modify-btn:hover {
+      background: #00a666;
+      border-color: #00a666;
+      transform: translateY(-3px);
+    }
+
+    .students-section {
+      background: white;
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      position: relative;
+      z-index: 2;
+    }
+
+    /* Header della sezione studenti con toggle */
+    .students-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .students-section h3 {
+      font-size: 1.4rem;
+      color: rgb(28, 37, 69);
+      margin: 0;
+    }
+
+    /* Toggle switch container */
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .toggle-label {
+      font-size: 0.9rem;
+      color: #6c757d;
+      font-weight: 500;
+    }
+
+    /* Toggle switch stile iOS */
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 28px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 28px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: #00a666;
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(22px);
+    }
+
+    .student-progress {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    .student-progress:hover {
+      transform: translateX(4px);
+      border-color: #00a666;
+    }
+
+    .student-progress h3 {
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .tutor-badge {
+      font-size: 0.75rem;
+      background: #00a666;
+      color: white;
+      padding: 0.2rem 0.6rem;
+      border-radius: 12px;
+      font-weight: 600;
+    }
+
+    .test-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      background: rgba(0, 166, 102, 0.05);
+      border-radius: 10px;
+      margin-bottom: 0.5rem;
+    }
+
+    .test-row span {
+      flex: 1;
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+
+    .viewTestsBtn, .dashboardBtn {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.3s ease;
+    }
+
+    .viewTestsBtn {
+      background: white;
+      color: #00a666;
+      border: 1.5px solid #00a666;
+    }
+
+    .viewTestsBtn:hover {
+      background: #00a666;
+      color: white;
+    }
+
+    .dashboardBtn {
+      background: rgb(28, 37, 69);
+      color: white;
+    }
+
+    .dashboardBtn:hover {
+      transform: scale(1.05);
+    }
+
+    /* Loading state */
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      color: #6c757d;
+    }
+
+    .loading::after {
+      content: "...";
+      animation: dots 1.5s steps(4, end) infinite;
+    }
+
+    @keyframes dots {
+      0%, 20% { content: ""; }
+      40% { content: "."; }
+      60% { content: ".."; }
+      80%, 100% { content: "..."; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Carica l'header dal file esterno -->
+  <div id="header-placeholder"></div>
+
+  <div class="container">
+    <div class="dashboard-header">
+      <h2>Dashboard Tutor</h2>
+<div class="button-group">
+  <button id="modifyTestsBtn" class="modify-btn">🛠️ Gestione test</button>
+  <button id="assignTestsBtn" class="modify-btn">➕ Assegna nuovi test</button>
+  <a href="signup.html" class="modify-btn" style="text-decoration: none;">📝 Nuovo studente</a>
+</div>
+
+    </div>
+     
+    <div class="students-section">
+      <div class="students-header">
+        <h3>🎓 Studenti</h3>
+        <div class="toggle-container">
+          <span class="toggle-label">I miei</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="viewAllToggle">
+            <span class="slider"></span>
+          </label>
+          <span class="toggle-label">Tutti</span>
+        </div>
+      </div>
+      <div id="studentsContainer">
+        <div class="loading">Caricamento studenti</div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Carica l'header dal file esterno
+    fetch('header.html')
+      .then(response => response.text())
+      .then(data => {
+        document.getElementById('header-placeholder').innerHTML = data;
+      });
+  </script>
+
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+    const SUPABASE_URL = "https://elrwpaezjnemmiegkyin.supabase.co"; 
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVscndwYWV6am5lbW1pZWdreWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzAyMDUsImV4cCI6MjA1MzY0NjIwNX0.p6R2S1HK8kPFYiEAYtYaxIAH8XSmzjQBWQ_ywy3akdI";  
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    let currentTutorId = null;
+    let isInitialized = false;
+
+    // Funzione per verificare se dobbiamo ricaricare
+    function shouldReload() {
+      const lastLoad = sessionStorage.getItem('dashboardLastLoad');
+      const now = Date.now();
+      // Se sono passati più di 2 secondi dall'ultimo caricamento
+      return !lastLoad || (now - parseInt(lastLoad)) > 2000;
+    }
+
+    // Inizializza tutto dopo che il DOM è pronto
+    async function initializeDashboard() {
+      if (isInitialized && !shouldReload()) return;
+      
+      isInitialized = true;
+      sessionStorage.setItem('dashboardLastLoad', Date.now());
+      
+      // Prima ottieni il tutor ID
+      currentTutorId = await getTutorId();
+      if (!currentTutorId) return;
+
+      // Recupera lo stato salvato
+      const savedViewAll = sessionStorage.getItem('tutorDashboardViewAll') === 'true';
+      document.getElementById('viewAllToggle').checked = savedViewAll;
+      
+      // Carica i dati appropriati
+      if (savedViewAll) {
+        await fetchAllStudents();
+      } else {
+        await fetchMyStudents();
+      }
+    }
+
+    // Toggle event listener
+    document.getElementById('viewAllToggle').addEventListener('change', (e) => {
+      // Salva lo stato nel sessionStorage
+      sessionStorage.setItem('tutorDashboardViewAll', e.target.checked);
+      sessionStorage.setItem('dashboardLastLoad', Date.now());
+      
+      if (e.target.checked) {
+        fetchAllStudents();
+      } else {
+        fetchMyStudents();
+      }
+    });
+
+    // Forza il reload quando la pagina diventa visibile
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && shouldReload()) {
+        initializeDashboard();
+      }
+    });
+
+    // Avvia l'inizializzazione
+    // Metodo semplice: forza sempre il reload al caricamento della pagina
+    window.addEventListener('load', async () => {
+      // Prima ottieni il tutor ID
+      currentTutorId = await getTutorId();
+      if (!currentTutorId) return;
+
+      // Recupera lo stato salvato del toggle
+      const savedViewAll = sessionStorage.getItem('tutorDashboardViewAll') === 'true';
+      
+      // Imposta il toggle
+      document.getElementById('viewAllToggle').checked = savedViewAll;
+      
+      // Carica SEMPRE i dati freschi
+      if (savedViewAll) {
+        await fetchAllStudents();
+      } else {
+        await fetchMyStudents();
+      }
+    });
+    setTimeout(async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData?.session) {
+        const userId = sessionData.session.user.id;
+        const { data: tutor } = await supabase
+          .from("tutors")
+          .select("name")
+          .eq("auth_uid", userId)
+          .single();
+        
+        if (tutor?.name) {
+          const userNameElement = document.querySelector('.user-name');
+          if (userNameElement) {
+            userNameElement.textContent = tutor.name;
+          }
+        }
+      }
+
+      // Aggiungi evento logout
+      document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+        await supabase.auth.signOut();
+        window.location.href = "/";
+      });
+    }, 100);
+
+    async function getTutorId() {
+      const { data: userData, error: authError } = await supabase.auth.getUser();
+      if (authError || !userData || !userData.user) {
+          alert("Sessione scaduta. Accedi di nuovo.");
+          window.location.href = "/";
+          return null;
+      }
+      const authUid = userData.user.id;
+      const { data: tutorData } = await supabase
+          .from("tutors")
+          .select("id")
+          .eq("auth_uid", authUid)
+          .single();
+      return tutorData?.id;
+    }
+
+    async function fetchMyStudents() {
+      if (!currentTutorId) {
+        currentTutorId = await getTutorId();
+        if (!currentTutorId) return;
+      }
+      
+      const { data: students } = await supabase
+          .from("students")
+          .select("id, auth_uid, name, tests")
+          .eq("tutor_id", currentTutorId);
+      
+      displayStudentProgress(students || [], false);
+    }
+
+    async function fetchAllStudents() {
+      // Recupera tutti gli studenti con info del tutor
+      const { data: students } = await supabase
+          .from("students")
+          .select(`
+            id, 
+            auth_uid, 
+            name, 
+            tests,
+            tutor_id,
+            tutors!inner(name)
+          `);
+      
+      displayStudentProgress(students || [], true);
+    }
+
+    async function displayStudentProgress(students, showAllMode) {
+      const studentsContainer = document.getElementById("studentsContainer");
+      studentsContainer.innerHTML = "";
+      
+      if (students.length === 0) {
+        const message = showAllMode ? 
+          'Nessuno studente nel sistema' : 
+          'Nessuno studente assegnato a te';
+        studentsContainer.innerHTML = `<p style="text-align: center; color: #6c757d;">${message}</p>`;
+        return;
+      }
+      
+      for (const student of students) {
+        const studentDiv = document.createElement("div");
+        studentDiv.classList.add("student-progress");
+        
+        // Mostra il nome dello studente con badge del tutor se in modalità "tutti"
+        let studentHeader = `<h3>👤 ${student.name}`;
+        if (showAllMode && student.tutors) {
+          const isMyStudent = student.tutor_id === currentTutorId;
+          const tutorName = isMyStudent ? 'Tu' : student.tutors.name;
+          const badgeColor = isMyStudent ? '#00a666' : '#6c757d';
+          studentHeader += ` <span class="tutor-badge" style="background: ${badgeColor}">Tutor: ${tutorName}</span>`;
+        }
+        studentHeader += '</h3>';
+        studentDiv.innerHTML = studentHeader;
+        
+        if (student.tests && student.tests.length > 0) {
+          student.tests.forEach(testOption => {
+            const rowDiv = document.createElement("div");
+            rowDiv.classList.add("test-row");
+            
+            const testLabel = document.createElement("span");
+            testLabel.textContent = `📝 ${testOption}`;
+            rowDiv.appendChild(testLabel);
+            
+            const viewTestsBtn = document.createElement("button");
+            viewTestsBtn.classList.add("viewTestsBtn");
+            viewTestsBtn.textContent = "Test assegnati";
+            viewTestsBtn.onclick = () => viewStudentTests(student.auth_uid, student.name, testOption);
+            rowDiv.appendChild(viewTestsBtn);
+            
+            const dashboardBtn = document.createElement("button");
+            dashboardBtn.classList.add("dashboardBtn");
+            dashboardBtn.textContent = "Risultati";
+            dashboardBtn.onclick = () => viewStudentDashboard(student.auth_uid, student.name, testOption);
+            rowDiv.appendChild(dashboardBtn);
+            
+            studentDiv.appendChild(rowDiv);
+          });
+        } else {
+          studentDiv.innerHTML += '<p style="color: #6c757d; text-align: center;">Nessun test disponibile</p>';
+        }
+        studentsContainer.appendChild(studentDiv);
+      }
+    }
+
+    // Toggle event listener
+    document.getElementById('viewAllToggle').addEventListener('change', (e) => {
+      if (e.target.checked) {
+        fetchAllStudents();
+      } else {
+        fetchMyStudents();
+      }
+    });
+
+    window.viewStudentTests = function (studentId, studentName, selectedTest) {
+      sessionStorage.setItem("selectedStudentId", studentId);
+      sessionStorage.setItem("selectedStudentName", studentName);
+      sessionStorage.setItem("selectedTestType", selectedTest);
+      window.location.href = "view_tests.html";
+    };
+
+    window.viewStudentDashboard = function (studentId, studentName, selectedTest) {
+      sessionStorage.setItem("selectedStudentId", studentId);
+      sessionStorage.setItem("selectedStudentName", studentName);
+      sessionStorage.setItem("selectedTestType", selectedTest);
+      window.location.href = "dashboard.html";
+    };
+
+    document.getElementById("modifyTestsBtn").addEventListener("click", () => {
+      window.location.href = "modify_tests.html";
+    });
+
+    document.getElementById("assignTestsBtn").addEventListener("click", () => {
+      window.location.href = "assign_tests.html";
+    });
+
+    // Carica inizialmente i propri studenti
+    fetchMyStudents();
+  </script>
+  <!-- Animated Background (se hai il file) -->
+  <script src="animated-background.js"></script>
+</body>
+</html>
