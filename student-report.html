@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Report Studente - Up to Ten</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <style>
+    /* Stili per la visualizzazione a schermo e PDF */
+    @media print {
+      @page {
+        size: A4;
+        margin: 0;
+      }
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Arial', sans-serif;
+      background: #f5f5f5;
+      color: #333;
+      line-height: 1.6;
+    }
+
+    /* Container per il report */
+    .report-container {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      background: white;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    }
+
+    /* Pagina */
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      padding: 20mm;
+      background: white;
+      position: relative;
+      page-break-after: always;
+    }
+
+    /* Header del report */
+    .report-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 3px solid #1c2545;
+    }
+
+    .logo-section {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .logo {
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(135deg, #1c2545, #2a3a5f);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    .company-info h1 {
+      font-size: 24px;
+      color: #1c2545;
+      margin-bottom: 5px;
+    }
+
+    .company-info p {
+      color: #666;
+      font-size: 14px;
+    }
+
+    .report-date {
+      text-align: right;
+      color: #666;
+      font-size: 14px;
+    }
+
+    /* Titolo principale */
+    .main-title {
+      text-align: center;
+      margin: 40px 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #1c2545, #2a3a5f);
+      color: white;
+      border-radius: 10px;
+    }
+
+    .main-title h2 {
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+
+    .main-title p {
+      font-size: 18px;
+      opacity: 0.9;
+    }
+
+    /* Info studente */
+    .student-info {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 30px;
+      border-left: 5px solid #00a666;
+    }
+
+    .student-info h3 {
+      color: #1c2545;
+      margin-bottom: 15px;
+      font-size: 20px;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+    }
+
+    .info-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .info-label {
+      font-weight: bold;
+      color: #666;
+      font-size: 12px;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+
+    .info-value {
+      color: #1c2545;
+      font-size: 16px;
+    }
+
+    /* Sezione statistiche */
+    .stats-section {
+      margin-bottom: 40px;
+    }
+
+    .section-title {
+      font-size: 22px;
+      color: #1c2545;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #e0e0e0;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .stat-card {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      border-top: 4px solid #00a666;
+    }
+
+    .stat-card.error {
+      border-top-color: #dc3545;
+    }
+
+    .stat-card.warning {
+      border-top-color: #ffc107;
+    }
+
+    .stat-card.info {
+      border-top-color: #0dcaf0;
+    }
+
+    .stat-value {
+      font-size: 36px;
+      font-weight: bold;
+      color: #1c2545;
+      margin: 10px 0;
+    }
+
+    .stat-label {
+      color: #666;
+      font-size: 14px;
+    }
+
+    /* Grafici */
+    .charts-section {
+      margin-bottom: 40px;
+    }
+
+    .chart-container {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 30px;
+    }
+
+    .chart-title {
+      font-size: 18px;
+      color: #1c2545;
+      margin-bottom: 15px;
+      font-weight: bold;
+    }
+
+    .chart-box {
+      width: 100%;
+      height: 300px;
+    }
+
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+
+    .chart-grid .chart-box {
+      height: 250px;
+    }
+
+    /* Tabella performance */
+    .performance-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      font-size: 14px;
+    }
+
+    .performance-table th,
+    .performance-table td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .performance-table th {
+      background: #1c2545;
+      color: white;
+      font-weight: bold;
+    }
+
+    .performance-table tr:nth-child(even) {
+      background: #f8f9fa;
+    }
+
+    .performance-table .score {
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .score.high { color: #28a745; }
+    .score.medium { color: #ffc107; }
+    .score.low { color: #dc3545; }
+
+    /* Osservazioni */
+    .observations-section {
+      background: #f8f9fa;
+      padding: 25px;
+      border-radius: 10px;
+      margin-top: 40px;
+      border-left: 5px solid #0dcaf0;
+    }
+
+    .observations-section h3 {
+      color: #1c2545;
+      margin-bottom: 15px;
+    }
+
+    .observation-item {
+      margin-bottom: 10px;
+      padding-left: 20px;
+      position: relative;
+    }
+
+    .observation-item::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: #0dcaf0;
+      font-weight: bold;
+    }
+
+    /* Footer */
+    .report-footer {
+      position: absolute;
+      bottom: 20mm;
+      left: 20mm;
+      right: 20mm;
+      text-align: center;
+      padding-top: 20px;
+      border-top: 1px solid #e0e0e0;
+      color: #666;
+      font-size: 12px;
+    }
+
+    /* Pulsanti controllo */
+    .controls {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      gap: 10px;
+      z-index: 1000;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+      background: #1c2545;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #2a3a5f;
+    }
+
+    .btn-secondary {
+      background: #6c757d;
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background: #5a6268;
+    }
+
+    /* Loading overlay */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+
+    .loading-content {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #1c2545;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Hide controls in PDF */
+    @media print {
+      .controls, .loading-overlay {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Controlli -->
+  <div class="controls">
+    <button class="btn btn-secondary" onclick="window.close()">Chiudi</button>
+    <button class="btn btn-primary" onclick="generatePDF()">📥 Scarica PDF</button>
+  </div>
+
+  <!-- Loading overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-content">
+      <div class="spinner"></div>
+      <p>Generazione PDF in corso...</p>
+    </div>
+  </div>
+
+  <!-- Report Container -->
+  <div class="report-container" id="reportContent">
+    <!-- Pagina 1 -->
+    <div class="page">
+      <!-- Header -->
+      <div class="report-header">
+        <div class="logo-section">
+          <div class="logo">UT</div>
+          <div class="company-info">
+            <h1>Up to Ten</h1>
+            <p>Sistema di Valutazione e Preparazione Test</p>
+          </div>
+        </div>
+        <div class="report-date">
+          <p><strong>Data Report:</strong></p>
+          <p id="reportDate"></p>
+        </div>
+      </div>
+
+      <!-- Titolo principale -->
+      <div class="main-title">
+        <h2>REPORT RISULTATI TEST</h2>
+        <p id="studentNameTitle"></p>
+      </div>
+
+      <!-- Info studente -->
+      <div class="student-info">
+        <h3>📋 Informazioni Studente</h3>
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="info-label">Nome Studente</span>
+            <span class="info-value" id="studentName"></span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Tipologia Test</span>
+            <span class="info-value" id="testType"></span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Periodo di Riferimento</span>
+            <span class="info-value" id="reportPeriod"></span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Test Completati</span>
+            <span class="info-value" id="completedTests"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Statistiche principali -->
+      <div class="stats-section">
+        <h3 class="section-title">📊 Statistiche Generali</h3>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Risposte Corrette</div>
+            <div class="stat-value" id="correctAnswers">0</div>
+            <div class="stat-label" id="correctPercentage">0%</div>
+          </div>
+          <div class="stat-card error">
+            <div class="stat-label">Risposte Errate</div>
+            <div class="stat-value" id="wrongAnswers">0</div>
+            <div class="stat-label" id="wrongPercentage">0%</div>
+          </div>
+          <div class="stat-card warning">
+            <div class="stat-label">Punteggio Medio</div>
+            <div class="stat-value" id="averageScore">0</div>
+            <div class="stat-label">su 100</div>
+          </div>
+          <div class="stat-card info">
+            <div class="stat-label">Tempo Medio</div>
+            <div class="stat-value" id="averageTime">0</div>
+            <div class="stat-label">minuti</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grafici principali -->
+      <div class="charts-section">
+        <h3 class="section-title">📈 Analisi Performance</h3>
+        
+        <!-- Grafico distribuzione risposte -->
+        <div class="chart-container">
+          <div class="chart-title">Distribuzione Risposte</div>
+          <div id="pieChart" class="chart-box"></div>
+        </div>
+      </div>
+
+      <!-- Footer pagina 1 -->
+      <div class="report-footer">
+        <p>Up to Ten - Report Confidenziale - Pagina 1</p>
+      </div>
+    </div>
+
+    <!-- Pagina 2 -->
+    <div class="page">
+      <!-- Performance per argomento -->
+      <div class="charts-section">
+        <h3 class="section-title">🎯 Performance per Argomento</h3>
+        
+        <div class="chart-grid">
+          <div class="chart-container">
+            <div class="chart-title">Percentuale Successo per Materia</div>
+            <div id="barChart" class="chart-box"></div>
+          </div>
+          <div class="chart-container">
+            <div class="chart-title">Competenze Radar</div>
+            <div id="radarChart" class="chart-box"></div>
+          </div>
+        </div>
+
+        <!-- Tabella dettagliata -->
+        <div class="chart-container">
+          <div class="chart-title">Dettaglio Performance per Sezione</div>
+          <table class="performance-table" id="performanceTable">
+            <thead>
+              <tr>
+                <th>Sezione</th>
+                <th>Argomento</th>
+                <th>Domande</th>
+                <th>Corrette</th>
+                <th>% Successo</th>
+              </tr>
+            </thead>
+            <tbody id="performanceTableBody">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Andamento temporale -->
+      <div class="charts-section">
+        <h3 class="section-title">📉 Andamento Temporale</h3>
+        <div class="chart-container">
+          <div class="chart-title">Progressi nel Tempo</div>
+          <div id="lineChart" class="chart-box"></div>
+        </div>
+      </div>
+
+      <!-- Footer pagina 2 -->
+      <div class="report-footer">
+        <p>Up to Ten - Report Confidenziale - Pagina 2</p>
+      </div>
+    </div>
+
+    <!-- Pagina 3 -->
+    <div class="page">
+      <!-- Osservazioni e raccomandazioni -->
+      <div class="observations-section">
+        <h3>💡 Osservazioni e Raccomandazioni</h3>
+        <div id="observations">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Aree di forza -->
+      <div class="observations-section" style="border-left-color: #28a745; margin-top: 30px;">
+        <h3>✅ Punti di Forza</h3>
+        <div id="strengths">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Aree di miglioramento -->
+      <div class="observations-section" style="border-left-color: #dc3545; margin-top: 30px;">
+        <h3>⚠️ Aree di Miglioramento</h3>
+        <div id="improvements">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Piano di studio consigliato -->
+      <div class="observations-section" style="border-left-color: #6f42c1; margin-top: 30px;">
+        <h3>📚 Piano di Studio Consigliato</h3>
+        <div id="studyPlan">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Note finali -->
+      <div style="margin-top: 50px; text-align: center; padding: 20px;">
+        <p style="color: #666; font-style: italic; margin-bottom: 20px;">
+          Questo report è stato generato automaticamente dal sistema Up to Ten basandosi sui risultati dei test completati.
+          Per ulteriori informazioni o chiarimenti, contattare il proprio tutor di riferimento.
+        </p>
+        <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #1c2545;">
+          <p style="font-weight: bold; color: #1c2545; font-size: 16px;">Up to Ten</p>
+          <p style="color: #666;">Excellence in Test Preparation</p>
+        </div>
+      </div>
+
+      <!-- Footer pagina 3 -->
+      <div class="report-footer">
+        <p>Up to Ten - Report Confidenziale - Pagina 3</p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+    const SUPABASE_URL = "https://elrwpaezjnemmiegkyin.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVscndwYWV6am5lbW1pZWdreWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzAyMDUsImV4cCI6MjA1MzY0NjIwNX0.p6R2S1HK8kPFYiEAYtYaxIAH8XSmzjQBWQ_ywy3akdI";
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Get data from session
+    const studentId = sessionStorage.getItem("selectedStudentId");
+    const studentName = sessionStorage.getItem("selectedStudentName");
+    const testType = sessionStorage.getItem("selectedTestType");
+
+    let globalAnswers = [];
+    let globalQuestions = [];
+    let studentTestsData = [];
+
+    // Initialize report
+    async function initializeReport() {
+      // Set basic info
+      document.getElementById('reportDate').textContent = new Date().toLocaleDateString('it-IT', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+      document.getElementById('studentNameTitle').textContent = studentName;
+      document.getElementById('studentName').textContent = studentName;
+      document.getElementById('testType').textContent = testType;
+
+      // Load data
+      await loadData();
+      
+      // Generate charts and content
+      generateCharts();
+      generateAnalysis();
+    }
+
+    async function loadData() {
+      const answerTable = testType.includes("PDF") ? "student_answers" : "studentbocconi_answers";
+      const questionTable = testType.includes("PDF") ? "questions" : "questions_bancaDati";
+
+      // Fetch answers
+      const { data: answers } = await supabase
+        .from(answerTable)
+        .select("*")
+        .eq("auth_uid", studentId);
+
+      // Fetch questions
+      const { data: questions } = await supabase
+        .from(questionTable)
+        .select("*")
+        .eq("tipologia_test", testType);
+
+      // Fetch student tests
+      const { data: testsData } = await supabase
+        .from("student_tests")
+        .select("*")
+        .eq("auth_uid", studentId)
+        .eq("tipologia_test", testType);
+
+      globalAnswers = answers || [];
+      globalQuestions = questions || [];
+      studentTestsData = testsData || [];
+
+      // Calculate statistics
+      calculateStatistics();
+    }
+
+    function calculateStatistics() {
+      const totalAnswers = globalAnswers.length;
+      const correctAnswers = globalAnswers.filter(a => a.auto_score === 1).length;
+      const wrongAnswers = globalAnswers.filter(a => a.auto_score === 0 && !["x", "y", "z"].includes(a.answer)).length;
+      const completedTests = studentTestsData.filter(t => t.status === "completed").length;
+
+      // Update stats
+      document.getElementById('correctAnswers').textContent = correctAnswers;
+      document.getElementById('correctPercentage').textContent = totalAnswers > 0 ? 
+        `${((correctAnswers / totalAnswers) * 100).toFixed(1)}%` : '0%';
+      
+      document.getElementById('wrongAnswers').textContent = wrongAnswers;
+      document.getElementById('wrongPercentage').textContent = totalAnswers > 0 ? 
+        `${((wrongAnswers / totalAnswers) * 100).toFixed(1)}%` : '0%';
+      
+      document.getElementById('averageScore').textContent = totalAnswers > 0 ? 
+        ((correctAnswers / totalAnswers) * 100).toFixed(0) : '0';
+      
+      document.getElementById('completedTests').textContent = completedTests;
+      
+      // Calculate average time
+      const totalDuration = studentTestsData
+        .filter(t => t.duration)
+        .reduce((sum, t) => sum + parseInt(t.duration), 0);
+      const avgTime = completedTests > 0 ? Math.round(totalDuration / completedTests / 60) : 0;
+      document.getElementById('averageTime').textContent = avgTime;
+
+      // Set report period
+      const dates = globalAnswers
+        .filter(a => a.submitted_at)
+        .map(a => new Date(a.submitted_at));
+      
+      if (dates.length > 0) {
+        const minDate = new Date(Math.min(...dates));
+        const maxDate = new Date(Math.max(...dates));
+        document.getElementById('reportPeriod').textContent = 
+          `${minDate.toLocaleDateString('it-IT')} - ${maxDate.toLocaleDateString('it-IT')}`;
+      } else {
+        document.getElementById('reportPeriod').textContent = 'N/A';
+      }
+    }
+
+    function generateCharts() {
+      // Pie Chart
+      const pieData = calculatePieData();
+      const pieChart = echarts.init(document.getElementById('pieChart'));
+      pieChart.setOption({
+        tooltip: { trigger: 'item' },
+        legend: { bottom: '5%', left: 'center' },
+        series: [{
+          type: 'pie',
+          radius: ['40%', '70%'],
+          avoidLabelOverlap: false,
+          itemStyle: {
+            borderRadius: 10,
+            borderColor: '#fff',
+            borderWidth: 2
+          },
+          label: { show: true, formatter: '{b}: {d}%' },
+          data: pieData
+        }]
+      });
+
+      // Bar Chart
+      const barData = calculateBarData();
+      const barChart = echarts.init(document.getElementById('barChart'));
+      barChart.setOption({
+        tooltip: { trigger: 'axis' },
+        xAxis: {
+          type: 'category',
+          data: barData.categories,
+          axisLabel: { rotate: 45, interval: 0 }
+        },
+        yAxis: { type: 'value', max: 100, name: '% Successo' },
+        series: [{
+          type: 'bar',
+          data: barData.values,
+          itemStyle: {
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: '#00a666' },
+              { offset: 1, color: '#00854f' }
+            ])
+          }
+        }]
+      });
+
+      // Radar Chart
+      const radarData = calculateRadarData();
+      const radarChart = echarts.init(document.getElementById('radarChart'));
+      radarChart.setOption({
+        radar: {
+          indicator: radarData.indicators,
+          shape: 'polygon'
+        },
+        series: [{
+          type: 'radar',
+          data: [{
+            value: radarData.values,
+            name: 'Performance',
+            areaStyle: { color: 'rgba(28, 37, 69, 0.3)' }
+          }]
+        }]
+      });
+
+      // Line Chart
+      const lineData = calculateLineData();
+      const lineChart = echarts.init(document.getElementById('lineChart'));
+      lineChart.setOption({
+        tooltip: { trigger: 'axis' },
+        xAxis: {
+          type: 'category',
+          data: lineData.dates,
+          axisLabel: { rotate: 45 }
+        },
+        yAxis: { type: 'value', max: 100, name: '% Corrette' },
+        series: [{
+          type: 'line',
+          data: lineData.values,
+          smooth: true,
+          itemStyle: { color: '#1c2545' },
+          areaStyle: {
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: 'rgba(28, 37, 69, 0.3)' },
+              { offset: 1, color: 'rgba(28, 37, 69, 0.05)' }
+            ])
+          }
+        }]
+      });
+    }
+
+    function calculatePieData() {
+      let correct = 0, incorrect = 0, insicuro = 0, nonHoIdea = 0, nonDato = 0;
+      
+      globalAnswers.forEach(a => {
+        if (a.auto_score === 1) correct++;
+        else if (a.auto_score === 0 && !["x", "y", "z"].includes(a.answer)) incorrect++;
+        else if (a.answer === "x") insicuro++;
+        else if (a.answer === "y") nonHoIdea++;
+        else if (a.answer === "z") nonDato++;
+      });
+
+      return [
+        { value: correct, name: 'Corretto', itemStyle: { color: '#28a745' } },
+        { value: incorrect, name: 'Incorretto', itemStyle: { color: '#dc3545' } },
+        { value: insicuro, name: 'Insicuro', itemStyle: { color: '#17a2b8' } },
+        { value: nonHoIdea, name: 'Non ho idea', itemStyle: { color: '#ffc107' } },
+        { value: nonDato, name: 'Non dato', itemStyle: { color: '#6c757d' } }
+      ];
+    }
+
+    function calculateBarData() {
+      const argomentoStats = {};
+      
+      globalQuestions.forEach(q => {
+        if (!argomentoStats[q.argomento]) {
+          argomentoStats[q.argomento] = { correct: 0, total: 0 };
+        }
+      });
+
+      globalAnswers.forEach(a => {
+        const question = globalQuestions.find(q => q.id === a.question_id);
+        if (question) {
+          argomentoStats[question.argomento].total++;
+          if (a.auto_score === 1) {
+            argomentoStats[question.argomento].correct++;
+          }
+        }
+      });
+
+      const categories = Object.keys(argomentoStats);
+      const values = categories.map(cat => 
+        argomentoStats[cat].total > 0 ? 
+          (argomentoStats[cat].correct / argomentoStats[cat].total * 100).toFixed(1) : 0
+      );
+
+      return { categories, values };
+    }
+
+    function calculateRadarData() {
+      const sectionStats = {};
+      
+      globalQuestions.forEach(q => {
+        if (!sectionStats[q.section]) {
+          sectionStats[q.section] = { correct: 0, total: 0 };
+        }
+      });
+
+      globalAnswers.forEach(a => {
+        const question = globalQuestions.find(q => q.id === a.question_id);
+        if (question) {
+          sectionStats[question.section].total++;
+          if (a.auto_score === 1) {
+            sectionStats[question.section].correct++;
+          }
+        }
+      });
+
+      const indicators = Object.keys(sectionStats).map(section => ({
+        name: section,
+        max: 100
+      }));
+
+      const values = Object.keys(sectionStats).map(section => 
+        sectionStats[section].total > 0 ? 
+          (sectionStats[section].correct / sectionStats[section].total * 100).toFixed(1) : 0
+      );
+
+      return { indicators, values };
+    }
+
+    function calculateLineData() {
+      // Group answers by date
+      const dailyStats = {};
+      
+      globalAnswers.forEach(a => {
+        if (a.submitted_at) {
+          const date = new Date(a.submitted_at).toLocaleDateString('it-IT');
+          if (!dailyStats[date]) {
+            dailyStats[date] = { correct: 0, total: 0 };
+          }
+          dailyStats[date].total++;
+          if (a.auto_score === 1) {
+            dailyStats[date].correct++;
+          }
+        }
+      });
+
+      const dates = Object.keys(dailyStats).sort();
+      const values = dates.map(date => 
+        (dailyStats[date].correct / dailyStats[date].total * 100).toFixed(1)
+      );
+
+      return { dates, values };
+    }
+
+    function generateAnalysis() {
+      // Generate performance table
+      const tableBody = document.getElementById('performanceTableBody');
+      const sectionData = calculateSectionPerformance();
+      
+      sectionData.forEach(section => {
+        const row = tableBody.insertRow();
+        row.insertCell(0).textContent = section.section;
+        row.insertCell(1).textContent = section.argomento;
+        row.insertCell(2).textContent = section.total;
+        row.insertCell(3).textContent = section.correct;
+        const scoreCell = row.insertCell(4);
+        scoreCell.textContent = section.percentage + '%';
+        scoreCell.className = 'score ' + getScoreClass(section.percentage);
+      });
+
+      // Generate observations
+      generateObservations();
+      generateStrengths();
+      generateImprovements();
+      generateStudyPlan();
+    }
+
+    function calculateSectionPerformance() {
+      const sectionMap = {};
+      
+      globalQuestions.forEach(q => {
+        const key = `${q.section}|${q.argomento}`;
+        if (!sectionMap[key]) {
+          sectionMap[key] = {
+            section: q.section,
+            argomento: q.argomento,
+            correct: 0,
+            total: 0
+          };
+        }
+      });
+
+      globalAnswers.forEach(a => {
+        const question = globalQuestions.find(q => q.id === a.question_id);
+        if (question) {
+          const key = `${question.section}|${question.argomento}`;
+          sectionMap[key].total++;
+          if (a.auto_score === 1) {
+            sectionMap[key].correct++;
+          }
+        }
+      });
+
+      return Object.values(sectionMap)
+        .filter(s => s.total > 0)
+        .map(s => ({
+          ...s,
+          percentage: ((s.correct / s.total) * 100).toFixed(0)
+        }))
+        .sort((a, b) => b.percentage - a.percentage);
+    }
+
+    function getScoreClass(percentage) {
+      if (percentage >= 80) return 'high';
+      if (percentage >= 60) return 'medium';
+      return 'low';
+    }
+
+    function generateObservations() {
+      const observations = document.getElementById('observations');
+      const totalAnswers = globalAnswers.length;
+      const correctRate = totalAnswers > 0 ? 
+        (globalAnswers.filter(a => a.auto_score === 1).length / totalAnswers * 100).toFixed(1) : 0;
+
+      const observationsList = [
+        `Performance complessiva: ${correctRate}% di risposte corrette su ${totalAnswers} domande totali`,
+        `Test completati: ${studentTestsData.filter(t => t.status === "completed").length} su ${studentTestsData.length}`,
+        `Tendenza generale: ${correctRate >= 70 ? 'Positiva' : correctRate >= 50 ? 'Sufficiente' : 'Da migliorare'}`
+      ];
+
+      observationsList.forEach(obs => {
+        const div = document.createElement('div');
+        div.className = 'observation-item';
+        div.textContent = obs;
+        observations.appendChild(div);
+      });
+    }
+
+    function generateStrengths() {
+      const strengths = document.getElementById('strengths');
+      const performanceData = calculateSectionPerformance();
+      const strongAreas = performanceData.filter(p => p.percentage >= 80);
+
+      if (strongAreas.length > 0) {
+        strongAreas.slice(0, 5).forEach(area => {
+          const div = document.createElement('div');
+          div.className = 'observation-item';
+          div.textContent = `${area.argomento} (${area.section}): ${area.percentage}% di successo`;
+          strengths.appendChild(div);
+        });
+      } else {
+        const div = document.createElement('div');
+        div.className = 'observation-item';
+        div.textContent = 'Continuare a lavorare per consolidare le competenze in tutte le aree';
+        strengths.appendChild(div);
+      }
+    }
+
+    function generateImprovements() {
+      const improvements = document.getElementById('improvements');
+      const performanceData = calculateSectionPerformance();
+      const weakAreas = performanceData.filter(p => p.percentage < 60);
+
+      if (weakAreas.length > 0) {
+        weakAreas.slice(0, 5).forEach(area => {
+          const div = document.createElement('div');
+          div.className = 'observation-item';
+          div.textContent = `${area.argomento} (${area.section}): solo ${area.percentage}% di successo - richiede maggiore attenzione`;
+          improvements.appendChild(div);
+        });
+      } else {
+        const div = document.createElement('div');
+        div.className = 'observation-item';
+        div.textContent = 'Mantenere il livello attuale di preparazione in tutte le aree';
+        improvements.appendChild(div);
+      }
+    }
+
+    function generateStudyPlan() {
+      const studyPlan = document.getElementById('studyPlan');
+      const performanceData = calculateSectionPerformance();
+      const priorityAreas = performanceData.filter(p => p.percentage < 70).slice(0, 3);
+
+      const planItems = [
+        'Dedicare almeno 2 ore al giorno allo studio mirato',
+        'Rivedere quotidianamente le domande sbagliate',
+        'Completare tutti i test disponibili nelle aree critiche'
+      ];
+
+      if (priorityAreas.length > 0) {
+        planItems.unshift(`Focus prioritario su: ${priorityAreas.map(a => a.argomento).join(', ')}`);
+      }
+
+      planItems.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'observation-item';
+        div.textContent = item;
+        studyPlan.appendChild(div);
+      });
+    }
+
+    // Generate PDF
+    window.generatePDF = async function() {
+      const loadingOverlay = document.getElementById('loadingOverlay');
+      loadingOverlay.style.display = 'flex';
+
+      try {
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        
+        const pages = document.querySelectorAll('.page');
+        
+        for (let i = 0; i < pages.length; i++) {
+          if (i > 0) pdf.addPage();
+          
+          const canvas = await html2canvas(pages[i], {
+            scale: 2,
+            useCORS: true,
+            logging: false
+          });
+          
+          const imgData = canvas.toDataURL('image/png');
+          pdf.addImage(imgData, 'PNG', 0, 0, 210, 297);
+        }
+        
+        pdf.save(`Report_${studentName}_${new Date().toISOString().split('T')[0]}.pdf`);
+      } catch (error) {
+        console.error('Error generating PDF:', error);
+        alert('Errore nella generazione del PDF. Riprova.');
+      } finally {
+        loadingOverlay.style.display = 'none';
+      }
+    };
+
+    // Initialize on load
+    initializeReport();
+  </script>
+</body>
+</html>

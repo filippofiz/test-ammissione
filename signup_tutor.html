@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registrazione Tutor - Up to Ten</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh;
+      color: rgb(28, 37, 69);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 1rem 2rem 1rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Container principale */
+    .register-container {
+      width: 100%;
+      max-width: 450px;
+      animation: fadeInUp 0.6s ease-out;
+      position: relative;
+      z-index: 1;
+      margin: auto;
+      min-height: 0;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Logo Section */
+    .logo-section {
+      text-align: center;
+      margin-bottom: 1rem;
+      margin-top: 2rem;
+      position: relative;
+    }
+
+    .platform-title {
+      font-size: 2.2rem;
+      font-weight: 700;
+      margin: 0 0 0.5rem 0;
+      line-height: 1.2;
+    }
+
+    .platform-title span {
+      display: inline-block;
+      animation: wordDrop 0.6s ease-out backwards;
+    }
+
+    .word1 {
+      color: rgb(28, 37, 69);
+      animation-delay: 0.1s;
+    }
+
+    .word2 {
+      color: #00a666;
+      animation-delay: 0.2s;
+      margin-left: 0.3rem;
+    }
+
+    /* UpToTen integrated text */
+    .uptoten-wrapper {
+      font-size: 2rem;
+      font-weight: 800;
+      margin: 0.5rem 0 1rem 0;
+      display: inline-block;
+      white-space: nowrap;
+      line-height: 1.2;
+    }
+
+    .uptoten-wrapper > span {
+      display: inline-block;
+      animation: fadeIn 0.6s ease-out backwards;
+    }
+
+    .up {
+      color: rgb(28, 37, 69);
+      font-size: 2rem;
+      text-transform: uppercase;
+      animation-delay: 0.4s;
+    }
+
+    .to {
+      color: #00a666;
+      font-size: 1.6rem;
+      margin: 0 0.15rem;
+      font-weight: 500;
+      text-transform: lowercase;
+      animation-delay: 0.5s;
+    }
+
+    .ten {
+      color: rgb(28, 37, 69);
+      font-size: 2rem;
+      text-transform: uppercase;
+      animation-delay: 0.6s;
+      margin-right: 0.6rem;
+    }
+
+    .makes-it {
+      color: #6c757d;
+      font-weight: 400;
+      font-size: 1.5rem;
+      font-style: italic;
+      animation-delay: 0.8s;
+      margin-right: 0.3rem;
+    }
+
+    .easy {
+      background: linear-gradient(135deg, #00a666 0%, #00c775 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      font-size: 2rem;
+      position: relative;
+      animation-delay: 1s;
+    }
+
+    .easy::after {
+      content: '👨‍🏫';
+      position: absolute;
+      top: -10px;
+      right: -35px;
+      font-size: 1.5rem;
+      animation: rotate 2s ease-in-out infinite;
+    }
+
+    @keyframes wordDrop {
+      from {
+        opacity: 0;
+        transform: translateY(-30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeIn {
+      from { 
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to { 
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes rotate {
+      0%, 100% { transform: rotate(0deg) scale(1); }
+      50% { transform: rotate(10deg) scale(1.1); }
+    }
+
+    /* Subtitle */
+    .subtitle-container {
+      position: relative;
+      margin-top: 1rem;
+    }
+
+    .subtitle-text {
+      color: #6c757d;
+      font-size: 1rem;
+      font-weight: 400;
+      letter-spacing: 0.3px;
+      margin: 0;
+      opacity: 0;
+      animation: fadeIn 0.8s ease-out 1.2s forwards;
+    }
+
+    .animated-line {
+      position: absolute;
+      bottom: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #00a666, transparent);
+      animation: expandLine 1.5s ease-out 1.4s forwards;
+    }
+
+    @keyframes expandLine {
+      to { width: 200px; }
+    }
+
+    /* Register Card */
+    .register-card {
+      background: white;
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .register-card::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -50%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(0, 166, 102, 0.05) 0%, transparent 70%);
+      animation: pulse 4s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.5; }
+      50% { transform: scale(1.2); opacity: 0.8; }
+    }
+
+    /* Card Header */
+    .card-header {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .card-header h2 {
+      font-size: 1.5rem;
+      color: rgb(28, 37, 69);
+      margin-bottom: 0.5rem;
+    }
+
+    .card-header p {
+      color: #6c757d;
+      font-size: 0.95rem;
+    }
+
+    /* Form Elements */
+    .form-group {
+      margin-bottom: 1.25rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: rgb(28, 37, 69);
+      font-size: 0.95rem;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 2px solid #e9ecef;
+      border-radius: 10px;
+      font-size: 1rem;
+      background: white;
+      color: rgb(28, 37, 69);
+      transition: all 0.3s ease;
+    }
+
+    .form-group input:hover {
+      border-color: #00a666;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #00a666;
+      box-shadow: 0 0 0 3px rgba(0, 166, 102, 0.1);
+    }
+
+    /* Submit Button */
+    .submit-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #00a666, #00c775);
+      color: white;
+      border: none;
+      padding: 0.875rem 2rem;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      z-index: 1;
+    }
+
+    .submit-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      transition: left 0.6s;
+    }
+
+    .submit-btn:hover::before {
+      left: 100%;
+    }
+
+    .submit-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 166, 102, 0.3);
+    }
+
+    .submit-btn:active {
+      transform: translateY(-1px);
+    }
+
+    .submit-btn:disabled {
+      background: #cccccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Loading Spinner */
+    .loading-spinner {
+      display: none;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+      margin: 0 auto;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Error Message */
+    .error-message {
+      background: #fee;
+      border: 1px solid #fcc;
+      color: #c33;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+      display: none;
+      animation: shake 0.5s ease-in-out;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+
+    /* Success Message */
+    .success-message {
+      background: #e6ffed;
+      border: 1px solid #b7e0c4;
+      color: #00a666;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+      display: none;
+    }
+
+    /* Divider */
+    .divider {
+      text-align: center;
+      margin: 1.5rem 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    .divider::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: #e9ecef;
+    }
+
+    .divider span {
+      background: white;
+      padding: 0 1rem;
+      color: #6c757d;
+      position: relative;
+      font-size: 0.9rem;
+    }
+
+    /* Login Link */
+    .login-link {
+      text-align: center;
+      margin-top: 1.5rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .login-link p {
+      color: #6c757d;
+      font-size: 0.95rem;
+    }
+
+    .login-link a {
+      color: #00a666;
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+
+    .login-link a:hover {
+      text-decoration: underline;
+    }
+
+    /* Responsive */
+    @media (max-height: 700px) {
+      body {
+        padding: 1rem;
+      }
+      
+      .logo-section {
+        margin-bottom: 0.5rem;
+      }
+      
+      .form-group {
+        margin-bottom: 1rem;
+      }
+      
+      .card-header {
+        margin-bottom: 1rem;
+      }
+      
+      .divider {
+        margin: 1rem 0;
+      }
+      
+      .register-card {
+        padding: 1.5rem;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .uptoten-wrapper {
+        font-size: 1.6rem;
+        white-space: normal;
+      }
+      
+      .up, .ten {
+        font-size: 1.6rem;
+      }
+      
+      .to {
+        font-size: 1.3rem;
+      }
+      
+      .makes-it {
+        font-size: 1.2rem;
+      }
+      
+      .easy {
+        font-size: 1.6rem;
+      }
+      
+      .platform-title {
+        font-size: 1.8rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .register-card {
+        padding: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="register-container">
+    <!-- Register Card -->
+    <div class="register-card">
+      <div class="card-header">
+        <h2>Registrazione Tutor</h2>
+        <p>Crea il tuo account per gestire le simulazioni</p>
+      </div>
+
+      <!-- Error/Success Messages -->
+      <div class="error-message" id="errorMessage"></div>
+      <div class="success-message" id="successMessage"></div>
+
+      <!-- Registration Form -->
+      <form id="registerForm">
+        <div class="form-group">
+          <label for="tutorName">👤 Nome Completo</label>
+          <input 
+            type="text" 
+            id="tutorName" 
+            name="tutorName" 
+            placeholder="Inserisci il tuo nome completo"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="tutorEmail">📧 Email</label>
+          <input 
+            type="email" 
+            id="tutorEmail" 
+            name="tutorEmail" 
+            placeholder="Inserisci la tua email"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="tutorPassword">🔒 Password</label>
+          <input 
+            type="password" 
+            id="tutorPassword" 
+            name="tutorPassword" 
+            placeholder="Crea una password sicura"
+            required
+          >
+        </div>
+
+        <button type="submit" class="submit-btn" id="submitBtn">
+          <span id="btnText">Registrati come Tutor</span>
+          <div class="loading-spinner" id="loadingSpinner"></div>
+        </button>
+      </form>
+
+      <!-- Divider -->
+      <div class="divider">
+        <span>oppure</span>
+      </div>
+
+      <!-- Login Link -->
+      <div class="login-link">
+        <p>Hai già un account? <a href="login.html">Accedi qui</a></p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+    const SUPABASE_URL = "https://elrwpaezjnemmiegkyin.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVscndwYWV6am5lbW1pZWdreWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzAyMDUsImV4cCI6MjA1MzY0NjIwNX0.p6R2S1HK8kPFYiEAYtYaxIAH8XSmzjQBWQ_ywy3akdI";
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Form submission
+    const registerForm = document.getElementById('registerForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const btnText = document.getElementById('btnText');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const errorMessage = document.getElementById('errorMessage');
+    const successMessage = document.getElementById('successMessage');
+
+    registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      // Clear messages
+      errorMessage.style.display = 'none';
+      successMessage.style.display = 'none';
+
+      // Get form data
+      const name = document.getElementById('tutorName').value.trim();
+      const email = document.getElementById('tutorEmail').value.trim();
+      const password = document.getElementById('tutorPassword').value.trim();
+
+      // Validate form
+      if (!name || !email || !password) {
+        errorMessage.textContent = 'Per favore compila tutti i campi.';
+        errorMessage.style.display = 'block';
+        return;
+      }
+
+      // Validate password length
+      if (password.length < 6) {
+        errorMessage.textContent = 'La password deve contenere almeno 6 caratteri.';
+        errorMessage.style.display = 'block';
+        return;
+      }
+
+      // Show loading state
+      submitBtn.disabled = true;
+      btnText.style.display = 'none';
+      loadingSpinner.style.display = 'block';
+
+      try {
+        // Sign up tutor using Supabase Auth
+        const { data, error } = await supabase.auth.signUp({ 
+          email, 
+          password,
+          options: {
+            data: {
+              name: name,
+              role: 'tutor'
+            }
+          }
+        });
+
+        if (error) {
+          console.error("❌ Registrazione Tutor Fallita:", error.message);
+          
+          // Gestione errori specifici
+          if (error.message.includes("already registered")) {
+            errorMessage.textContent = "Questa email è già registrata. Prova ad accedere.";
+          } else if (error.message.includes("Invalid email")) {
+            errorMessage.textContent = "Email non valida. Controlla l'indirizzo email.";
+          } else if (error.message.includes("password")) {
+            errorMessage.textContent = "Password non valida. Deve contenere almeno 6 caratteri.";
+          } else {
+            errorMessage.textContent = `Registrazione fallita: ${error.message}`;
+          }
+          
+          errorMessage.style.display = 'block';
+          return;
+        }
+
+        const user = data.user;
+        if (!user) {
+          errorMessage.textContent = "Si è verificato un errore durante la registrazione. Riprova.";
+          errorMessage.style.display = 'block';
+          return;
+        }
+
+        console.log("✅ Tutor registrato con successo!", user);
+
+        // Save tutor details in the database
+        const { error: insertError } = await supabase
+          .from("tutors")
+          .insert([{ 
+            auth_uid: user.id, 
+            email: email, 
+            name: name 
+          }]);
+
+        if (insertError) {
+          console.error("❌ Errore nel salvare le informazioni del tutor:", insertError.message);
+          errorMessage.textContent = "Errore nel salvare le informazioni del tutor. Contatta l'assistenza.";
+          errorMessage.style.display = 'block';
+          return;
+        }
+
+        // Success
+        successMessage.innerHTML = '✅ Registrazione completata con successo!<br><br>📧 <strong>Controlla la tua email</strong> per verificare il tuo account.<br>Solo dopo la verifica potrai effettuare il login.';
+        successMessage.style.display = 'block';
+
+        // Clear form
+        registerForm.reset();
+
+        // Note about email verification
+        setTimeout(() => {
+          const confirmRedirect = confirm(
+            "Registrazione completata!\n\n" +
+            "Per favore controlla la tua email e clicca sul link di verifica.\n\n" +
+            "Vuoi andare alla pagina di login?"
+          );
+          
+          if (confirmRedirect) {
+            window.location.href = 'login.html';
+          }
+        }, 2000);
+
+      } catch (err) {
+        console.error("Errore imprevisto:", err);
+        errorMessage.textContent = "Si è verificato un errore imprevisto. Riprova più tardi.";
+        errorMessage.style.display = 'block';
+      } finally {
+        // Reset loading state
+        submitBtn.disabled = false;
+        btnText.style.display = 'inline';
+        loadingSpinner.style.display = 'none';
+      }
+    });
+  </script>
+
+  <!-- Animated Background (se hai il file) -->
+  <script src="animated-background.js"></script>
+</body>
+</html>
