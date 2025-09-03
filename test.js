@@ -19,6 +19,7 @@ let currentSectionNumber = 1; // Sezione corrente
 let sectionStartTime = null; // Quando è iniziata la sezione corrente
 let hasSections = false; // Se il test ha sezioni
 let expiredSections = new Set(); // Sezioni con tempo scaduto
+let isBocconiTest = false; // Se è un test BOCCONI
 
 // Gestione drawer navigazione per tablet
 function setupTabletNavigation() {
@@ -95,6 +96,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     //Add event listeners for navigation
     prevPageBtn.addEventListener("click", () => {
+        if (isBocconiTest) {
+            console.log("Navigazione indietro disabilitata per test BOCCONI");
+            return;
+        }
         if (currentPage > 1) loadQuestionsForPage(currentPage - 1);
     });
     nextPageBtn.addEventListener("click", () => {
@@ -164,18 +169,25 @@ async function loadTest() {
     // SEMPRE cerca configurazioni in simulazioni_parti per QUALSIASI test
     globalCurrentSection = currentSection; // store it globally
     
+    // Determina se è un test BOCCONI
+    isBocconiTest = selectedTestType && selectedTestType.toLowerCase().includes("bocconi");
+    console.log(`🎯 Tipo test: ${isBocconiTest ? 'Bocconi' : 'Altri'}`);
+    
     // Cerca se esiste configurazione per questo test type
     if (selectedTestType) {
         const { data: simulazioniData, error: simulazioniError } = await supabase
           .from("simulazioni_parti")
           .select("boundaries, boundaries_assessment_iniziale, nome_parti, time_allocation, time_allocation_assessment_iniziale")
-          .eq("tipologia_test", selectedTestType)
+          .eq("tipologia_test", selectedTestType ? selectedTestType.trim() : "")
           .single();
           
         if (simulazioniError || !simulazioniData) {
-          console.error("Error fetching simulazioni boundaries:", simulazioniError);
-          return;
-        }
+          console.log("No simulazioni configuration found for:", selectedTestType);
+          // Per BOCCONI è normale non avere configurazione, continua senza sezioni
+          sectionPageBoundaries = {};
+          sectionPageStartPages = {};
+          hasSections = false;
+        } else {
         
         // Scegli i boundaries corretti in base al tipo di test
         let boundariesFilter;
@@ -244,6 +256,7 @@ async function loadTest() {
           }
         });
         console.log("Section Boundaries Loaded:", sectionPageBoundaries);
+        } // Chiusura dell'else aggiunto sopra
     } else {
       // Nessuna configurazione trovata per questo test
       sectionPageBoundaries = {};
@@ -251,7 +264,7 @@ async function loadTest() {
       console.log("No configuration found in simulazioni_parti for this test type");
     }
 
-    console.log("Section Boundaries Loaded:", sectionPageBoundaries);
+    console.log("Final Section Boundaries:", sectionPageBoundaries);
   
     // Fetch test duration (existing code)...
     const { data: testData, error: testError } = await supabase
@@ -954,8 +967,11 @@ function updateNavigationButtons() {
             nextPageBtn.textContent = "Avanti";
             prevPageBtn.disabled = false;
         }
-    } else if (testType === "bocconi" && testModality === "pdf") {
-        prevPageBtn.disabled = true; // Disable previous button for Bocconi PDF tests
+    }
+    
+    // Per test BOCCONI, disabilita sempre il tasto indietro
+    if (isBocconiTest) {
+        prevPageBtn.disabled = true;
     } 
 
 }      
@@ -1090,7 +1106,7 @@ function buildQuestionNav() {
       // Highlight answered questions.
       if (studentAnswers[q.id]) {
         // Per Bocconi: sempre verde, per TOLC: mantieni giallo per x/y
-        if (testType === "bocconi") {
+        if (isBocconiTest) {
           btn.classList.add("answered");  // Sempre verde per Bocconi
         } else {
           // Logica originale per TOLC
@@ -1102,8 +1118,8 @@ function buildQuestionNav() {
         }
       }
   
-      // NUOVO: Disabilita navigazione indietro per Bocconi PDF
-      if (testType === "bocconi" && testModality === "pdf" && q.page_number < currentPage) {
+      // Disabilita navigazione indietro per test BOCCONI
+      if (isBocconiTest && q.page_number < currentPage) {
         btn.disabled = true;
         btn.classList.add("non-navigabile");
         btn.title = "Non puoi tornare a questa domanda";
