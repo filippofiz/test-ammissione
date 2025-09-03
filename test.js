@@ -19,7 +19,8 @@ let currentSectionNumber = 1; // Sezione corrente
 let sectionStartTime = null; // Quando è iniziata la sezione corrente
 let hasSections = false; // Se il test ha sezioni
 let expiredSections = new Set(); // Sezioni con tempo scaduto
-let isBocconiTest = false; // Se è un test BOCCONI
+let isBocconiTest = false; // Se è un test BOCCONI (navigazione unidirezionale)
+let isMedicinaTest = false; // Se è un test MEDICINA (comportamento da definire)
 
 // Gestione drawer navigazione per tablet
 function setupTabletNavigation() {
@@ -169,9 +170,13 @@ async function loadTest() {
     // SEMPRE cerca configurazioni in simulazioni_parti per QUALSIASI test
     globalCurrentSection = currentSection; // store it globally
     
-    // Determina se è un test BOCCONI
+    // Determina il tipo di test per la navigazione
     isBocconiTest = selectedTestType && selectedTestType.toLowerCase().includes("bocconi");
-    console.log(`🎯 Tipo test: ${isBocconiTest ? 'Bocconi' : 'Altri'}`);
+    isMedicinaTest = selectedTestType && selectedTestType.toLowerCase().includes("medicina");
+    
+    console.log(`🎯 Tipo test: ${selectedTestType}`);
+    console.log(`   - Navigazione unidirezionale (Bocconi): ${isBocconiTest ? 'Sì' : 'No'}`);
+    console.log(`   - Test Medicina: ${isMedicinaTest ? 'Sì' : 'No'}`);
     
     // Cerca se esiste configurazione per questo test type
     if (selectedTestType) {
@@ -933,8 +938,11 @@ function updateNavigationButtons() {
     // Determine test type based on the presence of "PDF" in the test name
     const selectedTest = sessionStorage.getItem("selectedTestType");
     
-    // CATTOLICA si comporta come TOLC per la navigazione
-    const testType = (selectedTest.includes("TOLC") || selectedTest.includes("CATTOLICA")) ? "tolc" : "bocconi";
+    // Classificazione test per comportamento navigazione:
+    // - TOLC e CATTOLICA: navigazione con sezioni (possono muoversi dentro la sezione)
+    // - BOCCONI (tutti i tipi): navigazione unidirezionale (non possono tornare indietro)
+    // - MEDICINA: da definire (per ora come TOLC)
+    const testType = (selectedTest.includes("TOLC") || selectedTest.includes("CATTOLICA") || selectedTest.includes("MEDICINA")) ? "tolc" : "bocconi";
     const testModality = selectedTest.includes("PDF") ? "pdf" : "banca_dati";
 
     console.log(`📌 Test Type Determined: ${testType} (${selectedTest})`);
@@ -1077,9 +1085,9 @@ function buildQuestionNav() {
     if (!questionNav) return;
     questionNav.innerHTML = ""; // Clear existing buttons
   
-    // Determina il tipo di test - CATTOLICA si comporta come TOLC
+    // Determina il tipo di test basandosi sul comportamento di navigazione
     const selectedTest = sessionStorage.getItem("selectedTestType");
-    const testType = (selectedTest.includes("TOLC") || selectedTest.includes("CATTOLICA")) ? "tolc" : "bocconi";
+    const testType = (selectedTest.includes("TOLC") || selectedTest.includes("CATTOLICA") || selectedTest.includes("MEDICINA")) ? "tolc" : "bocconi";
     const testModality = selectedTest.includes("PDF") ? "pdf" : "banca_dati";
   
     // Compute the "minimum allowed page" for the current section.
