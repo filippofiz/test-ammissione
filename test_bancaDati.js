@@ -25,6 +25,7 @@ let sectionStartTime = null;
 let currentSectionNumber = 1;
 let expiredSections = new Set();
 let totalTestTime = 0;
+let timeAllocationPercentages = null; // Nuova variabile per percentuali personalizzate
 
 // Inizializzazione
 if (document.readyState === 'loading') {
@@ -146,9 +147,8 @@ async function loadTest() {
   isBocconiTest = selectedTestType.toLowerCase().includes("bocconi");
   console.log(`🎯 Tipo test: ${isBocconiTest ? 'Bocconi' : 'Altri'}`);
   
-  if (currentSection === "Simulazioni" || currentSection === "Assessment Iniziale") {
-    await loadSectionBoundaries(selectedTestType);
-  }
+  // Sempre cerca configurazioni in simulazioni_parti per QUALSIASI test
+  await loadSectionBoundaries(selectedTestType);
   
   const { data, error } = await supabase
     .from("questions_bancaDati")
@@ -187,20 +187,48 @@ async function loadSectionBoundaries(testType) {
   try {
     console.log(`📊 Cercando boundaries per testType: "${testType}"`);
     
+    const currentSection = sessionStorage.getItem("currentSection");
+    const isAssessmentIniziale = currentSection === "Assessment Iniziale";
+    
     const { data, error } = await supabase
       .from("simulazioni_parti")
-      .select("boundaries, nome_parti")
+      .select("boundaries, boundaries_assessment_iniziale, nome_parti, time_allocation, time_allocation_assessment_iniziale")
       .eq("tipologia_test", testType)
       .single();
     
-    if (error || !data || !data.boundaries || data.boundaries.length === 0) {
-      console.log("📊 Nessuna divisione in sezioni per questo test");
+    if (error || !data) {
+      console.log("📊 Nessuna configurazione trovata per questo test");
       hasSections = false;
       return;
     }
     
+    // Scegli i boundaries corretti in base al tipo di test
+    let boundariesArray;
+    if (isAssessmentIniziale && data.boundaries_assessment_iniziale) {
+      boundariesArray = data.boundaries_assessment_iniziale.map(b => parseInt(b));
+      console.log("📊 Usando boundaries Assessment Iniziale:", boundariesArray);
+    } else if (data.boundaries) {
+      boundariesArray = data.boundaries.map(b => parseInt(b));
+      console.log("📊 Usando boundaries standard:", boundariesArray);
+    } else {
+      console.log("📊 Nessun boundary trovato, test senza sezioni");
+      hasSections = false;
+      return;
+    }
+    
+    // Scegli l'allocazione tempo corretta
+    if (isAssessmentIniziale && data['time_allocation_assessment_iniziale']) {
+      timeAllocationPercentages = data['time_allocation_assessment_iniziale'].map(p => parseFloat(p));
+      console.log("📊 Usando time allocation Assessment Iniziale:", timeAllocationPercentages);
+    } else if (data['time_allocation']) {
+      timeAllocationPercentages = data['time_allocation'].map(p => parseFloat(p));
+      console.log("📊 Usando time allocation standard:", timeAllocationPercentages);
+    } else {
+      timeAllocationPercentages = null;
+      console.log("📊 Nessuna allocazione tempo personalizzata, userò calcolo proporzionale");
+    }
+    
     hasSections = true;
-    const boundariesArray = data.boundaries.map(b => parseInt(b));
     sectionNames = data.nome_parti || [];
     
     sectionBoundaries = {};
@@ -208,7 +236,7 @@ async function loadSectionBoundaries(testType) {
       sectionBoundaries[index + 2] = parseInt(boundary);
     });
     
-    console.log("📊 Sezioni caricate:", { sectionBoundaries, sectionNames });
+    console.log("📊 Sezioni caricate:", { sectionBoundaries, sectionNames, timeAllocationPercentages });
   } catch (error) {
     console.error("❌ Errore caricamento boundaries:", error);
     hasSections = false;
@@ -1011,25 +1039,47 @@ function setupNormalTimer(durationSeconds) {
 function setupSectionTimers(totalDurationSeconds) {
   totalTestTime = totalDurationSeconds;
   
-  const questionsBySection = {};
-  let totalQuestionsInSections = 0;
-  
-  questions.forEach(q => {
-    const section = getCurrentSectionForQuestion(q.question_number);
-    if (!questionsBySection[section]) {
-      questionsBySection[section] = 0;
-    }
-    questionsBySection[section]++;
-    totalQuestionsInSections++;
-  });
-  
-  const timePerQuestion = totalDurationSeconds / totalQuestionsInSections;
-  
   sectionDurations = {};
-  Object.keys(questionsBySection).sort((a, b) => parseInt(a) - parseInt(b)).forEach(section => {
-    const sectionTime = Math.round(timePerQuestion * questionsBySection[section]);
-    sectionDurations[section] = sectionTime;
-  });
+  
+  // Se abbiamo percentuali personalizzate, usale
+  if (timeAllocationPercentages && timeAllocationPercentages.length > 0) {
+    console.log("📊 Usando allocazione tempo personalizzata:", timeAllocationPercentages);
+    
+    // Verifica che la somma sia circa 100
+    const sum = timeAllocationPercentages.reduce((acc, val) => acc + val, 0);
+    if (Math.abs(sum - 100) > 1) {
+      console.warn(`⚠️ La somma delle percentuali è ${sum}%, non 100%!`);
+    }
+    
+    // Assegna il tempo in base alle percentuali
+    timeAllocationPercentages.forEach((percentage, index) => {
+      const sectionNum = index + 1;
+      sectionDurations[sectionNum] = Math.round(totalDurationSeconds * percentage / 100);
+      console.log(`Sezione ${sectionNum}: ${percentage}% = ${sectionDurations[sectionNum]} secondi`);
+    });
+  } else {
+    // Fallback: calcolo proporzionale basato sul numero di domande
+    console.log("📊 Nessuna allocazione personalizzata, uso calcolo proporzionale");
+    
+    const questionsBySection = {};
+    let totalQuestionsInSections = 0;
+    
+    questions.forEach(q => {
+      const section = getCurrentSectionForQuestion(q.question_number);
+      if (!questionsBySection[section]) {
+        questionsBySection[section] = 0;
+      }
+      questionsBySection[section]++;
+      totalQuestionsInSections++;
+    });
+    
+    const timePerQuestion = totalDurationSeconds / totalQuestionsInSections;
+    
+    Object.keys(questionsBySection).sort((a, b) => parseInt(a) - parseInt(b)).forEach(section => {
+      const sectionTime = Math.round(timePerQuestion * questionsBySection[section]);
+      sectionDurations[section] = sectionTime;
+    });
+  }
   
   currentSectionNumber = 1;
   sectionStartTime = Date.now();
@@ -1052,7 +1102,8 @@ function setupSectionTimers(totalDurationSeconds) {
 
 function updateSectionTimer() {
   const timeLeftElement = document.getElementById("time-left");
-  if (!timeLeftElement) return;
+  const timerElement = document.getElementById("timer");
+  if (!timeLeftElement || !timerElement) return;
   
   const pageSection = currentPage > 1 ? getCurrentSectionForPage(currentPage) : 1;
   
@@ -1068,19 +1119,41 @@ function updateSectionTimer() {
   if (timeRemaining > 0) {
     const minutes = Math.floor(timeRemaining / 60);
     const seconds = Math.floor(timeRemaining % 60);
+    const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
     
-    timeLeftElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    // Aggiorna display con sezione e tempo
+    let displayHTML = '';
+    if (sectionNames && sectionNames.length >= currentSectionNumber) {
+      displayHTML = `<div style="font-weight: bold; margin-bottom: 5px;">📚 Sezione ${currentSectionNumber}: ${sectionNames[currentSectionNumber - 1]}</div>`;
+      displayHTML += `<div>⏳ Tempo: <span id="time-left">${timeString}</span></div>`;
+    } else {
+      displayHTML = `⏳ Tempo: <span id="time-left">${timeString}</span>`;
+    }
+    timerElement.innerHTML = displayHTML;
     
     // Cambia colore se manca poco
-    timeLeftElement.classList.remove("text-danger", "text-warning");
     if (timeRemaining < 60) {
-      timeLeftElement.classList.add("text-danger");
+      timerElement.style.backgroundColor = "#ff6b6b";
+      timerElement.style.color = "white";
     } else if (timeRemaining < 300) {
-      timeLeftElement.classList.add("text-warning");
+      timerElement.style.backgroundColor = "#ffd93d";
+      timerElement.style.color = "#333";
+    } else {
+      timerElement.style.backgroundColor = "";
+      timerElement.style.color = "";
     }
   } else {
-    timeLeftElement.textContent = "Tempo scaduto!";
-    timeLeftElement.classList.add("text-danger");
+    // Display quando tempo scaduto
+    let displayHTML = '';
+    if (sectionNames && sectionNames.length >= currentSectionNumber) {
+      displayHTML = `<div style="font-weight: bold; margin-bottom: 5px;">📚 Sezione ${currentSectionNumber}: ${sectionNames[currentSectionNumber - 1]}</div>`;
+      displayHTML += `<div class="text-danger">⏳ Tempo: <span id="time-left">Scaduto!</span></div>`;
+    } else {
+      displayHTML = `⏳ Tempo: <span id="time-left" class="text-danger">Scaduto!</span>`;
+    }
+    timerElement.innerHTML = displayHTML;
+    timerElement.style.backgroundColor = "#ff6b6b";
+    timerElement.style.color = "white";
     
     if (!expiredSections.has(currentSectionNumber)) {
       expiredSections.add(currentSectionNumber);

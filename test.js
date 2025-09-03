@@ -13,6 +13,12 @@ let testDuration; // New global variable
 const testId = sessionStorage.getItem("selectedTestId");
 let globalCurrentSection = "";
 let sectionNames = null;
+let timeAllocationPercentages = null; // Percentuali tempo per sezione
+let sectionDurations = {}; // Durata in secondi per ogni sezione
+let currentSectionNumber = 1; // Sezione corrente
+let sectionStartTime = null; // Quando è iniziata la sezione corrente
+let hasSections = false; // Se il test ha sezioni
+let expiredSections = new Set(); // Sezioni con tempo scaduto
 
 // Gestione drawer navigazione per tablet
 function setupTabletNavigation() {
@@ -155,15 +161,14 @@ async function loadTest() {
     // ✅ Setup zoom and drag controls AFTER PDF is loaded
     setupZoomAndDrag();
  
-    // If tipologia_esercizi is "Simulazioni", fetch dynamic boundaries and section names.
-    if (currentSection === "Simulazioni") {
-      globalCurrentSection = currentSection; // store it globally
-      
-      // TOLC e CATTOLICA hanno sezioni, Bocconi no
-      if (selectedTestType.includes("TOLC") || selectedTestType.includes("CATTOLICA")) {
+    // SEMPRE cerca configurazioni in simulazioni_parti per QUALSIASI test
+    globalCurrentSection = currentSection; // store it globally
+    
+    // Cerca se esiste configurazione per questo test type
+    if (selectedTestType) {
         const { data: simulazioniData, error: simulazioniError } = await supabase
           .from("simulazioni_parti")
-          .select("boundaries, nome_parti")
+          .select("boundaries, boundaries_assessment_iniziale, nome_parti, time_allocation, time_allocation_assessment_iniziale")
           .eq("tipologia_test", selectedTestType)
           .single();
           
@@ -172,12 +177,46 @@ async function loadTest() {
           return;
         }
         
-        const boundariesFilter = simulazioniData.boundaries; // expects an array of integers
+        // Scegli i boundaries corretti in base al tipo di test
+        let boundariesFilter;
+        const isAssessmentIniziale = currentSection === "Assessment Iniziale" || tipologiaEsercizi === "Assessment";
+        
+        if (isAssessmentIniziale && simulazioniData.boundaries_assessment_iniziale) {
+          boundariesFilter = simulazioniData.boundaries_assessment_iniziale;
+          console.log("Using Assessment Iniziale boundaries:", boundariesFilter);
+        } else if (simulazioniData.boundaries) {
+          boundariesFilter = simulazioniData.boundaries;
+          console.log("Using standard boundaries:", boundariesFilter);
+        } else {
+          console.log("No boundaries found, proceeding without sections");
+          sectionPageBoundaries = {};
+          sectionPageStartPages = {};
+          return;
+        }
+        
         sectionNames = simulazioniData.nome_parti; // expects an array of section names
-        console.log("Fetched dynamic boundaries:", boundariesFilter);
         console.log("Fetched section names:", sectionNames);
+        
+        // Carica le percentuali tempo se disponibili
+        if (isAssessmentIniziale && simulazioniData['time_allocation_assessment_iniziale']) {
+          timeAllocationPercentages = simulazioniData['time_allocation_assessment_iniziale'].map(p => parseFloat(p));
+          console.log("Using Assessment Iniziale time allocation:", timeAllocationPercentages);
+        } else if (simulazioniData['time_allocation']) {
+          timeAllocationPercentages = simulazioniData['time_allocation'].map(p => parseFloat(p));
+          console.log("Using standard time allocation:", timeAllocationPercentages);
+        } else {
+          timeAllocationPercentages = null;
+          console.log("No time allocation found, will use proportional calculation");
+        }
 
         // Now fetch the page numbers for questions whose question_number is in our dynamic boundaries array.
+        if (!boundariesFilter || boundariesFilter.length === 0) {
+          console.log("No boundaries to fetch, proceeding without sections");
+          sectionPageBoundaries = {};
+          sectionPageStartPages = {};
+          return;
+        }
+        
         const { data: boundaries, error: boundaryError } = await supabase
           .from("questions")
           .select("question_number, page_number")
@@ -195,6 +234,7 @@ async function loadTest() {
         sectionPageStartPages = {};
 
         // Map the fetched boundaries to section numbers.
+        hasSections = true; // Abbiamo sezioni!
         boundaries.forEach(q => {
           const index = boundariesFilter.indexOf(q.question_number);
           if (index !== -1) {
@@ -204,16 +244,11 @@ async function loadTest() {
           }
         });
         console.log("Section Boundaries Loaded:", sectionPageBoundaries);
-      } else {
-        // Bocconi non ha sezioni
-        sectionPageBoundaries = {};
-        sectionPageStartPages = {};
-        console.log("Bocconi test - no sections");
-      }
     } else {
-      // If not Simulazioni, clear boundaries (they're not used)
+      // Nessuna configurazione trovata per questo test
       sectionPageBoundaries = {};
       sectionPageStartPages = {};
+      console.log("No configuration found in simulazioni_parti for this test type");
     }
 
     console.log("Section Boundaries Loaded:", sectionPageBoundaries);
@@ -461,9 +496,16 @@ function loadQuestionsForPage(page) {
         // Attach event listener to "Inizia Test"
         document.getElementById("startTestBtn").addEventListener("click", async () => {
             await enforceFullScreen();  // Go fullscreen before starting
-            // Recalculate testEndTime now that the test is starting
-            testEndTime = Date.now() + testDuration * 1000;
-            updateTimer();  // Start the timer
+            
+            // Setup timer basato su sezioni o normale
+            if (hasSections && Object.keys(sectionPageBoundaries).length > 0) {
+                setupSectionTimers();
+            } else {
+                // Timer normale senza sezioni
+                testEndTime = Date.now() + testDuration * 1000;
+                updateTimer();
+            }
+            
             loadQuestionsForPage(2);  // Move to the first real test page
         });
 
@@ -746,7 +788,97 @@ function showCustomAlert(message, isTimeExpired = false) {
     });
 }
 
-// ✅ Function to Update the Timer Display
+// Function to update timer for sections
+function updateSectionTimer() {
+    const timerElement = document.getElementById("timer");
+    if (!timerElement) {
+        console.error("❌ ERROR: Timer element not found in HTML.");
+        return;
+    }
+
+    function tick() {
+        const now = Date.now();
+        
+        // Verifica tempo totale del test
+        if (now >= testEndTime) {
+            console.log("⏳ Total test time expired! Auto-submitting...");
+            submitAnswers(true);
+            return;
+        }
+        
+        // Calcola quale sezione dovremmo essere
+        const pageSection = getSectionForPage(currentPage);
+        
+        // Se siamo in una sezione diversa, aggiorna
+        if (pageSection !== currentSectionNumber) {
+            // Marca la sezione precedente come scaduta se necessario
+            if (currentSectionNumber < pageSection) {
+                expiredSections.add(currentSectionNumber);
+            }
+            currentSectionNumber = pageSection;
+            sectionStartTime = now;
+        }
+        
+        // Calcola tempo rimanente per questa sezione
+        const sectionDuration = sectionDurations[currentSectionNumber] || 300; // Default 5 min
+        const sectionEndTime = sectionStartTime + sectionDuration * 1000;
+        const timeLeftInSection = Math.max(0, sectionEndTime - now);
+        
+        // Se il tempo della sezione è scaduto
+        if (timeLeftInSection <= 0 && !expiredSections.has(currentSectionNumber)) {
+            expiredSections.add(currentSectionNumber);
+            console.log(`⏰ Section ${currentSectionNumber} time expired!`);
+            
+            // Trova la prima pagina della prossima sezione
+            const nextSection = currentSectionNumber + 1;
+            const nextSectionStartPage = Object.entries(sectionPageStartPages)
+                .find(([sec, page]) => parseInt(sec) === nextSection)?.[1];
+            
+            if (nextSectionStartPage) {
+                // Auto-naviga alla prossima sezione
+                showCustomAlert(`⏰ Tempo scaduto per la sezione ${currentSectionNumber}! Passaggio automatico alla sezione successiva.`);
+                loadQuestionsForPage(nextSectionStartPage);
+                return;
+            } else {
+                // Era l'ultima sezione, submit automatico
+                console.log("⏳ Last section expired! Auto-submitting...");
+                submitAnswers(true);
+                return;
+            }
+        }
+        
+        // Aggiorna display del timer
+        const minutes = Math.floor(timeLeftInSection / 60000);
+        const seconds = Math.floor((timeLeftInSection % 60000) / 1000);
+        const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        
+        // Mostra sezione e tempo in formato più chiaro
+        let timerText = '';
+        if (sectionNames && sectionNames.length >= currentSectionNumber) {
+            timerText = `<div style="font-weight: bold; margin-bottom: 5px;">📚 Sezione ${currentSectionNumber}: ${sectionNames[currentSectionNumber - 1]}</div>`;
+            timerText += `<div>⏳ Tempo: <span id="time-left">${timeString}</span></div>`;
+        } else {
+            timerText = `⏳ Tempo: <span id="time-left">${timeString}</span>`;
+        }
+        
+        timerElement.innerHTML = timerText;
+        
+        // Aggiungi warning se poco tempo
+        if (timeLeftInSection < 60000) { // Meno di 1 minuto
+            timerElement.style.backgroundColor = "#ff6b6b";
+            timerElement.style.color = "white";
+        } else if (timeLeftInSection < 180000) { // Meno di 3 minuti
+            timerElement.style.backgroundColor = "#ffd93d";
+            timerElement.style.color = "#333";
+        }
+    }
+
+    // Avvia il timer
+    tick();
+    const timerInterval = setInterval(tick, 1000);
+}
+
+// ✅ Function to Update the Timer Display (normale, senza sezioni)
 function updateTimer() {
     const timerElement = document.getElementById("timer");
 
@@ -797,22 +929,29 @@ function updateNavigationButtons() {
     const currentSection = sessionStorage.getItem("currentSection");
     if (testType === "tolc") {
         // TOLC and CATTOLICA navigation using section boundaries.
-        // Controlla se la PROSSIMA pagina è l'inizio di una nuova sezione
-        const nextPageStartsNewSection = Object.values(sectionPageStartPages).includes(currentPage + 1);
-        
-        // Controlla se siamo appena passati a una nuova sezione (pagina corrente è l'inizio di una sezione)
-        const currentPageIsNewSection = Object.values(sectionPageStartPages).includes(currentPage);
-        
-        if (sessionStorage.getItem("currentSection") === "Simulazioni" && nextPageStartsNewSection) {
-            nextPageBtn.textContent = "Prossima Sezione";
+        // Se abbiamo sezioni configurate, applica le restrizioni
+        if (hasSections && Object.keys(sectionPageBoundaries).length > 0) {
+            // Controlla se la PROSSIMA pagina è l'inizio di una nuova sezione
+            const nextPageStartsNewSection = Object.values(sectionPageStartPages).includes(currentPage + 1);
+            
+            // Controlla se siamo appena passati a una nuova sezione (pagina corrente è l'inizio di una sezione)
+            const currentPageIsNewSection = Object.values(sectionPageStartPages).includes(currentPage);
+            
+            if (nextPageStartsNewSection) {
+                nextPageBtn.textContent = "Prossima Sezione";
+            } else {
+                nextPageBtn.textContent = "Avanti";
+            }
+            
+            // Disable previous button if we are at the start of a new section (can't go back to previous section)
+            if (currentPageIsNewSection && currentPage > 2) {
+                prevPageBtn.disabled = true;
+            } else {
+                prevPageBtn.disabled = false;
+            }
         } else {
+            // Senza sezioni, navigazione normale
             nextPageBtn.textContent = "Avanti";
-        }
-        
-        // Disable previous button if we are at the start of a new section (can't go back to previous section)
-        if (sessionStorage.getItem("currentSection") === "Simulazioni" && currentPageIsNewSection && currentPage > 2) {
-            prevPageBtn.disabled = true;
-        } else {
             prevPageBtn.disabled = false;
         }
     } else if (testType === "bocconi" && testModality === "pdf") {
@@ -868,6 +1007,54 @@ document.addEventListener("fullscreenchange", function () {
     }
 });
 
+// Setup timer per sezioni
+function setupSectionTimers() {
+    console.log("Setting up section timers for PDF test");
+    
+    // Calcola durata per ogni sezione
+    sectionDurations = {};
+    
+    if (timeAllocationPercentages && timeAllocationPercentages.length > 0) {
+        // Usa percentuali personalizzate
+        console.log("Using custom time allocation:", timeAllocationPercentages);
+        
+        timeAllocationPercentages.forEach((percentage, index) => {
+            const sectionNum = index + 1;
+            sectionDurations[sectionNum] = Math.round(testDuration * percentage / 100);
+            console.log(`Section ${sectionNum}: ${percentage}% = ${sectionDurations[sectionNum]} seconds`);
+        });
+    } else {
+        // Calcolo proporzionale basato sul numero di domande
+        console.log("Using proportional time calculation");
+        
+        const questionsBySection = {};
+        let totalQuestions = 0;
+        
+        questions.forEach(q => {
+            const section = getSectionForQuestionNumber(q.question_number);
+            if (!questionsBySection[section]) {
+                questionsBySection[section] = 0;
+            }
+            questionsBySection[section]++;
+            totalQuestions++;
+        });
+        
+        const timePerQuestion = testDuration / totalQuestions;
+        
+        Object.keys(questionsBySection).forEach(section => {
+            sectionDurations[section] = Math.round(timePerQuestion * questionsBySection[section]);
+            console.log(`Section ${section}: ${questionsBySection[section]} questions = ${sectionDurations[section]} seconds`);
+        });
+    }
+    
+    // Inizializza timer per la prima sezione
+    currentSectionNumber = 1;
+    sectionStartTime = Date.now();
+    testEndTime = Date.now() + testDuration * 1000; // Tempo totale come fallback
+    
+    updateSectionTimer(); // Avvia il timer per sezioni
+}
+
 
 function buildQuestionNav() {
     const questionNav = document.getElementById("questionNav");
@@ -922,8 +1109,8 @@ function buildQuestionNav() {
         btn.title = "Non puoi tornare a questa domanda";
         // Non aggiungere event listener per questi pulsanti
       } 
-      // Logica esistente per TOLC e CATTOLICA
-      else if (testType === "tolc" && sessionStorage.getItem("currentSection") === "Simulazioni") {
+      // Logica per test con sezioni (TOLC, CATTOLICA, Assessment con boundaries)
+      else if (testType === "tolc" && hasSections && Object.keys(sectionPageBoundaries).length > 0) {
         // If the student is beyond the boundary, disable navigation for questions on or before that boundary.
         const targetSection = getSectionForQuestionNumber(q.question_number);
         const currentQuestion = questions.find(qq => qq.page_number === currentPage);

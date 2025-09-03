@@ -20,7 +20,15 @@
       "Bash(git log:*)",
       "Bash(start C:App UpToTenadmission-testcheck-cattolica-sections.html)",
       "Bash(start check-cattolica-sections.html)",
-      "Bash(del check-cattolica-sections.html)"
+      "Bash(del check-cattolica-sections.html)",
+      "Bash(start explore-supabase-results.html)",
+      "Bash(start risultati-studente.html)",
+      "Bash(start risultati-tutor.html)",
+      "Bash(start verify-no-duplicates.html)",
+      "Bash(del risultati-studente.html risultati-tutor.html verify-no-duplicates.html)",
+      "Bash(npm install:*)",
+      "Bash(start check-supabase-rls.html)",
+      "Bash(del check-rls-policies.js check-supabase-rls.html test-rls-complete.js check-all-tables.js list-real-tables.js check-10-tables.js)"
     ],
     "deny": [],
     "ask": []
