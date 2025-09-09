@@ -21,6 +21,7 @@ let hasSections = false; // Se il test ha sezioni
 let expiredSections = new Set(); // Sezioni con tempo scaduto
 let isBocconiTest = false; // Se è un test BOCCONI (navigazione unidirezionale)
 let isMedicinaTest = false; // Se è un test MEDICINA (comportamento da definire)
+let selectedTestType = ""; // Tipo di test selezionato
 
 // Gestione drawer navigazione per tablet
 function setupTabletNavigation() {
@@ -77,6 +78,10 @@ function moveSubmitButtonForTablet() {
 
 document.addEventListener("DOMContentLoaded", async () => {
     console.log("DOM fully loaded. Initializing test...");
+    
+    // Imposta immediatamente la classe first-page per nascondere elementi
+    document.body.classList.add('first-page');
+    
     console.log("Selected Test ID:", testId);
        const submitBtn = document.getElementById("submitAnswers");
     if (submitBtn) {
@@ -131,7 +136,7 @@ async function loadTest() {
     const pdfUrl = sessionStorage.getItem("testPdf");
     const currentSection = sessionStorage.getItem("currentSection"); // Ensure it's a number
     const tipologiaEsercizi = sessionStorage.getItem("currentTipologiaEsercizi"); // new
-    const selectedTestType = sessionStorage.getItem("selectedTestType"); // new
+    selectedTestType = sessionStorage.getItem("selectedTestType") || ""; // Assegna alla variabile globale
   
     console.log("Fetching test for PDF URL:", pdfUrl);
   
@@ -483,7 +488,18 @@ function loadQuestionsForPage(page) {
     currentPage = page;
     sessionStorage.setItem("currentPage", currentPage);
 
-    renderPage(page);
+    // ✅ First Page Special Display: Use body classes to control visibility
+    if (page === 1) {
+        console.log("📄 First Page - Setting first-page class");
+        document.body.classList.add('first-page');
+        document.body.classList.remove('ready');
+    } else {
+        console.log("📄 Other pages - Showing all elements");
+        document.body.classList.remove('first-page');
+        document.body.classList.add('ready');
+        renderPage(page);  // Renderizza PDF solo per pagine > 1
+    }
+
     buildQuestionNav(); // Refresh nav grid highlight
 
     const questionContainer = document.getElementById("question-container");
@@ -493,14 +509,156 @@ function loadQuestionsForPage(page) {
     }
     questionContainer.innerHTML = "";
 
-    // ✅ First Page Special Display: Hide Navigation & Show Welcome Message
+    // ✅ Continue with First Page Special Display
     if (page === 1) {
         console.log("📄 First Page - Showing Welcome Message");
+        
+        // Espandi la sezione delle domande a tutto schermo
+        const questionSection = document.querySelector('.question-section');
+        if (questionSection) {
+            questionSection.style.gridColumn = '1 / -1';
+            questionSection.style.maxWidth = '100%';
+        }
+
+        // Costruisci info dinamiche sul test
+        const testInfo = [];
+        
+        // Info navigazione
+        if (isBocconiTest) {
+            testInfo.push("🚫 <strong>Navigazione unidirezionale</strong>: Non potrai tornare alle domande precedenti");
+        } else {
+            testInfo.push("✅ <strong>Navigazione libera</strong>: Potrai tornare alle domande precedenti");
+        }
+        
+        // Info sezioni e tempo
+        if (hasSections && sectionNames && sectionNames.length > 0) {
+            testInfo.push(`📚 <strong>${sectionNames.length} sezioni</strong> con tempi separati`);
+            if (timeAllocationPercentages) {
+                testInfo.push("⏱️ Ogni sezione ha un tempo limite specifico");
+            }
+        } else {
+            const minutes = Math.floor(testDuration / 60);
+            testInfo.push(`⏱️ <strong>Tempo totale</strong>: ${minutes} minuti`);
+        }
+        
+        // Info numero domande
+        if (questions && questions.length > 0) {
+            testInfo.push(`📝 <strong>${questions.length} domande</strong> totali`);
+        }
+        
+        // Info dispositivo consigliato
+        testInfo.push(`💻 <strong>Dispositivo consigliato</strong>: PC/Computer per funzionamento ottimale`);
+        testInfo.push(`📱 Il test è accessibile anche da tablet ma l'esperienza potrebbe essere limitata`);
+
+        // Pulisci il nome del test e costruisci il titolo
+        let testName = selectedTestType ? selectedTestType.replace(' PDF', '').replace(' BANCADATI', '') : 'Test';
+        let testTitle = `Percorso Preparazione Test d'Ingresso ${testName}`;
+        
+        // Recupera sezione corrente per il titolo
+        const currentSectionName = sessionStorage.getItem("currentSection");
+        if (currentSectionName) {
+            testTitle += ` - ${currentSectionName}`;
+        }
 
         questionContainer.innerHTML = `
-            <h2>Il test è da svolgere a schermo intero. Ogni tentativo di uscire annulla il test. Buon lavoro! 🎯</h2>
-            <p>Premi "Inizia Test" per cominciare.</p>
-            <button id="startTestBtn">Inizia Test</button>
+            <div style="
+                background: white;
+                border-radius: 16px;
+                padding: 2.5rem;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+                text-align: center;
+                max-width: 600px;
+                margin: 2rem auto;
+                border: 1px solid #e9ecef;
+            ">
+                <div style="font-size: 3rem; margin-bottom: 1.5rem;">
+                    🖥️
+                </div>
+                
+                <h3 style="
+                    font-size: 1.1rem;
+                    margin-bottom: 0.5rem;
+                    font-weight: 600;
+                    color: #00a666;
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                ">
+                    ${testName}
+                </h3>
+                
+                <h2 style="
+                    font-size: 1.4rem;
+                    margin-bottom: 1rem;
+                    font-weight: 700;
+                    color: rgb(28, 37, 69);
+                ">
+                    ${testTitle}
+                </h2>
+                
+                <div style="
+                    background: #fff3cd;
+                    border: 1px solid #ffc107;
+                    border-radius: 10px;
+                    padding: 1rem;
+                    margin: 1.5rem 0;
+                ">
+                    <p style="font-size: 0.95rem; margin: 0; color: #856404;">
+                        ⚠️ <strong>Attenzione:</strong> Il test deve essere svolto in modalità schermo intero. 
+                        L'uscita dalla modalità comporta l'annullamento del test.
+                    </p>
+                </div>
+                
+                <div style="
+                    background: #f8f9fa;
+                    border-radius: 10px;
+                    padding: 1.5rem;
+                    margin: 1.5rem 0;
+                    text-align: left;
+                ">
+                    <h3 style="
+                        font-size: 1.1rem;
+                        color: rgb(28, 37, 69);
+                        margin-bottom: 1rem;
+                        text-align: center;
+                    ">📋 Informazioni Test</h3>
+                    <ul style="
+                        list-style: none;
+                        padding: 0;
+                        margin: 0;
+                        font-size: 0.95rem;
+                        color: #495057;
+                        line-height: 2;
+                    ">
+                        ${testInfo.map(info => `<li>${info}</li>`).join('')}
+                    </ul>
+                </div>
+                
+                <button id="startTestBtn" style="
+                    background: linear-gradient(135deg, #00a666, #00c775);
+                    color: white;
+                    border: none;
+                    padding: 0.875rem 2.5rem;
+                    font-size: 1.1rem;
+                    font-weight: 600;
+                    border-radius: 10px;
+                    cursor: pointer;
+                    margin-top: 1.5rem;
+                    transition: all 0.3s ease;
+                    box-shadow: 0 4px 15px rgba(0, 166, 102, 0.3);
+                " 
+                onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(0, 166, 102, 0.4)';" 
+                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(0, 166, 102, 0.3)';">
+                    Inizia Test
+                </button>
+                
+                <p style="
+                    margin-top: 1.5rem;
+                    font-size: 0.9rem;
+                    color: #6c757d;
+                ">
+                    Buona fortuna!
+                </p>
+            </div>
         `;
 
         // ✅ Hide navigation buttons
@@ -514,6 +672,37 @@ function loadQuestionsForPage(page) {
         // Attach event listener to "Inizia Test"
         document.getElementById("startTestBtn").addEventListener("click", async () => {
             await enforceFullScreen();  // Go fullscreen before starting
+            
+            // IMPORTANTE: Rimuovi la classe first-page per mostrare tutti gli elementi
+            document.body.classList.remove('first-page');
+            document.body.classList.add('ready');
+            
+            // Ripristina il layout normale con PDF
+            const pdfViewer = document.querySelector('.pdf-viewer');
+            if (pdfViewer) {
+                pdfViewer.style.display = '';  // Ripristina display originale
+                pdfViewer.style.opacity = '1';
+            }
+            
+            // Ripristina timer
+            const timer = document.getElementById('timer');
+            if (timer) {
+                timer.style.display = '';
+                timer.style.opacity = '1';
+            }
+            
+            // Ripristina navigazione quiz
+            const navContainer = document.querySelector('.nav-container');
+            if (navContainer) {
+                navContainer.style.display = '';
+                navContainer.style.opacity = '1';
+            }
+            
+            const questionSection = document.querySelector('.question-section');
+            if (questionSection) {
+                questionSection.style.gridColumn = '';  // Ripristina grid originale
+                questionSection.style.maxWidth = '';
+            }
             
             // Setup timer basato su sezioni o normale
             if (hasSections && Object.keys(sectionPageBoundaries).length > 0) {
@@ -1012,7 +1201,7 @@ document.addEventListener('keydown', function(e) {
             .then(confirmExit => {
                 if (confirmExit) {
                     document.exitFullscreen().then(() => {
-                        alert("Il test è stato annullato.");
+                        alert("The test has been cancelled.");
                         window.location.href = "test_selection.html";
                     });
                 }
@@ -1026,7 +1215,7 @@ document.addEventListener("fullscreenchange", function () {
     if (isSubmitting) return;
     if (!document.fullscreenElement && testEndTime) {
         // Se sono già uscito (tramite F11 o altro), annulla immediatamente
-        alert("Il test è stato annullato perché sei uscito dallo schermo intero.");
+        alert("The test has been cancelled because you exited fullscreen mode.");
         window.location.href = "test_selection.html";
     }
 });

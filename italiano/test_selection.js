@@ -173,11 +173,16 @@ function displayTestTree(tests, studentTests, testType, selectedTest) {
       byMateria[mat].push(test);
     });
   
-    // 2️⃣ MODIFICATO: Nuovo ordinamento con Matematica prima
+    // 2️⃣ MODIFICATO: Nuovo ordinamento con Assessment prima, poi Matematica
     const materiaKeys = Object.keys(byMateria).sort((a, b) => {
-        if (a === "Matematica") return -1;            // Matematica sempre prima
+        // Assessment iniziale sempre per primo
+        if (a === "Assessment iniziale" || a === "Assessment Iniziale") return -1;
+        if (b === "Assessment iniziale" || b === "Assessment Iniziale") return 1;
+        // Matematica seconda
+        if (a === "Matematica") return -1;
         if (b === "Matematica") return 1;
-        if (a === "Simulazioni") return  1;           // Simulazioni dopo tutto il resto
+        // Simulazioni sempre per ultime
+        if (a === "Simulazioni") return  1;
         if (b === "Simulazioni") return -1;
         return a.localeCompare(b);                    // altrimenti alfabetico
     });
@@ -187,11 +192,25 @@ function displayTestTree(tests, studentTests, testType, selectedTest) {
       // Section wrapper for this Materia
       const matDiv = document.createElement("div");
       matDiv.classList.add("materia-section");
+      
+      // Stile speciale per Assessment iniziale
+      if (materia === "Assessment iniziale" || materia === "Assessment Iniziale") {
+        matDiv.style.background = "linear-gradient(135deg, #fff9e6 0%, #fffdf7 100%)";
+        matDiv.style.border = "2px solid #ffa500";
+      }
   
       // Header
       const h2 = document.createElement("h2");
       h2.classList.add("materia-header");
-      h2.textContent = materia === "Altro" ? "Altre Materie" : materia;
+      
+      // Aggiungi icona e testo speciale per Assessment
+      if (materia === "Assessment iniziale" || materia === "Assessment Iniziale") {
+        h2.innerHTML = `<span style="margin-right: 8px;">📊</span>${materia} <span style="font-size: 0.8em; color: #666; margin-left: 10px; font-weight: normal;">(Valuta il tuo livello)</span>`;
+        h2.style.borderBottomColor = "#ffa500";
+      } else {
+        h2.textContent = materia === "Altro" ? "Altre Materie" : materia;
+      }
+      
       matDiv.appendChild(h2);
       
       // ✨ NUOVO: Content wrapper per accordion

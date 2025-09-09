@@ -1,7 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(mkdir:*)",
+      "Bash(rmdir:*)",
+      "Bash(git checkout:*)",
+      "Bash(cp:*)",
+      "Bash(rm:*)",
+      "Bash(start index.html)",
+      "Bash(del index.html)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []
