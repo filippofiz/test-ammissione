@@ -125,6 +125,65 @@ body {
 .header-actions {
   display: flex;
   gap: 1rem;
+  align-items: center;
+}
+
+/* Toggle correzione inglese */
+.language-toggle-correction {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  background: white;
+  border: 2px solid #e9ecef;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.language-toggle-correction:hover {
+  border-color: #00a666;
+  background: rgba(0, 166, 102, 0.05);
+}
+
+.language-toggle-correction input[type="checkbox"] {
+  display: none;
+}
+
+.toggle-slider {
+  width: 40px;
+  height: 20px;
+  background: #e9ecef;
+  border-radius: 20px;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.toggle-slider::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background: white;
+  border-radius: 50%;
+  top: 2px;
+  left: 2px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.language-toggle-correction input:checked + .toggle-slider {
+  background: #00a666;
+}
+
+.language-toggle-correction input:checked + .toggle-slider::after {
+  left: 22px;
+}
+
+.toggle-label {
+  font-weight: 600;
+  color: #1c2545;
+  font-size: 0.9rem;
 }
 
 .action-btn {
