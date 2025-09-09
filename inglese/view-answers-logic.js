@@ -111,13 +111,28 @@ async function loadTestAnswers() {
 
     totalQuestions = questionsData.length;
 
-    // 2. Gestione PDF se disponibile
-    const pdfUrls = questionsData.map(q => q.pdf_url).filter(url => url);
-    const uniquePdfUrls = [...new Set(pdfUrls)];
+    // 2. Gestione PDF se disponibile - con supporto multilingua
+    const pdfUrlsIt = questionsData.map(q => q.pdf_url).filter(url => url);
+    const pdfUrlsEn = questionsData.map(q => q.pdf_url_eng).filter(url => url);
+    const uniquePdfUrlsIt = [...new Set(pdfUrlsIt)];
+    const uniquePdfUrlsEn = [...new Set(pdfUrlsEn)];
     
-    if (usePDF && uniquePdfUrls.length > 0) {
-      document.getElementById("pdfFrame").src = uniquePdfUrls[0];
+    // Salva gli URL per poterli switchare
+    window.italianPdfUrl = uniquePdfUrlsIt[0] || null;
+    window.englishPdfUrl = uniquePdfUrlsEn[0] || null;
+    
+    if (usePDF && (uniquePdfUrlsIt.length > 0 || uniquePdfUrlsEn.length > 0)) {
+      // Carica inizialmente il PDF italiano
+      document.getElementById("pdfFrame").src = uniquePdfUrlsIt[0] || uniquePdfUrlsEn[0];
       document.getElementById("pdfPanel").style.display = "flex";
+      
+      // Se non c'è PDF inglese, disabilita il toggle
+      const englishToggle = document.getElementById("englishCorrectionToggle");
+      if (!window.englishPdfUrl) {
+        englishToggle.disabled = true;
+        document.querySelector(".toggle-label").textContent = "🇬🇧 PDF Inglese non disponibile";
+        document.querySelector(".language-toggle-correction").style.opacity = "0.5";
+      }
     } else {
       // Nascondi pannello PDF e espandi risposte
       document.getElementById("pdfPanel").style.display = "none";
@@ -160,7 +175,7 @@ async function loadTestAnswers() {
     }
   } catch (error) {
     console.error("Errore generale:", error);
-    alert("Si è verificato un errore nel caricamento delle risposte.");
+    alert("An error occurred while loading answers.");
   }
 }
 
@@ -182,15 +197,15 @@ function displayQuestionsAndAnswers(questionsData, studentAnswersMap) {
     let studentAnswer = studentAnswerRaw;
     let answerStatus = "";
     
-    // Gestione risposte speciali
+    // Gestione risposte speciali - ENGLISH VERSION
     if (studentAnswerRaw === "x") {
-      studentAnswer = "Insicuro";
+      studentAnswer = "Unsure";
       answerStatus = "special";
     } else if (studentAnswerRaw === "y") {
-      studentAnswer = "Non ho idea";
+      studentAnswer = "No idea";
       answerStatus = "special";
     } else if (studentAnswerRaw === "z") {
-      studentAnswer = "Tempo esaurito";
+      studentAnswer = "Timeout";
       answerStatus = "timeout";
     }
     
@@ -244,7 +259,7 @@ function displayQuestionsAndAnswers(questionsData, studentAnswersMap) {
     }
     
     header.innerHTML = `
-      <span>Domanda ${index + 1}</span>
+      <span>Question ${index + 1}</span>
       ${mark}
     `;
     questionDiv.appendChild(header);
@@ -270,7 +285,7 @@ function displayQuestionsAndAnswers(questionsData, studentAnswersMap) {
     const correctDiv = document.createElement("div");
     correctDiv.classList.add("answer-row");
     correctDiv.innerHTML = `
-      <strong>Risposta corretta:</strong> 
+      <strong>Correct answer:</strong> 
       <span class="correct-answer">${q.correct_answer}</span>
     `;
     questionDiv.appendChild(correctDiv);
@@ -282,13 +297,13 @@ function displayQuestionsAndAnswers(questionsData, studentAnswersMap) {
     if (studentAnswer) {
       const answerClass = isCorrect ? "student-answer correct" : "student-answer";
       answerDiv.innerHTML = `
-        <strong>Risposta dello studente:</strong> 
+        <strong>Student's answer:</strong> 
         <span class="${answerClass}">${studentAnswer}</span>
       `;
     } else {
       answerDiv.innerHTML = `
-        <strong>Risposta dello studente:</strong> 
-        <span class="no-answer">Nessuna risposta</span>
+        <strong>Student's answer:</strong> 
+        <span class="no-answer">No answer</span>
       `;
     }
     questionDiv.appendChild(answerDiv);
@@ -338,3 +353,99 @@ function showLoading() {
 function hideLoading() {
   document.getElementById('loadingOverlay').classList.add('hidden');
 }
+
+// Gestione toggle correzione inglese
+document.addEventListener("DOMContentLoaded", () => {
+  const englishToggle = document.getElementById("englishCorrectionToggle");
+  
+  if (englishToggle) {
+    englishToggle.addEventListener("change", (e) => {
+      const isEnglish = e.target.checked;
+      const pdfFrame = document.getElementById("pdfFrame");
+      
+      // Cambia PDF
+      if (isEnglish && window.englishPdfUrl) {
+        pdfFrame.src = window.englishPdfUrl;
+        console.log("📄 Switched to English PDF:", window.englishPdfUrl);
+      } else if (!isEnglish && window.italianPdfUrl) {
+        pdfFrame.src = window.italianPdfUrl;
+        console.log("📄 Switched to Italian PDF:", window.italianPdfUrl);
+      }
+      
+      // Traduci interfaccia
+      if (isEnglish) {
+        // Traduci le etichette in inglese
+        document.querySelector("#testTitle").textContent = "Student's answers";
+        document.querySelector('.stat-card.correct .stat-label').textContent = "Correct";
+        document.querySelector('.stat-card.wrong .stat-label').textContent = "Wrong";
+        document.querySelector('.stat-card.unsure .stat-label').textContent = "Unsure";
+        document.querySelector('.stat-card.no-idea .stat-label').textContent = "No idea";
+        document.querySelector('.stat-card.skipped .stat-label').textContent = "Skipped";
+        document.querySelector('.stat-card.timeout .stat-label').textContent = "Timeout";
+        document.querySelector('.filter-hint span').textContent = "💡 Click on boxes to filter answers";
+        document.querySelector('#printBtn').innerHTML = "🖨️ Generate PDF";
+        
+        // Traduci le etichette delle risposte
+        document.querySelectorAll('.answer-header').forEach(header => {
+          const text = header.textContent;
+          if (text.includes('Domanda')) {
+            header.innerHTML = header.innerHTML.replace('Domanda', 'Question');
+          }
+        });
+        
+        document.querySelectorAll('.status-label').forEach(label => {
+          const text = label.textContent;
+          if (text === 'Risposta data:') label.textContent = 'Given answer:';
+          if (text === 'Risposta corretta:') label.textContent = 'Correct answer:';
+          if (text === 'Stato:') label.textContent = 'Status:';
+        });
+        
+        document.querySelectorAll('.status-value').forEach(value => {
+          const text = value.textContent.trim();
+          if (text === 'Corretta') value.textContent = 'Correct';
+          if (text === 'Errata') value.textContent = 'Wrong';
+          if (text === 'Insicuro') value.textContent = 'Unsure';
+          if (text === 'Non ho idea') value.textContent = 'No idea';
+          if (text === 'Non risposta') value.textContent = 'Not answered';
+          if (text === 'Tempo esaurito') value.textContent = 'Timeout';
+        });
+      } else {
+        // Ripristina italiano
+        document.querySelector("#testTitle").textContent = "Risposte dello studente";
+        document.querySelector('.stat-card.correct .stat-label').textContent = "Corrette";
+        document.querySelector('.stat-card.wrong .stat-label').textContent = "Errate";
+        document.querySelector('.stat-card.unsure .stat-label').textContent = "Insicuro";
+        document.querySelector('.stat-card.no-idea .stat-label').textContent = "Non ho idea";
+        document.querySelector('.stat-card.skipped .stat-label').textContent = "Non date";
+        document.querySelector('.stat-card.timeout .stat-label').textContent = "Tempo esaurito";
+        document.querySelector('.filter-hint span').textContent = "💡 Clicca sui box per filtrare le risposte";
+        document.querySelector('#printBtn').innerHTML = "🖨️ Genera PDF";
+        
+        // Ripristina etichette italiane
+        document.querySelectorAll('.answer-header').forEach(header => {
+          const text = header.textContent;
+          if (text.includes('Question')) {
+            header.innerHTML = header.innerHTML.replace('Question', 'Domanda');
+          }
+        });
+        
+        document.querySelectorAll('.status-label').forEach(label => {
+          const text = label.textContent;
+          if (text === 'Given answer:') label.textContent = 'Risposta data:';
+          if (text === 'Correct answer:') label.textContent = 'Risposta corretta:';
+          if (text === 'Status:') label.textContent = 'Stato:';
+        });
+        
+        document.querySelectorAll('.status-value').forEach(value => {
+          const text = value.textContent.trim();
+          if (text === 'Correct') value.textContent = 'Corretta';
+          if (text === 'Wrong') value.textContent = 'Errata';
+          if (text === 'Unsure') value.textContent = 'Insicuro';
+          if (text === 'No idea') value.textContent = 'Non ho idea';
+          if (text === 'Not answered') value.textContent = 'Non risposta';
+          if (text === 'Timeout') value.textContent = 'Tempo esaurito';
+        });
+      }
+    });
+  }
+});

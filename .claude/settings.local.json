@@ -9,7 +9,9 @@
       "Bash(rm:*)",
       "Bash(start index.html)",
       "Bash(del index.html)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []

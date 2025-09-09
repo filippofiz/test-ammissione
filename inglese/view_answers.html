@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>View Answers - Up to Ten</title>
+  <title>Visualizza Risposte - Up to Ten</title>
   <link rel="stylesheet" href="header.css">
   <link rel="stylesheet" href="view-answers.css">
   <link rel="stylesheet" href="floating-back-button.css">
   
-  <!-- MathJax for mathematical formulas -->
+  <!-- MathJax per formule matematiche -->
   <script>
     window.MathJax = {
       tex: {
@@ -18,7 +18,7 @@
   </script>
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
   
-  <!-- Libraries for PDF generation -->
+  <!-- Librerie per generazione PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
@@ -26,23 +26,29 @@
   <!-- Header -->
   <div id="header-placeholder"></div>
 
-  <!-- Main container -->
+  <!-- Container principale -->
   <div class="main-container" id="mainContainer">
-    <!-- Left panel: PDF viewer (if available) -->
+    <!-- Pannello sinistro: PDF viewer (se disponibile) -->
     <div id="pdfPanel" class="pdf-panel">
-      <button class="toggle-panel-btn" id="togglePdfPanel" title="Hide PDF">◀</button>
+      <button class="toggle-panel-btn" id="togglePdfPanel" title="Nascondi PDF">◀</button>
       <iframe id="pdfFrame" class="pdf-frame"></iframe>
     </div>
     
-    <!-- Right panel: Answers -->
+    <!-- Pannello destro: Risposte -->
     <div id="answersPanel" class="answers-panel">
-      <!-- Answers section header -->
+      <!-- Header della sezione risposte -->
       <div class="answers-header">
         <div class="header-content">
-          <h2 id="testTitle">Student answers</h2>
+          <h2 id="testTitle">Student's answers</h2>
           <p id="testInfo" class="test-info"></p>
         </div>
         <div class="header-actions">
+          <!-- Toggle per correzione in italiano -->
+          <label class="language-toggle-correction">
+            <input type="checkbox" id="italianCorrectionToggle">
+            <span class="toggle-slider"></span>
+            <span class="toggle-label">🇮🇹 Italian Correction</span>
+          </label>
           <button id="printBtn" class="action-btn print-btn">
             🖨️ Generate PDF
           </button>
@@ -52,48 +58,48 @@
       <!-- Statistiche/Filtri cliccabili -->
       <div class="stats-container">
         <div class="filter-hint">
-          <span>💡 Clicca sui box per filtrare le risposte</span>
+          <span>💡 Click on boxes to filter answers</span>
         </div>
         <div class="stat-card correct clickable-filter active" data-filter="correct">
           <div class="stat-icon">✅</div>
           <div class="stat-content">
             <div class="stat-number" id="correctCount">0</div>
-            <div class="stat-label">Corrette</div>
+            <div class="stat-label">Correct</div>
           </div>
         </div>
         <div class="stat-card wrong clickable-filter active" data-filter="wrong">
           <div class="stat-icon">❌</div>
           <div class="stat-content">
             <div class="stat-number" id="wrongCount">0</div>
-            <div class="stat-label">Errate</div>
+            <div class="stat-label">Wrong</div>
           </div>
         </div>
         <div class="stat-card unsure clickable-filter active" data-filter="unsure">
           <div class="stat-icon">❓</div>
           <div class="stat-content">
             <div class="stat-number" id="unsureCount">0</div>
-            <div class="stat-label">Insicuro</div>
+            <div class="stat-label">Unsure</div>
           </div>
         </div>
         <div class="stat-card no-idea clickable-filter active" data-filter="no-idea">
           <div class="stat-icon">🤷</div>
           <div class="stat-content">
             <div class="stat-number" id="noIdeaCount">0</div>
-            <div class="stat-label">Non ho idea</div>
+            <div class="stat-label">No idea</div>
           </div>
         </div>
         <div class="stat-card skipped clickable-filter active" data-filter="skipped">
           <div class="stat-icon">⏭️</div>
           <div class="stat-content">
             <div class="stat-number" id="skippedCount">0</div>
-            <div class="stat-label">Non date</div>
+            <div class="stat-label">Skipped</div>
           </div>
         </div>
         <div class="stat-card timeout clickable-filter active" data-filter="timeout">
           <div class="stat-icon">⏱️</div>
           <div class="stat-content">
             <div class="stat-number" id="timeoutCount">0</div>
-            <div class="stat-label">Tempo esaurito</div>
+            <div class="stat-label">Timeout</div>
           </div>
         </div>
         <div class="stat-card percentage">

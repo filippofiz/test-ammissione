@@ -43,6 +43,12 @@
           <p id="testInfo" class="test-info"></p>
         </div>
         <div class="header-actions">
+          <!-- Toggle per correzione in inglese -->
+          <label class="language-toggle-correction">
+            <input type="checkbox" id="englishCorrectionToggle">
+            <span class="toggle-slider"></span>
+            <span class="toggle-label">🇬🇧 Correzione in Inglese</span>
+          </label>
           <button id="printBtn" class="action-btn print-btn">
             🖨️ Genera PDF
           </button>
@@ -100,14 +106,14 @@
           <div class="stat-icon">📊</div>
           <div class="stat-content">
             <div class="stat-number" id="percentageScore">0%</div>
-            <div class="stat-label">Punteggio</div>
+            <div class="stat-label" id="scoreLabel">Punteggio</div>
           </div>
         </div>
       </div>
 
       <!-- Info filtri attivi -->
       <div class="filter-info" id="filterInfo">
-        <span id="filterInfoText">Mostrando tutte le domande</span>
+        <span id="filterInfoText" data-total="0">Mostrando tutte le domande</span>
         <button class="reset-filters-btn" id="resetFilters">Mostra tutto</button>
       </div>
 
