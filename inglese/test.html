@@ -1,11 +1,34 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Test - Up to Ten</title>
   <link rel="stylesheet" href="header.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <!-- MathJax for mathematical formulas -->
+  <!-- Polyfill removed as it's not needed for modern browsers -->
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']],
+        processEscapes: true,
+        processEnvironments: true
+      },
+      options: {
+        skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+      },
+      startup: {
+        pageReady: () => {
+          return MathJax.startup.defaultPageReady().then(() => {
+            console.log('MathJax initial typesetting complete');
+          });
+        }
+      }
+    };
+  </script>
   <style>
     * {
       margin: 0;
@@ -431,7 +454,7 @@
       
       /* Handle per aprire/chiudere */
       .nav-container::before {
-        content: "☰ Navigazione Quiz";
+        content: "☰ Quiz Navigation";
         position: absolute;
         top: 0;
         left: 0;
@@ -530,6 +553,25 @@
       height: 100vh;
       padding-top: 2rem;
     }
+    /* Nascondi inizialmente gli elementi per evitare flash */
+    .pdf-viewer,
+    #timer,
+    .nav-container {
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    
+    body.ready .pdf-viewer,
+    body.ready #timer,
+    body.ready .nav-container {
+      opacity: 1;
+    }
+    
+    body.first-page .pdf-viewer,
+    body.first-page #timer,
+    body.first-page .nav-container {
+      display: none !important;
+    }
   </style>
 </head>
 <body>
@@ -551,11 +593,11 @@
 
       <!-- Middle: Question & Answer Section -->
       <div class="question-section">
-        <div id="timer">⏳ Tempo: <span id="time-left"></span></div>
+        <div id="timer">⏳ Time: <span id="time-left"></span></div>
 
         <div class="navigation">
-          <button id="prevPage" style="display: none;">Indietro</button>
-          <button id="nextPage" style="display: none;">Avanti</button>
+          <button id="prevPage" style="display: none;">Previous</button>
+          <button id="nextPage" style="display: none;">Next</button>
         </div>
 
         <h2 id="question-text"></h2>
@@ -565,10 +607,10 @@
 
       <!-- Right side: Navigation Quiz -->
       <div class="nav-container">
-        <h3>📍 Navigazione quiz</h3>
+        <h3>📍 Quiz navigation</h3>
         <div id="questionNav"></div>
         <!-- Manda Risposte button placed here -->
-        <button id="submitAnswers" class="submit-btn">📤 Manda Risposte</button>
+        <button id="submitAnswers" class="submit-btn">📤 Submit Answers</button>
       </div>
     </div>
   </div>

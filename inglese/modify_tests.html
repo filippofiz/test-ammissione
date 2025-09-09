@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Management - Up to Ten</title>
+  <link rel="stylesheet" href="header.css">
+  <link rel="stylesheet" href="floating-back-button.css">
+  <!-- Include PapaParse from CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh;
+      color: rgb(28, 37, 69);
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 2rem;
+    }
+
+    /* Responsive container for large screens */
+    @media (min-width: 1600px) {
+      .container {
+        max-width: 1400px;
+      }
+    }
+
+    @media (max-width: 1280px) {
+      .container {
+        padding: 0 1.5rem;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        margin: 1rem auto;
+        padding: 0 1rem;
+      }
+    }
+
+    .dashboard-header {
+      background: linear-gradient(135deg, rgb(28, 37, 69), #1a2541);
+      color: white;
+      padding: 2rem 2.5rem;
+      border-radius: 16px;
+      margin-bottom: 2rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
+    }
+
+    .dashboard-header h2 {
+      font-size: 1.8rem;
+      margin-bottom: 1rem;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .modify-btn {
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      color: white;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      padding: 0.75rem 1.5rem;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .modify-btn:hover {
+      background: #00a666;
+      border-color: #00a666;
+      transform: translateY(-3px);
+    }
+
+    /* Main sections */
+    .upload-section, #uploadedTestsContainer {
+      background: white;
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      margin-bottom: 2rem;
+    }
+
+    .upload-section h3, #uploadedTestsContainer h3 {
+      font-size: 1.4rem;
+      color: rgb(28, 37, 69);
+      margin-bottom: 1.5rem;
+    }
+
+    /* Form styling */
+    .upload-section p {
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: rgb(28, 37, 69);
+    }
+
+    /* Radio buttons */
+    .upload-section label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: white;
+      color: #00a666;
+      border: 1.5px solid #00a666;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+      transition: all 0.3s ease;
+      margin-right: 1rem;
+    }
+
+    .upload-section label:hover {
+      background: #00a666;
+      color: white;
+    }
+
+    .upload-section input[type="radio"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #00a666;
+    }
+
+    .upload-section input[type="radio"]:checked + label,
+    .upload-section label:has(input[type="radio"]:checked) {
+      background: #00a666;
+      color: white;
+    }
+
+    /* Fix for radio buttons when selected */
+    .upload-section input[type="radio"]:checked {
+      accent-color: white;
+      background-color: white;
+    }
+
+    /* Template button */
+    #templateBtn {
+      background: white;
+      color: #00a666;
+      border: 1.5px solid #00a666;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.3s ease;
+      margin-bottom: 1rem;
+    }
+
+    #templateBtn:hover {
+      background: #00a666;
+      color: white;
+    }
+
+    /* File input */
+    #csvFileInput {
+      width: 100%;
+      padding: 0.75rem;
+      border: 2px dashed #e9ecef;
+      border-radius: 10px;
+      background: #f8f9fa;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.3s ease;
+      margin-bottom: 1rem;
+    }
+
+    #csvFileInput:hover {
+      border-color: #00a666;
+      background: rgba(0, 166, 102, 0.05);
+    }
+
+    #csvFileInput::-webkit-file-upload-button {
+      background: white;
+      color: #00a666;
+      border: 1.5px solid #00a666;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.3s ease;
+      margin-right: 1rem;
+    }
+
+    #csvFileInput::-webkit-file-upload-button:hover {
+      background: #00a666;
+      color: white;
+    }
+
+    /* Upload button */
+    #uploadCsvBtn {
+      background: rgb(28, 37, 69);
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.3s ease;
+    }
+
+    #uploadCsvBtn:hover {
+      transform: scale(1.05);
+    }
+
+    /* Messages */
+    #uploadMessage {
+      margin-top: 1rem;
+      padding: 1rem;
+      border-radius: 10px;
+      font-weight: 500;
+    }
+
+    #uploadMessage:not(:empty) {
+      background: rgba(0, 166, 102, 0.1);
+      color: #00a666;
+      border: 1px solid rgba(0, 166, 102, 0.3);
+    }
+
+    #uploadMessage.error {
+      background: rgba(220, 53, 69, 0.1);
+      color: #dc3545;
+      border: 1px solid rgba(220, 53, 69, 0.3);
+    }
+
+    /* Summary con stile migliorato */
+    .summary {
+      margin-top: 1.5rem;
+      background: #f8f9fa;
+      padding: 1.5rem;
+      border-radius: 10px;
+      border: 1px solid #e9ecef;
+    }
+
+    .summary h3 {
+      font-size: 1.2rem;
+      color: rgb(28, 37, 69);
+      margin-bottom: 1rem;
+    }
+
+    .summary ol {
+      list-style: none;
+      counter-reset: item;
+      padding: 0;
+    }
+
+    .summary li {
+      counter-increment: item;
+      margin-bottom: 1rem;
+      padding: 1rem;
+      background: white;
+      border-radius: 8px;
+      border: 1px solid #e9ecef;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .summary li::before {
+      content: counter(item) ".";
+      font-weight: bold;
+      margin-right: 0.5rem;
+      color: #00a666;
+    }
+
+    .summary button {
+      background: white;
+      color: #00a666;
+      border: 1.5px solid #00a666;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.75rem;
+      transition: all 0.3s ease;
+      margin-left: 1rem;
+    }
+
+    .summary button:hover {
+      background: #00a666;
+      color: white;
+    }
+
+    /* Confirm Upload button */
+    button[textContent="Conferma Upload CSV"] {
+      background: rgb(28, 37, 69);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.3s ease;
+      margin-top: 1rem;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    button[textContent="Conferma Upload CSV"]:hover {
+      transform: scale(1.05);
+    }
+
+    /* Already uploaded tests section */
+    #uploadedTestsDropdown {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #e9ecef;
+      border-radius: 10px;
+      background: #f8f9fa;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+      cursor: pointer;
+    }
+
+    #uploadedTestsList {
+      list-style: none;
+      padding: 0;
+    }
+
+    #uploadedTestsList li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem;
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 10px;
+      margin-bottom: 0.5rem;
+      transition: all 0.3s ease;
+    }
+
+    #uploadedTestsList li:hover {
+      transform: translateX(4px);
+      border-color: #00a666;
+    }
+
+    .delete-test-btn {
+      background: white;
+      color: #dc3545;
+      border: 1.5px solid #dc3545;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.75rem;
+      transition: all 0.3s ease;
+    }
+
+    .delete-test-btn:hover {
+      background: #dc3545;
+      color: white;
+    }
+
+.modify-test-btn {
+  background: white;
+  color: #007bff;
+  border: 1.5px solid #007bff;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: all 0.3s ease;
+}
+
+.modify-test-btn:hover {
+  background: #007bff;
+  color: white;
+}
+
+/* Adjustment for button layout in the list */
+#uploadedTestsList li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 10px;
+  margin-bottom: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+#uploadedTestsList li div {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+/* Add this style in the <style> section of modify_tests.html, after other button styles */
+
+.copy-test-btn {
+  background: white;
+  color: #28a745;
+  border: 1.5px solid #28a745;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: all 0.3s ease;
+}
+
+.copy-test-btn:hover {
+  background: #28a745;
+  color: white;
+}
+
+  </style>
+</head>
+<body>
+  <!-- Load header from external file -->
+  <div id="header-placeholder"></div>
+
+  <div class="container">
+    <div class="dashboard-header">
+      <h2>Test Management</h2>
+      <div class="button-group">
+        <button class="modify-btn" onclick="window.location.href='tutor_dashboard.html'">
+          ← Back to Dashboard
+        </button>
+      </div>
+    </div>
+
+    <div class="upload-section">
+  <h3>📤 Upload Questions</h3>
+  <!-- Radio buttons to choose test type -->
+  <p>Select Test Type:</p>
+  <label>
+    <input type="radio" name="csvTestType" value="PDF" checked>
+    PDF
+  </label>
+  <label>
+    <input type="radio" name="csvTestType" value="Banca Dati">
+    Banca Dati
+  </label>
+  <br><br>
+  
+  <!-- Bottoni nell'ordine corretto: Template poi Caricamento Avanzato -->
+  <button id="templateBtn">
+    📄 Open Template
+  </button>
+  
+  <button id="newUploadBtn" style="background: #ff6b6b; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.85rem; margin-bottom: 1rem; margin-left: 1rem; transition: all 0.3s ease;">
+    🚀 Advanced Upload (Beta - not working)
+  </button>
+  
+  <br>
+  <!-- File input for CSV -->
+  <input type="file" id="csvFileInput" accept=".csv">
+  <!-- Button to trigger upload and parse -->
+  <button id="uploadCsvBtn">📤 Upload CSV</button>
+  <div id="uploadMessage"></div>
+  <div id="uploadSummary" class="summary"></div>
+</div>
+  
+  <script>
+    // Load header from external file
+    fetch('header.html')
+      .then(response => response.text())
+      .then(data => {
+        document.getElementById('header-placeholder').innerHTML = data;
+      });
+  </script>
+
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+    const SUPABASE_URL = "https://elrwpaezjnemmiegkyin.supabase.co"; 
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVscndwYWV6am5lbW1pZWdreWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzAyMDUsImV4cCI6MjA1MzY0NjIwNX0.p6R2S1HK8kPFYiEAYtYaxIAH8XSmzjQBWQ_ywy3akdI";  
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // IMPORTANT: Expose Supabase globally for Excel forms
+    window.SUPABASE_URL = SUPABASE_URL;
+    window.SUPABASE_KEY = SUPABASE_KEY;
+    window.supabase = supabase;
+    window.supabaseClient = { createClient };
+
+    // Wait for header to load, then update name
+    setTimeout(async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData?.session) {
+        const userId = sessionData.session.user.id;
+        const { data: tutor } = await supabase
+          .from("tutors")
+          .select("name")
+          .eq("auth_uid", userId)
+          .single();
+        
+        if (tutor?.name) {
+          const userNameElement = document.querySelector('.user-name');
+          if (userNameElement) {
+            userNameElement.textContent = tutor.name;
+          }
+        }
+      }
+
+      // Add logout event
+      document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+        await supabase.auth.signOut();
+        window.location.href = "/";
+      });
+    }, 100);
+  </script>
+
+  <script type="module" src="modify_tests.js?v=4"></script>
+  
+  <style>
+    /* Usa invece questi stili unificati che erediteranno le dimensioni dal container padre: */
+.upload-section, #uploadedTestsContainer {
+  background: white;
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  margin-bottom: 2rem;
+  /* No max-width or margin auto - will inherit from parent .container */
+}
+    
+    /* Fix for floating button - must stay behind */
+    .floating-back-button {
+      z-index: 0 !important;
+    }
+    
+    #uploadedTestsContainer h3 {
+      font-size: 1.4rem;
+      color: rgb(28, 37, 69);
+      margin-bottom: 1.5rem;
+    }
+  </style>
+  
+  <script src="floating-back-button.js"></script>
+  <script src="animated-background.js"></script>
+  <script src="custom-dropdown.js"></script>
+  <script src="excel-form-pdf.js"></script>
+<script>
+  // Load script asynchronously with error handling
+  (function() {
+    const script = document.createElement('script');
+    script.src = 'excel-form-bancadati.js';
+    script.onload = function() {
+      console.log('✅ excel-form-bancadati.js loaded successfully!');
+    };
+    script.onerror = function() {
+      console.error('❌ Error loading excel-form-bancadati.js');
+    };
+    document.head.appendChild(script);
+  })();
+</script>
+<!-- Add this script BEFORE the </body> tag in modify_tests.html -->
+
+<script>
+  // Handling the new button for advanced upload
+  window.addEventListener('load', function() {
+    const newUploadBtn = document.getElementById('newUploadBtn');
+    
+    if (newUploadBtn) {
+      console.log('Advanced Upload button found!');
+      
+      // Remove "(Beta - not working)" from button text now that it works
+      newUploadBtn.textContent = '🚀 Advanced Upload';
+      
+      // Add hover effect
+      newUploadBtn.addEventListener('mouseenter', function() {
+        this.style.background = '#ff5252';
+        this.style.transform = 'translateY(-2px)';
+        this.style.boxShadow = '0 4px 12px rgba(255, 107, 107, 0.3)';
+      });
+      
+      newUploadBtn.addEventListener('mouseleave', function() {
+        this.style.background = '#ff6b6b';
+        this.style.transform = 'translateY(0)';
+        this.style.boxShadow = 'none';
+      });
+      
+      // Handle click
+      newUploadBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        console.log('Click on Advanced Upload!');
+        
+        const testType = document.querySelector('input[name="csvTestType"]:checked').value;
+        console.log('Selected test type:', testType);
+        
+        if (testType === 'PDF') {
+          // Open PDF form
+          if (typeof excelFormPDF !== 'undefined' && excelFormPDF.open) {
+            console.log('Opening Excel PDF form...');
+            excelFormPDF.open();
+          } else {
+            console.error('excelFormPDF non trovato!');
+            alert('⚠️ The PDF upload module is not loaded yet. Reload the page and try again.');
+          }
+        } else if (testType === 'Banca Dati') {
+          // Open Database form
+          if (typeof excelFormBancaDati !== 'undefined' && excelFormBancaDati.open) {
+            console.log('Opening Excel Database form...');
+            excelFormBancaDati.open();
+          } else {
+            console.error('excelFormBancaDati non trovato!');
+            alert('⚠️ The Database upload module is not loaded yet. Reload the page and try again.');
+          }
+        }
+      });
+    } else {
+      console.error('newUploadBtn button not found!');
+    }
+  });
+</script>
+</body>
+</html>

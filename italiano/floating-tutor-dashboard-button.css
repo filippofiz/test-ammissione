@@ -1,0 +1,66 @@
+/* floating-back-button.css */
+.floating-back-button {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  background: linear-gradient(135deg, rgb(28, 37, 69), #1a2541);
+  color: white;
+  border: none;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  z-index: 999;
+}
+
+.floating-back-button:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  background: linear-gradient(135deg, #1a2541, rgb(28, 37, 69));
+}
+
+.floating-back-button:active {
+  transform: translateY(-1px) scale(0.98);
+}
+
+/* Tooltip */
+.floating-back-button::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  right: 70px;
+  background: rgba(28, 37, 69, 0.95);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.floating-back-button:hover::before {
+  opacity: 1;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .floating-back-button {
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    font-size: 1.2rem;
+  }
+  
+  .floating-back-button::before {
+    display: none;
+  }
+}

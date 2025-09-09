@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Results Dashboard - Up to Ten</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="header.css">
+  <link rel="stylesheet" href="floating-back-button.css">
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh;
+      color: rgb(28, 37, 69);
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Main container */
+    .dashboard-container {
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 2rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    @media (min-width: 1600px) {
+      .dashboard-container {
+        max-width: 1400px;
+      }
+    }
+
+    @media (max-width: 1280px) {
+      .dashboard-container {
+        padding: 0 1.5rem;
+      }
+    }
+
+    /* Header */
+    .dashboard-header {
+      background: linear-gradient(135deg, rgb(28, 37, 69), #1a2541);
+      color: white;
+      padding: 2rem 3rem;
+      border-radius: 20px;
+      margin-bottom: 2rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .dashboard-header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -10%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(0, 166, 102, 0.3) 0%, transparent 70%);
+      animation: pulse 4s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.5; }
+      50% { transform: scale(1.2); opacity: 0.8; }
+    }
+
+    .dashboard-header h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .dashboard-header p {
+      font-size: 1.1rem;
+      opacity: 0.9;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Simulation Estimate Card - New standardized style */
+.simulation-estimate {
+  background: white;
+  color: #2d3748;
+  padding: 1.5rem;
+  border-radius: 16px;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  display: none;
+  border-top: 4px solid #667eea;
+}
+
+.simulation-estimate h2 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  color: #2d3748;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.simulation-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+
+.simulation-stat {
+  background: #f8fafc;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.simulation-stat:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  background: #f1f5f9;
+}
+
+.simulation-stat h3 {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #64748b;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.simulation-value {
+  font-size: 2.2rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+  color: #1e293b;
+}
+
+.simulation-subtext {
+  font-size: 0.875rem;
+  color: #94a3b8;
+}
+
+/* Final Estimate box - style with brand colors */
+#finalEstimate {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border: 2px solid rgb(28, 37, 69);
+  border-radius: 16px;
+  padding: 2rem;
+  text-align: center;
+  margin-bottom: 1.5rem;
+  color: #1e293b;
+  box-shadow: 0 10px 30px rgba(0, 166, 102, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Add decorative element */
+#finalEstimate::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -10%;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(0, 166, 102, 0.1) 0%, transparent 70%);
+  animation: pulse 4s ease-in-out infinite;
+}
+
+/* Info icon for methodology */
+.simulation-stat::after {
+  content: "ℹ";
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 20px;
+  height: 20px;
+  background: #e2e8f0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: #64748b;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.simulation-stat:hover::after {
+  opacity: 1;
+}
+
+/* Timeline chart container */
+.timeline-container {
+  background: #f8fafc;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  margin-top: 1.5rem;
+}
+
+.timeline-container h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 1rem;
+}
+
+/* Methodology hint */
+.methodology-hint {
+  margin-top: 1.5rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #64748b;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+/* Outlier alert */
+#outlierAlert {
+  margin-top: 1.5rem;
+}
+
+#outlierAlert > div {
+  background: #fef2f2 !important;
+  padding: 1rem;
+  border-radius: 12px;
+  border: 1px solid #fecaca !important;
+}
+
+#outlierAlert h4 {
+  color: #dc2626 !important;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+#outlierAlert p {
+  color: #7f1d1d !important;
+  line-height: 1.6;
+}
+
+/* Specific colors for metrics */
+#media-box { border-left: 4px solid #3b82f6; }
+#mediana-box { border-left: 4px solid #06b6d4; }
+#var-box { border-left: 4px solid #8b5cf6; }
+#simulazioni-box { border-left: 4px solid #10b981; }
+#trend-box { border-left: 4px solid #f59e0b; }
+#consistenza-box { border-left: 4px solid #ec4899; }
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .simulation-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+    /* Filters */
+    .filters-section {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      margin-bottom: 2rem;
+    }
+
+    .filters-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: #2d3748;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .filters-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .filter-group label {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #4a5568;
+    }
+
+    .filter-group select {
+      padding: 0.75rem;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      background: white;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .filter-group select:hover {
+      border-color: #3b82f6;
+    }
+
+    .filter-group select:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    /* Stats Cards */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    }
+
+    .stat-card h3 {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #64748b;
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .stat-value {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-subtext {
+      font-size: 0.875rem;
+      color: #94a3b8;
+    }
+
+    .stat-card.correct { border-top: 4px solid #10b981; }
+    .stat-card.correct .stat-value { color: #10b981; }
+    
+    .stat-card.incorrect { border-top: 4px solid #ef4444; }
+    .stat-card.incorrect .stat-value { color: #ef4444; }
+    
+    .stat-card.score { border-top: 4px solid #3b82f6; }
+    .stat-card.score .stat-value { color: #3b82f6; }
+    
+    .stat-card.progress { border-top: 4px solid #8b5cf6; }
+    .stat-card.progress .stat-value { color: #8b5cf6; }
+
+    /* Charts Grid */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .chart-container {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    }
+
+    .chart-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: #2d3748;
+    }
+
+    .chart-box {
+      width: 100%;
+      height: 400px;
+    }
+
+    /* Full width chart */
+    .chart-container.full-width {
+      grid-column: 1 / -1;
+    }
+
+    /* Line chart filter */
+    .line-chart-filter {
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .line-chart-filter label {
+      font-weight: 500;
+      color: #4a5568;
+    }
+
+    /* Interactive Table */
+    .table-container {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      overflow-x: auto;
+      margin-bottom: 2rem;
+    }
+
+    .table-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: #2d3748;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+
+    th, td {
+      border: 1px solid #e2e8f0;
+      padding: 0.75rem;
+      text-align: center;
+    }
+
+    th {
+      background-color: #f8fafc;
+      font-weight: 600;
+      color: #475569;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .double-border-right {
+      border-right: 3px double #cbd5e1;
+    }
+
+    /* Cell colors */
+    .correct-light { background-color: #d1fae5; color: #065f46; }
+    .incorrect-light { background-color: #fee2e2; color: #991b1b; }
+    .x-answer-light { background-color: #dbeafe; color: #1e40af; }
+    .y-answer-light { background-color: #fed7aa; color: #9a3412; }
+    .z-answer-light { background-color: #e5e7eb; color: #374151; }
+
+    .corretto { background-color: #10b981; color: white; font-weight: 600; }
+    .incorretto { background-color: #ef4444; color: white; font-weight: 600; }
+    .x-answer { background-color: #3b82f6; color: white; font-weight: 600; }
+    .y-answer { background-color: #f59e0b; color: white; font-weight: 600; }
+    .z-answer { background-color: #6b7280; color: white; font-weight: 600; }
+    
+    /* Report button */
+    .report-button {
+      background: linear-gradient(135deg, #00a666, #00c775);
+      color: white;
+      border: none;
+      padding: 1rem 2rem;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin: 2rem auto;
+      box-shadow: 0 4px 16px rgba(0, 166, 102, 0.2);
+    }
+
+    .report-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 166, 102, 0.3);
+    }
+    
+    /* Button container */
+    .button-container {
+      text-align: center;
+      margin-top: 2rem;
+      padding-bottom: 4rem; /* Add padding to avoid overlap with floating button */
+    }
+
+    /* Progress bar */
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: #e2e8f0;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 0.5rem;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+      border-radius: 4px;
+      transition: width 0.5s ease;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .dashboard-container {
+        padding: 0 1rem;
+      }
+      
+      .dashboard-header {
+        padding: 1.2rem;
+      }
+      
+      .dashboard-header h1 {
+        font-size: 1.3rem;
+      }
+      
+      .charts-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      
+      .simulation-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
+    /* Add hover info icon to stat cards */
+    .simulation-stat {
+      position: relative;
+    }
+    
+    .simulation-stat::after {
+      content: "ℹ";
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      width: 20px;
+      height: 20px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    
+    .simulation-stat:hover::after {
+      opacity: 0.7;
+    }
+    
+    /* Mobile responsive */
+    @media (max-width: 768px) {
+      .simulation-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header placeholder -->
+  <div id="header-placeholder"></div>
+
+  <div class="dashboard-container">
+    <!-- Header -->
+    <div class="dashboard-header">
+      <h1 id="dashboardTitle">Results Dashboard</h1>
+      <p>Detailed analysis of performance and progress</p>
+    </div>
+
+    <!-- Simulation Estimate Card -->
+    <div class="simulation-estimate" id="simulationEstimate">
+      <h2>🎯 Statistical Analysis of Simulations</h2>
+      
+      <!-- Final Estimate - Most Prominent -->
+      <div id="finalEstimate">
+  <!-- Populated by JavaScript -->
+</div>
+      
+      <!-- Primary Info Grid - Most important metrics first -->
+      <div class="simulation-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 1rem;">
+        <div class="simulation-stat" id="simulazioni-box">
+          <h3>Simulations</h3>
+          <div class="simulation-value" id="simulationCount">0</div>
+          <div class="simulation-subtext">tests completed</div>
+        </div>
+        
+        <div class="simulation-stat" id="trend-box">
+          <h3>Trend</h3>
+          <div class="simulation-value" id="scoreTrend">→ Stable</div>
+          <div class="simulation-subtext">recent simulations</div>
+        </div>
+        
+        <div class="simulation-stat" id="consistenza-box">
+          <h3>Consistency</h3>
+          <div class="simulation-value" id="consistency">Average</div>
+          <div class="simulation-subtext">result stability</div>
+        </div>
+      </div>
+      
+      <!-- Statistical Metrics Grid -->
+      <div class="simulation-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));">
+        <div class="simulation-stat" id="media-box">
+          <h3>Average</h3>
+          <div class="simulation-value" id="estimatedScore">0</div>
+          <div class="simulation-subtext" id="estimatedPercentage">μ = 0</div>
+        </div>
+        
+        <div class="simulation-stat" id="mediana-box">
+          <h3>Median</h3>
+          <div class="simulation-value" id="medianScore">0</div>
+          <div class="simulation-subtext">central value</div>
+        </div>
+        
+        <div class="simulation-stat" id="var-box">
+          <h3>VaR (5%)</h3>
+          <div class="simulation-value" id="scoreRange">0</div>
+          <div class="simulation-subtext" id="stdDeviation">probable minimum</div>
+        </div>
+        
+        <!-- Hidden stats for advanced calculation -->
+        <div style="display: none;">
+          <div id="weightedScore">0</div>
+        </div>
+      </div>
+      
+      <!-- Timeline chart will be inserted here by JavaScript -->
+      
+      <!-- Alert for outliers -->
+      <div id="outlierAlert" style="display: none; grid-column: 1 / -1;"></div>
+      
+      <!-- Methodology hint -->
+      <div style="margin-top: 1rem; text-align: center; font-size: 0.85rem; opacity: 0.7;">
+        💡 Click on any metric to see the calculation methodology
+      </div>
+    </div>
+
+    <!-- Filtri -->
+    <div class="filters-section">
+      <h2 class="filters-title">🔍 Filters</h2>
+      <div class="filters-grid">
+        <div class="filter-group">
+          <label for="sectionFilter">Section</label>
+          <select id="sectionFilter"></select>
+        </div>
+        <div class="filter-group">
+          <label for="tipologiaFilter">Type</label>
+          <select id="tipologiaFilter"></select>
+        </div>
+        <div class="filter-group">
+          <label for="progressivoFilter">Progressive</label>
+          <select id="progressivoFilter"></select>
+        </div>
+        <div class="filter-group">
+          <label for="argomentoFilter">Topic</label>
+          <select id="argomentoFilter"></select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+      <div class="stat-card correct">
+        <h3>Correct Answers</h3>
+        <div class="stat-value" id="correctCount">0</div>
+        <div class="stat-subtext" id="correctPercentage">0% of total</div>
+      </div>
+      
+      <div class="stat-card incorrect">
+        <h3>Wrong Answers</h3>
+        <div class="stat-value" id="incorrectCount">0</div>
+        <div class="stat-subtext" id="incorrectPercentage">0% of total</div>
+      </div>
+      
+      <div class="stat-card score">
+        <h3>Total Score</h3>
+        <div class="stat-value" id="totalScore">0</div>
+        <div class="stat-subtext" id="scoreDisplay">Standard mode</div>
+      </div>
+      
+      <div class="stat-card progress">
+        <h3>Completion</h3>
+        <div class="stat-value" id="completionRate">0%</div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Grid -->
+    <div class="charts-grid">
+      <!-- Pie Chart -->
+      <div class="chart-container">
+        <h3 class="chart-title">📊 Answer Distribution</h3>
+        <div id="echartsPieContainer" class="chart-box"></div>
+      </div>
+      
+      <!-- Bar Chart -->
+      <div class="chart-container">
+        <h3 class="chart-title">📈 Performance by Category</h3>
+        <div id="barChartContainer" class="chart-box"></div>
+      </div>
+      
+      <!-- Line Chart -->
+      <div class="chart-container full-width">
+        <h3 class="chart-title">📉 Time Progress</h3>
+        <div class="line-chart-filter">
+          <label for="linePlotArgomentoFilter">Topic:</label>
+          <select id="linePlotArgomentoFilter"></select>
+        </div>
+        <div id="lineChartContainer" class="chart-box"></div>
+      </div>
+      
+      <!-- Radar Chart -->
+      <div class="chart-container">
+        <h3 class="chart-title">🎯 Skills by Topic</h3>
+        <div id="radarChartContainer" class="chart-box"></div>
+      </div>
+      
+      <!-- Heatmap -->
+      <div class="chart-container">
+        <h3 class="chart-title">🔥 Performance Heatmap</h3>
+        <div id="heatmapContainer" class="chart-box"></div>
+      </div>
+    </div>
+
+    <!-- Score Display for specific filters -->
+    <div id="scoreDisplay2" style="display:none;"></div>
+
+    <!-- Interactive Table -->
+    <div class="table-container">
+      <h3 class="table-title">📋 Detailed Answers Table</h3>
+      <div id="interactiveTableContainer"></div>
+    </div>
+
+    <!-- Buttons -->
+    <div class="button-container">
+      <button class="report-button" onclick="openReport()">
+        📄 Generate PDF Report
+      </button>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script>
+    // Load header
+    fetch('header.html')
+      .then(response => response.text())
+      .then(data => {
+        document.getElementById('header-placeholder').innerHTML = data;
+        
+        // Update tutor name after header is loaded
+        setTimeout(async () => {
+          // This code will be handled by dashboard.js
+        }, 100);
+      });
+  </script>
+  <script type="module" src="dashboard.js"></script>
+  <script src="floating-back-button.js"></script>
+  <script>
+    // Create floating button to return to dashboard
+    document.addEventListener('DOMContentLoaded', function() {
+      createFloatingBackButton({
+        targetUrl: 'tutor_dashboard.html',
+        tooltip: 'Back to Tutor Dashboard'
+      });
+    });
+  </script>
+</body>
+</html>
