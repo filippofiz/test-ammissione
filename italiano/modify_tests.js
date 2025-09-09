@@ -314,7 +314,7 @@ async function fetchUploadedTests() {
   while (hasMore) {
     const { data, error } = await supabase
       .from("questions")
-      .select("section, tipologia_esercizi, progressivo, tipologia_test")
+      .select("section, tipologia_esercizi, progressivo, tipologia_test, pdf_url_eng")
       .range(page * 1000, (page + 1) * 1000 - 1);
     
     if (error || !data || data.length === 0) {
@@ -471,13 +471,18 @@ if (!container) {
         modifyBtn.addEventListener("click", () => modifyTestPdf(test));
         buttonContainer.appendChild(modifyBtn);
 
-        // Pulsante Carica Inglese (nuovo)
+        // Pulsante Carica/Modifica Inglese
         const uploadEnBtn = document.createElement("button");
-        uploadEnBtn.textContent = "📄 Carica Inglese";
+        
+        // Controlla se esiste già un PDF inglese
+        const hasEnglishPdf = test.pdf_url_eng && test.pdf_url_eng.trim() !== '';
+        
+        // Cambia testo e colore in base alla presenza del PDF inglese
+        uploadEnBtn.textContent = hasEnglishPdf ? "✏️ Modifica Inglese" : "📄 Carica Inglese";
         uploadEnBtn.style.cssText = `
           background: white;
-          color: #17a2b8;
-          border: 1.5px solid #17a2b8;
+          color: ${hasEnglishPdf ? '#28a745' : '#17a2b8'};
+          border: 1.5px solid ${hasEnglishPdf ? '#28a745' : '#17a2b8'};
           padding: 0.4rem 0.8rem;
           border-radius: 6px;
           font-weight: 600;
@@ -486,12 +491,12 @@ if (!container) {
           transition: all 0.3s ease;
         `;
         uploadEnBtn.addEventListener('mouseenter', function() {
-          this.style.background = '#17a2b8';
+          this.style.background = hasEnglishPdf ? '#28a745' : '#17a2b8';
           this.style.color = 'white';
         });
         uploadEnBtn.addEventListener('mouseleave', function() {
           this.style.background = 'white';
-          this.style.color = '#17a2b8';
+          this.style.color = hasEnglishPdf ? '#28a745' : '#17a2b8';
         });
         uploadEnBtn.addEventListener("click", () => uploadEnglishPdf(test));
         buttonContainer.appendChild(uploadEnBtn);
@@ -672,9 +677,12 @@ async function modifyTestPdf(test) {
   fileInput.click();
 }
 
-// Nuova funzione per caricare PDF inglese con controlli di sicurezza
+// Nuova funzione per caricare/modificare PDF inglese con controlli di sicurezza
 async function uploadEnglishPdf(test) {
-  console.log("📚 === INIZIO CARICAMENTO PDF INGLESE ===");
+  // Controlla se è una modifica o un nuovo caricamento
+  const isModification = test.pdf_url_eng && test.pdf_url_eng.trim() !== '';
+  
+  console.log(isModification ? "✏️ === MODIFICA PDF INGLESE ===" : "📚 === CARICAMENTO PDF INGLESE ===");
   console.log("📊 Test selezionato:", test);
   
   try {
@@ -761,12 +769,12 @@ async function uploadEnglishPdf(test) {
       console.log("📄 File selezionato:", file.name, "Size:", file.size, "bytes");
       
       const confirmUpload = confirm(
-        `📚 Confermi il caricamento del PDF INGLESE per:\n\n` +
+        `${isModification ? '✏️ Confermi la MODIFICA' : '📚 Confermi il caricamento'} del PDF INGLESE per:\n\n` +
         `Test: ${test.tipologia_test}\n` +
         `Sezione: ${test.section}\n` +
         `Tipo: ${test.tipologia_esercizi} ${test.progressivo}\n` +
         `File: ${file.name}\n\n` +
-        `Questo aggiornerà ${allRows.length - inconsistentRows.length} domande.`
+        `${isModification ? 'Questo SOSTITUIRÀ il PDF inglese esistente e' : 'Questo'} aggiornerà ${allRows.length - inconsistentRows.length} domande.`
       );
       
       if (!confirmUpload) {
@@ -815,6 +823,30 @@ async function uploadEnglishPdf(test) {
           type: file.type,
           lastModified: file.lastModified
         });
+        
+        // Se è una modifica, elimina il vecchio PDF dal bucket
+        if (isModification && test.pdf_url_eng) {
+          console.log("🗑️ Rimozione del vecchio PDF inglese...");
+          try {
+            // Estrai il nome del file dall'URL
+            const oldFileName = test.pdf_url_eng.split('/').pop().split('?')[0];
+            console.log("📄 Nome file da rimuovere:", oldFileName);
+            
+            const { error: removeError } = await supabase
+              .storage
+              .from("PDF_eng")
+              .remove([oldFileName]);
+            
+            if (removeError) {
+              console.warn("⚠️ Impossibile rimuovere il vecchio PDF:", removeError);
+              // Non bloccare l'operazione se la rimozione fallisce
+            } else {
+              console.log("✅ Vecchio PDF rimosso con successo");
+            }
+          } catch (err) {
+            console.warn("⚠️ Errore durante la rimozione del vecchio PDF:", err);
+          }
+        }
         
         // TEST 4.3: Prova upload nel bucket PDF_eng
         console.log("📤 Test 4.3: Upload file nel bucket PDF_eng...");
@@ -912,7 +944,7 @@ async function uploadEnglishPdf(test) {
           console.log(`📚 Totale righe: ${finalCheck.length}`);
           
           alert(
-            `✅ PDF inglese caricato con successo!\n\n` +
+            `✅ PDF inglese ${isModification ? 'modificato' : 'caricato'} con successo!\n\n` +
             `📊 Riepilogo:\n` +
             `• Righe aggiornate: ${updateData.length}\n` +
             `• Righe totali del test: ${finalCheck.length}\n` +

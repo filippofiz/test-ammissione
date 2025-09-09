@@ -788,7 +788,7 @@ function loadQuestionsForPage(page) {
 
     pageQuestions.forEach(q => {
         const questionDiv = document.createElement("div");
-        questionDiv.innerHTML = `<h3>Quesito ${q.question_number}</h3>`;
+        questionDiv.innerHTML = `<h3>Question ${q.question_number}</h3>`;
 
         if (q.is_open_ended) {
             let input = document.createElement("input");
@@ -799,7 +799,7 @@ function loadQuestionsForPage(page) {
         } else {
             let choices = (q.wrong_answers || []).concat(q.correct_answer);
             // Add the two extra choices:
-            choices = choices.concat(["insicuro", "non ho idea"]);
+            choices = choices.concat(["no idea", "unsure"]);
             choices.sort((a, b) => a.localeCompare(b));
 
             choices.forEach(choice => {
@@ -808,8 +808,8 @@ function loadQuestionsForPage(page) {
                 btn.onclick = () => selectAnswer(q.id, choice, btn);
 
                 if (studentAnswers[q.id] === choice || 
-                    (choice.toLowerCase() === "insicuro" && studentAnswers[q.id] === "x") ||
-                    (choice.toLowerCase() === "non ho idea" && studentAnswers[q.id] === "y")) {
+                    (choice.toLowerCase() === "unsure" && studentAnswers[q.id] === "x") ||
+                    (choice.toLowerCase() === "no idea" && studentAnswers[q.id] === "y")) {
                      btn.style.background = "green";
                  }
 
@@ -825,10 +825,10 @@ function loadQuestionsForPage(page) {
 
 function selectAnswer(questionId, answer, btn) {
     let mappedAnswer = answer;
-    // Map "insicuro" and "non ho idea" to "x" and "y" respectively.
-    if (answer.toLowerCase() === "insicuro") {
+    // Map "unsure" and "no idea" to "x" and "y" respectively.
+    if (answer.toLowerCase() === "unsure") {
       mappedAnswer = "x";
-    } else if (answer.toLowerCase() === "non ho idea") {
+    } else if (answer.toLowerCase() === "no idea") {
       mappedAnswer = "y";
     }
     
@@ -849,8 +849,8 @@ function selectAnswer(questionId, answer, btn) {
     buttons.forEach(b => {
       let btnMapped = b.textContent;
       // Normalize the text for the extra choices.
-      if (btnMapped.toLowerCase() === "insicuro") btnMapped = "x";
-      if (btnMapped.toLowerCase() === "non ho idea") btnMapped = "y";
+      if (btnMapped.toLowerCase() === "unsure") btnMapped = "x";
+      if (btnMapped.toLowerCase() === "no idea") btnMapped = "y";
       
       if (btnMapped === studentAnswers[questionId]) {
         // If the chosen answer is one of the extra ones, color it yellow; otherwise, green.
