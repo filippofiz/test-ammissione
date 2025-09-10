@@ -86,7 +86,13 @@ document.addEventListener("DOMContentLoaded", async () => {
        const submitBtn = document.getElementById("submitAnswers");
     if (submitBtn) {
         submitBtn.addEventListener("click", async () => {
+            // Protezione contro click multipli
+            if (isSubmitting) {
+                console.log("⚠️ Submit già in corso, ignorando click");
+                return;
+            }
             console.log("Submit button clicked!");
+            submitBtn.disabled = true; // Disabilita il bottone immediatamente
             await submitAnswers(false); // false = non è scaduto il tempo
         });
     }
@@ -811,15 +817,29 @@ function selectAnswer(questionId, answer, btn) {
   }
 
 async function submitAnswers(timeExpired = false) {
+    // Controllo priorità timer - se il timer è scaduto durante un submit manuale
+    if (timeExpired && isSubmitting) {
+        console.log("⏰ Timer scaduto durante submit manuale - il submit manuale continuerà");
+        return; // Lascia completare il submit manuale già in corso
+    }
+    
+    // Controllo per evitare submit multipli
+    if (isSubmitting) {
+        console.log("⚠️ Submit già in corso, ignorando chiamata duplicata");
+        return;
+    }
+    
+    // Imposta immediatamente il flag per bloccare altre chiamate
+    isSubmitting = true;
+    
     // Se NON è scaduto il tempo, chiedi conferma con dialog personalizzato
     if (!timeExpired) {
         const confirmSubmit = await customConfirm("Sei sicuro di voler inviare le risposte?");
         if (!confirmSubmit) {
+            isSubmitting = false; // Reset il flag se l'utente annulla
             return;
         }
     }
-    
-    isSubmitting = true;
     let studentId = sessionStorage.getItem("studentId");
 
     // ✅ If `studentId` is missing, fetch it again
@@ -865,7 +885,7 @@ async function submitAnswers(timeExpired = false) {
 
     console.log("✅ Final submission data:", submissions);
 
-    // ✅ Insert into Supabase
+    // ✅ Insert into Supabase (con protezione JavaScript contro duplicati)
     let { data, error } = await supabase
         .from("student_answers")
         .insert(submissions);
