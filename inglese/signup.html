@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Student Registration | Up to Ten</title>
   <link rel="stylesheet" href="header.css" />
+  <link rel="stylesheet" href="dashboard.css" />
   <style>
     body {
       margin: 0;
@@ -27,7 +28,7 @@
 
     .container {
       max-width: 600px;
-      margin: 4rem auto;
+      margin: 7rem auto 4rem;
       padding: 2rem;
       background: white;
       border-radius: 16px;
@@ -136,6 +137,9 @@
 </head>
 <body>
 
+  <!-- Header -->
+  <div id="header-placeholder"></div>
+
   <!-- Optional background -->
   <script src="animated-background.js"></script>
 
@@ -184,5 +188,41 @@
   </script>
 
   <script type="module" src="signup.js"></script>
+
+  <!-- Load header -->
+  <script>
+    // Load the header
+    fetch('header.html')
+      .then(response => response.text())
+      .then(data => {
+        document.getElementById('header-placeholder').innerHTML = data;
+        
+        // Initialize header after loading
+        setTimeout(async () => {
+          const { data: sessionData } = await supabase.auth.getSession();
+          if (sessionData?.session) {
+            const userId = sessionData.session.user.id;
+            const { data: tutor } = await supabase
+              .from("tutors")
+              .select("name")
+              .eq("auth_uid", userId)
+              .single();
+            
+            if (tutor?.name) {
+              const userNameElement = document.querySelector('.user-name');
+              if (userNameElement) {
+                userNameElement.textContent = tutor.name;
+              }
+            }
+          }
+
+          // Add logout event
+          document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+            await supabase.auth.signOut();
+            window.location.href = "/";
+          });
+        }, 100);
+      });
+  </script>
 </body>
 </html>
