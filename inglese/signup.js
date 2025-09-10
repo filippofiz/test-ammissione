@@ -110,11 +110,16 @@ async function registerStudent(email, password, fullName, tutorId, chosenTests) 
             // Non bloccare il processo se l'inizializzazione test fallisce
         }
         
-        // Successo!
-        showSuccess(`✅ Studente registrato con successo!\n\nLo studente può ora accedere con:\nEmail: ${email}\nPassword: quella appena impostata`);
+        // Success!
+        showSuccess(`✅ Student registered successfully!\n\nThe student can now log in with:\nEmail: ${email}\nPassword: the one just set`);
 
-        // Pulisci il form
+        // Clear the form
         clearForm();
+        
+        // Redirect to tutor dashboard after 2 seconds
+        setTimeout(() => {
+            window.location.href = "tutor_dashboard.html";
+        }, 2000);
 
     } catch (err) {
         console.error("❌ Errore imprevisto:", err);

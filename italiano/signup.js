@@ -22,24 +22,24 @@ document.addEventListener("DOMContentLoaded", () => {
   
       // Validazioni
       if (!email || !password || !confirmPassword || !fullName || !tutorId || chosenTests.length === 0) {
-        showError("Please fill in all fields and select at least one test.");
+        showError("Compila tutti i campi e seleziona almeno un test.");
         return;
       }
 
       if (password !== confirmPassword) {
-        showError("Passwords do not match.");
+        showError("Le password non corrispondono.");
         return;
       }
 
       if (password.length < 6) {
-        showError("Password must be at least 6 characters long.");
+        showError("La password deve essere di almeno 6 caratteri.");
         return;
       }
 
       // Validazione email
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
-        showError("Please enter a valid email address.");
+        showError("Inserisci un indirizzo email valido.");
         return;
       }
   
@@ -111,10 +111,15 @@ async function registerStudent(email, password, fullName, tutorId, chosenTests) 
         }
         
         // Successo!
-        showSuccess(`✅ Student registered successfully!\n\nThe student can now log in with:\nEmail: ${email}\nPassword: the one just set`);
+        showSuccess(`✅ Studente registrato con successo!\n\nLo studente può ora accedere con:\nEmail: ${email}\nPassword: quella appena impostata`);
 
         // Pulisci il form
         clearForm();
+        
+        // Redirect alla dashboard tutor dopo 2 secondi
+        setTimeout(() => {
+            window.location.href = "tutor_dashboard.html";
+        }, 2000);
 
     } catch (err) {
         console.error("❌ Errore imprevisto:", err);
