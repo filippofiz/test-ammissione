@@ -468,7 +468,7 @@
             name, 
             tests,
             tutor_id,
-            tutors!inner(name)
+            tutors(name)
           `);
       
       displayStudentProgress(students || [], true);
