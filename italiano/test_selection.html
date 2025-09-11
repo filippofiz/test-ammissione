@@ -20,9 +20,9 @@
     }
 
     .container {
-      max-width: 100%;
-      margin: 2rem 0;
-      padding: 0;
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 2rem;
     }
 
     /* Layout principale con griglia */
@@ -31,26 +31,18 @@
       grid-template-columns: 1fr 320px;
       gap: 2rem;
       align-items: start;
-      max-width: calc(100% - 300px);
-      margin: 0 auto;
     }
     
+
     @media (min-width: 1600px) {
-      .main-layout {
-        max-width: 1350px;
+      .container {
+        max-width: 1400px;
       }
     }
 
     @media (max-width: 1024px) {
       .main-layout {
         grid-template-columns: 1fr;
-        max-width: calc(100% - 2rem);
-        margin: 0 1rem;
-      }
-      
-      .page-header {
-        max-width: calc(100% - 2rem);
-        margin: 0 1rem 2rem 1rem;
       }
       
       .progress-sidebar {
@@ -65,17 +57,9 @@
       padding: 2rem 2.5rem;
       border-radius: 16px;
       margin-bottom: 2rem;
-      margin-left: auto;
-      margin-right: auto;
-      max-width: calc(100% - 300px);
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
     }
     
-    @media (min-width: 1600px) {
-      .page-header {
-        max-width: 1350px;
-      }
-    }
 
     .page-header h2 {
       font-size: 1.8rem;
@@ -263,6 +247,18 @@
       flex-wrap: wrap;
       gap: 0.75rem;
       margin-top: 0.75rem;
+    }
+    
+    /* Fix per contenitori flex generati da JS */
+    .materia-content div[style*="display: flex"] {
+      max-width: 100% !important;
+      flex-wrap: wrap !important;
+    }
+    
+    /* Contenimento per tutti i div interni */
+    .test-tree-section * {
+      max-width: 100%;
+      box-sizing: border-box;
     }
 
     /* Stile per Simulazioni - layout distintivo */
@@ -496,6 +492,7 @@
     @media (max-width: 768px) {
       .container {
         padding: 0 1rem;
+        max-width: 100%;
       }
 
       .page-header {
