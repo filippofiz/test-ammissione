@@ -88,6 +88,23 @@ async function updateTutorName() {
 // Carica le risposte del test
 async function loadTestAnswers() {
   try {
+    console.log("🔍 DEBUG: Starting loadTestAnswers");
+    console.log("🔍 DEBUG: Query parameters:", {
+      questionsTable,
+      selectedSection,
+      selectedTipologiaEsercizi, 
+      selectedProgressivo,
+      selectedTestType,
+      selectedStudentId
+    });
+    
+    console.log("🔍 DEBUG: EXACT QUERY FILTERS FOR QUESTIONS TABLE:");
+    console.log("  - Table:", questionsTable);
+    console.log("  - section =", selectedSection);
+    console.log("  - tipologia_esercizi =", selectedTipologiaEsercizi);
+    console.log("  - progressivo =", selectedProgressivo);
+    console.log("  - tipologia_test =", selectedTestType);
+    
     // 1. Fetch domande per il test selezionato
     const { data: questionsData, error: questionsError } = await supabase
       .from(questionsTable)
@@ -109,6 +126,19 @@ async function loadTestAnswers() {
       return;
     }
 
+    console.log("🔍 DEBUG: Questions fetched:", questionsData.length);
+    console.log("🔍 DEBUG: First few question IDs:", questionsData.slice(0, 5).map(q => q.id));
+    
+    // Check which PDFs these questions come from
+    const pdfCounts = {};
+    questionsData.forEach(q => {
+      const pdfUrl = q.pdf_url_eng || q.pdf_url || 'NO_PDF';
+      pdfCounts[pdfUrl] = (pdfCounts[pdfUrl] || 0) + 1;
+    });
+    
+    console.log("🔍 DEBUG: Questions by PDF:", pdfCounts);
+    console.log("🔍 DEBUG: Number of different PDFs:", Object.keys(pdfCounts).length);
+    
     totalQuestions = questionsData.length;
 
     // 2. Gestione PDF se disponibile - con supporto multilingua
@@ -141,8 +171,16 @@ async function loadTestAnswers() {
 
     // 3. Array di ID domande
     const questionIds = questionsData.map(q => q.id);
+    console.log("🔍 DEBUG: Question IDs array length:", questionIds.length);
+    console.log("🔍 DEBUG: Using answersTable:", answersTable);
 
     // 4. Fetch risposte dello studente
+    console.log("🔍 DEBUG: Fetching answers with query:", {
+      table: answersTable,
+      questionIds: questionIds.slice(0, 5) + " (...and " + (questionIds.length - 5) + " more)",
+      selectedStudentId
+    });
+    
     const { data: answersData, error: answersError } = await supabase
       .from(answersTable)
       .select("*")
@@ -153,6 +191,94 @@ async function loadTestAnswers() {
       console.error("Errore nel recupero delle risposte:", answersError.message);
       alert("Errore nel recupero delle risposte.");
       return;
+    }
+    
+    console.log("🔍 DEBUG: Answers fetched:", answersData ? answersData.length : 0);
+    console.log("🔍 DEBUG: First few answers:", answersData ? answersData.slice(0, 10) : []);
+    
+    // Check which PDF the student's answers correspond to
+    if (answersData && answersData.length > 0) {
+      const answeredQuestionIds = new Set(answersData.map(a => a.question_id));
+      const questionsWithAnswers = questionsData.filter(q => answeredQuestionIds.has(q.id));
+      
+      const answeredPdfCounts = {};
+      questionsWithAnswers.forEach(q => {
+        const pdfUrl = q.pdf_url_eng || q.pdf_url || 'NO_PDF';
+        answeredPdfCounts[pdfUrl] = (answeredPdfCounts[pdfUrl] || 0) + 1;
+      });
+      
+      console.log("🔍 DEBUG: Student answered questions from these PDFs:", answeredPdfCounts);
+      
+      // Check for mixing - if student has answers from multiple PDFs
+      const pdfWithAnswers = Object.keys(answeredPdfCounts);
+      if (pdfWithAnswers.length > 1) {
+        console.log("🚨 WARNING: MIXING DETECTED! Student has answers from multiple PDFs:");
+        pdfWithAnswers.forEach(pdf => {
+          console.log(`   - ${pdf}: ${answeredPdfCounts[pdf]} answers`);
+        });
+        
+        // Show which specific questions come from which PDF
+        console.log("🔍 DEBUG: Detailed breakdown by question:");
+        questionsWithAnswers.forEach(q => {
+          const pdfUrl = q.pdf_url_eng || q.pdf_url || 'NO_PDF';
+          const shortPdf = pdfUrl.split('_').pop(); // Get just the timestamp part
+          console.log(`   Question ${q.question_number}: ${q.id} from ${shortPdf}`);
+        });
+      } else {
+        console.log("✅ No mixing detected - all answers from single PDF");
+      }
+      
+      // Find the PDF that the student actually used (should have the most answers)
+      const actualPdf = Object.entries(answeredPdfCounts)
+        .sort(([,a], [,b]) => b - a) // Sort by count descending
+        [0]?.[0]; // Get the PDF with most answers
+      console.log("🔍 DEBUG: Student's actual PDF appears to be:", actualPdf);
+      
+      if (actualPdf) {
+        console.log("🔍 DEBUG: Re-fetching questions filtered by student's actual PDF...");
+        
+        // Re-fetch questions filtered by the student's actual PDF
+        const { data: filteredQuestionsData, error: filteredQuestionsError } = await supabase
+          .from(questionsTable)
+          .select("*")
+          .eq("section", selectedSection)
+          .eq("tipologia_esercizi", selectedTipologiaEsercizi)
+          .eq("progressivo", selectedProgressivo)
+          .eq("tipologia_test", selectedTestType)
+          .eq("pdf_url", actualPdf)
+          .order("question_number");
+          
+        if (filteredQuestionsError) {
+          console.error("Error re-fetching filtered questions:", filteredQuestionsError);
+        } else if (filteredQuestionsData && filteredQuestionsData.length > 0) {
+          console.log("🔍 DEBUG: Filtered questions count:", filteredQuestionsData.length);
+          // Replace the original questions data with the filtered data
+          questionsData.splice(0, questionsData.length, ...filteredQuestionsData);
+          totalQuestions = questionsData.length;
+          console.log("✅ DEBUG: Using filtered questions data, new count:", totalQuestions);
+        }
+      }
+    }
+    
+    // Check for duplicates
+    if (answersData && answersData.length > 0) {
+      const answersByQuestionId = {};
+      answersData.forEach(ans => {
+        if (!answersByQuestionId[ans.question_id]) {
+          answersByQuestionId[ans.question_id] = [];
+        }
+        answersByQuestionId[ans.question_id].push(ans);
+      });
+      
+      const duplicates = Object.entries(answersByQuestionId).filter(([qId, answers]) => answers.length > 1);
+      if (duplicates.length > 0) {
+        console.log("🚨 DEBUG: DUPLICATE ANSWERS FOUND:", duplicates.length, "questions have multiple answers");
+        duplicates.forEach(([qId, answers]) => {
+          console.log(`   Question ${qId} has ${answers.length} answers:`, answers);
+        });
+      } else {
+        console.log("✅ DEBUG: No duplicate answers found");
+      }
     }
     
     // Mappa risposte
