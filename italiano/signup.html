@@ -145,6 +145,9 @@
 
   <div class="container">
     <h2>Registrazione Studente</h2>
+    <div id="authStatus" style="background: #f0f8ff; padding: 10px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #0066cc;">
+      Verifica autenticazione in corso...
+    </div>
 
     <div id="errorMessage" class="error-message"></div>
     <div id="successMessage" class="success-message"></div>
@@ -187,7 +190,59 @@
     window.supabase = supabase;
   </script>
 
-  <script type="module" src="signup.js"></script>
+  <script type="module" src="signup.js?v=4"></script>
+
+  <!-- Display Auth Status -->
+  <script>
+    async function displayAuthStatus() {
+      const authDiv = document.getElementById('authStatus');
+      if (!authDiv) return;
+
+      const { data: session } = await window.supabase.auth.getSession();
+
+      if (session?.session) {
+        const user = session.session.user;
+
+        // Check if user is a tutor
+        const { data: tutorData } = await window.supabase
+          .from('tutors')
+          .select('id, name')
+          .eq('auth_uid', user.id)
+          .single();
+
+        if (tutorData) {
+          authDiv.innerHTML = `
+            <strong>✅ Autenticato come TUTOR:</strong><br>
+            Nome: ${tutorData.name}<br>
+            Email: ${user.email}<br>
+            User ID: ${user.id}<br>
+            Tutor ID: ${tutorData.id}
+          `;
+          authDiv.style.background = '#d4f8d4';
+          authDiv.style.borderColor = '#00a666';
+        } else {
+          authDiv.innerHTML = `
+            <strong>⚠️ Autenticato ma NON È UN TUTOR:</strong><br>
+            Email: ${user.email}<br>
+            User ID: ${user.id}<br>
+            <span style="color: red;">Questo utente non è registrato come tutor!</span>
+          `;
+          authDiv.style.background = '#fff3cd';
+          authDiv.style.borderColor = '#ffc107';
+        }
+      } else {
+        authDiv.innerHTML = `
+          <strong>❌ NON AUTENTICATO</strong><br>
+          <span style="color: red;">Nessun utente autenticato. Devi essere autenticato come tutor per registrare studenti.</span>
+        `;
+        authDiv.style.background = '#f8d7da';
+        authDiv.style.borderColor = '#dc3545';
+      }
+    }
+
+    // Check auth status when page loads and supabase is ready
+    setTimeout(displayAuthStatus, 500);
+  </script>
 
   <!-- Carica header -->
   <script>

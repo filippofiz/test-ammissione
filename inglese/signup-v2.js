@@ -1,14 +1,31 @@
 const supabase = window.supabase;
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+    // Check initial auth status when page loads
+    const { data: initialSession } = await supabase.auth.getSession();
+    console.log("🚀 Page loaded - Current auth status:", {
+        isLoggedIn: !!initialSession?.session,
+        userEmail: initialSession?.session?.user?.email,
+        userId: initialSession?.session?.user?.id,
+        role: initialSession?.session?.user?.role
+    });
+
     const signupBtn = document.getElementById("signupBtn");
-  
+
     if (!signupBtn) {
       console.error("❌ ERROR: Signup button not found.");
       return;
     }
-  
+
     signupBtn.addEventListener("click", async () => {
+      // Check auth status right before signup
+      const { data: preClickSession } = await supabase.auth.getSession();
+      console.log("🎯 Button clicked - Auth status before signup:", {
+          isLoggedIn: !!preClickSession?.session,
+          userEmail: preClickSession?.session?.user?.email,
+          userId: preClickSession?.session?.user?.id
+      });
+
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value.trim();
       const confirmPassword = document.getElementById("confirmPassword").value.trim();
@@ -16,18 +33,18 @@ document.addEventListener("DOMContentLoaded", () => {
       const tutorId = document.getElementById("tutorDropdown").value;
       const testsDropdown = document.getElementById("testsDropdown");
       const chosenTests = Array.from(testsDropdown.selectedOptions).map(opt => opt.value);
-      
+
       // Reset messaggi
       hideMessages();
   
       // Validazioni
       if (!email || !password || !confirmPassword || !fullName || !tutorId || chosenTests.length === 0) {
-        showError("Compila tutti i campi e seleziona almeno un test.");
+        showError("Per favore compila tutti i campi e seleziona almeno un test.");
         return;
       }
 
       if (password !== confirmPassword) {
-        showError("Le password non corrispondono.");
+        showError("Le password non coincidono.");
         return;
       }
 
@@ -84,9 +101,9 @@ async function registerStudent(email, password, fullName, tutorId, chosenTests) 
             console.error("❌ Registrazione fallita:", error.message);
 
             if (error.message.includes("already registered")) {
-                showError("This email address is already registered in the system.");
+                showError("Questo indirizzo email è già registrato nel sistema.");
             } else {
-                showError("Registration error: " + error.message);
+                showError("Errore durante la registrazione: " + error.message);
             }
             return;
         }
@@ -94,71 +111,52 @@ async function registerStudent(email, password, fullName, tutorId, chosenTests) 
         const user = data.user;
         console.log("✅ Utente creato! Auth UID:", user.id);
 
-        // IMMEDIATELY restore tutor session after creating student
+        // Check current session after signup
+        const { data: currentSessionAfterSignup } = await supabase.auth.getSession();
+        console.log("🔍 Session after signup:", {
+            hasSession: !!currentSessionAfterSignup?.session,
+            userEmail: currentSessionAfterSignup?.session?.user?.email,
+            userId: currentSessionAfterSignup?.session?.user?.id
+        });
+
+        // Restore tutor session before database operations
         if (tutorAccessToken && tutorRefreshToken) {
             console.log("🔄 Restoring tutor session...");
-            const { data: setSessionData, error: sessionError } = await supabase.auth.setSession({
+            await supabase.auth.setSession({
                 access_token: tutorAccessToken,
                 refresh_token: tutorRefreshToken
             });
 
-            if (sessionError) {
-                console.error("❌ Failed to restore tutor session:", sessionError);
-            } else {
-                console.log("✅ Tutor session restored successfully");
-            }
-
             // Verify the session was restored
-            const { data: verifySession } = await supabase.auth.getSession();
-            console.log("🔍 Current session after restore:", {
-                userEmail: verifySession?.session?.user?.email,
-                userId: verifySession?.session?.user?.id
+            const { data: restoredSession } = await supabase.auth.getSession();
+            console.log("✅ Tutor session restored:", {
+                hasSession: !!restoredSession?.session,
+                userEmail: restoredSession?.session?.user?.email,
+                userId: restoredSession?.session?.user?.id
             });
         } else {
-            console.error("❌ No tutor session to restore!");
+            console.warn("⚠️ No tutor session to restore - user might not be logged in as tutor");
         }
 
         // Attendi un momento per assicurarsi che Supabase abbia processato l'utente
         await new Promise(resolve => setTimeout(resolve, 2000));
 
-        // Get the current tutor's ID for the insert (to satisfy RLS)
-        const { data: currentTutor } = await supabase
-            .from("tutors")
-            .select("id")
-            .eq("auth_uid", tutorSession?.session?.user?.id)
-            .single();
-
-        // First, insert the student with the current tutor's ID to satisfy RLS
+        // Inserisci lo studente nel database
         const { error: insertError } = await supabase
             .from("students")
             .insert([{
                 auth_uid: user.id,
                 email,
                 name: fullName,
-                tutor_id: currentTutor?.id || tutorId,  // Use current tutor's ID first
+                tutor_id: tutorId,
                 tests: chosenTests,
-                password_set: true
+                password_set: true // La password è già stata impostata
             }]);
 
         if (insertError) {
             console.error("❌ Errore salvataggio info studente:", insertError.message);
-            showError("Error saving information. Account was created but please contact support.");
+            showError("Errore nel salvataggio delle informazioni. L'account è stato creato ma contatta il supporto.");
             return;
-        }
-
-        // If a different tutor was selected, update the student's tutor_id
-        if (currentTutor?.id && tutorId !== currentTutor.id) {
-            console.log("🔄 Updating student to assigned tutor:", tutorId);
-            const { error: updateError } = await supabase
-                .from("students")
-                .update({ tutor_id: tutorId })
-                .eq("auth_uid", user.id);
-
-            if (updateError) {
-                console.warn("⚠️ Could not assign to selected tutor, student remains with current tutor");
-            } else {
-                console.log("✅ Student assigned to selected tutor");
-            }
         }
 
         // Inizializza i test per lo studente
@@ -169,20 +167,20 @@ async function registerStudent(email, password, fullName, tutorId, chosenTests) 
             // Non bloccare il processo se l'inizializzazione test fallisce
         }
         
-        // Successo!
-        showSuccess(`✅ Studente registrato con successo!\n\nLo studente può ora accedere con:\nEmail: ${email}\nPassword: quella appena impostata`);
+        // Success!
+        showSuccess(`✅ Student registered successfully!\n\nThe student can now log in with:\nEmail: ${email}\nPassword: the one just set`);
 
-        // Pulisci il form
+        // Clear the form
         clearForm();
         
-        // Redirect alla dashboard tutor dopo 2 secondi
+        // Redirect to tutor dashboard after 2 seconds
         setTimeout(() => {
             window.location.href = "tutor_dashboard.html";
         }, 2000);
 
     } catch (err) {
         console.error("❌ Errore imprevisto:", err);
-        showError("An unexpected error occurred. Please try again.");
+        showError("Si è verificato un errore imprevisto. Riprova.");
     } finally {
         // Riabilita il bottone
         const signupBtn = document.getElementById("signupBtn");
@@ -362,7 +360,7 @@ async function loadTutors() {
   
     if (error) {
       console.error("❌ Errore caricamento tutor:", error.message);
-      showError("Error loading tutors.");
+      showError("Errore nel caricamento dei tutor.");
       return;
     }
   
