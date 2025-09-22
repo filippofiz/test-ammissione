@@ -1,14 +1,31 @@
 const supabase = window.supabase;
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+    // Check initial auth status when page loads
+    const { data: initialSession } = await supabase.auth.getSession();
+    console.log("🚀 Page loaded - Current auth status:", {
+        isLoggedIn: !!initialSession?.session,
+        userEmail: initialSession?.session?.user?.email,
+        userId: initialSession?.session?.user?.id,
+        role: initialSession?.session?.user?.role
+    });
+
     const signupBtn = document.getElementById("signupBtn");
-  
+
     if (!signupBtn) {
       console.error("❌ ERROR: Signup button not found.");
       return;
     }
-  
+
     signupBtn.addEventListener("click", async () => {
+      // Check auth status right before signup
+      const { data: preClickSession } = await supabase.auth.getSession();
+      console.log("🎯 Button clicked - Auth status before signup:", {
+          isLoggedIn: !!preClickSession?.session,
+          userEmail: preClickSession?.session?.user?.email,
+          userId: preClickSession?.session?.user?.id
+      });
+
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value.trim();
       const confirmPassword = document.getElementById("confirmPassword").value.trim();
@@ -16,7 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const tutorId = document.getElementById("tutorDropdown").value;
       const testsDropdown = document.getElementById("testsDropdown");
       const chosenTests = Array.from(testsDropdown.selectedOptions).map(opt => opt.value);
-      
+
       // Reset messaggi
       hideMessages();
   
@@ -50,15 +67,26 @@ document.addEventListener("DOMContentLoaded", () => {
 async function registerStudent(email, password, fullName, tutorId, chosenTests) {
     try {
         console.log("🔄 Registrazione studente:", email);
-        
+
         // Disabilita il bottone durante la registrazione
         const signupBtn = document.getElementById("signupBtn");
         signupBtn.disabled = true;
         signupBtn.textContent = "Registrazione in corso...";
-        
+
+        // Save the current tutor session BEFORE signup
+        const { data: tutorSession } = await supabase.auth.getSession();
+        const tutorAccessToken = tutorSession?.session?.access_token;
+        const tutorRefreshToken = tutorSession?.session?.refresh_token;
+
+        console.log("🔍 Tutor session saved:", {
+            hasSession: !!tutorSession?.session,
+            userEmail: tutorSession?.session?.user?.email,
+            userId: tutorSession?.session?.user?.id
+        });
+
         // Registra l'utente con Supabase Auth
-        const { data, error } = await supabase.auth.signUp({ 
-            email, 
+        const { data, error } = await supabase.auth.signUp({
+            email,
             password,
             options: {
                 data: {
@@ -69,7 +97,7 @@ async function registerStudent(email, password, fullName, tutorId, chosenTests) 
 
         if (error) {
             console.error("❌ Registrazione fallita:", error.message);
-            
+
             if (error.message.includes("already registered")) {
                 showError("Questo indirizzo email è già registrato nel sistema.");
             } else {
@@ -81,25 +109,71 @@ async function registerStudent(email, password, fullName, tutorId, chosenTests) 
         const user = data.user;
         console.log("✅ Utente creato! Auth UID:", user.id);
 
+        // IMMEDIATELY restore tutor session after creating student
+        if (tutorAccessToken && tutorRefreshToken) {
+            console.log("🔄 Restoring tutor session...");
+            const { data: setSessionData, error: sessionError } = await supabase.auth.setSession({
+                access_token: tutorAccessToken,
+                refresh_token: tutorRefreshToken
+            });
+
+            if (sessionError) {
+                console.error("❌ Failed to restore tutor session:", sessionError);
+            } else {
+                console.log("✅ Tutor session restored successfully");
+            }
+
+            // Verify the session was restored
+            const { data: verifySession } = await supabase.auth.getSession();
+            console.log("🔍 Current session after restore:", {
+                userEmail: verifySession?.session?.user?.email,
+                userId: verifySession?.session?.user?.id
+            });
+        } else {
+            console.error("❌ No tutor session to restore!");
+        }
+
         // Attendi un momento per assicurarsi che Supabase abbia processato l'utente
         await new Promise(resolve => setTimeout(resolve, 2000));
 
-        // Inserisci lo studente nel database
+        // Get the current tutor's ID for the insert (to satisfy RLS)
+        const { data: currentTutor } = await supabase
+            .from("tutors")
+            .select("id")
+            .eq("auth_uid", tutorSession?.session?.user?.id)
+            .single();
+
+        // First, insert the student with the current tutor's ID to satisfy RLS
         const { error: insertError } = await supabase
             .from("students")
-            .insert([{ 
-                auth_uid: user.id, 
-                email, 
-                name: fullName, 
-                tutor_id: tutorId, 
+            .insert([{
+                auth_uid: user.id,
+                email,
+                name: fullName,
+                tutor_id: currentTutor?.id || tutorId,  // Use current tutor's ID first
                 tests: chosenTests,
-                password_set: true // La password è già stata impostata
+                password_set: true
             }]);
 
         if (insertError) {
             console.error("❌ Errore salvataggio info studente:", insertError.message);
             showError("Errore nel salvataggio delle informazioni. L'account è stato creato ma contatta il supporto.");
             return;
+        }
+
+        // If a different tutor was selected, update the student's tutor_id
+        if (currentTutor?.id && tutorId !== currentTutor.id) {
+            console.log("🔄 Updating student to assigned tutor:", tutorId);
+            const { error: updateError } = await supabase
+                .from("students")
+                .update({ tutor_id: tutorId })
+                .eq("auth_uid", user.id);
+
+            if (updateError) {
+                console.warn("⚠️ Could not assign to selected tutor, student remains with current tutor");
+            } else {
+                console.log("✅ Student assigned to selected tutor");
+            }
         }
 
         // Inizializza i test per lo studente
