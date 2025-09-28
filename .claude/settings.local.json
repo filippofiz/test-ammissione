@@ -13,7 +13,11 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(git pull:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "WebSearch",
+      "Bash(node:*)",
+      "Bash(start \"C:\\App UpToTen\\admission-test\\inglese\\update-sat-boundaries.html\")",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []

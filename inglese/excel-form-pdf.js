@@ -73,7 +73,17 @@ class ExcelFormPDF {
     
     // Lista argomenti validi con categorie - definita una volta sola
     this.argomentiConCategoria = [
-      // Matematica
+      // SAT Reading & Writing
+      { value: 'Craft and Structure', category: 'SAT-RW', color: '#ff6b6b' },
+      { value: 'Information and Ideas', category: 'SAT-RW', color: '#ff6b6b' },
+      { value: 'Expression of Ideas', category: 'SAT-RW', color: '#ff6b6b' },
+      { value: 'Standard English Conventions', category: 'SAT-RW', color: '#ff6b6b' },
+      // SAT Math
+      { value: 'Problem Solving and Data Analysis', category: 'SAT-MATH', color: '#4ecdc4' },
+      { value: 'Algebra', category: 'SAT-MATH', color: '#4ecdc4' },
+      { value: 'Geometry and Trigonometry', category: 'SAT-MATH', color: '#4ecdc4' },
+      { value: 'Advanced Math', category: 'SAT-MATH', color: '#4ecdc4' },
+      // Matematica (Italian tests)
       { value: 'Logica e insiemi', category: 'MAT', color: '#1976d2' },
       { value: 'Algebra', category: 'MAT', color: '#1976d2' },
       { value: 'Logaritmi ed esponenziali', category: 'MAT', color: '#1976d2' },
@@ -114,7 +124,8 @@ class ExcelFormPDF {
       'wrong_answers',
       'is_open_ended',
       'argomento',
-      'pdf_url'
+      'pdf_url',
+      'SAT_section'
     ];
   }
 
@@ -270,6 +281,26 @@ class ExcelFormPDF {
       .excel-pdf-table input[type="checkbox"] {
         width: auto;
         cursor: pointer;
+      }
+
+      /* Open-ended checkbox styling for SAT */
+      .excel-pdf-table td > div {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+      }
+
+      .excel-pdf-table td > div input[type="text"] {
+        flex: 1;
+      }
+
+      .excel-pdf-table td > div label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #666;
+        margin: 0;
+        white-space: nowrap;
       }
 
       .excel-pdf-table textarea {
@@ -594,12 +625,12 @@ class ExcelFormPDF {
 
   updateSectionField(materia) {
     const sectionField = document.getElementById('sectionField');
-    
+
     if (materia === 'Simulazioni') {
       // Per Simulazioni: campo readonly
       sectionField.innerHTML = `
-        <input type="text" id="configPDFSection" value="Simulazioni" readonly 
-               style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6; 
+        <input type="text" id="configPDFSection" value="Simulazioni" readonly
+               style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6;
                       border-radius: 6px; background: #f0f0f0; color: #666;">
       `;
       // Trigger calcolo progressivo dopo aver impostato il valore
@@ -788,9 +819,101 @@ class ExcelFormPDF {
             <option value="CATTOLICA PDF">CATTOLICA PDF</option>
             <option value="BOCCONI MAGISTRALE PDF">BOCCONI MAGISTRALE PDF</option>
             <option value="BOCCONI LAW PDF">BOCCONI LAW PDF</option>
+            <option value="SAT PDF">SAT PDF</option>
           </select>
         </div>
-        
+
+        <!-- SAT Module Configuration (hidden by default) -->
+        <div style="display: none; margin-bottom: 1.5rem; padding: 1rem; background: #f8f9fa; border-radius: 8px;" id="satModuleConfig">
+          <h4 style="margin: 0 0 1rem 0; color: #1976d2;">SAT Module Configuration</h4>
+          <p style="margin-bottom: 1rem; font-size: 0.9rem; color: #666;">
+            Specify how many questions you're uploading for each module. Leave 0 for modules you're not including.
+          </p>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <!-- Module 1 configurations -->
+            <div>
+              <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">RW Module 1 (Standard):</label>
+              <input type="number" id="satRW1Count" min="0" max="50" value="0"
+                     style="width: 100%; padding: 0.5rem; border: 1px solid #dee2e6; border-radius: 6px;">
+            </div>
+
+            <div>
+              <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Math Module 1 (Standard):</label>
+              <input type="number" id="satMath1Count" min="0" max="50" value="0"
+                     style="width: 100%; padding: 0.5rem; border: 1px solid #dee2e6; border-radius: 6px;">
+            </div>
+
+            <!-- RW Module 2 Adaptive -->
+            <div style="grid-column: span 2; border: 1px solid #dee2e6; border-radius: 8px; padding: 1rem; background: white;">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div>
+                  <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; font-weight: 600;">
+                    RW Module 2 (Adaptive):
+                  </label>
+                  <input type="number" id="satRW2Count" min="0" max="50" value="0"
+                         style="width: 100%; padding: 0.5rem; border: 1px solid #dee2e6; border-radius: 6px;">
+                  <small style="color: #666;">Questions per version</small>
+                </div>
+
+                <div>
+                  <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Number of versions:</label>
+                  <select id="satRW2Versions" style="width: 100%; padding: 0.5rem; border: 1px solid #dee2e6; border-radius: 6px;">
+                    <option value="2" selected>2 versions (Real SAT)</option>
+                    <option value="3">3 versions (Extended practice)</option>
+                  </select>
+                  <small style="color: #666;">Total: <span id="rw2Total">0</span> questions</small>
+                </div>
+              </div>
+
+              <!-- RW Thresholds Display -->
+              <div id="rw2Thresholds" style="margin-top: 0.75rem; padding: 0.5rem; background: #f0f8ff; border-radius: 4px; font-size: 0.85rem;">
+                <strong>Adaptive Thresholds (RW ~70% for harder):</strong>
+                <div id="rw2ThresholdDetails" style="margin-top: 0.25rem;">
+                  • Easy: 0-70% correct in Module 1<br>
+                  • Hard: 70-100% correct in Module 1
+                </div>
+              </div>
+            </div>
+
+            <!-- Math Module 2 Adaptive -->
+            <div style="grid-column: span 2; border: 1px solid #dee2e6; border-radius: 8px; padding: 1rem; background: white;">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div>
+                  <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; font-weight: 600;">
+                    Math Module 2 (Adaptive):
+                  </label>
+                  <input type="number" id="satMath2Count" min="0" max="50" value="0"
+                         style="width: 100%; padding: 0.5rem; border: 1px solid #dee2e6; border-radius: 6px;">
+                  <small style="color: #666;">Questions per version</small>
+                </div>
+
+                <div>
+                  <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Number of versions:</label>
+                  <select id="satMath2Versions" style="width: 100%; padding: 0.5rem; border: 1px solid #dee2e6; border-radius: 6px;">
+                    <option value="2" selected>2 versions (Real SAT)</option>
+                    <option value="3">3 versions (Extended practice)</option>
+                  </select>
+                  <small style="color: #666;">Total: <span id="math2Total">0</span> questions</small>
+                </div>
+              </div>
+
+              <!-- Math Thresholds Display -->
+              <div id="math2Thresholds" style="margin-top: 0.75rem; padding: 0.5rem; background: #fff8e1; border-radius: 4px; font-size: 0.85rem;">
+                <strong>Adaptive Thresholds (Math ~65% for harder):</strong>
+                <div id="math2ThresholdDetails" style="margin-top: 0.25rem;">
+                  • Easy: 0-65% correct in Module 1<br>
+                  • Hard: 65-100% correct in Module 1
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top: 1rem; padding: 0.75rem; background: #e3f2fd; border-radius: 6px;">
+            <strong>Total Questions: <span id="satTotalQuestions" style="color: #1976d2;">0</span></strong>
+          </div>
+        </div>
+
         <div style="margin-bottom: 1.5rem;">
           <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Macro-sezione:*</label>
           <select id="configPDFMateria" style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6; border-radius: 6px;">
@@ -803,7 +926,7 @@ class ExcelFormPDF {
             <option value="Altro">Altro</option>
           </select>
         </div>
-        
+
         <div style="margin-bottom: 1.5rem;" id="sectionContainer">
           <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Sezione:*</label>
           <div id="sectionField">
@@ -855,10 +978,25 @@ class ExcelFormPDF {
     
     // Aggiungi event listener per tipologia test
     document.getElementById('configPDFTipologiaTest').addEventListener('change', () => {
+      const testType = document.getElementById('configPDFTipologiaTest').value;
+
+      // Show/hide SAT module configuration
+      const satModuleConfig = document.getElementById('satModuleConfig');
+      const numDomandeContainer = document.getElementById('configPDFNumDomande').parentElement;
+
+      if (testType === 'SAT PDF') {
+        satModuleConfig.style.display = 'block';
+        numDomandeContainer.style.display = 'none'; // Hide standard number input
+        this.updateSATTotal(); // Calculate initial total
+      } else {
+        satModuleConfig.style.display = 'none';
+        numDomandeContainer.style.display = 'block'; // Show standard number input
+      }
+
       // Prova a sincronizzare il dropdown dei test caricati
       const uploadedDropdown = document.getElementById('uploadedTestsDropdown');
       const newTipologia = document.getElementById('configPDFTipologiaTest').value;
-      
+
       if (uploadedDropdown && newTipologia) {
         for (let option of uploadedDropdown.options) {
           if (option.value === newTipologia) {
@@ -868,8 +1006,23 @@ class ExcelFormPDF {
           }
         }
       }
-      
+
       this.checkAndCalculateProgressivo();
+    });
+
+    // Add event listeners for SAT module inputs
+    ['satRW1Count', 'satRW2Count', 'satMath1Count', 'satMath2Count'].forEach(id => {
+      document.getElementById(id)?.addEventListener('input', () => {
+        this.updateSATTotal();
+      });
+    });
+
+    // Add event listeners for version selectors
+    ['satRW2Versions', 'satMath2Versions'].forEach(id => {
+      document.getElementById(id)?.addEventListener('change', () => {
+        this.updateSATThresholds(id);
+        this.updateSATTotal();
+      });
     });
     
     // Calcola il progressivo iniziale dopo un delay per permettere al dropdown di caricarsi
@@ -905,16 +1058,63 @@ class ExcelFormPDF {
     }, 1000);
   }
 
+  updateSATTotal() {
+    const rw1 = parseInt(document.getElementById('satRW1Count').value) || 0;
+    const rw2 = parseInt(document.getElementById('satRW2Count').value) || 0;
+    const math1 = parseInt(document.getElementById('satMath1Count').value) || 0;
+    const math2 = parseInt(document.getElementById('satMath2Count').value) || 0;
+
+    const rw2Versions = parseInt(document.getElementById('satRW2Versions').value) || 2;
+    const math2Versions = parseInt(document.getElementById('satMath2Versions').value) || 2;
+
+    const rw2Total = rw2 * rw2Versions;
+    const math2Total = math2 * math2Versions;
+    const total = rw1 + rw2Total + math1 + math2Total;
+
+    // Update displays
+    document.getElementById('rw2Total').textContent = rw2Total;
+    document.getElementById('math2Total').textContent = math2Total;
+    document.getElementById('satTotalQuestions').textContent = total;
+
+    // Update the hidden numDomande field for SAT
+    document.getElementById('configPDFNumDomande').value = total;
+  }
+
+  updateSATThresholds(versionSelectId) {
+    const isRW = versionSelectId.includes('RW2');
+    const versions = parseInt(document.getElementById(versionSelectId).value);
+    const thresholdDetailsId = isRW ? 'rw2ThresholdDetails' : 'math2ThresholdDetails';
+    const baseThreshold = isRW ? 70 : 65; // RW needs 70%, Math needs 65%
+
+    let thresholdHTML = '';
+    if (versions === 2) {
+      thresholdHTML = `
+        • Easy: 0-${baseThreshold}% correct in Module 1<br>
+        • Hard: ${baseThreshold}-100% correct in Module 1
+      `;
+    } else if (versions === 3) {
+      const lowerThird = Math.floor(baseThreshold / 2);
+      const upperThird = baseThreshold;
+      thresholdHTML = `
+        • Easy: 0-${lowerThird}% correct in Module 1<br>
+        • Medium: ${lowerThird}-${upperThird}% correct in Module 1<br>
+        • Hard: ${upperThird}-100% correct in Module 1
+      `;
+    }
+
+    document.getElementById(thresholdDetailsId).innerHTML = thresholdHTML;
+  }
+
   async checkAndCalculateProgressivo() {
     const tipologiaTest = document.getElementById('configPDFTipologiaTest').value;
     const materia = document.getElementById('configPDFMateria').value;
     const section = document.getElementById('configPDFSection').value;
     const tipologiaEsercizi = document.getElementById('configPDFTipologia').value;
-    
+
     const progressivoInfo = document.getElementById('configProgressivoInfo');
     const progressivoInput = document.getElementById('configPDFProgressivo');
     const continueButton = document.getElementById('continueButton');
-    
+
     // Se non sono tutti compilati, mostra messaggio di attesa e disabilita il pulsante
     if (!tipologiaTest || !materia || !section || !tipologiaEsercizi) {
       progressivoInfo.textContent = 'Seleziona tutti i campi sopra per calcolare il progressivo';
@@ -1367,8 +1567,40 @@ class ExcelFormPDF {
     const section = document.getElementById('configPDFSection').value;
     const tipologiaEsercizi = document.getElementById('configPDFTipologia').value;
     const progressivo = parseInt(document.getElementById('configPDFProgressivo').value);
-    const numDomande = parseInt(document.getElementById('configPDFNumDomande').value);
-    
+    let numDomande = parseInt(document.getElementById('configPDFNumDomande').value);
+
+    // Handle SAT module configuration
+    let satModuleInfo = null;
+    if (tipologiaTest === 'SAT PDF') {
+      const rw1 = parseInt(document.getElementById('satRW1Count').value) || 0;
+      const rw2 = parseInt(document.getElementById('satRW2Count').value) || 0;
+      const math1 = parseInt(document.getElementById('satMath1Count').value) || 0;
+      const math2 = parseInt(document.getElementById('satMath2Count').value) || 0;
+      const rw2Versions = parseInt(document.getElementById('satRW2Versions').value) || 2;
+      const math2Versions = parseInt(document.getElementById('satMath2Versions').value) || 2;
+
+      if (rw1 === 0 && rw2 === 0 && math1 === 0 && math2 === 0) {
+        alert('Please specify at least one SAT module!');
+        return;
+      }
+
+      satModuleInfo = {
+        rw1Count: rw1,
+        rw2Count: rw2,
+        math1Count: math1,
+        math2Count: math2,
+        rw2Versions: rw2Versions,
+        math2Versions: math2Versions,
+        rw2Total: rw2 * rw2Versions,
+        math2Total: math2 * math2Versions,
+        // Store thresholds for reference
+        rw2Threshold: 70,  // 70% for RW harder module
+        math2Threshold: 65  // 65% for Math harder module
+      };
+
+      numDomande = rw1 + (rw2 * rw2Versions) + math1 + (math2 * math2Versions);
+    }
+
     // Validazioni
     if (!tipologiaTest || !materia || !section || !tipologiaEsercizi) {
       alert('Compila tutti i campi obbligatori!');
@@ -1394,7 +1626,8 @@ class ExcelFormPDF {
       tipologia_esercizi: tipologiaEsercizi,  // Ora viene dal form iniziale
       progressivo: progressivo,
       num_domande: numDomande,
-      pdf_url: ''
+      pdf_url: '',
+      satModuleInfo: satModuleInfo  // Store SAT module configuration
     };
     
     document.body.removeChild(configModal);
@@ -1518,8 +1751,11 @@ class ExcelFormPDF {
       ℹ️ <strong>Nota:</strong> Tutti i campi comuni sono stati impostati nella configurazione iniziale.
       Compila solo le informazioni specifiche per ogni domanda.`;
     
-    // Aggiungi nota speciale per Simulazioni e Assessment Iniziale
-    if (this.commonData.Materia === 'Simulazioni' || this.commonData.Materia === 'Assessment Iniziale') {
+    // Check if it's a SAT test
+    const isSATTest = this.commonData.tipologia_test && this.commonData.tipologia_test.startsWith('SAT PDF');
+
+    // Aggiungi nota speciale per Simulazioni, Assessment Iniziale e SAT
+    if (this.commonData.Materia === 'Simulazioni' || this.commonData.Materia === 'Assessment Iniziale' || isSATTest) {
       bannerText += `<br><br>💡 <strong>Suggerimento per l'argomento:</strong>
         <br>&nbsp;&nbsp;• <strong>Cliccare sul campo</strong> per vedere tutte le opzioni
         <br>&nbsp;&nbsp;• <strong>Doppio click o freccia ↓</strong> per rivedere le opzioni quando sei già nel campo
@@ -1686,7 +1922,8 @@ class ExcelFormPDF {
       'question_number',     // readonly auto
       'correct_answer',      // modificabile
       'wrong_answers',       // readonly auto
-      'argomento'           // modificabile
+      'argomento',           // modificabile
+      'SAT_section'          // modificabile per SAT
     ];
     
     visibleColumns.forEach(col => {
@@ -1714,7 +1951,8 @@ class ExcelFormPDF {
       'question_number': 'N° Domanda',
       'correct_answer': 'Risposta Corretta',
       'wrong_answers': 'Risposte Errate',
-      'argomento': 'Argomento'
+      'argomento': 'Argomento',
+      'SAT_section': 'SAT Section'
     };
     
     return translations[col] || col.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -1724,41 +1962,126 @@ class ExcelFormPDF {
     const tbody = document.getElementById('excelPDFTableBody');
     const rowIndex = this.tableData.length;
     const tr = document.createElement('tr');
-    
+
     // Numero riga
     const tdNum = document.createElement('td');
     tdNum.className = 'row-number';
     tdNum.textContent = rowIndex + 1;
     tr.appendChild(tdNum);
-    
+
+    // Check if this is a SAT test
+    const isSATTest = this.commonData.tipologia_test && this.commonData.tipologia_test.startsWith('SAT PDF');
+
+    // Determine SAT module for this row if it's SAT
+    let satModule = '';
+    let satSectionBoundary = null;
+    if (this.commonData.satModuleInfo) {
+      const info = this.commonData.satModuleInfo;
+      const questionNum = rowIndex + 1;
+      let currentQ = 0;
+
+      // RW Module 1
+      if (info.rw1Count > 0) {
+        if (questionNum <= info.rw1Count) {
+          satModule = 'RW1';
+          satSectionBoundary = 1;
+        }
+        currentQ = info.rw1Count;
+      }
+
+      // RW Module 2 (2 or 3 versions)
+      if (info.rw2Count > 0 && satModule === '') {
+        if (info.rw2Versions === 2) {
+          if (questionNum <= currentQ + info.rw2Count) {
+            satModule = 'RW2-Easy';
+            satSectionBoundary = 2;
+          } else if (questionNum <= currentQ + info.rw2Count * 2) {
+            satModule = 'RW2-Hard';
+            satSectionBoundary = 2;
+          }
+        } else if (info.rw2Versions === 3) {
+          if (questionNum <= currentQ + info.rw2Count) {
+            satModule = 'RW2-Easy';
+            satSectionBoundary = 2;
+          } else if (questionNum <= currentQ + info.rw2Count * 2) {
+            satModule = 'RW2-Medium';
+            satSectionBoundary = 2;
+          } else if (questionNum <= currentQ + info.rw2Count * 3) {
+            satModule = 'RW2-Hard';
+            satSectionBoundary = 2;
+          }
+        }
+        currentQ += info.rw2Total;
+      }
+
+      // Math Module 1
+      if (info.math1Count > 0 && satModule === '') {
+        if (questionNum <= currentQ + info.math1Count) {
+          satModule = 'Math1';
+          satSectionBoundary = 3;
+        }
+        currentQ += info.math1Count;
+      }
+
+      // Math Module 2 (2 or 3 versions)
+      if (info.math2Count > 0 && satModule === '') {
+        if (info.math2Versions === 2) {
+          if (questionNum <= currentQ + info.math2Count) {
+            satModule = 'Math2-Easy';
+            satSectionBoundary = 4;
+          } else if (questionNum <= currentQ + info.math2Count * 2) {
+            satModule = 'Math2-Hard';
+            satSectionBoundary = 4;
+          }
+        } else if (info.math2Versions === 3) {
+          if (questionNum <= currentQ + info.math2Count) {
+            satModule = 'Math2-Easy';
+            satSectionBoundary = 4;
+          } else if (questionNum <= currentQ + info.math2Count * 2) {
+            satModule = 'Math2-Medium';
+            satSectionBoundary = 4;
+          } else if (questionNum <= currentQ + info.math2Count * 3) {
+            satModule = 'Math2-Hard';
+            satSectionBoundary = 4;
+          }
+        }
+      }
+    }
+
     // Dati della riga
     const rowData = {
       ...this.commonData,
+      section: this.commonData.section, // Keep the same section for all SAT questions
       page_number: '',  // Vuoto di default
       question_number: rowIndex + 1,
       correct_answer: '',
-      wrong_answers: '',
+      wrong_answers: null,  // Now nullable in DB
       is_open_ended: false,
-      argomento: (this.commonData.Materia === 'Simulazioni' || this.commonData.Materia === 'Assessment Iniziale') ? '' : this.commonData.section
+      argomento: isSATTest && satModule ? satModule : ((this.commonData.Materia === 'Simulazioni' || this.commonData.Materia === 'Assessment Iniziale') ? '' : this.commonData.section),
+      // For SAT: store module info in SAT_section field
+      SAT_section: isSATTest && satModule ? satModule : ''
     };
     
     // Crea celle per colonne visibili
-    this.createCells(tr, rowData, rowIndex);
-    
+    this.createCells(tr, rowData, rowIndex, isSATTest);
+
     this.tableData.push(rowData);
     tbody.appendChild(tr);
     this.updateStatus();
   }
 
-  createCells(tr, rowData, rowIndex) {
+  createCells(tr, rowData, rowIndex, isSATTest) {
     // Tipologia Test - readonly
     this.createReadonlyCell(tr, rowData.tipologia_test);
-    
+
     // Macro-sezione (Materia) - readonly
     this.createReadonlyCell(tr, rowData.Materia);
-    
-    // Sezione - sempre readonly perché già impostata nel form iniziale
-    this.createReadonlyCell(tr, rowData.section);
+
+    // Sezione - sempre readonly (shows module info for SAT in argomento)
+    const sectionDisplay = isSATTest && rowData.argomento && rowData.argomento.startsWith('RW') || rowData.argomento?.startsWith('MATH')
+      ? `${rowData.section} (${rowData.argomento})`  // Show both section and module for SAT
+      : rowData.section;
+    this.createReadonlyCell(tr, sectionDisplay);
     
     // Tipologia Esercizi - sempre readonly perché già impostata nel form iniziale
     this.createReadonlyCell(tr, rowData.tipologia_esercizi);
@@ -1886,21 +2209,78 @@ class ExcelFormPDF {
     const tdCorrect = document.createElement('td');
     const correctInput = document.createElement('input');
     correctInput.type = 'text';
-    correctInput.placeholder = 'a-e';
-    correctInput.title = 'Risposta corretta (a-e). Puoi incollare una colonna da Excel.';
-    correctInput.maxLength = '1';
-    correctInput.style.textTransform = 'lowercase';
-    
+
+    // For SAT tests, add checkbox for open-ended questions
+    if (isSATTest) {
+      const checkboxContainer = document.createElement('div');
+      checkboxContainer.style.display = 'flex';
+      checkboxContainer.style.gap = '8px';
+      checkboxContainer.style.alignItems = 'center';
+
+      const openEndedCheckbox = document.createElement('input');
+      openEndedCheckbox.type = 'checkbox';
+      openEndedCheckbox.id = `open-ended-${rowIndex}`;
+      openEndedCheckbox.title = 'Check for open-ended question';
+
+      const label = document.createElement('label');
+      label.htmlFor = `open-ended-${rowIndex}`;
+      label.textContent = 'OE';
+      label.style.fontSize = '0.8rem';
+      label.style.cursor = 'pointer';
+      label.title = 'Open-Ended';
+
+      checkboxContainer.appendChild(openEndedCheckbox);
+      checkboxContainer.appendChild(correctInput);
+      checkboxContainer.appendChild(label);
+
+      tdCorrect.appendChild(checkboxContainer);
+
+      // Handle checkbox change
+      openEndedCheckbox.addEventListener('change', (e) => {
+        rowData.is_open_ended = e.target.checked;
+        if (e.target.checked) {
+          correctInput.placeholder = 'Answer';
+          correctInput.removeAttribute('maxLength');
+          correctInput.style.textTransform = 'none';
+          correctInput.title = 'Enter the numeric or text answer';
+        } else {
+          correctInput.placeholder = 'a-e';
+          correctInput.maxLength = '1';
+          correctInput.style.textTransform = 'lowercase';
+          correctInput.title = 'Risposta corretta (a-e)';
+        }
+      });
+    } else {
+      correctInput.placeholder = 'a-e';
+      correctInput.title = 'Risposta corretta (a-e). Puoi incollare una colonna da Excel.';
+      correctInput.maxLength = '1';
+      correctInput.style.textTransform = 'lowercase';
+      tdCorrect.appendChild(correctInput);
+    }
+
     // Funzione per normalizzare risposta
     const normalizeAnswer = (text) => {
+      // For open-ended questions in SAT, keep the answer as-is
+      const isOpenEnded = isSATTest && rowData.is_open_ended;
+      if (isOpenEnded) {
+        return text.trim();
+      }
       return text.trim().toLowerCase();
     };
-    
+
     // Funzione per validare risposta
     const validateAnswer = (value) => {
+      const isOpenEnded = isSATTest && rowData.is_open_ended;
+
+      if (isOpenEnded) {
+        // For open-ended questions, any non-empty answer is valid
+        correctInput.classList.remove('invalid-argomento');
+        return value.trim() !== '';
+      }
+
       const normalized = normalizeAnswer(value);
       const isValid = ['a', 'b', 'c', 'd', 'e'].includes(normalized) || normalized === '';
-      
+
       if (!isValid && normalized !== '') {
         correctInput.classList.add('invalid-argomento');
         correctInput.title = '⚠️ Solo a, b, c, d, e';
@@ -1908,26 +2288,26 @@ class ExcelFormPDF {
         correctInput.classList.remove('invalid-argomento');
         correctInput.title = 'Risposta corretta (a-e). Puoi incollare una colonna da Excel.';
       }
-      
+
       return isValid || normalized === '';
     };
     
     correctInput.addEventListener('input', (e) => {
       const normalized = normalizeAnswer(e.target.value);
       e.target.value = normalized;
-      
-      if (validateAnswer(normalized)) {
-        this.updateCell(rowIndex, 'correct_answer', normalized);
-        
-        // Auto-compila wrong_answers
-        if (normalized && ['a', 'b', 'c', 'd', 'e'].includes(normalized)) {
-          const wrongAnswersCell = tr.cells[9].querySelector('textarea'); // Colonna wrong_answers
-          if (wrongAnswersCell) {
-            const allAnswers = ['a', 'b', 'c', 'd', 'e'];
-            const wrongAnswers = allAnswers.filter(a => a !== normalized);
-            wrongAnswersCell.value = `{${wrongAnswers.join(',')}}`;
-            this.updateCell(rowIndex, 'wrong_answers', wrongAnswersCell.value);
-          }
+
+      // Validate and update
+      validateAnswer(normalized);
+      this.updateCell(rowIndex, 'correct_answer', normalized);
+
+      // Auto-compila wrong_answers (only for multiple choice)
+      if (!rowData.is_open_ended && normalized && ['a', 'b', 'c', 'd', 'e'].includes(normalized)) {
+        const wrongAnswersCell = tr.cells[9].querySelector('textarea'); // Colonna wrong_answers
+        if (wrongAnswersCell) {
+          const allAnswers = ['a', 'b', 'c', 'd', 'e'];
+          const wrongAnswers = allAnswers.filter(a => a !== normalized);
+          wrongAnswersCell.value = `{${wrongAnswers.join(',')}}`;
+          this.updateCell(rowIndex, 'wrong_answers', wrongAnswersCell.value);
         }
       }
     });
@@ -1936,19 +2316,22 @@ class ExcelFormPDF {
       e.preventDefault();
       const pastedData = (e.clipboardData || window.clipboardData).getData('text');
       const rows = pastedData.split(/\r?\n/).filter(row => row.trim() !== '');
-      
+
       if (rows.length > 1) {
         // Incollaggio multiplo
         const tbody = document.getElementById('excelPDFTableBody');
         const allRows = tbody.getElementsByTagName('tr');
-        
+
         rows.forEach((value, index) => {
           const targetRowIndex = rowIndex + index;
-          
+
           if (targetRowIndex < this.tableData.length) {
-            const normalized = normalizeAnswer(value);
+            // Check if target row is open-ended for SAT
+            const targetIsOpenEnded = this.tableData[targetRowIndex].is_open_ended;
+            const normalized = targetIsOpenEnded ? value.trim() : normalizeAnswer(value);
+
             this.updateCell(targetRowIndex, 'correct_answer', normalized);
-            
+
             // Aggiorna l'input visuale
             if (allRows[targetRowIndex]) {
               const targetCell = allRows[targetRowIndex].cells[8]; // Colonna risposta corretta
@@ -1956,23 +2339,25 @@ class ExcelFormPDF {
               if (targetInput) {
                 targetInput.value = normalized;
                 // Valida
-                const isValid = ['a', 'b', 'c', 'd', 'e'].includes(normalized) || normalized === '';
-                if (!isValid) {
-                  targetInput.classList.add('invalid-argomento');
-                  targetInput.title = '⚠️ Solo a, b, c, d, e';
-                } else {
-                  targetInput.classList.remove('invalid-argomento');
-                  targetInput.title = 'Risposta corretta (a-e). Puoi incollare una colonna da Excel.';
-                  
-                  // Auto-compila wrong_answers
-                  if (normalized && ['a', 'b', 'c', 'd', 'e'].includes(normalized)) {
-                    const wrongCell = allRows[targetRowIndex].cells[9];
-                    const wrongTextarea = wrongCell.querySelector('textarea');
-                    if (wrongTextarea) {
-                      const allAnswers = ['a', 'b', 'c', 'd', 'e'];
-                      const wrongAnswers = allAnswers.filter(a => a !== normalized);
-                      wrongTextarea.value = `{${wrongAnswers.join(',')}}`;
-                      this.updateCell(targetRowIndex, 'wrong_answers', wrongTextarea.value);
+                if (!targetIsOpenEnded) {
+                  const isValid = ['a', 'b', 'c', 'd', 'e'].includes(normalized) || normalized === '';
+                  if (!isValid) {
+                    targetInput.classList.add('invalid-argomento');
+                    targetInput.title = '⚠️ Solo a, b, c, d, e';
+                  } else {
+                    targetInput.classList.remove('invalid-argomento');
+                    targetInput.title = 'Risposta corretta (a-e). Puoi incollare una colonna da Excel.';
+
+                    // Auto-compila wrong_answers
+                    if (normalized && ['a', 'b', 'c', 'd', 'e'].includes(normalized)) {
+                      const wrongCell = allRows[targetRowIndex].cells[9];
+                      const wrongTextarea = wrongCell.querySelector('textarea');
+                      if (wrongTextarea) {
+                        const allAnswers = ['a', 'b', 'c', 'd', 'e'];
+                        const wrongAnswers = allAnswers.filter(a => a !== normalized);
+                        wrongTextarea.value = `{${wrongAnswers.join(',')}}`;
+                        this.updateCell(targetRowIndex, 'wrong_answers', wrongTextarea.value);
+                      }
                     }
                   }
                 }
@@ -1980,9 +2365,9 @@ class ExcelFormPDF {
             }
           }
         });
-        
+
         const incollati = Math.min(rows.length, this.tableData.length - rowIndex);
-        this.showPasteNotification(`✅ Incollate ${incollati} risposte corrette a partire dalla riga ${rowIndex + 1}`);
+        this.showPasteNotification(`✅ Incollate ${incollati} risposte a partire dalla riga ${rowIndex + 1}`);
       } else {
         // Incollaggio singolo
         const normalized = normalizeAnswer(rows[0] || '');
@@ -2011,18 +2396,35 @@ class ExcelFormPDF {
     
     // Argomento - condizionale in base alla macro-sezione
     const tdArgomento = document.createElement('td');
-    
-    if (rowData.Materia === 'Simulazioni' || rowData.Materia === 'Assessment Iniziale') {
-      // Per Simulazioni e Assessment Iniziale: usa CustomDropdown
-      
-      // Usa la lista definita nel constructor
-      const argomentiConCategoria = this.argomentiConCategoria;
+
+    // isSATTest is already passed as a parameter to this function
+
+    if (rowData.Materia === 'Simulazioni' || rowData.Materia === 'Assessment Iniziale' || isSATTest) {
+      // Per Simulazioni, Assessment Iniziale e SAT: usa CustomDropdown
+
+      // For SAT tests, prioritize SAT topics
+      let argomentiConCategoria = this.argomentiConCategoria;
+      if (isSATTest) {
+        // Sort to put SAT topics first
+        argomentiConCategoria = [...this.argomentiConCategoria].sort((a, b) => {
+          const aIsSAT = a.category.startsWith('SAT');
+          const bIsSAT = b.category.startsWith('SAT');
+          if (aIsSAT && !bIsSAT) return -1;
+          if (!aIsSAT && bIsSAT) return 1;
+          // Within SAT, put RW before Math
+          if (aIsSAT && bIsSAT) {
+            if (a.category === 'SAT-RW' && b.category === 'SAT-MATH') return -1;
+            if (a.category === 'SAT-MATH' && b.category === 'SAT-RW') return 1;
+          }
+          return 0;
+        });
+      }
       const validArgomenti = this.validArgomenti;
-      
+
       // Crea container per il dropdown custom
       const dropdownContainer = document.createElement('div');
       dropdownContainer.style.width = '100%';
-      
+
       // Inizializza CustomDropdown
       const customDropdown = new CustomDropdown(dropdownContainer, {
         value: rowData.argomento || '',
@@ -2149,6 +2551,27 @@ class ExcelFormPDF {
     }
     
     tr.appendChild(tdArgomento);
+
+    // SAT Section - for SAT tests only, show the module
+    const tdSATSection = document.createElement('td');
+    const satSectionInput = document.createElement('input');
+    satSectionInput.type = 'text';
+    satSectionInput.className = 'cell-input';
+
+    if (isSATTest && rowData.argomento) {
+      // For SAT tests, auto-populate with the module from argomento
+      if (rowData.argomento.startsWith('RW') || rowData.argomento.startsWith('Math')) {
+        satSectionInput.value = rowData.argomento;
+      }
+    }
+
+    // Make it editable for manual override if needed
+    satSectionInput.addEventListener('input', (e) => {
+      this.updateCell(rowIndex, 'SAT_section', e.target.value);
+    });
+
+    tdSATSection.appendChild(satSectionInput);
+    tr.appendChild(tdSATSection);
   }
 
   createReadonlyCell(tr, value) {
@@ -2308,13 +2731,17 @@ class ExcelFormPDF {
     
     // Valori validi per risposte
     const validRisposte = ['a', 'b', 'c', 'd', 'e'];
-    
+    const isSATTest = this.commonData.tipologia_test && this.commonData.tipologia_test.startsWith('SAT PDF');
+
     this.tableData.forEach((row, index) => {
       // Valida risposta corretta
       if (!row.correct_answer) {
         errors.push(`Riga ${index + 1}: Manca la risposta corretta`);
-      } else if (!validRisposte.includes(row.correct_answer)) {
+      } else if (!row.is_open_ended && !validRisposte.includes(row.correct_answer)) {
+        // Only validate multiple choice format if not open-ended
         errors.push(`Riga ${index + 1}: Risposta "${row.correct_answer}" non valida (deve essere a, b, c, d o e)`);
+      } else if (row.is_open_ended && row.correct_answer.trim() === '') {
+        errors.push(`Riga ${index + 1}: Risposta open-ended non può essere vuota`);
       }
       
       // Valida numero pagina
@@ -2329,12 +2756,20 @@ class ExcelFormPDF {
       }
       // Nota: non blocchiamo se la prima pagina non è 1 (è solo un avviso)
       
-      // Per Simulazioni verifica che l'argomento sia selezionato e valido
-      if (this.commonData.Materia === 'Simulazioni') {
+      // Check if it's a SAT test
+      const isSATTest = this.commonData.tipologia_test && this.commonData.tipologia_test.startsWith('SAT PDF');
+
+      // Per Simulazioni e SAT verifica che l'argomento sia selezionato e valido
+      if (this.commonData.Materia === 'Simulazioni' || isSATTest) {
         if (!row.argomento) {
           errors.push(`Riga ${index + 1}: Manca l'argomento`);
-        } else if (!validArgomenti.includes(row.argomento)) {
-          errors.push(`Riga ${index + 1}: Argomento "${row.argomento}" non valido`);
+        } else {
+          // Case-insensitive validation
+          const argomentoLower = row.argomento.toLowerCase();
+          const isValid = validArgomenti.some(valid => valid.toLowerCase() === argomentoLower);
+          if (!isValid) {
+            errors.push(`Riga ${index + 1}: Argomento "${row.argomento}" non valido`);
+          }
         }
       }
     });
@@ -2378,9 +2813,15 @@ class ExcelFormPDF {
               cleanRow[col] = Boolean(row[col]);
             } else if (col === 'page_number' || col === 'question_number' || col === 'progressivo') {
               cleanRow[col] = parseInt(row[col]) || 0;
-            } else if (col === 'wrong_answers' && typeof row[col] === 'string' && row[col].startsWith('{')) {
-              // È già nel formato PostgreSQL array
-              cleanRow[col] = row[col];
+            } else if (col === 'wrong_answers') {
+              // Handle wrong_answers properly
+              if (row[col] === null || row[col] === '' || row[col] === undefined) {
+                cleanRow[col] = null; // Use null for empty/undefined
+              } else if (typeof row[col] === 'string' && row[col].startsWith('{')) {
+                cleanRow[col] = row[col]; // Already in PostgreSQL array format
+              } else {
+                cleanRow[col] = null; // Default to null for invalid formats
+              }
             } else {
               cleanRow[col] = row[col];
             }

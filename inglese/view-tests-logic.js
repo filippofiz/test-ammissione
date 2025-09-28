@@ -578,13 +578,25 @@ async function getTestScore(section, progressivo, selectedTest, tipologiaEserciz
   const answersTable = isTestPDF ? "student_answers" : "studentbocconi_answers";
   
   // Recupera le domande del test
-  const { data: questions, error: questionsError } = await supabase
-    .from(questionsTable)
-    .select("id")
-    .eq("section", section)
-    .eq("tipologia_esercizi", tipologiaEsercizi)
-    .eq("progressivo", progressivo)
-    .eq("tipologia_test", selectedTest);
+  let query = supabase.from(questionsTable).select("id");
+
+  if (selectedTest === "SAT PDF" && section === "Assessment Iniziale") {
+    // For SAT, get questions from all modules using Materia field
+    query = query
+      .eq("Materia", section)
+      .eq("tipologia_esercizi", tipologiaEsercizi)
+      .eq("progressivo", progressivo)
+      .eq("tipologia_test", selectedTest);
+  } else {
+    // Regular query for non-SAT tests
+    query = query
+      .eq("section", section)
+      .eq("tipologia_esercizi", tipologiaEsercizi)
+      .eq("progressivo", progressivo)
+      .eq("tipologia_test", selectedTest);
+  }
+
+  const { data: questions, error: questionsError } = await query;
   
   if (questionsError) {
     throw new Error(`Errore query domande: ${questionsError.message}`);
@@ -608,17 +620,17 @@ async function getTestScore(section, progressivo, selectedTest, tipologiaEserciz
     }
   }
   
-  // Recupera le risposte dello studente con auto_score
+  // Recupera le risposte dello studente con auto_score E answer per SAT
   const { data: answers, error: answersError } = await supabase
     .from(answersTable)
-    .select("question_id, auto_score")
+    .select("question_id, auto_score, answer")
     .eq("auth_uid", studentId)
     .in("question_id", uniqueQuestionIds);
-  
+
   if (answersError) {
     throw new Error(`Errore query risposte: ${answersError.message}`);
   }
-  
+
   // Gestisci eventuali risposte duplicate per la stessa domanda
   // (prendi solo l'ultima risposta per ogni domanda)
   const answerMap = new Map();
@@ -627,11 +639,48 @@ async function getTestScore(section, progressivo, selectedTest, tipologiaEserciz
       answerMap.set(answer.question_id, answer);
     });
   }
-  
+
   // Converti la mappa in array di risposte uniche
   const uniqueAnswers = Array.from(answerMap.values());
-  const answeredQuestions = uniqueAnswers.length;
-  const correctAnswers = uniqueAnswers.filter(a => a.auto_score === 1).length;
+
+  // For SAT tests, filter out questions that were never shown (answer = 'xx')
+  let shownAnswers = uniqueAnswers;
+  let totalQuestionsToUse = totalQuestions;
+
+  let satModulesShown = null;
+  if (selectedTest === "SAT PDF") {
+    // Filter out questions that were never shown (answer = 'xx')
+    shownAnswers = uniqueAnswers.filter(a => a.answer !== 'xx');
+    // For SAT, use only shown questions for percentage calculation
+    totalQuestionsToUse = shownAnswers.length;
+    console.log(`SAT Test: ${shownAnswers.length} questions shown out of ${totalQuestions} total`);
+
+    // Determine which adaptive modules were shown
+    // Get questions with their SAT_section to identify modules
+    const { data: satQuestions } = await supabase
+      .from(questionsTable)
+      .select("id, SAT_section")
+      .in("id", shownAnswers.map(a => a.question_id));
+
+    if (satQuestions) {
+      const modulesSet = new Set(satQuestions.map(q => q.SAT_section).filter(s => s));
+      const modules = Array.from(modulesSet);
+
+      // Identify adaptive path
+      const hasRW2Easy = modules.includes('RW2-Easy');
+      const hasRW2Hard = modules.includes('RW2-Hard');
+      const hasMath2Easy = modules.includes('Math2-Easy');
+      const hasMath2Hard = modules.includes('Math2-Hard');
+
+      satModulesShown = {
+        rw2: hasRW2Easy ? 'Easy' : (hasRW2Hard ? 'Hard' : 'N/A'),
+        math2: hasMath2Easy ? 'Easy' : (hasMath2Hard ? 'Hard' : 'N/A')
+      };
+    }
+  }
+
+  const answeredQuestions = shownAnswers.filter(a => a.answer && a.answer !== 'z' && a.answer !== 'xx').length;
+  const correctAnswers = shownAnswers.filter(a => a.auto_score === 1).length;
   
   // Log di debug per assessment algebra
   if (section.toLowerCase().includes('algebra') && tipologiaEsercizi === 'Assessment') {
@@ -644,17 +693,18 @@ async function getTestScore(section, progressivo, selectedTest, tipologiaEserciz
   }
   
   const wrongAnswers = answeredQuestions - correctAnswers;
-  const unansweredQuestions = totalQuestions - answeredQuestions;
-  const percentage = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
-  
+  const unansweredQuestions = totalQuestionsToUse - answeredQuestions;
+  const percentage = totalQuestionsToUse > 0 ? Math.round((correctAnswers / totalQuestionsToUse) * 100) : 0;
+
   return {
-    totalQuestions,
+    totalQuestions: totalQuestionsToUse, // Use shown questions count for SAT
     correctAnswers,
     wrongAnswers,
     answeredQuestions,
     unansweredQuestions, // Aggiungo anche le domande non risposte
     percentage,
-    passed: percentage >= 60
+    passed: percentage >= 60,
+    satModulesShown // Include SAT module information if available
   };
 }
 
@@ -671,7 +721,7 @@ function updateTestBadge(badge, tooltip, details, score, isAssessment) {
   
   // Aggiorna i dettagli
   const testType = isAssessment ? 'Assessment' : 'Training';
-  details.innerHTML = `
+  let detailsHTML = `
     <h5>📊 Dettagli ${testType}</h5>
     <div class="score-row">
       <span class="score-label">Domande totali:</span>
@@ -685,10 +735,34 @@ function updateTestBadge(badge, tooltip, details, score, isAssessment) {
       <span class="score-label">Risposte errate:</span>
       <span class="score-value" style="color: #ef4444;">${score.wrongAnswers}</span>
     </div>
+    <div class="score-row">
+      <span class="score-label">Non date:</span>
+      <span class="score-value" style="color: #6b7280;">${score.unansweredQuestions}</span>
+    </div>`;
+
+  // Add SAT module information if available
+  if (score.satModulesShown) {
+    detailsHTML += `
+    <div class="score-row" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e5e7eb;">
+      <span class="score-label">📚 Moduli SAT:</span>
+    </div>
+    <div class="score-row">
+      <span class="score-label" style="margin-left: 10px;">RW Module 2:</span>
+      <span class="score-value">${score.satModulesShown.rw2}</span>
+    </div>
+    <div class="score-row">
+      <span class="score-label" style="margin-left: 10px;">Math Module 2:</span>
+      <span class="score-value">${score.satModulesShown.math2}</span>
+    </div>`;
+  }
+
+  detailsHTML += `
     <div class="score-percentage ${score.passed ? 'passed' : 'failed'}">
       ${score.percentage}%
     </div>
   `;
+
+  details.innerHTML = detailsHTML;
 }
 
 // Funzione per aggiungere badge alle sezioni con assessment passati
@@ -994,13 +1068,27 @@ async function confirmResetTest(section, testProgressivo, studentTestType, selec
 
   console.log(`🔄 Resetting Test: Section ${section}, Test Type: ${studentTestType}, Progressivo: ${testProgressivo}, Selected: ${selectedTest}`);
 
-  const { data: questions, error: questionError } = await supabase
+  let query = supabase
       .from(selectedTest.includes("PDF") ? "questions" : "questions_bancaDati")
-      .select("id")
+      .select("id");
+
+  if (selectedTest === "SAT PDF" && section === "Assessment Iniziale") {
+    // For SAT, use Materia field
+    query = query
+      .eq("Materia", section)
+      .eq("tipologia_esercizi", studentTestType)
+      .eq("tipologia_test", selectedTest)
+      .eq("progressivo", testProgressivo);
+  } else {
+    // Regular query for non-SAT tests
+    query = query
       .eq("section", section)
       .eq("tipologia_esercizi", studentTestType)
       .eq("tipologia_test", selectedTest)
       .eq("progressivo", testProgressivo);
+  }
+
+  const { data: questions, error: questionError } = await query;
 
   if (questionError) {
       console.error("❌ Error fetching questions for reset:", questionError);

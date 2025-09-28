@@ -344,16 +344,21 @@ function displayTestTree(tests, studentTests, testType, selectedTest) {
 // ✅ Start PDF test
 async function startPdfTest(section, tipologia_esercizi, testProgressivo, selectedTest, testId) {
     console.log(`🚀 Starting PDF Test: ${section} - ${tipologia_esercizi} - ${testProgressivo} - ${selectedTest} - ${testId}`);
-    const { data: testQuestion, error } = await supabase
+
+    // Regular PDF test logic - same for all PDF tests including SAT
+    // Get the first question matching criteria to get the PDF (all questions share same PDF)
+    const { data: results, error } = await supabase
         .from("questions")
         .select("pdf_url")
         .eq("section", section)
         .eq("tipologia_esercizi", tipologia_esercizi)
-        .eq("progressivo", testProgressivo)
+        .eq("progressivo", String(testProgressivo))  // Convert to string to match DB
         .eq("tipologia_test", selectedTest)
-        .limit(1)
-        .single();
-    
+        .limit(1);
+
+
+    const testQuestion = results && results.length > 0 ? results[0] : null;
+
 
     if (error || !testQuestion) {
         console.error("❌ Error fetching PDF URL:", error?.message);

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Update SAT Boundaries</title>
+    <script type="module">
+        import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+        const supabase = createClient(
+            'https://elrwpaezjnemmiegkyin.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVscndwYWV6am5lbW1pZWdreWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzAyMDUsImV4cCI6MjA1MzY0NjIwNX0.p6R2S1HK8kPFYiEAYtYaxIAH8XSmzjQBWQ_ywy3akdI'
+        );
+
+        async function updateSATBoundaries() {
+            // First check if SAT PDF entry exists
+            const { data: existing, error: checkError } = await supabase
+                .from('simulazioni_parti')
+                .select('*')
+                .eq('tipologia_test', 'SAT PDF')
+                .single();
+
+            if (checkError && checkError.code !== 'PGRST116') {
+                console.error('Error checking:', checkError);
+                document.getElementById('result').innerHTML = `<div style="color: red;">Error checking: ${checkError.message}</div>`;
+                return;
+            }
+
+            // SAT has 4 modules: RW1 (27q), RW2 (27q), Math1 (22q), Math2 (22q)
+            // Boundaries mark the START of each new section (question numbers where sections begin)
+            const satBoundaries = [28, 55, 77]; // Start of RW2, Math1, Math2
+            const satNames = ['RW Module 1', 'RW Module 2', 'Math Module 1', 'Math Module 2'];
+            const satTimeAllocation = [25, 25, 25, 25]; // Equal time for each module
+
+            if (existing) {
+                // Update existing entry
+                const { data, error } = await supabase
+                    .from('simulazioni_parti')
+                    .update({
+                        boundaries_assessment_iniziale: satBoundaries,
+                        nome_parti: satNames,
+                        time_allocation_assessment_iniziale: satTimeAllocation
+                    })
+                    .eq('tipologia_test', 'SAT PDF');
+
+                if (error) {
+                    console.error('Error updating:', error);
+                    document.getElementById('result').innerHTML = `<div style="color: red;">Error updating: ${error.message}</div>`;
+                } else {
+                    console.log('✅ Updated SAT PDF boundaries');
+                    document.getElementById('result').innerHTML = `
+                        <div style="color: green;">
+                            ✅ Updated SAT PDF boundaries for Assessment Iniziale<br>
+                            Boundaries: ${satBoundaries.join(', ')}<br>
+                            Sections: ${satNames.join(', ')}
+                        </div>`;
+                }
+            } else {
+                // Insert new entry
+                const { data, error } = await supabase
+                    .from('simulazioni_parti')
+                    .insert({
+                        tipologia_test: 'SAT PDF',
+                        boundaries_assessment_iniziale: satBoundaries,
+                        nome_parti: satNames,
+                        time_allocation_assessment_iniziale: satTimeAllocation
+                    });
+
+                if (error) {
+                    console.error('Error inserting:', error);
+                    document.getElementById('result').innerHTML = `<div style="color: red;">Error inserting: ${error.message}</div>`;
+                } else {
+                    console.log('✅ Created SAT PDF entry');
+                    document.getElementById('result').innerHTML = `
+                        <div style="color: green;">
+                            ✅ Created SAT PDF entry with Assessment Iniziale boundaries<br>
+                            Boundaries: ${satBoundaries.join(', ')}<br>
+                            Sections: ${satNames.join(', ')}
+                        </div>`;
+                }
+            }
+        }
+
+        // Run on page load
+        window.addEventListener('DOMContentLoaded', updateSATBoundaries);
+    </script>
+</head>
+<body>
+    <h1>Updating SAT Boundaries...</h1>
+    <div id="result"></div>
+</body>
+</html>

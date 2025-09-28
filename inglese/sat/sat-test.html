@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SAT Test - Up to Ten</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="sat-styles.css">
+</head>
+<body>
+  <!-- Test Header -->
+  <div class="sat-header">
+    <div class="header-left">
+      <div id="moduleHeader">
+        <!-- Module name will be inserted here -->
+      </div>
+    </div>
+    <div class="header-center">
+      <div class="timer-container">
+        <span class="timer-label">Time Remaining:</span>
+        <span id="timer" class="timer">00:00</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="progress-info">
+        <span id="questionProgress">Question 1 of 27</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Module Progress Bar -->
+  <div class="module-progress-container">
+    <div class="module-progress">
+      <div class="module-item completed" data-module="rw1">
+        <span class="module-label">RW 1</span>
+      </div>
+      <div class="module-item" data-module="rw2">
+        <span class="module-label">RW 2</span>
+      </div>
+      <div class="module-break">Break</div>
+      <div class="module-item" data-module="math1">
+        <span class="module-label">Math 1</span>
+      </div>
+      <div class="module-item" data-module="math2">
+        <span class="module-label">Math 2</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Test Content -->
+  <div class="test-container">
+    <!-- Question Display Area -->
+    <div class="question-area">
+      <div id="questionContent">
+        <!-- Question will be loaded here -->
+      </div>
+
+      <!-- Answer Options -->
+      <div id="answerOptions" class="answer-options">
+        <!-- Answer options will be loaded here -->
+      </div>
+    </div>
+
+    <!-- Question Navigation Grid -->
+    <div class="question-nav-sidebar">
+      <h3>Question Navigator</h3>
+      <div id="questionGrid" class="question-grid">
+        <!-- Question numbers will be generated here -->
+      </div>
+
+      <div class="nav-legend">
+        <div class="legend-item">
+          <span class="legend-dot answered"></span> Answered
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot flagged"></span> Flagged
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot current"></span> Current
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigation Controls -->
+  <div class="nav-controls">
+    <button id="prevPage" class="nav-btn">
+      ← Previous
+    </button>
+
+    <button id="flagQuestion" class="flag-btn">
+      🚩 Flag for Review
+    </button>
+
+    <button id="nextPage" class="nav-btn">
+      Next →
+    </button>
+
+    <button id="completeModule" class="complete-btn" style="display: none;">
+      Complete Module
+    </button>
+  </div>
+
+  <!-- PDF Viewer (if needed) -->
+  <div id="pdfViewer" class="pdf-viewer" style="display: none;">
+    <canvas id="pdfCanvas"></canvas>
+  </div>
+
+  <!-- Adaptive Notification Modal -->
+  <div id="adaptiveModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <h2>Adaptive Module Selected</h2>
+      <p id="adaptiveMessage"></p>
+      <button onclick="closeAdaptiveModal()">Continue</button>
+    </div>
+  </div>
+
+  <!-- Break Screen -->
+  <div id="breakScreen" class="break-screen" style="display: none;">
+    <div class="break-content">
+      <h2>10-Minute Break</h2>
+      <p>Great job completing the Reading and Writing section!</p>
+      <p>Take a break before starting the Math section.</p>
+      <div id="breakTimer" class="break-timer">10:00</div>
+      <button id="continueAfterBreak">Continue to Math Section</button>
+    </div>
+  </div>
+
+  <!-- Completion Screen -->
+  <div id="completionScreen" class="completion-screen" style="display: none;">
+    <div class="completion-content">
+      <h1>🎉 SAT Test Complete!</h1>
+      <div class="score-display">
+        <div class="score-section">
+          <h3>Evidence-Based Reading and Writing</h3>
+          <p id="englishScore" class="score-value">--</p>
+        </div>
+        <div class="score-section">
+          <h3>Math</h3>
+          <p id="mathScore" class="score-value">--</p>
+        </div>
+        <div class="total-score">
+          <h2>Total Score</h2>
+          <p id="totalScore" class="score-value">----</p>
+        </div>
+      </div>
+      <button onclick="window.location.href='/inglese/choose_test.html'">Return to Dashboard</button>
+    </div>
+  </div>
+
+  <!-- Supabase -->
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+    const SUPABASE_URL = "https://elrwpaezjnemmiegkyin.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVscndwYWV6am5lbW1pZWdreWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzAyMDUsImV4cCI6MjA1MzY0NjIwNX0.p6R2S1HK8kPFYiEAYtYaxIAH8XSmzjQBWQ_ywy3akdI";
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    window.supabase = supabase;
+  </script>
+
+  <!-- PDF.js -->
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+  </script>
+
+  <!-- SAT Test Scripts -->
+  <script type="module" src="sat-test.js"></script>
+</body>
+</html>

@@ -22,6 +22,611 @@ let expiredSections = new Set(); // Sezioni con tempo scaduto
 let isBocconiTest = false; // Se è un test BOCCONI (navigazione unidirezionale)
 let isMedicinaTest = false; // Se è un test MEDICINA (comportamento da definire)
 let selectedTestType = ""; // Tipo di test selezionato
+let isSATTest = false; // Se è un test SAT (navigazione adattiva)
+let satModuleScores = {}; // Track SAT module scores for adaptive logic
+let satActiveQuestions = []; // Questions currently visible for SAT
+let satCompletedModules = new Set(); // Track completed SAT modules
+let satModuleStartPages = {}; // Track start page for each SAT module
+let satAllAnswers = {}; // Store all SAT answers across modules
+let allSATQuestions = []; // All SAT questions (for adaptive selection)
+let satQuestionMapping = {}; // Maps display question numbers (1-98) to actual question numbers
+let satDisplayNumber = 1; // Current display question number for continuous numbering
+let satInModuleTransition = false; // Flag to skip welcome page during module transitions
+let satBreakTimer = null; // Timer for mandatory break between modules
+
+// Renumber SAT questions for continuous display (1-98)
+function renumberSATQuestions() {
+    if (!isSATTest) return;
+
+    // Sort questions by their original question number
+    const sortedQuestions = [...questions].sort((a, b) => a.question_number - b.question_number);
+
+    // Calculate starting display number dynamically based on previously answered questions
+    // satActiveQuestions contains all questions from completed modules
+    let startingDisplayNum = 1;
+
+    // Count actual questions from completed modules dynamically
+    if (satActiveQuestions && satActiveQuestions.length > 0) {
+        // Find questions from completed modules by checking SAT_section
+        let completedQuestionCount = 0;
+
+        // Count RW1 questions if completed
+        if (satCompletedModules.has('RW1')) {
+            const rw1Count = satActiveQuestions.filter(q => q.SAT_section === 'RW1').length;
+            completedQuestionCount += rw1Count;
+        }
+
+        // Count RW2 questions only if we've completed it and moved to next module
+        // Don't count if we're currently IN RW2 module
+        if (satCompletedModules.has('RW2-Complete')) {
+            const rw2Count = satActiveQuestions.filter(q =>
+                q.SAT_section === 'RW2-Easy' || q.SAT_section === 'RW2-Hard'
+            ).length;
+            completedQuestionCount += rw2Count;
+        }
+
+        // Count Math1 questions if completed
+        if (satCompletedModules.has('MATH1')) {
+            const math1Count = satActiveQuestions.filter(q => q.SAT_section === 'Math1').length;
+            completedQuestionCount += math1Count;
+        }
+
+        // Count Math2 questions if we're past Math2 (for future expansion)
+        if (satCompletedModules.has('Math2-Complete')) {
+            const math2Count = satActiveQuestions.filter(q =>
+                q.SAT_section === 'Math2-Easy' || q.SAT_section === 'Math2-Hard'
+            ).length;
+            completedQuestionCount += math2Count;
+        }
+
+        startingDisplayNum += completedQuestionCount;
+
+        // Debug logging
+        console.log(`📊 Dynamic numbering calculation:
+            - RW1: ${satCompletedModules.has('RW1') ? satActiveQuestions.filter(q => q.SAT_section === 'RW1').length : 0} questions
+            - RW2: ${(satCompletedModules.has('RW2-Easy') || satCompletedModules.has('RW2-Hard') || satCompletedModules.has('RW2-Complete')) ?
+                     satActiveQuestions.filter(q => q.SAT_section === 'RW2-Easy' || q.SAT_section === 'RW2-Hard').length : 0} questions
+            - Math1: ${satCompletedModules.has('MATH1') ? satActiveQuestions.filter(q => q.SAT_section === 'Math1').length : 0} questions
+            - Total completed: ${completedQuestionCount}
+            - Starting from: ${startingDisplayNum}`);
+    }
+
+    // Create mapping and update display numbers
+    let displayNum = startingDisplayNum;
+    sortedQuestions.forEach(q => {
+        satQuestionMapping[displayNum] = q.question_number;
+        q.display_number = displayNum; // Add display number to question object
+        displayNum++;
+    });
+
+    console.log(`📊 Renumbered ${sortedQuestions.length} questions starting from ${startingDisplayNum} for continuous display (dynamically calculated)`);
+}
+
+
+// Check if SAT test is complete
+function isSATComplete() {
+    if (!isSATTest) return false;
+
+    // SAT is complete when we have 4 completed modules
+    const complete = satCompletedModules.size >= 4 ||
+                    (satCompletedModules.has("RW1") &&
+                     (satCompletedModules.has("RW2-Easy") || satCompletedModules.has("RW2-Hard")) &&
+                     satCompletedModules.has("MATH1") &&
+                     (satCompletedModules.has("Math2-Easy") || satCompletedModules.has("Math2-Hard")));
+
+    console.log(`🎯 SAT Complete Check: ${complete} (Completed modules: ${Array.from(satCompletedModules).join(", ")})`);
+    return complete;
+}
+
+// Show mandatory break screen between SAT modules
+function showSATBreakScreen(nextModuleName, callback) {
+    console.log(`⏸️ Starting mandatory 5-minute break before ${nextModuleName}`);
+
+    // Hide question content and show break screen
+    const questionContainer = document.getElementById("questionContainer");
+    const pdfViewer = document.querySelector('.pdf-viewer');
+    const questionNav = document.getElementById("questionNav");
+    const prevPageBtn = document.getElementById("prevPage");
+    const nextPageBtn = document.getElementById("nextPage");
+
+    // Hide elements
+    if (pdfViewer) pdfViewer.style.display = 'none';
+    if (questionNav) questionNav.style.display = 'none';
+    if (prevPageBtn) prevPageBtn.style.display = 'none';
+    if (nextPageBtn) nextPageBtn.style.display = 'none';
+
+    // Create break screen
+    const breakScreen = document.createElement('div');
+    breakScreen.id = 'satBreakScreen';
+    breakScreen.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        color: white;
+        font-family: Arial, sans-serif;
+    `;
+
+    breakScreen.innerHTML = `
+        <div style="text-align: center; padding: 40px; background: rgba(255,255,255,0.1); border-radius: 20px; backdrop-filter: blur(10px);">
+            <h1 style="font-size: 48px; margin-bottom: 20px;">⏸️ Mandatory Break</h1>
+            <p style="font-size: 24px; margin-bottom: 30px;">You've completed a module! Time for a break (5 seconds for testing).</p>
+            <p style="font-size: 20px; margin-bottom: 10px;">Next module: <strong>${nextModuleName}</strong></p>
+            <div id="breakTimer" style="font-size: 72px; font-weight: bold; margin: 30px 0; font-family: monospace;">0:05</div>
+            <p style="font-size: 18px; opacity: 0.8;">This break cannot be skipped. The test will resume automatically.</p>
+            <div style="margin-top: 30px;">
+                <p style="font-size: 16px;">💡 Use this time to:</p>
+                <ul style="list-style: none; padding: 0; font-size: 16px; line-height: 1.8;">
+                    <li>• Stand up and stretch</li>
+                    <li>• Rest your eyes</li>
+                    <li>• Take a few deep breaths</li>
+                    <li>• Have a sip of water</li>
+                </ul>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(breakScreen);
+
+    // Start countdown
+    let breakTimeRemaining = 5; // 5 seconds for testing (was 300 for 5 minutes)
+    const timerElement = document.getElementById('breakTimer');
+
+    satBreakTimer = setInterval(() => {
+        breakTimeRemaining--;
+
+        const minutes = Math.floor(breakTimeRemaining / 60);
+        const seconds = breakTimeRemaining % 60;
+        timerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+        if (breakTimeRemaining <= 0) {
+            clearInterval(satBreakTimer);
+
+            // Remove break screen
+            breakScreen.remove();
+
+            // Show elements again
+            if (pdfViewer) pdfViewer.style.display = '';
+            if (questionNav) questionNav.style.display = '';
+            if (prevPageBtn) prevPageBtn.style.display = '';
+            if (nextPageBtn) nextPageBtn.style.display = '';
+
+            console.log(`✅ Break ended - Continuing with ${nextModuleName}`);
+
+            // Continue with the callback (load next module)
+            if (callback) callback();
+        }
+    }, 1000);
+}
+
+// Update submit button visibility for SAT
+function updateSATSubmitButton() {
+    if (!isSATTest) return;
+
+    const submitBtn = document.getElementById("submitAnswers");
+    if (!submitBtn) return;
+
+    // Simply show submit button when Math2 is loaded (either Easy or Hard)
+    if (satCompletedModules.has("Math2-Easy") || satCompletedModules.has("Math2-Hard")) {
+        submitBtn.style.display = "block";
+        submitBtn.disabled = false;
+    } else {
+        submitBtn.style.display = "none";
+    }
+}
+
+// SAT Adaptive Module Logic
+function handleSATModuleTransition(currentQuestionNumber) {
+    console.log(`\n🔄 === handleSATModuleTransition START ===`);
+    console.log(`📍 Current question number: ${currentQuestionNumber}`);
+    console.log(`📍 Is SAT test: ${isSATTest}`);
+    console.log(`📍 Current questions in view: ${questions.length}`);
+    console.log(`📍 Total SAT questions loaded: ${allSATQuestions.length}`);
+    console.log(`📍 Active questions collected: ${satActiveQuestions.length}`);
+    console.log(`📍 Completed modules: ${Array.from(satCompletedModules).join(", ")}`);
+
+    if (!isSATTest) {
+        console.log(`❌ Not a SAT test, returning false`);
+        console.log(`🔄 === handleSATModuleTransition END (false) ===\n`);
+        return false;
+    }
+
+    console.log(`🎯 SAT Module Transition Check at question ${currentQuestionNumber}`);
+
+    // Dynamically check if we're at the end of RW1
+    const rw1Questions = questions.filter(q => q.SAT_section === "RW1");
+    const rw1QuestionNumbers = rw1Questions.map(q => q.question_number);
+    const rw1LastQuestion = rw1Questions.length > 0 ? Math.max(...rw1QuestionNumbers) : 0;
+    console.log(`📋 RW1 questions found: ${rw1Questions.length}`);
+    console.log(`📋 RW1 question numbers: [${rw1QuestionNumbers.join(', ')}]`);
+    console.log(`📋 RW1 boundary check: Last Q=${rw1LastQuestion}, Current Q=${currentQuestionNumber}, RW1 completed=${satCompletedModules.has("RW1")}`);
+
+    // Check if we're at a module boundary
+    if (rw1LastQuestion > 0 && currentQuestionNumber === rw1LastQuestion && !satCompletedModules.has("RW1")) {
+        console.log(`✅ AT RW Module 1 boundary (question ${rw1LastQuestion})`);
+
+        // Save RW1 answers locally before transitioning
+        console.log(`💾 Saving RW1 answers locally...`);
+        questions.forEach(q => {
+            if (studentAnswers[q.id]) {
+                satAllAnswers[q.id] = studentAnswers[q.id];
+            }
+        });
+
+        // End of RW Module 1 -> Calculate score and load RW Module 2
+        const rw1QuestionsForScore = questions.filter(q => q.SAT_section === "RW1");
+        console.log(`📊 RW1 questions found for scoring: ${rw1QuestionsForScore.length}`);
+
+        const rw1Score = calculateModuleScore(rw1QuestionsForScore);
+        satModuleScores["RW1"] = rw1Score;
+        satCompletedModules.add("RW1");
+
+        console.log(`📊 RW Module 1 Score: ${(rw1Score * 100).toFixed(1)}%`);
+
+        // Select RW Module 2 based on score (70% threshold)
+        const rw2Module = rw1Score >= 0.7 ? "RW2-Hard" : "RW2-Easy";
+        console.log(`✅ Selected RW Module 2: ${rw2Module}`);
+
+        // Load ONLY RW2 questions (replace current questions)
+        console.log(`🔍 Looking for ${rw2Module} in all SAT questions...`);
+        const rw2Questions = allSATQuestions.filter(q => q.SAT_section === rw2Module);
+        console.log(`📊 RW2 questions found: ${rw2Questions.length}`);
+
+        if (rw2Questions.length === 0) {
+            console.error(`❌ No questions found for ${rw2Module}!`);
+            console.log(`Available sections in allSATQuestions:`, [...new Set(allSATQuestions.map(q => q.section))]);
+        }
+
+        // Replace current questions with RW2 only
+        questions = [...rw2Questions];
+        satActiveQuestions = [...satActiveQuestions, ...rw2Questions];
+
+        // Clear current studentAnswers for new module
+        studentAnswers = {};
+
+        console.log(`📊 Current module questions: ${questions.length}`);
+        console.log(`📊 Total active questions collected: ${satActiveQuestions.length}`);
+        console.log(`📊 Current module:`, [...new Set(questions.map(q => q.section))]);
+
+        // Mark RW2 module as added
+        if (rw2Module === "RW2-Easy") {
+            satCompletedModules.add("RW2-Easy");
+        } else {
+            satCompletedModules.add("RW2-Hard");
+        }
+
+        // Keep original page numbers from database - don't renumber!
+        // Update totalPages based on actual PDF pages
+        const minPage = Math.min(...questions.map(q => q.page_number));
+        const maxPage = Math.max(...questions.map(q => q.page_number));
+        totalPages = maxPage;  // Update totalPages to the max page of this module
+
+        // Track module start page for RW2
+        satModuleStartPages['RW2'] = minPage;
+
+        console.log(`📄 RW2 pages range: ${minPage} to ${maxPage}, totalPages updated to ${totalPages}`);
+
+        // Renumber questions for continuous display
+        renumberSATQuestions();
+
+        // Rebuild navigation
+        buildQuestionNav();
+        updateSATSubmitButton();
+
+
+        // Load the PDF page of the first question in RW2 module (use already calculated minPageRW2)
+        console.log(`📄 Loading first page of RW2: page ${minPageRW2}`);
+        console.log(`🔍 RW2 Questions sample:`, questions.slice(0, 3).map(q => ({
+            id: q.id,
+            q_num: q.question_number,
+            page: q.page_number,
+            section: q.SAT_section
+        })));
+        currentPage = minPageRW2;
+        satInModuleTransition = true;
+        loadQuestionsForPage(minPageRW2);
+        satInModuleTransition = false;
+
+        console.log(`🔄 === handleSATModuleTransition END (true - RW1->RW2) ===\n`);
+        return true;
+    }
+
+    // Check for end of RW2 to transition to Math1
+    const rw2EasyQuestions = questions.filter(q => q.SAT_section === "RW2-Easy");
+    const rw2HardQuestions = questions.filter(q => q.SAT_section === "RW2-Hard");
+    const rw2Questions = rw2EasyQuestions.length > 0 ? rw2EasyQuestions : rw2HardQuestions;
+    const rw2LastQuestion = rw2Questions.length > 0 ? Math.max(...rw2Questions.map(q => q.question_number)) : 0;
+
+    console.log(`📋 RW2 boundary check: Last Q=${rw2LastQuestion}, Current Q=${currentQuestionNumber}`);
+    console.log(`📋 RW2-Easy completed=${satCompletedModules.has("RW2-Easy")}, RW2-Hard completed=${satCompletedModules.has("RW2-Hard")}`);
+    console.log(`📋 RW2-Complete=${satCompletedModules.has("RW2-Complete")}`);
+
+    if (rw2LastQuestion > 0 && currentQuestionNumber === rw2LastQuestion &&
+        (satCompletedModules.has("RW2-Easy") || satCompletedModules.has("RW2-Hard")) &&
+        !satCompletedModules.has("RW2-Complete")) {
+
+        console.log(`✅ AT RW Module 2 boundary, transitioning to Math1`);
+
+        // Save RW2 answers locally
+        console.log(`💾 Saving RW2 answers locally...`);
+        questions.forEach(q => {
+            if (studentAnswers[q.id]) {
+                satAllAnswers[q.id] = studentAnswers[q.id];
+            }
+        });
+
+        satCompletedModules.add("RW2-Complete");
+
+        // Load Math1 questions
+        console.log(`📊 Loading Math Module 1...`);
+        const math1Questions = allSATQuestions.filter(q => q.SAT_section === "Math1" || q.SAT_section === "MATH1");
+        console.log(`📊 Math1 questions found: ${math1Questions.length}`);
+
+        // Replace questions with only Math1
+        questions = [...math1Questions];
+        satActiveQuestions = [...satActiveQuestions, ...math1Questions];
+        studentAnswers = {}; // Clear for new module
+
+        // Keep original page numbers from database - don't renumber!
+        // Update totalPages based on actual PDF pages
+        const minPageMath1 = Math.min(...questions.map(q => q.page_number));
+        const maxPageMath1 = Math.max(...questions.map(q => q.page_number));
+        totalPages = maxPageMath1;  // Update totalPages to the max page of this module
+
+        // Track module start page for Math1
+        satModuleStartPages['Math1'] = minPageMath1;
+
+        console.log(`📄 Math1 pages range: ${minPageMath1} to ${maxPageMath1}, totalPages updated to ${totalPages}`);
+
+        // Renumber and rebuild
+        renumberSATQuestions();
+        buildQuestionNav();
+        updateSATSubmitButton();
+        showSATModuleDebug();
+
+        // Show mandatory 5-minute break between Reading/Writing and Math sections
+        showSATBreakScreen("Math Module 1", () => {
+            // Use the minPageMath1 we calculated before the break
+            console.log(`📄 Loading first page of Math1: page ${minPageMath1}`);
+            console.log(`🔍 Math1 Questions sample:`, questions.slice(0, 3).map(q => ({
+                id: q.id,
+                q_num: q.question_number,
+                page: q.page_number,
+                section: q.SAT_section
+            })));
+            currentPage = minPageMath1;
+            satInModuleTransition = true;
+            loadQuestionsForPage(minPageMath1);
+            satInModuleTransition = false;
+        });
+
+        console.log(`🔄 === handleSATModuleTransition END (true - RW2->Math1) ===\n`);
+        return true;
+    }
+
+    // Dynamically check if we're at the end of Math1
+    const math1Questions = questions.filter(q => q.SAT_section === "Math1" || q.SAT_section === "MATH1");
+    const math1LastQuestion = math1Questions.length > 0 ? Math.max(...math1Questions.map(q => q.question_number)) : 0;
+
+    console.log(`📋 Math1 boundary check: Last Q=${math1LastQuestion}, Current Q=${currentQuestionNumber}, MATH1 completed=${satCompletedModules.has("MATH1")}`);
+
+    if (math1LastQuestion > 0 && currentQuestionNumber === math1LastQuestion && !satCompletedModules.has("MATH1")) {
+        console.log(`✅ AT Math Module 1 boundary (question ${math1LastQuestion})`);
+
+        // Save Math1 answers locally
+        console.log(`💾 Saving MATH1 answers locally...`);
+        questions.forEach(q => {
+            if (studentAnswers[q.id]) {
+                satAllAnswers[q.id] = studentAnswers[q.id];
+            }
+        });
+
+        console.log(`📊 MATH1 questions found for scoring: ${math1Questions.length}`);
+
+        const math1Score = calculateModuleScore(math1Questions);
+        satModuleScores["MATH1"] = math1Score;
+        satCompletedModules.add("MATH1");
+
+        console.log(`📊 Math Module 1 Score: ${(math1Score * 100).toFixed(1)}%`);
+
+        // Select Math Module 2 based on score (65% threshold for Math)
+        const math2Module = math1Score >= 0.65 ? "Math2-Hard" : "Math2-Easy";
+        console.log(`✅ Selected Math Module 2: ${math2Module}`);
+
+        // Load ONLY MATH2 questions
+        console.log(`🔍 Looking for ${math2Module} in all SAT questions...`);
+        console.log(`📊 Total questions in allSATQuestions: ${allSATQuestions.length}`);
+
+        // Log sample of questions to see their SAT_section values
+        console.log(`🔍 Sample of allSATQuestions SAT_sections:`,
+            allSATQuestions.slice(0, 10).map(q => ({
+                question: q.question_number,
+                SAT_section: q.SAT_section,
+                page: q.page_number
+            }))
+        );
+
+        // Check for case variations
+        const math2EasyVariations = allSATQuestions.filter(q =>
+            q.SAT_section && q.SAT_section.toLowerCase() === 'math2-easy'
+        );
+        console.log(`🔍 Math2-Easy variations found (case-insensitive): ${math2EasyVariations.length}`);
+
+        // Check specifically for Math2 questions
+        const allMath2Questions = allSATQuestions.filter(q =>
+            q.SAT_section && q.SAT_section.includes('Math2')
+        );
+        console.log(`🔍 All Math2 questions (contains 'Math2'): ${allMath2Questions.length}`);
+        if (allMath2Questions.length > 0) {
+            console.log(`🔍 Math2 SAT_sections found:`, [...new Set(allMath2Questions.map(q => q.SAT_section))]);
+        }
+
+        const math2Questions = allSATQuestions.filter(q => q.SAT_section === math2Module);
+        console.log(`📊 MATH2 questions found for ${math2Module}: ${math2Questions.length}`);
+
+        if (math2Questions.length === 0) {
+            console.error(`❌ No questions found for ${math2Module}!`);
+            console.log(`Available SAT_sections in allSATQuestions:`, [...new Set(allSATQuestions.map(q => q.SAT_section))]);
+
+            // Log questions with question numbers in Math2 range
+            const math2RangeQuestions = allSATQuestions.filter(q =>
+                parseInt(q.question_number) >= 89 && parseInt(q.question_number) <= 126
+            );
+            console.log(`🔍 Questions in Math2 number range (89-126): ${math2RangeQuestions.length}`);
+            if (math2RangeQuestions.length > 0) {
+                console.log(`🔍 Sample Math2 range questions:`,
+                    math2RangeQuestions.slice(0, 5).map(q => ({
+                        question: q.question_number,
+                        SAT_section: q.SAT_section,
+                        page: q.page_number
+                    }))
+                );
+            }
+        }
+
+        // Replace questions with only Math2
+        questions = [...math2Questions];
+        satActiveQuestions = [...satActiveQuestions, ...math2Questions];
+        studentAnswers = {}; // Clear for new module
+
+        console.log(`📊 Current module questions: ${questions.length}`);
+        console.log(`📊 Total active questions collected: ${satActiveQuestions.length}`);
+        console.log(`📊 Current SAT module:`, [...new Set(questions.map(q => q.SAT_section))]);
+
+        // Mark MATH2 module as added
+        if (math2Module === "Math2-Easy") {
+            satCompletedModules.add("Math2-Easy");
+        } else {
+            satCompletedModules.add("Math2-Hard");
+        }
+
+        // Keep original page numbers from database - don't renumber!
+        // Update totalPages based on actual PDF pages
+        if (questions.length > 0) {
+            const minPageMath2 = Math.min(...questions.map(q => q.page_number));
+            const maxPageMath2 = Math.max(...questions.map(q => q.page_number));
+            totalPages = maxPageMath2;  // Update totalPages to the max page of this module
+
+            // Track module start page for Math2
+            satModuleStartPages['Math2'] = minPageMath2;
+
+            console.log(`📄 Math2 pages range: ${minPageMath2} to ${maxPageMath2}, totalPages updated to ${totalPages}`);
+        } else {
+            console.error(`❌ No questions to determine page range for Math2`);
+            // Fallback: Try to load questions by question number range
+            const fallbackMath2 = allSATQuestions.filter(q =>
+                parseInt(q.question_number) >= 89 && parseInt(q.question_number) <= 126
+            );
+            if (fallbackMath2.length > 0) {
+                console.log(`🔧 Using fallback: Loading Math2 by question number range (89-126)`);
+                questions = [...fallbackMath2];
+                satActiveQuestions = [...satActiveQuestions, ...fallbackMath2];
+                const minPageMath2 = Math.min(...questions.map(q => q.page_number));
+                const maxPageMath2 = Math.max(...questions.map(q => q.page_number));
+                totalPages = maxPageMath2;
+
+                // Track module start page for Math2 (fallback case)
+                satModuleStartPages['Math2'] = minPageMath2;
+
+                console.log(`📄 Fallback Math2 pages range: ${minPageMath2} to ${maxPageMath2}, totalPages updated to ${totalPages}`);
+            }
+        }
+
+        // Renumber questions for continuous display
+        renumberSATQuestions();
+
+        // Rebuild navigation
+        buildQuestionNav();
+        updateSATSubmitButton();
+
+
+        // Check if test is complete and should auto-submit
+        if (isSATComplete()) {
+            console.log("🎯 SAT Test Complete - Ready for submission");
+        }
+
+        // Load the PDF page of the first question in Math2 module
+        if (questions.length > 0) {
+            const firstMath2Page = Math.min(...questions.map(q => q.page_number));
+            console.log(`📄 Loading first page of Math2: page ${firstMath2Page}`);
+            console.log(`🔍 Math2 Questions sample:`, questions.slice(0, 3).map(q => ({
+                id: q.id,
+                q_num: q.question_number,
+                page: q.page_number,
+                section: q.SAT_section
+            })));
+            currentPage = firstMath2Page;
+            satInModuleTransition = true;
+            loadQuestionsForPage(firstMath2Page);
+            satInModuleTransition = false;
+        } else {
+            console.error(`❌ No Math2 questions to load - cannot determine first page`);
+            // Show completion message or handle error appropriately
+            if (isSATComplete()) {
+                console.log("🎯 SAT Test Complete despite Math2 loading issue");
+                // The test should still be marked as complete
+            }
+        }
+
+        console.log(`🔄 === handleSATModuleTransition END (true - Math1->Math2) ===\n`);
+        return true;
+    }
+
+    // Check if we're at the end of Math2 (final module)
+    const math2EasyQuestions = questions.filter(q => q.SAT_section === "Math2-Easy");
+    const math2HardQuestions = questions.filter(q => q.SAT_section === "Math2-Hard");
+    const math2Questions = math2EasyQuestions.length > 0 ? math2EasyQuestions : math2HardQuestions;
+    const math2LastQuestion = math2Questions.length > 0 ? Math.max(...math2Questions.map(q => q.question_number)) : 0;
+
+    console.log(`📋 Math2 boundary check: Last Q=${math2LastQuestion}, Current Q=${currentQuestionNumber}`);
+    console.log(`📋 Math2-Easy completed=${satCompletedModules.has("Math2-Easy")}, Math2-Hard completed=${satCompletedModules.has("Math2-Hard")}`);
+
+    if (math2LastQuestion > 0 && currentQuestionNumber === math2LastQuestion &&
+        (satCompletedModules.has("Math2-Easy") || satCompletedModules.has("Math2-Hard"))) {
+
+        console.log(`✅ AT Math Module 2 boundary - Test Complete`);
+
+        // Save Math2 answers locally
+        console.log(`💾 Saving MATH2 answers locally...`);
+        questions.forEach(q => {
+            if (studentAnswers[q.id]) {
+                satAllAnswers[q.id] = studentAnswers[q.id];
+            }
+        });
+
+        satCompletedModules.add("Math2-Complete");
+
+        // All modules complete - show submit button
+        console.log(`✅ All SAT modules completed`);
+        updateSATSubmitButton();
+    }
+
+    console.log(`🔄 === handleSATModuleTransition END (false - no transition) ===\n`);
+    return false;
+}
+
+function calculateModuleScore(moduleQuestions) {
+    let correct = 0;
+    let total = 0;
+
+    moduleQuestions.forEach(q => {
+        if (studentAnswers[q.id]) {
+            total++;
+            if (studentAnswers[q.id] === q.correct_answer) {
+                correct++;
+            }
+        }
+    });
+
+    return total > 0 ? correct / total : 0;
+}
 
 // Gestione drawer navigazione per tablet
 function setupTabletNavigation() {
@@ -115,18 +720,53 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (currentPage > 1) loadQuestionsForPage(currentPage - 1);
     });
     nextPageBtn.addEventListener("click", () => {
+        console.log(`➡️ Next button clicked - Current page: ${currentPage}, Total pages: ${totalPages}`);
         const nextPage = currentPage + 1;
-        if (nextPage > totalPages) return;
-        
-        // Only prompt confirmation if the button is labeled "Prossima Sezione"
-        if (nextPageBtn.textContent.trim() === "Next Section") {
-        customConfirm("You are about to move to the next section. Do you want to continue?").then(confirmChange => {
-            if (!confirmChange) return;
-            loadQuestionsForPage(nextPage);
-        });
-        return;
+
+        // Check for SAT module transition FIRST (before checking if we're at last page)
+        if (isSATTest) {
+            console.log(`🎯 SAT Test - Checking for module transition...`);
+            // Get current page's questions to find question number
+            const pageQuestions = questions.filter(q => q.page_number === currentPage);
+            console.log(`📄 Questions on current page ${currentPage}:`, pageQuestions.map(q => ({num: q.question_number, section: q.section})));
+
+            if (pageQuestions.length > 0) {
+                const lastQuestionOnPage = Math.max(...pageQuestions.map(q => q.question_number));
+                console.log(`🔍 Last question on current page: ${lastQuestionOnPage}`);
+                console.log(`🔍 Current section:`, [...new Set(pageQuestions.map(q => q.section))]);
+
+                // Check if we're at any module boundary
+                console.log(`🔄 Calling handleSATModuleTransition(${lastQuestionOnPage})...`);
+                const transitioned = handleSATModuleTransition(lastQuestionOnPage);
+                if (transitioned) {
+                    console.log(`✅ Module transition completed - new module loaded`);
+                    return; // Don't continue to loadQuestionsForPage
+                }
+
+                // Only check for last page AFTER checking for transitions
+                if (nextPage > totalPages) {
+                    console.log(`❌ At last page (${totalPages}) of current module and no more questions`);
+                    return;
+                }
+                console.log(`➡️ Not at module boundary, continuing to page ${nextPage}`);
+            }
+        } else {
+            // Non-SAT test - normal page limit check
+            if (nextPage > totalPages) {
+                console.log(`❌ Already at last page (${totalPages})`);
+                return;
+            }
         }
-        
+
+        // Regular section transition for TOLC/CATTOLICA
+        if (nextPageBtn.textContent.trim() === "Next Section") {
+            customConfirm("You are about to move to the next section. Do you want to continue?").then(confirmChange => {
+                if (!confirmChange) return;
+                loadQuestionsForPage(nextPage);
+            });
+            return;
+        }
+
         loadQuestionsForPage(nextPage);
       });
 
@@ -184,10 +824,12 @@ async function loadTest() {
     // Determina il tipo di test per la navigazione
     isBocconiTest = selectedTestType && selectedTestType.toLowerCase().includes("bocconi");
     isMedicinaTest = selectedTestType && selectedTestType.toLowerCase().includes("medicina");
-    
+    isSATTest = selectedTestType && selectedTestType.toUpperCase().includes("SAT");
+
     console.log(`🎯 Tipo test: ${selectedTestType}`);
     console.log(`   - Navigazione unidirezionale (Bocconi): ${isBocconiTest ? 'Sì' : 'No'}`);
     console.log(`   - Test Medicina: ${isMedicinaTest ? 'Sì' : 'No'}`);
+    console.log(`   - Test SAT adattivo: ${isSATTest ? 'Sì' : 'No'}`);
     
     // Cerca se esiste configurazione per questo test type
     if (selectedTestType) {
@@ -208,10 +850,18 @@ async function loadTest() {
         // Scegli i boundaries corretti in base al tipo di test
         let boundariesFilter;
         const isAssessmentIniziale = currentSection === "Assessment Iniziale" || tipologiaEsercizi === "Assessment";
-        
+
+        console.log(`🎯 SAT Boundary Check:`, {
+            currentSection,
+            tipologiaEsercizi,
+            isAssessmentIniziale,
+            hasAssessmentBoundaries: !!simulazioniData.boundaries_assessment_iniziale,
+            hasStandardBoundaries: !!simulazioniData.boundaries
+        });
+
         if (isAssessmentIniziale && simulazioniData.boundaries_assessment_iniziale) {
           boundariesFilter = simulazioniData.boundaries_assessment_iniziale;
-          console.log("Using Assessment Iniziale boundaries:", boundariesFilter);
+          console.log("✅ Using Assessment Iniziale boundaries:", boundariesFilter);
         } else if (simulazioniData.boundaries) {
           boundariesFilter = simulazioniData.boundaries;
           console.log("Using standard boundaries:", boundariesFilter);
@@ -322,8 +972,55 @@ async function loadTest() {
     }
   
     questions = data;
+
+    // SAT Adaptive Logic: Initially show only Module 1 questions
+    if (isSATTest) {
+        console.log("🎯 SAT Test Detected - Initializing adaptive logic");
+        console.log(`📊 Total questions loaded: ${questions.length}`);
+
+        // Debug: Check what's in SAT_section field for SAT tests
+        const uniqueSATSections = [...new Set(questions.map(q => q.SAT_section))];
+        console.log("📋 Unique SAT_section values found:", uniqueSATSections);
+
+        // Also show regular section for comparison
+        const uniqueSections = [...new Set(questions.map(q => q.section))];
+        console.log("📋 Unique section values found:", uniqueSections);
+
+        // Check if argomento has the module info instead
+        const uniqueArgomenti = [...new Set(questions.map(q => q.argomento))];
+        console.log("📋 Unique argomento values found:", uniqueArgomenti);
+
+        // Show first few questions to understand structure
+        console.log("🔍 First 3 questions:", questions.slice(0, 3).map(q => ({
+            num: q.question_number,
+            section: q.section,
+            SAT_section: q.SAT_section,
+            argomento: q.argomento
+        })));
+
+        // Initialize with ONLY RW1 questions (using SAT_section field)
+        satActiveQuestions = questions.filter(q => q.SAT_section === "RW1");
+
+        // Track module start page (RW1 starts at page 1)
+        satModuleStartPages['RW1'] = 1;
+
+        console.log(`✅ SAT RW Module 1 questions: ${satActiveQuestions.length}`);
+        console.log(`   - RW1: ${questions.filter(q => q.SAT_section === "RW1").length} questions`);
+
+        // Store all questions but only use active ones for display
+        allSATQuestions = questions;
+        questions = satActiveQuestions;
+
+        // Renumber questions for continuous display
+        renumberSATQuestions();
+
+        // Hide submit button initially for SAT (will show when all modules complete)
+        updateSATSubmitButton();
+
+    }
+
     totalPages = Math.max(...questions.map(q => q.page_number));
-  
+
     // Build nav grid once and load first page.
     buildQuestionNav();
     console.log(`Test loaded successfully! Total pages: ${totalPages}`);
@@ -496,8 +1193,8 @@ function loadQuestionsForPage(page) {
     currentPage = page;
     sessionStorage.setItem("currentPage", currentPage);
 
-    // ✅ First Page Special Display: Hide elements BEFORE rendering
-    if (page === 1) {
+    // ✅ First Page Special Display: Hide elements BEFORE rendering (skip for SAT module transitions)
+    if (page === 1 && !satInModuleTransition) {
         console.log("📄 First Page - Hiding elements before render");
         document.body.classList.add('first-page');
         
@@ -545,8 +1242,8 @@ function loadQuestionsForPage(page) {
     }
     questionContainer.innerHTML = "";
 
-    // ✅ Continue with First Page Special Display
-    if (page === 1) {
+    // ✅ Continue with First Page Special Display (skip for SAT module transitions)
+    if (page === 1 && !satInModuleTransition) {
         console.log("📄 First Page - Showing Welcome Message");
         
         // Espandi la sezione delle domande a tutto schermo
@@ -783,18 +1480,42 @@ function loadQuestionsForPage(page) {
     // ✅ Show navigation buttons again on other pages
     prevPageBtn.style.display = "inline-block";
     nextPageBtn.style.display = "inline-block";
-    if (submitButton) submitButton.style.display = "inline-block";
+
+    // For SAT tests, only show submit button when all modules are complete
+    if (submitButton) {
+        if (isSATTest) {
+            const hasMath2Complete = satCompletedModules.has("Math2-Complete");
+            submitButton.style.display = hasMath2Complete ? "inline-block" : "none";
+        } else {
+            submitButton.style.display = "inline-block";
+        }
+    }
+
+    // Debug: Check what questions we have and their page numbers
+    console.log(`🔍 Looking for questions on page ${currentPage}`);
+    console.log(`📊 First 10 questions in array:`, questions.slice(0, 10).map(q => ({
+        num: q.question_number,
+        page: q.page_number,
+        pdf_page: q.pdf_page_number
+    })));
+    console.log(`📊 Total questions loaded: ${questions.length}`);
 
     const pageQuestions = questions.filter(q => q.page_number === currentPage);
 
     if (pageQuestions.length === 0) {
         console.warn(`⚠️ No questions found on Page ${page}.`);
+        console.log(`📊 Available page numbers:`, [...new Set(questions.map(q => q.page_number))].sort((a, b) => a - b));
         return;
     }
 
+    console.log(`✅ Found ${pageQuestions.length} questions on page ${currentPage}:`,
+        pageQuestions.map(q => q.question_number));
+
     pageQuestions.forEach(q => {
         const questionDiv = document.createElement("div");
-        questionDiv.innerHTML = `<h3>Question ${q.question_number}</h3>`;
+        // Use display_number for SAT tests to show continuous numbering
+        const questionNumber = isSATTest && q.display_number ? q.display_number : q.question_number;
+        questionDiv.innerHTML = `<h3>Question ${questionNumber}</h3>`;
 
         if (q.is_open_ended) {
             let input = document.createElement("input");
@@ -827,6 +1548,11 @@ function loadQuestionsForPage(page) {
     });
 
     updateNavigationButtons();
+
+    // For SAT tests, also update submit button visibility
+    if (isSATTest) {
+        updateSATSubmitButton();
+    }
 }
 
 function selectAnswer(questionId, answer, btn) {
@@ -915,19 +1641,51 @@ async function submitAnswers(timeExpired = false) {
         console.log("✅ Student ID restored:", studentId);
     }
 
-    if (Object.keys(studentAnswers).length === 0 && !timeExpired) {
-        showCustomAlert("No answer selected. Please answer at least one question.");
-        isSubmitting = false;
-        return;
-    }
 
     console.log("📌 Submitting answers for student:", studentId);
 
-    const submissions = questions.map(q => {
-        const answer = (q.id in studentAnswers) ? studentAnswers[q.id] : "z";
+    // For SAT tests, merge all saved answers before submission
+    if (isSATTest) {
+        // Save current module answers to satAllAnswers
+        console.log(`💾 Saving current module answers before submission...`);
+        questions.forEach(q => {
+            if (studentAnswers[q.id]) {
+                satAllAnswers[q.id] = studentAnswers[q.id];
+            }
+        });
+
+        console.log(`🎯 SAT Submission: ${allSATQuestions.length} total questions`);
+        console.log(`   - Total answers collected: ${Object.keys(satAllAnswers).length}`);
+        console.log(`   - Completed modules:`, Array.from(satCompletedModules));
+        console.log(`   - Module scores:`, satModuleScores);
+    }
+
+    // For SAT tests, submit ALL questions (including non-shown adaptive modules)
+    const questionsToSubmit = isSATTest ? allSATQuestions : questions;
+
+    const submissions = questionsToSubmit.map(q => {
+        let answer;
+        if (isSATTest) {
+            // For SAT: check if question was from a shown module
+            const wasShown = satActiveQuestions.some(aq => aq.id === q.id);
+            if (wasShown) {
+                // Question was shown - use answer or "z" for not answered
+                answer = satAllAnswers[q.id] || studentAnswers[q.id] || "z";
+            } else {
+                // Question was never shown (from non-selected adaptive module)
+                answer = "xx";
+            }
+        } else {
+            // For regular tests: use "z" for unanswered
+            answer = studentAnswers[q.id] || "z";
+        }
+
         let auto_score = null;
         if (!q.is_open_ended) {
-            auto_score = answer === q.correct_answer ? 1 : 0;
+            // Only calculate score for answered questions (not "xx", "z", "x", "y")
+            if (!["xx", "z", "x", "y"].includes(answer)) {
+                auto_score = answer === q.correct_answer ? 1 : 0;
+            }
         }
         return {
             auth_uid: studentId,
@@ -1089,8 +1847,21 @@ function updateSectionTimer() {
         }
         
         // Calcola quale sezione dovremmo essere
-        const pageSection = getSectionForPage(currentPage);
-        
+        let pageSection = getSectionForPage(currentPage);
+
+        // Special handling for SAT tests - correct section number based on module
+        if (isSATTest) {
+            if (!satCompletedModules.has('RW1')) {
+                pageSection = 1; // RW Module 1
+            } else if (!satCompletedModules.has('RW2-Complete')) {
+                pageSection = 2; // RW Module 2
+            } else if (!satCompletedModules.has('MATH1')) {
+                pageSection = 3; // Math Module 1
+            } else if (!satCompletedModules.has('Math2-Complete')) {
+                pageSection = 4; // Math Module 2
+            }
+        }
+
         // Se siamo in una sezione diversa, aggiorna
         if (pageSection !== currentSectionNumber) {
             // Marca la sezione precedente come scaduta se necessario
@@ -1136,7 +1907,29 @@ function updateSectionTimer() {
         
         // Mostra sezione e tempo in formato più chiaro
         let timerText = '';
-        if (sectionNames && sectionNames.length >= currentSectionNumber) {
+
+        // Special handling for SAT tests to show correct module name
+        if (isSATTest) {
+            let currentModuleName = '';
+
+            // Determine which SAT module we're in based on completed modules
+            if (!satCompletedModules.has('RW1')) {
+                currentModuleName = 'Reading and Writing - Module 1';
+            } else if (!satCompletedModules.has('RW2-Complete')) {
+                currentModuleName = 'Reading and Writing - Module 2';
+            } else if (!satCompletedModules.has('MATH1')) {
+                currentModuleName = 'Math - Module 1';
+            } else if (!satCompletedModules.has('Math2-Complete')) {
+                currentModuleName = 'Math - Module 2';
+            }
+
+            if (currentModuleName) {
+                timerText = `<div style="font-weight: bold; margin-bottom: 5px;">📚 ${currentModuleName}</div>`;
+                timerText += `<div>⏳ Time: <span id="time-left">${timeString}</span></div>`;
+            } else {
+                timerText = `⏳ Time: <span id="time-left">${timeString}</span>`;
+            }
+        } else if (sectionNames && sectionNames.length >= currentSectionNumber) {
             timerText = `<div style="font-weight: bold; margin-bottom: 5px;">📚 Section ${currentSectionNumber}: ${sectionNames[currentSectionNumber - 1]}</div>`;
             timerText += `<div>⏳ Time: <span id="time-left">${timeString}</span></div>`;
         } else {
@@ -1199,17 +1992,29 @@ function updateNavigationButtons() {
 
     console.log(`🔄 Updating buttons for Page ${currentPage}`);
 
-    // Determine test type based on the presence of "PDF" in the test name
-    const selectedTest = sessionStorage.getItem("selectedTestType");
-    
+    // Use global selectedTestType variable (already set) or fallback to sessionStorage
+    const selectedTest = selectedTestType || sessionStorage.getItem("selectedTestType");
+
     // Classificazione test per comportamento navigazione:
-    // - TOLC e CATTOLICA: navigazione con sezioni (possono muoversi dentro la sezione)
+    // - TOLC, CATTOLICA: navigazione con sezioni (possono muoversi dentro la sezione)
+    // - SAT: navigazione adattiva con moduli (selezione basata su performance)
     // - BOCCONI (tutti i tipi): navigazione unidirezionale (non possono tornare indietro)
     // - MEDICINA: da definire (per ora come TOLC)
-    const testType = (selectedTest.includes("TOLC") || selectedTest.includes("CATTOLICA") || selectedTest.includes("MEDICINA")) ? "tolc" : "bocconi";
-    const testModality = selectedTest.includes("PDF") ? "pdf" : "banca_dati";
+    console.log(`🔍 selectedTest value: "${selectedTest}" (global: "${selectedTestType}")`);
+    // Check with case-insensitive matching
+    const selectedTestUpper = selectedTest ? selectedTest.toUpperCase() : "";
+    let testType;
+    if (selectedTestUpper.includes("SAT")) {
+        testType = "sat";  // SAT has its own adaptive logic
+    } else if (selectedTestUpper.includes("TOLC") || selectedTestUpper.includes("CATTOLICA") || selectedTestUpper.includes("MEDICINA")) {
+        testType = "tolc";
+    } else {
+        testType = "bocconi";
+    }
+    const testModality = selectedTest && selectedTest.includes("PDF") ? "pdf" : "banca_dati";
 
     console.log(`📌 Test Type Determined: ${testType} (${selectedTest})`);
+    console.log(`📌 SAT check: includes("SAT") = ${selectedTestUpper.includes("SAT")}, upperCase value = "${selectedTestUpper}"`);
 
     const currentSection = sessionStorage.getItem("currentSection");
     if (testType === "tolc") {
@@ -1244,7 +2049,17 @@ function updateNavigationButtons() {
     // Per test BOCCONI, disabilita sempre il tasto indietro
     if (isBocconiTest) {
         prevPageBtn.disabled = true;
-    } 
+    }
+
+    // SAT-specific navigation logic
+    if (testType === "sat") {
+        // For SAT: Hide Previous button completely, rename Next button
+        prevPageBtn.style.display = "none";
+        nextPageBtn.textContent = "Vai alle prossime domande";
+
+        // Never disable the Next button - let module transitions handle navigation
+        nextPageBtn.disabled = false;
+    }
 
 }      
 
@@ -1351,8 +2166,16 @@ function buildQuestionNav() {
   
     // Determina il tipo di test basandosi sul comportamento di navigazione
     const selectedTest = sessionStorage.getItem("selectedTestType");
-    const testType = (selectedTest.includes("TOLC") || selectedTest.includes("CATTOLICA") || selectedTest.includes("MEDICINA")) ? "tolc" : "bocconi";
-    const testModality = selectedTest.includes("PDF") ? "pdf" : "banca_dati";
+    const selectedTestUpper = selectedTest ? selectedTest.toUpperCase() : "";
+    let testType;
+    if (selectedTestUpper.includes("SAT")) {
+        testType = "sat";  // SAT has its own adaptive logic
+    } else if (selectedTestUpper.includes("TOLC") || selectedTestUpper.includes("CATTOLICA") || selectedTestUpper.includes("MEDICINA")) {
+        testType = "tolc";
+    } else {
+        testType = "bocconi";
+    }
+    const testModality = selectedTest && selectedTest.includes("PDF") ? "pdf" : "banca_dati";
   
     // Compute the "minimum allowed page" for the current section.
     // We sort all the section boundaries and choose the highest boundary that is less than the current page.
@@ -1368,7 +2191,8 @@ function buildQuestionNav() {
     questions.forEach(q => {
       const btn = document.createElement("button");
       btn.classList.add("question-cell");
-      btn.textContent = q.question_number;
+      // Use display_number for SAT, otherwise use question_number
+      btn.textContent = isSATTest && q.display_number ? q.display_number : q.question_number;
   
       // Highlight if this question is on the current page.
       if (q.page_number === currentPage) {
@@ -1525,7 +2349,7 @@ function buildQuestionNav() {
 
   function getCurrentSection() {
     // Get all questions for the current page.
-    const pageQuestions = questions.filter(q => q.page_number === currentPage + 1);
+    const pageQuestions = questions.filter(q => q.page_number === currentPage);
     if (pageQuestions.length > 0) {
       // Use the first question's number (converted to Number) to determine the section.
       const firstQuestionNumber = Number(pageQuestions[0].question_number);
@@ -1537,16 +2361,16 @@ function buildQuestionNav() {
   function updateSectionHeader(page) {
     const questionSection = document.querySelector(".question-section");
     if (!questionSection) return;
-    
+
     // Remove any existing header
     const oldHeader = questionSection.querySelector(".section-header");
     if (oldHeader) {
       oldHeader.remove();
     }
-    
+
     // Do not add header if we're on page 1
     if (page === 1) return;
-    
+
     // Only add header if the test is "Simulazioni" and we have section names available.
     if (globalCurrentSection === "Simulazioni" && Array.isArray(sectionNames) && sectionNames.length > 0) {
       // Determine the current section number using your helper.
@@ -1557,11 +2381,11 @@ function buildQuestionNav() {
         currentSectionNumber > 0 && currentSectionNumber <= sectionNames.length
           ? sectionNames[currentSectionNumber - 1]
           : "Section " + currentSectionNumber;
-    
+
       const headerDiv = document.createElement("div");
       headerDiv.className = "section-header";
       headerDiv.innerHTML = `<p>${headerText}</p>`;
-      
+
       // Insert header right after the timer element so it appears above the navigation buttons.
       const timerElement = document.getElementById("timer");
       if (timerElement) {
