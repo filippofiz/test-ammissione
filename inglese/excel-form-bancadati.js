@@ -64,7 +64,7 @@ class ExcelFormBancaDati {
       'argomento',
       'image_url',
       'option_a',
-      'option_b', 
+      'option_b',
       'option_c',
       'option_d',
       'option_e',
@@ -72,7 +72,8 @@ class ExcelFormBancaDati {
       'image_option_b',
       'image_option_c',
       'image_option_d',
-      'image_option_e'
+      'image_option_e',
+      'SAT_section'
     ];
   }
 
@@ -166,14 +167,14 @@ class ExcelFormBancaDati {
   // Definisci l'ordine corretto delle colonne per l'incollaggio
   // Questo array definisce in quale ordine vanno incollati i dati da Excel
   const pasteOrder = [
-    { cellIndex: 7, fieldName: 'question_text' },      // Colonna 1: Testo domanda
-    { cellIndex: 9, fieldName: 'correct_answer' },     // Colonna 2: Risposta corretta
-    { cellIndex: 10, fieldName: 'option_a' },          // Colonna 3: Opzione A
-    { cellIndex: 12, fieldName: 'option_b' },          // Colonna 4: Opzione B
-    { cellIndex: 14, fieldName: 'option_c' },          // Colonna 5: Opzione C
-    { cellIndex: 16, fieldName: 'option_d' },          // Colonna 6: Opzione D
-    { cellIndex: 18, fieldName: 'option_e' },          // Colonna 7: Opzione E
-    { cellIndex: 20, fieldName: 'argomento' }          // Colonna 8: Argomento
+    { cellIndex: 8, fieldName: 'question_text' },      // Colonna 1: Testo domanda
+    { cellIndex: 10, fieldName: 'correct_answer' },     // Colonna 2: Risposta corretta
+    { cellIndex: 11, fieldName: 'option_a' },          // Colonna 3: Opzione A
+    { cellIndex: 13, fieldName: 'option_b' },          // Colonna 4: Opzione B
+    { cellIndex: 15, fieldName: 'option_c' },          // Colonna 5: Opzione C
+    { cellIndex: 17, fieldName: 'option_d' },          // Colonna 6: Opzione D
+    { cellIndex: 19, fieldName: 'option_e' },          // Colonna 7: Opzione E
+    { cellIndex: 21, fieldName: 'argomento' }          // Colonna 8: Argomento
   ];
   
   // Trova l'indice di partenza nell'array pasteOrder

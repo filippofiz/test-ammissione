@@ -104,13 +104,22 @@ console.log("📊 Global Section Order (Unique):", ordineSections);
     }
     // —————————————————————————————————————
     // ✅ Ensure only unique sections exist in test data
-    studentTests = studentTests.filter((test, index, self) =>
-        index === self.findIndex((t) =>
-             t.section === test.section &&
-             t.tipologia_esercizi === test.tipologia_esercizi &&
-             t.progressivo === test.progressivo
-        )
-    );
+    // For SAT tests, DON'T group - let them stay as separate entries
+    // They'll be grouped later after Materia is fetched
+    if (selectedTest === "SAT PDF") {
+        // Keep the SAT test entries as they are for now
+        // We'll handle grouping after Materia is assigned
+        console.log("SAT PDF detected - will group after Materia assignment");
+    } else {
+        // Original logic for non-SAT tests
+        studentTests = studentTests.filter((test, index, self) =>
+            index === self.findIndex((t) =>
+                 t.section === test.section &&
+                 t.tipologia_esercizi === test.tipologia_esercizi &&
+                 t.progressivo === test.progressivo
+            )
+        );
+    }
 
     // ✅ Sort test data based on `ordine_sections`
     studentTests.sort((a, b) => ordineSections.indexOf(a.section) - ordineSections.indexOf(b.section));
@@ -172,6 +181,38 @@ function displayTestTree(tests, studentTests, testType, selectedTest) {
       if (!byMateria[mat]) byMateria[mat] = [];
       byMateria[mat].push(test);
     });
+
+    // 🎯 SAT Specific: Group SAT modules into single test AFTER Materia is assigned
+    if (selectedTest === "SAT PDF") {
+        console.log("🔄 Now grouping SAT modules after Materia assignment");
+
+        // For each Materia that contains SAT tests, group them
+        Object.keys(byMateria).forEach(materia => {
+            const testsInMateria = byMateria[materia];
+            const satTests = testsInMateria.filter(test => test.section && test.section.includes("SAT"));
+
+            if (satTests.length > 0) {
+                console.log(`📊 Found ${satTests.length} SAT modules in ${materia}:`, satTests.map(t => t.section));
+
+                // Create unified SAT test from the first module, preserving Materia
+                const firstModule = satTests[0];
+                const unifiedSATTest = {
+                    ...firstModule,
+                    section: 'SAT Complete Test',
+                    status: satTests.some(m => m.status === 'completed') ?
+                            (satTests.every(m => m.status === 'completed') ? 'completed' : 'in_progress') :
+                            firstModule.status,
+                    Materia: materia // Preserve the correct Materia
+                };
+
+                // Remove individual SAT tests and add unified one
+                byMateria[materia] = testsInMateria.filter(test => !test.section || !test.section.includes("SAT"));
+                byMateria[materia].push(unifiedSATTest);
+
+                console.log(`✅ Created unified SAT test under ${materia} category`);
+            }
+        });
+    }
   
     // 2️⃣ MODIFICATO: Nuovo ordinamento con Matematica prima
     const materiaKeys = Object.keys(byMateria).sort((a, b) => {
@@ -395,18 +436,63 @@ function displayTestTree(tests, studentTests, testType, selectedTest) {
 // ✅ Start PDF test
 async function startPdfTest(section, tipologia_esercizi, testProgressivo, selectedTest, testId) {
     console.log(`🚀 Starting PDF Test: ${section} - ${tipologia_esercizi} - ${testProgressivo} - ${selectedTest} - ${testId}`);
-    
-    // IMPORTANTE: Nella versione inglese, pesca prima pdf_url_eng, fallback su pdf_url
-    const { data: testQuestion, error } = await supabase
+
+    // Special handling for SAT test
+    if (selectedTest === "SAT PDF" && section === "SAT Complete Test") {
+        console.log("🎯 Starting SAT Complete Test - Beginning with RW Module 1");
+
+        // For SAT, fetch the first module's PDF (RW1)
+        const { data: testQuestion, error } = await supabase
+            .from("questions")
+            .select("pdf_url, pdf_url_eng")
+            .eq("section", "RW1")  // Start with RW Module 1
+            .eq("tipologia_test", selectedTest)
+            .eq("tipologia_esercizi", tipologia_esercizi)
+            .eq("progressivo", testProgressivo)
+            .limit(1)
+            .single();
+
+        if (error || !testQuestion) {
+            console.error("❌ Error fetching SAT PDF URL:", error?.message);
+            alert("Error loading SAT test. Please try again.");
+            return;
+        }
+
+        const pdfToUse = testQuestion.pdf_url_eng || testQuestion.pdf_url;
+
+        if (!pdfToUse) {
+            console.error("❌ No SAT PDF URL found");
+            alert("SAT PDF not available.");
+            return;
+        }
+
+        console.log(`📄 Using SAT PDF: ${pdfToUse}`);
+
+        // Store SAT-specific session data
+        sessionStorage.setItem("testPdf", pdfToUse);
+        sessionStorage.setItem("currentSection", "RW1");  // Start with RW1
+        sessionStorage.setItem("currentTipologiaEsercizi", tipologia_esercizi);
+        sessionStorage.setItem("currentTestProgressivo", testProgressivo);
+        sessionStorage.setItem("selectedTestId", testId);
+        sessionStorage.setItem("isSATTest", "true");
+        sessionStorage.setItem("satCurrentModule", "RW1");
+        sessionStorage.setItem("selectedTestType", selectedTest);  // Keep the test type
+        window.location.href = "test.html";
+        return;
+    }
+
+    // Regular PDF test logic - same for all PDF tests including SAT
+    // Get the first question matching criteria to get the PDF (all questions share same PDF)
+    const { data: results, error } = await supabase
         .from("questions")
         .select("pdf_url, pdf_url_eng")
         .eq("section", section)
         .eq("tipologia_esercizi", tipologia_esercizi)
-        .eq("progressivo", testProgressivo)
+        .eq("progressivo", String(testProgressivo))  // Convert to string to match DB
         .eq("tipologia_test", selectedTest)
-        .limit(1)
-        .single();
-    
+        .limit(1);
+
+    const testQuestion = results && results.length > 0 ? results[0] : null;
 
     if (error || !testQuestion) {
         console.error("❌ Error fetching PDF URL:", error?.message);
@@ -414,22 +500,22 @@ async function startPdfTest(section, tipologia_esercizi, testProgressivo, select
         return;
     }
 
-    // Usa pdf_url_eng se disponibile, altrimenti fallback su pdf_url italiano
     const pdfToUse = testQuestion.pdf_url_eng || testQuestion.pdf_url;
-    
+
     if (!pdfToUse) {
         console.error("❌ No PDF URL found (neither English nor Italian)");
         alert("PDF not available for this test.");
         return;
     }
-    
+
     console.log(`📄 Using PDF: ${testQuestion.pdf_url_eng ? 'English' : 'Italian (fallback)'} - ${pdfToUse}`);
-    
+
     sessionStorage.setItem("testPdf", pdfToUse);
     sessionStorage.setItem("currentSection", section);
     sessionStorage.setItem("currentTipologiaEsercizi", tipologia_esercizi);
     sessionStorage.setItem("currentTestProgressivo", testProgressivo);
     sessionStorage.setItem("selectedTestId", testId);
+    sessionStorage.setItem("isSATTest", "false");
     window.location.href = "test.html";
 }
 

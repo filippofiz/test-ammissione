@@ -1887,3 +1887,125 @@ button.disabled-green, #testTree button.disabled-green {
 .filter-info.has-filters .reset-filters-btn:hover {
   background-color: #f59e0b;
 }
+
+/* SAT-specific styles */
+.sat-module-wrapper {
+  margin-bottom: 0.5rem;
+}
+
+.sat-section-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 1rem 1.5rem;
+  margin: 0.25rem 0;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+}
+
+.sat-section-header.collapsible {
+  cursor: pointer;
+}
+
+.sat-section-header.collapsible:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.sat-section-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.sat-section-header .section-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.sat-section-header .section-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.9rem;
+}
+
+.toggle-arrow {
+  font-size: 1.2rem;
+  transition: transform 0.3s ease;
+  display: inline-block;
+}
+
+.module-content {
+  transition: all 0.3s ease;
+  padding: 0.5rem 0;
+}
+
+.module-content .question-item {
+  margin-bottom: 1rem;
+}
+
+.not-shown-section {
+  margin-top: 2rem;
+  border-top: 2px solid #e9ecef;
+  padding-top: 1rem;
+}
+
+.not-shown-header {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.toggle-btn {
+  background: white;
+  color: #667eea;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.toggle-btn:hover {
+  background: #f0f0f0;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.not-shown-container {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-top: 1rem;
+}
+
+.info-text {
+  color: #6c757d;
+  font-style: italic;
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background: white;
+  border-left: 4px solid #f5576c;
+  border-radius: 4px;
+}
+
+.question-item.not-shown {
+  background: #fff5f5;
+  border-left: 4px solid #f5576c;
+  opacity: 0.8;
+}
+
+.not-shown-mark {
+  color: #f5576c;
+  font-size: 1.2rem;
+}
+
+.module-info {
+  color: #6c757d;
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+  font-style: italic;
+}

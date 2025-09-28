@@ -1887,3 +1887,148 @@ button.disabled-green, #testTree button.disabled-green {
 .filter-info.has-filters .reset-filters-btn:hover {
   background-color: #f59e0b;
 }
+
+/* SAT-specific styles */
+.sat-module-wrapper {
+  margin-bottom: 0.5rem;
+}
+
+.sat-section {
+  margin-bottom: 1rem;
+}
+
+.sat-section-header {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+  margin: 0.25rem 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+  transition: all 0.3s ease;
+}
+
+.sat-section-header.collapsible {
+  cursor: pointer;
+}
+
+.sat-section-header.collapsible:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.3);
+}
+
+.sat-section-header .section-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.sat-section-header .section-info {
+  font-size: 0.9rem;
+  opacity: 0.9;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.toggle-arrow {
+  font-size: 1.2rem;
+  transition: transform 0.3s ease;
+  display: inline-block;
+}
+
+.module-content {
+  transition: all 0.3s ease;
+  padding: 0.5rem 0;
+}
+
+.module-content .question-item {
+  margin-bottom: 1rem;
+}
+
+/* Toggle for not-shown modules */
+.sat-toggle-container {
+  background: white;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border: 2px solid #e9ecef;
+}
+
+.sat-toggle-btn {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.sat-toggle-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.3);
+}
+
+.sat-toggle-btn.showing {
+  background: linear-gradient(135deg, #6b7280, #4b5563);
+}
+
+/* Not shown questions styling */
+.sat-not-shown-section {
+  background: #f3f4f6;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 1rem;
+  border: 2px dashed #9ca3af;
+  display: none;
+}
+
+.sat-not-shown-section.visible {
+  display: block;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.sat-not-shown-header {
+  color: #6b7280;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sat-not-shown-header::before {
+  content: '👁️‍🗨️';
+  font-size: 1.2rem;
+}
+
+.question-item.not-shown {
+  opacity: 0.7;
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.question-item.not-shown .question-header {
+  color: #6b7280;
+}
+
+.not-shown-mark {
+  color: #9ca3af;
+  font-size: 1.3rem;
+}
+
+/* Update stats for SAT */
+.stat-card.not-shown .stat-icon {
+  background: rgba(156, 163, 175, 0.2);
+  color: #6b7280;
+}
