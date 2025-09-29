@@ -33,6 +33,7 @@ let satQuestionMapping = {}; // Maps display question numbers (1-98) to actual q
 let satDisplayNumber = 1; // Current display question number for continuous numbering
 let satInModuleTransition = false; // Flag to skip welcome page during module transitions
 let satBreakTimer = null; // Timer for mandatory break between modules
+let satTimerExpiredTransition = false; // Flag to track when transitioning due to timer expiry
 
 // Renumber SAT questions for continuous display (1-98)
 function renumberSATQuestions() {
@@ -122,6 +123,11 @@ function isSATComplete() {
 function showSATBreakScreen(nextModuleName, callback) {
     console.log(`⏸️ Starting mandatory 5-minute break before ${nextModuleName}`);
 
+    // Extend the total test time to account for the break
+    const BREAK_DURATION_SECONDS = 300; // 5 minutes break (300 seconds)
+    testEndTime += BREAK_DURATION_SECONDS * 1000;
+    console.log(`⏰ Extended test end time by ${BREAK_DURATION_SECONDS} seconds for break`);
+
     // Hide question content and show break screen
     const questionContainer = document.getElementById("questionContainer");
     const pdfViewer = document.querySelector('.pdf-viewer');
@@ -176,7 +182,7 @@ function showSATBreakScreen(nextModuleName, callback) {
     document.body.appendChild(breakScreen);
 
     // Start countdown
-    let breakTimeRemaining = 5; // 5 seconds for testing (was 300 for 5 minutes)
+    let breakTimeRemaining = BREAK_DURATION_SECONDS;
     const timerElement = document.getElementById('breakTimer');
 
     satBreakTimer = setInterval(() => {
@@ -321,6 +327,11 @@ function handleSATModuleTransition(currentQuestionNumber) {
         updateSATSubmitButton();
 
 
+        // Set section to 2 and reset timer for RW2
+        currentSectionNumber = 2; // RW2 is section 2
+        sectionStartTime = Date.now(); // Reset section timer for RW2
+        console.log(`🔄 RW1->RW2: Moving to section ${currentSectionNumber}, timer reset`);
+
         // Load the PDF page of the first question in RW2 module (use already calculated minPageRW2)
         console.log(`📄 Loading first page of RW2: page ${minPageRW2}`);
         console.log(`🔍 RW2 Questions sample:`, questions.slice(0, 3).map(q => ({
@@ -389,10 +400,16 @@ function handleSATModuleTransition(currentQuestionNumber) {
         renumberSATQuestions();
         buildQuestionNav();
         updateSATSubmitButton();
-        showSATModuleDebug();
+        // showSATModuleDebug(); // Removed to hide percentage display
 
         // Show mandatory 5-minute break between Reading/Writing and Math sections
+        // During break, don't advance section number yet
         showSATBreakScreen("Math Module 1", () => {
+            // After break ends, now move to section 3 and reset timer
+            currentSectionNumber = 3; // Math1 is section 3
+            sectionStartTime = Date.now(); // Reset section timer for Math1
+            console.log(`🔄 After break: Moving to section ${currentSectionNumber}, timer reset`);
+
             // Use the minPageMath1 we calculated before the break
             console.log(`📄 Loading first page of Math1: page ${minPageMath1}`);
             console.log(`🔍 Math1 Questions sample:`, questions.slice(0, 3).map(q => ({
@@ -554,6 +571,11 @@ function handleSATModuleTransition(currentQuestionNumber) {
 
         // Load the PDF page of the first question in Math2 module
         if (questions.length > 0) {
+            // Set section to 4 and reset timer for Math2
+            currentSectionNumber = 4; // Math2 is section 4
+            sectionStartTime = Date.now(); // Reset section timer for Math2
+            console.log(`🔄 Math1->Math2: Moving to section ${currentSectionNumber}, timer reset`);
+
             const firstMath2Page = Math.min(...questions.map(q => q.page_number));
             console.log(`📄 Loading first page of Math2: page ${firstMath2Page}`);
             console.log(`🔍 Math2 Questions sample:`, questions.slice(0, 3).map(q => ({
@@ -1255,33 +1277,82 @@ function loadQuestionsForPage(page) {
 
         // Build dynamic test info
         const testInfo = [];
-        
-        // Navigation info
-        if (isBocconiTest) {
-            testInfo.push("🚫 <strong>One-way navigation</strong>: You cannot return to previous questions");
-        } else {
-            testInfo.push("✅ <strong>Free navigation</strong>: You can return to previous questions");
-        }
-        
-        // Sections and time info
-        if (hasSections && sectionNames && sectionNames.length > 0) {
-            testInfo.push(`📚 <strong>${sectionNames.length} sections</strong> with separate timers`);
-            if (timeAllocationPercentages) {
-                testInfo.push("⏱️ Each section has a specific time limit");
+
+        // SAT-specific content in English
+        if (isSATTest) {
+            testInfo.push("✅ <strong>Free navigation</strong>: You can review previous questions within each section");
+
+            // Calculate actual questions from loaded data
+            const rw1Count = allSATQuestions.filter(q => q.SAT_section === "RW1").length;
+            const rw2EasyCount = allSATQuestions.filter(q => q.SAT_section === "RW2-Easy").length;
+            const rw2HardCount = allSATQuestions.filter(q => q.SAT_section === "RW2-Hard").length;
+            const math1Count = allSATQuestions.filter(q => q.SAT_section === "Math1" || q.SAT_section === "MATH1").length;
+            const math2EasyCount = allSATQuestions.filter(q => q.SAT_section === "Math2-Easy").length;
+            const math2HardCount = allSATQuestions.filter(q => q.SAT_section === "Math2-Hard").length;
+
+            // Total questions that will actually be shown (Module 1s + one variant of each Module 2)
+            const totalQuestionsToShow = rw1Count + Math.max(rw2EasyCount, rw2HardCount) + math1Count + Math.max(math2EasyCount, math2HardCount);
+
+            testInfo.push(`📝 <strong>${totalQuestionsToShow} questions</strong> will be shown (adaptive test)`);
+
+            // Calculate section times from timeAllocationPercentages or defaults
+            let rw1Time = 32; // default
+            let rw2Time = 32; // default
+            let math1Time = 35; // default
+            let math2Time = 35; // default
+
+            if (timeAllocationPercentages && timeAllocationPercentages.length >= 4) {
+                // Calculate minutes from percentages of total test duration
+                rw1Time = Math.round((testDuration * timeAllocationPercentages[0] / 100) / 60);
+                rw2Time = Math.round((testDuration * timeAllocationPercentages[1] / 100) / 60);
+                math1Time = Math.round((testDuration * timeAllocationPercentages[2] / 100) / 60);
+                math2Time = Math.round((testDuration * timeAllocationPercentages[3] / 100) / 60);
             }
+
+            // SAT has 4 sections with adaptive modules - show detailed breakdown
+            testInfo.push("📚 <strong>4 adaptive modules</strong>:");
+            testInfo.push(`&nbsp;&nbsp;&nbsp;&nbsp;• Reading & Writing Module 1: ${rw1Count} questions (${rw1Time} min)`);
+            testInfo.push(`&nbsp;&nbsp;&nbsp;&nbsp;• Reading & Writing Module 2: ${Math.max(rw2EasyCount, rw2HardCount)} questions (${rw2Time} min) - adaptive`);
+            testInfo.push(`&nbsp;&nbsp;&nbsp;&nbsp;• Math Module 1: ${math1Count} questions (${math1Time} min)`);
+            testInfo.push(`&nbsp;&nbsp;&nbsp;&nbsp;• Math Module 2: ${Math.max(math2EasyCount, math2HardCount)} questions (${math2Time} min) - adaptive`);
+
+            // Total test time: 134 minutes (2 hours 14 minutes)
+            const totalMinutes = Math.floor(testDuration / 60);
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
+            testInfo.push(`⏱️ <strong>Total test time</strong>: ${totalMinutes} minutes (${hours} hours ${minutes} minutes)`);
+            testInfo.push(`☕ <strong>Break</strong>: 5-minute break between Reading & Writing and Math sections`);
+
+            // Device recommendation without tablet mention for SAT
+            testInfo.push(`💻 <strong>Recommended device</strong>: PC/Computer for optimal performance`);
         } else {
-            const minutes = Math.floor(testDuration / 60);
-            testInfo.push(`⏱️ <strong>Total time</strong>: ${minutes} minutes`);
+            // Navigation info
+            if (isBocconiTest) {
+                testInfo.push("🚫 <strong>One-way navigation</strong>: You cannot return to previous questions");
+            } else {
+                testInfo.push("✅ <strong>Free navigation</strong>: You can return to previous questions");
+            }
+
+            // Sections and time info
+            if (hasSections && sectionNames && sectionNames.length > 0) {
+                testInfo.push(`📚 <strong>${sectionNames.length} sections</strong> with separate timers`);
+                if (timeAllocationPercentages) {
+                    testInfo.push("⏱️ Each section has a specific time limit");
+                }
+            } else {
+                const minutes = Math.floor(testDuration / 60);
+                testInfo.push(`⏱️ <strong>Total time</strong>: ${minutes} minutes`);
+            }
+
+            // Questions info
+            if (questions && questions.length > 0) {
+                testInfo.push(`📝 <strong>${questions.length} questions</strong> total`);
+            }
+
+            // Device recommendation info
+            testInfo.push(`💻 <strong>Recommended device</strong>: PC/Computer for optimal performance`);
+            testInfo.push(`📱 Test is accessible on tablets but experience may be limited`);
         }
-        
-        // Questions info
-        if (questions && questions.length > 0) {
-            testInfo.push(`📝 <strong>${questions.length} questions</strong> total`);
-        }
-        
-        // Device recommendation info
-        testInfo.push(`💻 <strong>Recommended device</strong>: PC/Computer for optimal performance`);
-        testInfo.push(`📱 Test is accessible on tablets but experience may be limited`);
 
         // Section translations
         const sectionTranslations = {
@@ -1477,9 +1548,14 @@ function loadQuestionsForPage(page) {
         return; // ✅ Prevent further execution
     }
 
-    // ✅ Show navigation buttons again on other pages
-    prevPageBtn.style.display = "inline-block";
-    nextPageBtn.style.display = "inline-block";
+    // ✅ Show navigation buttons again on other pages (unless it's a SAT timer expiry transition)
+    if (!satTimerExpiredTransition) {
+        prevPageBtn.style.display = "inline-block";
+        nextPageBtn.style.display = "inline-block";
+        console.log(`🔧 Navigation buttons shown (satTimerExpiredTransition = ${satTimerExpiredTransition})`);
+    } else {
+        console.log(`⏰ Keeping navigation buttons hidden due to timer expiry transition`);
+    }
 
     // For SAT tests, only show submit button when all modules are complete
     if (submitButton) {
@@ -1525,6 +1601,12 @@ function loadQuestionsForPage(page) {
             questionDiv.appendChild(input);
         } else {
             let choices = (q.wrong_answers || []).concat(q.correct_answer);
+
+            // For SAT tests, remove option "E" if it exists
+            if (isSATTest) {
+                choices = choices.filter(choice => choice.toUpperCase() !== 'E');
+            }
+
             // Add the two extra choices:
             choices = choices.concat(["no idea", "unsure"]);
             choices.sort((a, b) => a.localeCompare(b));
@@ -1596,6 +1678,87 @@ function selectAnswer(questionId, answer, btn) {
       }
     });
   }
+
+// Flexible comparison function for open-ended answers
+function compareOpenEndedAnswers(studentAnswer, correctAnswer) {
+    if (!studentAnswer || !correctAnswer) return false;
+
+    // Normalize both answers for comparison
+    const normalizeAnswer = (answer) => {
+        return answer
+            .toString()
+            .trim() // Remove leading/trailing whitespace
+            .toLowerCase() // Case insensitive
+            .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+            .replace(/\s*([+\-*/=;,])\s*/g, '$1') // Remove spaces around operators and separators
+            .replace(/,/g, '.') // Replace commas with dots for decimals
+            .replace(/^0+(\d)/g, '$1') // Remove leading zeros (except for decimals like 0.5)
+            .replace(/\.0+$/, '') // Remove trailing zeros after decimal point
+            .replace(/(\.\d*[1-9])0+$/, '$1'); // Remove trailing zeros but keep significant decimals
+    };
+
+    const normalizedStudent = normalizeAnswer(studentAnswer);
+    const normalizedCorrect = normalizeAnswer(correctAnswer);
+
+    // Direct comparison after normalization
+    if (normalizedStudent === normalizedCorrect) return true;
+
+    // Try parsing as numbers for numeric answers
+    const studentNum = parseFloat(normalizedStudent.replace(/[^0-9.\-]/g, ''));
+    const correctNum = parseFloat(normalizedCorrect.replace(/[^0-9.\-]/g, ''));
+
+    if (!isNaN(studentNum) && !isNaN(correctNum)) {
+        // Allow small floating point differences
+        return Math.abs(studentNum - correctNum) < 0.0001;
+    }
+
+    // Handle multiple answers separated by semicolons (like "2;-2")
+    if (normalizedStudent.includes(';') || normalizedCorrect.includes(';')) {
+        const studentParts = normalizedStudent.split(';').map(s => s.trim()).sort();
+        const correctParts = normalizedCorrect.split(';').map(s => s.trim()).sort();
+
+        if (studentParts.length === correctParts.length) {
+            return studentParts.every((part, index) => {
+                const studentPartNum = parseFloat(part);
+                const correctPartNum = parseFloat(correctParts[index]);
+                if (!isNaN(studentPartNum) && !isNaN(correctPartNum)) {
+                    return Math.abs(studentPartNum - correctPartNum) < 0.0001;
+                }
+                return part === correctParts[index];
+            });
+        }
+    }
+
+    // Handle fractions (e.g., "1/2", "3/4")
+    const fractionRegex = /^(-?\d+)\s*\/\s*(\d+)$/;
+    const studentFraction = normalizedStudent.match(fractionRegex);
+    const correctFraction = normalizedCorrect.match(fractionRegex);
+
+    if (studentFraction && correctFraction) {
+        const studentValue = parseFloat(studentFraction[1]) / parseFloat(studentFraction[2]);
+        const correctValue = parseFloat(correctFraction[1]) / parseFloat(correctFraction[2]);
+        return Math.abs(studentValue - correctValue) < 0.0001;
+    }
+
+    // If one is a fraction and the other is a decimal, convert and compare
+    if (studentFraction && !correctFraction) {
+        const studentValue = parseFloat(studentFraction[1]) / parseFloat(studentFraction[2]);
+        const correctValue = parseFloat(normalizedCorrect);
+        if (!isNaN(correctValue)) {
+            return Math.abs(studentValue - correctValue) < 0.0001;
+        }
+    }
+
+    if (!studentFraction && correctFraction) {
+        const studentValue = parseFloat(normalizedStudent);
+        const correctValue = parseFloat(correctFraction[1]) / parseFloat(correctFraction[2]);
+        if (!isNaN(studentValue)) {
+            return Math.abs(studentValue - correctValue) < 0.0001;
+        }
+    }
+
+    return false;
+}
 
 async function submitAnswers(timeExpired = false) {
     // Controllo priorità timer - se il timer è scaduto durante un submit manuale
@@ -1681,9 +1844,14 @@ async function submitAnswers(timeExpired = false) {
         }
 
         let auto_score = null;
-        if (!q.is_open_ended) {
-            // Only calculate score for answered questions (not "xx", "z", "x", "y")
-            if (!["xx", "z", "x", "y"].includes(answer)) {
+
+        // Auto-score both multiple choice and open-ended questions
+        if (!["xx", "z", "x", "y"].includes(answer)) {
+            if (q.is_open_ended) {
+                // Flexible comparison for open-ended questions
+                auto_score = compareOpenEndedAnswers(answer, q.correct_answer) ? 1 : 0;
+            } else {
+                // Exact comparison for multiple choice
                 auto_score = answer === q.correct_answer ? 1 : 0;
             }
         }
@@ -1884,11 +2052,152 @@ function updateSectionTimer() {
             
             // Trova la prima pagina della prossima sezione
             const nextSection = currentSectionNumber + 1;
+
+            // For SAT tests, don't use sectionPageStartPages, use module transition instead
+            if (isSATTest && nextSection <= 4) {
+                // For SAT tests, show message then trigger module transition
+                console.log(`⏰ SAT Section ${currentSectionNumber} time expired - showing message then transitioning`);
+
+                    // Hide navigation buttons immediately
+                    const prevBtn = document.getElementById("prevPage");
+                    const nextBtn = document.getElementById("nextPage");
+                    if (prevBtn) prevBtn.style.display = "none";
+                    if (nextBtn) nextBtn.style.display = "none";
+
+                    // Show temporary message
+                    const messageDiv = document.createElement('div');
+                    messageDiv.style.cssText = `
+                        position: fixed;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                        background: #ff6b6b;
+                        color: white;
+                        padding: 30px 50px;
+                        border-radius: 10px;
+                        font-size: 20px;
+                        z-index: 10000;
+                        text-align: center;
+                        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                    `;
+                    messageDiv.innerHTML = `
+                        <h3 style="margin: 0 0 10px 0;">⏰ Time Expired!</h3>
+                        <p style="margin: 0;">Section ${currentSectionNumber} time has ended.<br>Moving to next section automatically...</p>
+                    `;
+                    document.body.appendChild(messageDiv);
+
+                    // Remove message after 5 seconds
+                    setTimeout(() => {
+                        messageDiv.remove();
+                    }, 5000);
+
+                    // Determine which module transition to trigger based on section
+                    let lastQuestionNum = 0;
+                    if (currentSectionNumber === 1 && !satCompletedModules.has('RW1')) {
+                        // End of RW Module 1 - transition to RW2
+                        lastQuestionNum = 23; // RW1 has 23 questions
+                        console.log(`⏰ Timer: Triggering RW1 -> RW2 transition`);
+                    } else if (currentSectionNumber === 2) {
+                        // End of RW Module 2 - transition to Math1
+                        lastQuestionNum = 46; // RW2 ends at question 46
+                        console.log(`⏰ Timer: Triggering RW2 -> Math1 transition`);
+                    } else if (currentSectionNumber === 3) {
+                        // End of Math Module 1 - transition to Math2
+                        // Find the actual last question number of Math1 in current view
+                        const math1QuestionsInView = questions.filter(q => q.SAT_section === "Math1" || q.SAT_section === "MATH1");
+                        if (math1QuestionsInView.length > 0) {
+                            lastQuestionNum = Math.max(...math1QuestionsInView.map(q => q.question_number));
+                        } else {
+                            // Fallback - force transition with a high number
+                            lastQuestionNum = 999;
+                        }
+                        console.log(`⏰ Timer: Triggering Math1 -> Math2 transition (Math1 last question: ${lastQuestionNum})`);
+                    } else if (currentSectionNumber === 4) {
+                        // End of Math Module 2 - submit test
+                        console.log(`⏰ Timer: Last module expired, submitting test`);
+                        submitAnswers(true);
+                        return;
+                    }
+
+                    // Trigger the SAT module transition after 2 seconds (while message is showing)
+                    satTimerExpiredTransition = true;
+                    setTimeout(() => {
+                        // For timer-triggered transitions, we need to handle them specially
+                        let transitioned = false;
+
+                        if (currentSectionNumber === 3 && !satCompletedModules.has("MATH1")) {
+                            // Force complete Math1 and load Math2
+                            console.log(`⏰ Timer: Force completing Math1 and loading Math2`);
+
+                            // Mark Math1 as complete
+                            satCompletedModules.add("MATH1");
+
+                            // Calculate Math1 score (even if incomplete)
+                            const math1Score = 0; // Default to 0 if time ran out
+                            satModuleScores["MATH1"] = math1Score;
+
+                            // Select Math2 module based on score
+                            const math2Module = math1Score >= 0.65 ? "Math2-Hard" : "Math2-Easy";
+                            console.log(`✅ Selected Math Module 2: ${math2Module}`);
+
+                            // Load Math2 questions
+                            const math2Questions = allSATQuestions.filter(q => q.SAT_section === math2Module);
+                            if (math2Questions.length > 0) {
+                                questions = [...math2Questions];
+                                satActiveQuestions = [...satActiveQuestions, ...math2Questions];
+
+                                // Update section and timer
+                                currentSectionNumber = 4;
+                                sectionStartTime = Date.now();
+                                console.log(`🔄 Timer forced Math1->Math2: Moving to section ${currentSectionNumber}, timer reset`);
+
+                                // Load first page of Math2
+                                const firstMath2Page = Math.min(...questions.map(q => q.page_number));
+                                const maxPageMath2 = Math.max(...questions.map(q => q.page_number));
+                                totalPages = maxPageMath2;
+
+                                renumberSATQuestions();
+                                buildQuestionNav();
+                                updateSATSubmitButton();
+
+                                currentPage = firstMath2Page;
+                                satInModuleTransition = true;
+                                loadQuestionsForPage(firstMath2Page);
+                                satInModuleTransition = false;
+                                transitioned = true;
+                            }
+                        } else {
+                            // Try normal transition
+                            transitioned = handleSATModuleTransition(lastQuestionNum);
+                        }
+
+                        if (!transitioned) {
+                            console.log(`⚠️ Module transition failed, attempting submit`);
+                            submitAnswers(true);
+                        }
+                        setTimeout(() => {
+                            satTimerExpiredTransition = false;
+                            console.log(`✅ Timer transition complete, flag reset`);
+
+                            // Re-show navigation buttons after transition is complete
+                            const prevBtn = document.getElementById("prevPage");
+                            const nextBtn = document.getElementById("nextPage");
+                            if (prevBtn) prevBtn.style.display = "none"; // Keep prev hidden for SAT
+                            if (nextBtn) {
+                                nextBtn.style.display = "inline-block";
+                                console.log(`✅ Next button re-enabled after timer transition`);
+                            }
+                            updateNavigationButtons(); // Update button states for new module
+                        }, 500);
+                    }, 2000); // Wait 2 seconds before transitioning (message shows for 5 seconds total)
+                return;
+            }
+
+            // For non-SAT tests, use the original page-based navigation
             const nextSectionStartPage = Object.entries(sectionPageStartPages)
                 .find(([sec, page]) => parseInt(sec) === nextSection)?.[1];
-            
+
             if (nextSectionStartPage) {
-                // Auto-naviga alla prossima sezione
                 showCustomAlert(`⏰ Time's up for section ${currentSectionNumber}! Automatically moving to the next section.`);
                 loadQuestionsForPage(nextSectionStartPage);
                 return;
@@ -1944,7 +2253,10 @@ function updateSectionTimer() {
             timerElement.style.color = "white";
         } else if (timeLeftInSection < 180000) { // Meno di 3 minuti
             timerElement.style.backgroundColor = "#ffd93d";
-            timerElement.style.color = "#333";
+            timerElement.style.color = "white"; // Changed from #333 to white
+        } else {
+            // Ensure white text for normal state
+            timerElement.style.color = "white";
         }
     }
 
@@ -2153,7 +2465,12 @@ function setupSectionTimers() {
     // Inizializza timer per la prima sezione
     currentSectionNumber = 1;
     sectionStartTime = Date.now();
-    testEndTime = Date.now() + testDuration * 1000; // Tempo totale come fallback
+    // Add a small buffer (10 seconds) to account for transitions and processing delays
+    const TRANSITION_BUFFER = isSATTest ? 10 : 0;
+    testEndTime = Date.now() + (testDuration + TRANSITION_BUFFER) * 1000; // Tempo totale come fallback
+    if (TRANSITION_BUFFER > 0) {
+        console.log(`Added ${TRANSITION_BUFFER} second buffer to total test time for transitions`);
+    }
     
     updateSectionTimer(); // Avvia il timer per sezioni
 }
@@ -2384,6 +2701,7 @@ function buildQuestionNav() {
 
       const headerDiv = document.createElement("div");
       headerDiv.className = "section-header";
+      headerDiv.style.color = "white";
       headerDiv.innerHTML = `<p>${headerText}</p>`;
 
       // Insert header right after the timer element so it appears above the navigation buttons.
