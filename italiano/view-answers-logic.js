@@ -105,52 +105,119 @@ async function loadTestAnswers() {
     console.log("  - progressivo =", selectedProgressivo);
     console.log("  - tipologia_test =", selectedTestType);
 
-    // 1. Fetch domande per il test selezionato
-    let query = supabase.from(questionsTable).select("*");
+    // ✅ STEP 0: Get test_id from student_tests table (get LATEST attempt)
+    console.log("🔍 DEBUG: Step 0 - Getting test_id from student_tests (latest attempt)");
+    const { data: studentTestData, error: studentTestError } = await supabase
+      .from("student_tests")
+      .select("id")
+      .eq("auth_uid", selectedStudentId)
+      .eq("section", selectedSection)
+      .eq("tipologia_esercizi", selectedTipologiaEsercizi)
+      .eq("progressivo", selectedProgressivo)
+      .eq("tipologia_test", selectedTestType)
+      .order("start_time", { ascending: false })
+      .limit(1);
+
+    if (studentTestError) {
+      console.error("Errore nel recupero del test:", studentTestError.message);
+      alert("Errore nel recupero del test.");
+      return;
+    }
+
+    if (!studentTestData || studentTestData.length === 0) {
+      alert("Test non trovato per questo studente.");
+      return;
+    }
+
+    const testId = studentTestData[0].id;
+    console.log("🔍 DEBUG: test_id =", testId);
+
+    // ✅ STEP 1: Get highest question_number (= number of questions in test)
+    console.log("🔍 DEBUG: Step 1 - Getting highest question_number for this test");
+    let maxQuestionQuery = supabase.from(questionsTable).select("question_number");
 
     if (selectedTestType === "SAT PDF" && selectedSection === "Assessment Iniziale") {
       // For SAT, use Materia field instead of section
       console.log("  - Using Materia field for SAT PDF");
-      query = query
+      maxQuestionQuery = maxQuestionQuery
         .eq("Materia", selectedSection)
         .eq("tipologia_esercizi", selectedTipologiaEsercizi)
         .eq("progressivo", selectedProgressivo)
         .eq("tipologia_test", selectedTestType);
     } else {
       // Regular query for non-SAT tests
-      query = query
+      maxQuestionQuery = maxQuestionQuery
         .eq("section", selectedSection)
         .eq("tipologia_esercizi", selectedTipologiaEsercizi)
         .eq("progressivo", selectedProgressivo)
         .eq("tipologia_test", selectedTestType);
     }
 
-    const { data: questionsData, error: questionsError } = await query.order("question_number");
-      
+    maxQuestionQuery = maxQuestionQuery.order("question_number", { ascending: false }).limit(1);
+
+    const { data: maxQuestionData, error: maxQuestionError } = await maxQuestionQuery;
+
+    if (maxQuestionError) {
+      console.error("Errore nel recupero del numero di domande:", maxQuestionError.message);
+      alert("Errore nel recupero del test.");
+      return;
+    }
+
+    if (!maxQuestionData || maxQuestionData.length === 0) {
+      alert("Nessuna domanda trovata per questo test.");
+      return;
+    }
+
+    const questionCount = maxQuestionData[0].question_number;
+    console.log("🔍 DEBUG: Test has", questionCount, "questions (max question_number)");
+
+    // ✅ STEP 2: Fetch student answers FOR THIS TEST, ordered by timestamp DESC, take top N
+    console.log("🔍 DEBUG: Step 2 - Fetching", questionCount, "most recent answers for this test");
+    const { data: answersData, error: allAnswersError } = await supabase
+      .from(answersTable)
+      .select("*")
+      .eq("auth_uid", selectedStudentId)
+      .eq("test_id", testId)
+      .order("submitted_at", { ascending: false })
+      .limit(questionCount);
+
+    if (allAnswersError) {
+      console.error("Errore nel recupero delle risposte:", allAnswersError.message);
+      alert("Errore nel recupero delle risposte.");
+      return;
+    }
+
+    if (!answersData || answersData.length === 0) {
+      alert("Nessuna risposta trovata per questo studente.");
+      return;
+    }
+
+    console.log("🔍 DEBUG: Answers fetched:", answersData.length);
+
+    // ✅ STEP 3: Extract question IDs from answers
+    const answeredQuestionIds = answersData.map(a => a.question_id);
+    console.log("🔍 DEBUG: Question IDs to fetch:", answeredQuestionIds.length);
+
+    // ✅ STEP 4: Fetch ONLY the questions that were answered
+    const { data: questionsData, error: questionsError } = await supabase
+      .from(questionsTable)
+      .select("*")
+      .in("id", answeredQuestionIds)
+      .order("question_number");
+
     if (questionsError) {
       console.error("Errore nel recupero delle domande:", questionsError.message);
       alert("Errore nel recupero delle domande.");
       return;
     }
-    
+
     if (!questionsData || questionsData.length === 0) {
-      alert("Nessuna domanda trovata per questo test.");
+      alert("Nessuna domanda trovata per le risposte dello studente.");
       return;
     }
 
     console.log("🔍 DEBUG: Questions fetched:", questionsData.length);
-    console.log("🔍 DEBUG: First few question IDs:", questionsData.slice(0, 5).map(q => q.id));
-    
-    // Check which PDFs these questions come from
-    const pdfCounts = {};
-    questionsData.forEach(q => {
-      const pdfUrl = q.pdf_url_eng || q.pdf_url || 'NO_PDF';
-      pdfCounts[pdfUrl] = (pdfCounts[pdfUrl] || 0) + 1;
-    });
-    
-    console.log("🔍 DEBUG: Questions by PDF:", pdfCounts);
-    console.log("🔍 DEBUG: Number of different PDFs:", Object.keys(pdfCounts).length);
-    
+
     totalQuestions = questionsData.length;
 
     // 2. Gestione PDF se disponibile - con supporto multilingua
@@ -158,16 +225,16 @@ async function loadTestAnswers() {
     const pdfUrlsEn = questionsData.map(q => q.pdf_url_eng).filter(url => url);
     const uniquePdfUrlsIt = [...new Set(pdfUrlsIt)];
     const uniquePdfUrlsEn = [...new Set(pdfUrlsEn)];
-    
+
     // Salva gli URL per poterli switchare
     window.italianPdfUrl = uniquePdfUrlsIt[0] || null;
     window.englishPdfUrl = uniquePdfUrlsEn[0] || null;
-    
+
     if (usePDF && (uniquePdfUrlsIt.length > 0 || uniquePdfUrlsEn.length > 0)) {
       // Carica inizialmente il PDF italiano
       document.getElementById("pdfFrame").src = uniquePdfUrlsIt[0] || uniquePdfUrlsEn[0];
       document.getElementById("pdfPanel").style.display = "flex";
-      
+
       // Se non c'è PDF inglese, disabilita il toggle
       const englishToggle = document.getElementById("englishCorrectionToggle");
       if (!window.englishPdfUrl) {
@@ -179,161 +246,6 @@ async function loadTestAnswers() {
       // Nascondi pannello PDF e espandi risposte
       document.getElementById("pdfPanel").style.display = "none";
       document.getElementById("answersPanel").classList.add("expanded");
-    }
-
-    // 3. Array di ID domande
-    const questionIds = questionsData.map(q => q.id);
-    console.log("🔍 DEBUG: Question IDs array length:", questionIds.length);
-    console.log("🔍 DEBUG: Using answersTable:", answersTable);
-
-    // 4. Fetch risposte dello studente
-    console.log("🔍 DEBUG: Fetching answers with query:", {
-      table: answersTable,
-      questionIds: questionIds.slice(0, 5) + " (...and " + (questionIds.length - 5) + " more)",
-      selectedStudentId
-    });
-    
-    const { data: answersData, error: answersError } = await supabase
-      .from(answersTable)
-      .select("*")
-      .in("question_id", questionIds)
-      .eq("auth_uid", selectedStudentId);
-      
-    if (answersError) {
-      console.error("Errore nel recupero delle risposte:", answersError.message);
-      alert("Errore nel recupero delle risposte.");
-      return;
-    }
-    
-    console.log("🔍 DEBUG: Answers fetched:", answersData ? answersData.length : 0);
-    console.log("🔍 DEBUG: First few answers:", answersData ? answersData.slice(0, 10) : []);
-    
-    // Check which PDF the student's answers correspond to
-    if (answersData && answersData.length > 0) {
-      const answeredQuestionIds = new Set(answersData.map(a => a.question_id));
-      const questionsWithAnswers = questionsData.filter(q => answeredQuestionIds.has(q.id));
-      
-      const answeredPdfCounts = {};
-      questionsWithAnswers.forEach(q => {
-        const pdfUrl = q.pdf_url_eng || q.pdf_url || 'NO_PDF';
-        answeredPdfCounts[pdfUrl] = (answeredPdfCounts[pdfUrl] || 0) + 1;
-      });
-      
-      console.log("🔍 DEBUG: Student answered questions from these PDFs:", answeredPdfCounts);
-      
-      // Check for mixing - if student has answers from multiple PDFs
-      const pdfWithAnswers = Object.keys(answeredPdfCounts);
-      if (pdfWithAnswers.length > 1) {
-        console.log("🚨 WARNING: MIXING DETECTED! Student has answers from multiple PDFs:");
-        pdfWithAnswers.forEach(pdf => {
-          console.log(`   - ${pdf}: ${answeredPdfCounts[pdf]} answers`);
-        });
-        
-        // Show which specific questions come from which PDF
-        console.log("🔍 DEBUG: Detailed breakdown by question:");
-        questionsWithAnswers.forEach(q => {
-          const pdfUrl = q.pdf_url_eng || q.pdf_url || 'NO_PDF';
-          const shortPdf = pdfUrl.split('_').pop(); // Get just the timestamp part
-          console.log(`   Question ${q.question_number}: ${q.id} from ${shortPdf}`);
-        });
-      } else {
-        console.log("✅ No mixing detected - all answers from single PDF");
-      }
-      
-      // Find the PDF that the student actually used (should have the most answers)
-      const actualPdf = Object.entries(answeredPdfCounts)
-        .sort(([,a], [,b]) => b - a) // Sort by count descending
-        [0]?.[0]; // Get the PDF with most answers
-      console.log("🔍 DEBUG: Student's actual PDF appears to be:", actualPdf);
-      
-      if (actualPdf) {
-        console.log("🔍 DEBUG: Re-fetching questions filtered by student's actual PDF...");
-        
-        // Re-fetch questions filtered by the student's actual PDF
-        const { data: filteredQuestionsData, error: filteredQuestionsError } = await supabase
-          .from(questionsTable)
-          .select("*")
-          .eq("section", selectedSection)
-          .eq("tipologia_esercizi", selectedTipologiaEsercizi)
-          .eq("progressivo", selectedProgressivo)
-          .eq("tipologia_test", selectedTestType)
-          .eq("pdf_url", actualPdf)
-          .order("question_number");
-          
-        if (filteredQuestionsError) {
-          console.error("Error re-fetching filtered questions:", filteredQuestionsError);
-        } else if (filteredQuestionsData && filteredQuestionsData.length > 0) {
-          console.log("🔍 DEBUG: Filtered questions count:", filteredQuestionsData.length);
-          // Replace the original questions data with the filtered data
-          questionsData.splice(0, questionsData.length, ...filteredQuestionsData);
-          totalQuestions = questionsData.length;
-          console.log("✅ DEBUG: Using filtered questions data, new count:", totalQuestions);
-        }
-      }
-    }
-    
-    // Check for duplicates
-    if (answersData && answersData.length > 0) {
-      const answersByQuestionId = {};
-      answersData.forEach(ans => {
-        if (!answersByQuestionId[ans.question_id]) {
-          answersByQuestionId[ans.question_id] = [];
-        }
-        answersByQuestionId[ans.question_id].push(ans);
-      });
-      
-      const duplicates = Object.entries(answersByQuestionId).filter(([qId, answers]) => answers.length > 1);
-      if (duplicates.length > 0) {
-        console.log("🚨 DEBUG: DUPLICATE ANSWERS FOUND:", duplicates.length, "questions have multiple answers");
-        duplicates.forEach(([qId, answers]) => {
-          console.log(`   Question ${qId} has ${answers.length} answers:`, answers);
-        });
-      } else {
-        console.log("✅ DEBUG: No duplicate answers found");
-      }
-    }
-
-    // ✅ DEDUPLICATE questions - prioritize questions that student actually answered
-    const answeredQuestionIds = new Set(answersData ? answersData.map(a => a.question_id) : []);
-    const uniqueQuestionsMap = new Map();
-    let duplicatesRemoved = 0;
-
-    questionsData.forEach(q => {
-      const key = `${q.question_number}-${q.page_number}`;
-
-      if (!uniqueQuestionsMap.has(key)) {
-        // First occurrence - keep it
-        uniqueQuestionsMap.set(key, q);
-      } else {
-        // Duplicate found
-        duplicatesRemoved++;
-        const existingQuestion = uniqueQuestionsMap.get(key);
-
-        // ALWAYS prefer the question that was answered
-        const currentHasAnswer = answeredQuestionIds.has(q.id);
-        const existingHasAnswer = answeredQuestionIds.has(existingQuestion.id);
-
-        if (currentHasAnswer && !existingHasAnswer) {
-          // Current duplicate has answer, existing doesn't - REPLACE
-          console.log(`⚠️ Replacing duplicate Q${q.question_number} (ID ${existingQuestion.id} → ${q.id}) because student answered ${q.id}`);
-          uniqueQuestionsMap.set(key, q);
-        } else if (!currentHasAnswer && existingHasAnswer) {
-          // Existing has answer, current doesn't - KEEP existing (do nothing)
-          console.warn(`⚠️ Duplicate removed: Question ${q.question_number} on page ${q.page_number} (ID: ${q.id}) - keeping answered version`);
-        } else {
-          // Both answered or both not answered - keep first occurrence
-          console.warn(`⚠️ Duplicate removed: Question ${q.question_number} on page ${q.page_number} (ID: ${q.id})`);
-        }
-      }
-    });
-
-    // Replace questionsData with deduplicated version
-    questionsData.splice(0, questionsData.length, ...Array.from(uniqueQuestionsMap.values()));
-    totalQuestions = questionsData.length;
-
-    if (duplicatesRemoved > 0) {
-      console.warn(`⚠️ ${duplicatesRemoved} duplicate question(s) removed from tutor view`);
-      console.log(`✅ Unique questions to display: ${questionsData.length}`);
     }
 
     // Mappa risposte
