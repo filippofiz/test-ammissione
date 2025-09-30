@@ -309,11 +309,19 @@ async function loadTestAnswers() {
         duplicatesRemoved++;
         const existingQuestion = uniqueQuestionsMap.get(key);
 
-        // If this duplicate has an answer but existing doesn't, replace it
-        if (answeredQuestionIds.has(q.id) && !answeredQuestionIds.has(existingQuestion.id)) {
+        // ALWAYS prefer the question that was answered
+        const currentHasAnswer = answeredQuestionIds.has(q.id);
+        const existingHasAnswer = answeredQuestionIds.has(existingQuestion.id);
+
+        if (currentHasAnswer && !existingHasAnswer) {
+          // Current duplicate has answer, existing doesn't - REPLACE
           console.log(`⚠️ Replacing duplicate Q${q.question_number} (ID ${existingQuestion.id} → ${q.id}) because student answered ${q.id}`);
           uniqueQuestionsMap.set(key, q);
+        } else if (!currentHasAnswer && existingHasAnswer) {
+          // Existing has answer, current doesn't - KEEP existing (do nothing)
+          console.warn(`⚠️ Duplicate removed: Question ${q.question_number} on page ${q.page_number} (ID: ${q.id}) - keeping answered version`);
         } else {
+          // Both answered or both not answered - keep first occurrence
           console.warn(`⚠️ Duplicate removed: Question ${q.question_number} on page ${q.page_number} (ID: ${q.id})`);
         }
       }
