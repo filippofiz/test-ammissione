@@ -285,9 +285,17 @@ async function uploadPdfForGroup(groupKey, groupIdx) {
  * Function to perform the actual upload of CSV data to Supabase.
  */
 async function uploadDataToSupabase(data, tableName) {
+  // Define conflict columns based on table type
+  const conflictColumns = tableName === "questions"
+    ? 'section,tipologia_esercizi,progressivo,tipologia_test,question_number,pdf_url,page_number,Materia,argomento'
+    : 'section,tipologia_esercizi,progressivo,tipologia_test,question_number,image_url,page_number,Materia,argomento';
+
   const { error } = await supabase
     .from(tableName)
-    .insert(data);
+    .upsert(data, {
+      onConflict: conflictColumns,
+      ignoreDuplicates: false
+    });
     if (error) {
       uploadMessageDiv.innerHTML = `<p class='error'>Errore nell'upload: ${error.message}</p>`;
     } else {
@@ -883,9 +891,16 @@ async function copyTest(test) {
       }
       
       // 4. Inserisci le nuove domande
+      const conflictColumns = test.sourceTable === "questions"
+        ? 'section,tipologia_esercizi,progressivo,tipologia_test,question_number,pdf_url,page_number,Materia,argomento'
+        : 'section,tipologia_esercizi,progressivo,tipologia_test,question_number,image_url,page_number,Materia,argomento';
+
       const { error: insertError } = await supabase
         .from(test.sourceTable)
-        .insert(domandeNuove);
+        .upsert(domandeNuove, {
+          onConflict: conflictColumns,
+          ignoreDuplicates: false
+        });
       
       if (insertError) {
         alert("Errore nella copia delle domande: " + insertError.message);
