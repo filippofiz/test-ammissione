@@ -319,6 +319,17 @@
     <!-- Regular Tests Section -->
     <div class="test-section">
       <h3>Tests not yet assigned</h3>
+
+      <!-- Test Type Filter (shown only when multiple test types) -->
+      <div id="testTypeFilterContainer" style="display: none; margin-bottom: 1rem;">
+        <label for="testTypeFilter" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: rgb(28, 37, 69);">
+          🔍 Filter by test type:
+        </label>
+        <select id="testTypeFilter" style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #e9ecef; border-radius: 10px; font-size: 1rem; background: white; color: rgb(28, 37, 69); cursor: pointer; transition: all 0.3s ease;">
+          <option value="">All test types</option>
+        </select>
+      </div>
+
       <div id="unassignedTests">
         <div class="loading"></div>
       </div>
@@ -430,6 +441,9 @@
         document.getElementById("unassignedIngressoTests").innerHTML = '<div class="empty-state">Select a student to see available entrance tests</div>';
     }
 
+    // Global variable to store all unassigned tests for filtering
+    let allUnassignedTests = [];
+
     async function fetchUnassignedTests(studentTests) {
       const studentId = document.getElementById("studentDropdown").value;
       if (!studentId) return;
@@ -534,17 +548,64 @@
       });
       const uniqueTests = Array.from(uniqueTestsMap.values());
 
+      // Sort alphabetically by compositeName
+      uniqueTests.sort((a, b) => a.compositeName.localeCompare(b.compositeName));
+
+      // Store all tests globally for filtering
+      allUnassignedTests = uniqueTests;
+
+      // Setup filter dropdown if multiple test types
+      setupTestTypeFilter();
+
+      // Display tests (will respect current filter)
+      displayFilteredTests();
+    }
+
+    function setupTestTypeFilter() {
+      const filterContainer = document.getElementById("testTypeFilterContainer");
+      const filterSelect = document.getElementById("testTypeFilter");
+
+      // Get unique test types from all tests
+      const testTypes = [...new Set(allUnassignedTests.map(t => t.tipologia_test))];
+
+      // Only show filter if there are multiple test types
+      if (testTypes.length > 1) {
+        filterContainer.style.display = "block";
+
+        // Populate filter options (keep "All test types" as first option)
+        filterSelect.innerHTML = '<option value="">All test types</option>';
+        testTypes.sort().forEach(testType => {
+          const option = document.createElement("option");
+          option.value = testType;
+          option.textContent = testType;
+          filterSelect.appendChild(option);
+        });
+      } else {
+        filterContainer.style.display = "none";
+      }
+    }
+
+    function displayFilteredTests() {
+      const testContainer = document.getElementById("unassignedTests");
+      const filterValue = document.getElementById("testTypeFilter").value;
+
+      // Filter tests based on selected test type
+      let testsToDisplay = allUnassignedTests;
+      if (filterValue) {
+        testsToDisplay = allUnassignedTests.filter(test => test.tipologia_test === filterValue);
+      }
+
       testContainer.innerHTML = "";
 
-      if (uniqueTests.length === 0) {
-        testContainer.innerHTML = '<div class="empty-state">All tests have already been assigned!</div>';
+      if (testsToDisplay.length === 0) {
+        testContainer.innerHTML = '<div class="empty-state">No tests match the selected filter</div>';
         return;
       }
 
-      uniqueTests.forEach(test => {
+      testsToDisplay.forEach(test => {
         const testItem = document.createElement("div");
         testItem.classList.add("test-item");
-        
+
         const checkbox = document.createElement("input");
         checkbox.type = "checkbox";
         checkbox.value = test.compositeKey;
@@ -617,6 +678,9 @@
 
       // Filter out already assigned
       const unassignedTests = uniqueTests.filter(test => !studentTests.includes(test));
+
+      // Sort alphabetically
+      unassignedTests.sort((a, b) => a.localeCompare(b));
 
       testContainer.innerHTML = "";
 
@@ -732,8 +796,11 @@
       if (!selectedOption || !selectedOption.value) {
         document.getElementById("unassignedTests").innerHTML = '<div class="empty-state">Select a student to see available tests</div>';
         document.getElementById("unassignedIngressoTests").innerHTML = '<div class="empty-state">Select a student to see available entrance tests</div>';
+        document.getElementById("testTypeFilterContainer").style.display = "none";
         return;
       }
+      // Reset filter when changing student
+      document.getElementById("testTypeFilter").value = "";
       const tests = JSON.parse(selectedOption.dataset.tests || "[]");
       await fetchUnassignedTests(tests);
       await fetchUnassignedTestIngresso(tests);
@@ -741,6 +808,9 @@
 
     document.getElementById("assignSelectedTests").addEventListener("click", assignTests);
     document.getElementById("assignIngressoTests").addEventListener("click", assignTestIngresso);
+
+    // Add filter event listener
+    document.getElementById("testTypeFilter").addEventListener("change", displayFilteredTests);
 
     // Initialize
     loadStudents();

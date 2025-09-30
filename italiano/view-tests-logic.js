@@ -360,6 +360,23 @@ function displayTestTree(tests, studentTests, testType, selectedTest) {
   const tree = document.getElementById("testTree");
   tree.innerHTML = "";
 
+  // Check if no tests assigned
+  if (!tests || tests.length === 0) {
+    const emptyMessage = document.createElement("div");
+    emptyMessage.style.cssText = `
+      text-align: center;
+      padding: 3rem;
+      color: #6c757d;
+      font-size: 1.1rem;
+    `;
+    emptyMessage.innerHTML = `
+      <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;">📭</div>
+      <p>Nessun test è stato ancora assegnato</p>
+    `;
+    tree.appendChild(emptyMessage);
+    return;
+  }
+
   // Raggruppa per materia
   const byMat = {};
   tests.forEach(t => {
@@ -369,6 +386,10 @@ function displayTestTree(tests, studentTests, testType, selectedTest) {
 
 // Ordina materie con ordine personalizzato
 const mats = Object.keys(byMat).sort((a,b) => {
+    // Assessment Iniziale sempre per primo
+    if (a === "Assessment Iniziale") return -1;
+    if (b === "Assessment Iniziale") return 1;
+
     // Definisci l'ordine prioritario
     const priorityOrder = {
         "Matematica": 1,
@@ -377,25 +398,25 @@ const mats = Object.keys(byMat).sort((a,b) => {
         "Altre Materie": 4,
         "Altro": 4  // stesso peso di "Altre Materie"
     };
-    
+
     // Simulazioni sempre per ultime
     if (a === "Simulazioni") return 1;
     if (b === "Simulazioni") return -1;
-    
+
     // Controlla se entrambe hanno priorità definita
     const priorityA = priorityOrder[a];
     const priorityB = priorityOrder[b];
-    
+
     if (priorityA && priorityB) {
         return priorityA - priorityB;
     }
-    
+
     // Se solo A ha priorità, va prima
     if (priorityA) return -1;
-    
+
     // Se solo B ha priorità, va prima
     if (priorityB) return 1;
-    
+
     // Altrimenti ordine alfabetico
     return a.localeCompare(b);
 });
@@ -404,19 +425,40 @@ const mats = Object.keys(byMat).sort((a,b) => {
     const section = document.createElement("div");
     section.classList.add("materia-section");
 
+    // Header con toggle icon
     const h2 = document.createElement("h2");
     h2.classList.add("materia-header");
-    h2.textContent = materia==="Altro" ? "Altre Materie" : materia;
+
+    const toggleIcon = document.createElement("span");
+    toggleIcon.classList.add("toggle-icon");
+    toggleIcon.textContent = "▼";
+
+    const titleSpan = document.createElement("span");
+    titleSpan.textContent = materia==="Altro" ? "Altre Materie" : materia;
+
+    h2.appendChild(toggleIcon);
+    h2.appendChild(titleSpan);
+
+    // Aggiungi evento click per toggle
+    h2.addEventListener("click", () => {
+      section.classList.toggle("collapsed");
+    });
+
     section.appendChild(h2);
+
+    // Content wrapper
+    const contentDiv = document.createElement("div");
+    contentDiv.classList.add("materia-content");
 
     const group = byMat[materia];
 
     if (materia==="Simulazioni") {
-      displaySimulazioni(section, group, studentTests, selectedTest);
+      displaySimulazioni(contentDiv, group, studentTests, selectedTest);
     } else {
-      displayRegularTests(section, group, studentTests, selectedTest);
+      displayRegularTests(contentDiv, group, studentTests, selectedTest);
     }
 
+    section.appendChild(contentDiv);
     tree.appendChild(section);
   });
 

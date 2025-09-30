@@ -34,6 +34,7 @@ let satDisplayNumber = 1; // Current display question number for continuous numb
 let satInModuleTransition = false; // Flag to skip welcome page during module transitions
 let satBreakTimer = null; // Timer for mandatory break between modules
 let satTimerExpiredTransition = false; // Flag to track when transitioning due to timer expiry
+let mainTimerInterval = null; // Main test timer interval (can be paused during breaks)
 
 // Renumber SAT questions for continuous display (1-98)
 function renumberSATQuestions() {
@@ -114,10 +115,7 @@ function isSATComplete() {
 function showSATBreakScreen(nextModuleName, callback) {
     console.log(`⏸️ Starting mandatory 5-minute break before ${nextModuleName}`);
 
-    // Extend the total test time to account for the break
-    const BREAK_DURATION_SECONDS = 300; // 5 minutes break (300 seconds)
-    testEndTime += BREAK_DURATION_SECONDS * 1000;
-    console.log(`⏰ Extended test end time by ${BREAK_DURATION_SECONDS} seconds for break`);
+    const BREAK_DURATION_SECONDS = 15; // 15 seconds break
 
     // Hide question content and show break screen
     const questionContainer = document.getElementById("questionContainer");
@@ -131,6 +129,15 @@ function showSATBreakScreen(nextModuleName, callback) {
     if (questionNav) questionNav.style.display = 'none';
     if (prevPageBtn) prevPageBtn.style.display = 'none';
     if (nextPageBtn) nextPageBtn.style.display = 'none';
+
+    // Pause the main test timer during break
+    const testTimer = document.getElementById('timer');
+    if (testTimer) testTimer.style.display = 'none';
+    if (mainTimerInterval) {
+        clearInterval(mainTimerInterval);
+        mainTimerInterval = null;
+        console.log('⏸️ Timer principale in pausa durante la pausa');
+    }
 
     // Create break screen
     const breakScreen = document.createElement('div');
@@ -154,9 +161,9 @@ function showSATBreakScreen(nextModuleName, callback) {
     breakScreen.innerHTML = `
         <div style="text-align: center; padding: 40px; background: rgba(255,255,255,0.1); border-radius: 20px; backdrop-filter: blur(10px);">
             <h1 style="font-size: 48px; margin-bottom: 20px;">⏸️ Pausa Obbligatoria</h1>
-            <p style="font-size: 24px; margin-bottom: 30px;">Hai completato un modulo! Tempo per una pausa (5 secondi per test).</p>
+            <p style="font-size: 24px; margin-bottom: 30px;">Hai completato un modulo! Tempo per una pausa.</p>
             <p style="font-size: 20px; margin-bottom: 10px;">Prossimo modulo: <strong>${nextModuleName}</strong></p>
-            <div id="breakTimer" style="font-size: 72px; font-weight: bold; margin: 30px 0; font-family: monospace;">0:05</div>
+            <div id="breakTimer" style="font-size: 72px; font-weight: bold; margin: 30px 0; font-family: monospace;">0:15</div>
             <p style="font-size: 18px; opacity: 0.8;">Questa pausa non può essere saltata. Il test riprenderà automaticamente.</p>
             <div style="margin-top: 30px;">
                 <p style="font-size: 16px;">💡 Usa questo tempo per:</p>
@@ -170,7 +177,13 @@ function showSATBreakScreen(nextModuleName, callback) {
         </div>
     `;
 
-    document.body.appendChild(breakScreen);
+    // Append to testContainer so it remains visible when re-entering fullscreen
+    const testContainer = document.getElementById('testContainer');
+    if (testContainer) {
+        testContainer.appendChild(breakScreen);
+    } else {
+        document.body.appendChild(breakScreen);
+    }
 
     // Start countdown
     let breakTimeRemaining = BREAK_DURATION_SECONDS;
@@ -197,8 +210,22 @@ function showSATBreakScreen(nextModuleName, callback) {
 
             console.log(`✅ Break ended - Continuing with ${nextModuleName}`);
 
-            // Continue with the callback (load next module)
-            if (callback) callback();
+            // IMPORTANTE: Carica il modulo successivo PRIMA (imposta numero sezione e pagina corretti)
+            if (callback) {
+                callback();
+                console.log(`✅ Caricato modulo successivo: ${nextModuleName}, Sezione: ${currentSectionNumber}, Start time: ${sectionStartTime}`);
+            }
+
+            // Poi riprendi il timer (ora userà la sezione corretta)
+            const testTimer = document.getElementById('timer');
+            if (testTimer) testTimer.style.display = '';
+
+            // Force update the timer display immediately with current section info
+            if (!mainTimerInterval) {
+                console.log(`▶️ Ripresa timer - Sezione ${currentSectionNumber}, satCompletedModules: ${Array.from(satCompletedModules).join(', ')}`);
+                updateSectionTimer();
+                console.log('▶️ Timer principale ripreso dopo la pausa');
+            }
         }
     }, 1000);
 }
@@ -885,8 +912,27 @@ async function loadTest() {
       alert("No questions available for this test.");
       return;
     }
-  
-    questions = data;
+
+    // ✅ DEDUPLICATE questions based on question_number and page_number
+    const uniqueQuestionsMap = new Map();
+    let duplicatesFound = 0;
+
+    data.forEach(q => {
+      const key = `${q.question_number}-${q.page_number}`;
+      if (!uniqueQuestionsMap.has(key)) {
+        uniqueQuestionsMap.set(key, q);
+      } else {
+        duplicatesFound++;
+        console.warn(`⚠️ Duplicate found: Question ${q.question_number} on page ${q.page_number} (ID: ${q.id})`);
+      }
+    });
+
+    questions = Array.from(uniqueQuestionsMap.values());
+
+    if (duplicatesFound > 0) {
+      console.warn(`⚠️ ${duplicatesFound} duplicate question(s) removed from ${data.length} total questions`);
+      console.log(`✅ Unique questions: ${questions.length}`);
+    }
 
     // SAT Adaptive Logic: Initially show only Module 1 questions
     if (isSATTest) {
@@ -1122,7 +1168,11 @@ function loadQuestionsForPage(page) {
         const questionSection = document.querySelector('.question-section');
         if (questionSection) {
             questionSection.style.gridColumn = '1 / -1';
-            questionSection.style.maxWidth = '100%';
+            questionSection.style.maxWidth = 'none';
+            questionSection.style.width = '100%';
+            questionSection.style.padding = '1rem 2rem';
+            questionSection.style.overflow = 'auto';
+            questionSection.style.height = '100%';
         }
 
         // Costruisci info dinamiche sul test
@@ -1216,16 +1266,11 @@ function loadQuestionsForPage(page) {
 
         questionContainer.innerHTML = `
             <div style="
-                background: white;
-                border-radius: 16px;
-                padding: 2.5rem;
-                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
                 text-align: center;
-                max-width: 600px;
-                margin: 2rem auto;
-                border: 1px solid #e9ecef;
+                width: 100%;
+                padding: 0;
             ">
-                <div style="font-size: 3rem; margin-bottom: 1.5rem;">
+                <div style="font-size: 3rem; margin-bottom: 1rem; margin-top: 0;">
                     🖥️
                 </div>
                 
@@ -1413,8 +1458,9 @@ function loadQuestionsForPage(page) {
         } else {
             let choices = (q.wrong_answers || []).concat(q.correct_answer);
 
-            // For SAT tests, remove option "E" if it exists
-            if (isSATTest) {
+            // For SAT and HUMAT tests, remove option "E" if it exists
+            const isHUMATTest = selectedTestType && selectedTestType.toUpperCase().includes("HUMAT");
+            if (isSATTest || isHUMATTest) {
                 choices = choices.filter(choice => choice.toUpperCase() !== 'E');
             }
 
@@ -2088,7 +2134,7 @@ function updateSectionTimer() {
 
     // Avvia il timer
     tick();
-    const timerInterval = setInterval(tick, 1000);
+    mainTimerInterval = setInterval(tick, 1000);
 }
 
 // ✅ Function to Update the Timer Display (normale, senza sezioni)
@@ -2134,7 +2180,7 @@ function updateNavigationButtons() {
     const selectedTest = selectedTestType || sessionStorage.getItem("selectedTestType");
 
     // Classificazione test per comportamento navigazione:
-    // - TOLC, CATTOLICA: navigazione con sezioni (possono muoversi dentro la sezione)
+    // - TOLC, CATTOLICA, HUMAT: navigazione con sezioni (possono muoversi dentro la sezione)
     // - SAT: navigazione adattiva con moduli (selezione basata su performance)
     // - BOCCONI (tutti i tipi): navigazione unidirezionale (non possono tornare indietro)
     // - MEDICINA: da definire (per ora come TOLC)
@@ -2142,7 +2188,7 @@ function updateNavigationButtons() {
     let testType;
     if (selectedTestUpper.includes("SAT")) {
         testType = "sat";  // SAT has its own adaptive logic
-    } else if (selectedTestUpper.includes("TOLC") || selectedTestUpper.includes("CATTOLICA") || selectedTestUpper.includes("MEDICINA")) {
+    } else if (selectedTestUpper.includes("TOLC") || selectedTestUpper.includes("CATTOLICA") || selectedTestUpper.includes("MEDICINA") || selectedTestUpper.includes("HUMAT")) {
         testType = "tolc";
     } else {
         testType = "bocconi";
@@ -2238,12 +2284,176 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ✅ Gestisci uscite forzate (F11, etc) che non possiamo intercettare
+let fullscreenExitConfirmShown = false;
 document.addEventListener("fullscreenchange", function () {
     if (isSubmitting) return;
-    if (!document.fullscreenElement && testEndTime) {
-        // Se sono già uscito (tramite F11 o altro), annulla immediatamente
-        alert("The test has been cancelled because you exited fullscreen mode.");
-        window.location.href = "test_selection.html";
+    if (!document.fullscreenElement && testEndTime && !fullscreenExitConfirmShown) {
+        fullscreenExitConfirmShown = true;
+
+        // Crea un overlay modale che copre tutto lo schermo
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999999;
+            backdrop-filter: blur(10px);
+        `;
+
+        const dialog = document.createElement('div');
+        dialog.style.cssText = `
+            background: white;
+            padding: 3rem;
+            border-radius: 20px;
+            max-width: 600px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        `;
+
+        dialog.innerHTML = `
+            <div style="font-size: 4rem; margin-bottom: 1rem;">⚠️</div>
+            <h2 style="color: #dc2626; margin-bottom: 1rem; font-size: 1.8rem;">Attenzione!</h2>
+            <p style="font-size: 1.2rem; color: #374151; margin-bottom: 1rem; line-height: 1.6;">
+                Sei uscito dalla modalità schermo intero.<br>
+                <strong>Devi tornare a schermo intero per continuare il test.</strong>
+            </p>
+            <div id="countdownTimer" style="font-size: 1.1rem; font-weight: 600; color: #dc2626; margin-bottom: 0.5rem;">
+                ⏰ Devi fare una scelta entro <span id="countdown" style="font-size: 2.5rem; font-weight: 800;">5</span> secondi
+            </div>
+            <p style="font-size: 0.95rem; color: #6b7280; margin-bottom: 2rem;">
+                altrimenti il test verrà annullato automaticamente
+            </p>
+            <div style="display: flex; gap: 1rem; justify-content: center;">
+                <button id="returnFullscreen" style="
+                    background: linear-gradient(135deg, #00a666, #00c775);
+                    color: white;
+                    border: none;
+                    padding: 1rem 2rem;
+                    border-radius: 12px;
+                    font-size: 1.1rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    box-shadow: 0 4px 12px rgba(0, 166, 102, 0.3);
+                    transition: all 0.3s ease;
+                ">
+                    🔄 Torna a Schermo Intero
+                </button>
+                <button id="exitTest" style="
+                    background: #dc2626;
+                    color: white;
+                    border: none;
+                    padding: 1rem 2rem;
+                    border-radius: 12px;
+                    font-size: 1.1rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+                    transition: all 0.3s ease;
+                ">
+                    ❌ Esci e Annulla Test
+                </button>
+            </div>
+        `;
+
+        overlay.appendChild(dialog);
+        document.body.appendChild(overlay);
+
+        // Countdown timer - 5 seconds
+        let timeLeft = 5;
+        const countdownSpan = dialog.querySelector('#countdown');
+        const countdownInterval = setInterval(() => {
+            timeLeft--;
+            countdownSpan.textContent = timeLeft;
+
+            if (timeLeft <= 0) {
+                clearInterval(countdownInterval);
+                document.body.removeChild(overlay);
+                alert("⚠️ Test annullato - Nessuna scelta è stata effettuata entro il tempo limite.");
+                window.location.href = "test_selection.html";
+            }
+        }, 1000);
+
+        // Aggiungi hover effects
+        const returnBtn = dialog.querySelector('#returnFullscreen');
+        const exitBtn = dialog.querySelector('#exitTest');
+
+        returnBtn.addEventListener('mouseenter', () => {
+            returnBtn.style.transform = 'translateY(-2px)';
+            returnBtn.style.boxShadow = '0 6px 20px rgba(0, 166, 102, 0.4)';
+        });
+        returnBtn.addEventListener('mouseleave', () => {
+            returnBtn.style.transform = 'translateY(0)';
+            returnBtn.style.boxShadow = '0 4px 12px rgba(0, 166, 102, 0.3)';
+        });
+
+        exitBtn.addEventListener('mouseenter', () => {
+            exitBtn.style.transform = 'translateY(-2px)';
+            exitBtn.style.boxShadow = '0 6px 20px rgba(220, 38, 38, 0.4)';
+        });
+        exitBtn.addEventListener('mouseleave', () => {
+            exitBtn.style.transform = 'translateY(0)';
+            exitBtn.style.boxShadow = '0 4px 12px rgba(220, 38, 38, 0.3)';
+        });
+
+        // Handler per tornare a fullscreen
+        returnBtn.addEventListener('click', async () => {
+            clearInterval(countdownInterval);
+            try {
+                await document.getElementById('testContainer').requestFullscreen();
+                document.body.removeChild(overlay);
+                fullscreenExitConfirmShown = false;
+
+                // Se siamo in pausa SAT, assicuriamo che lo schermo di pausa rimanga visibile
+                const breakScreen = document.getElementById('satBreakScreen');
+                if (breakScreen) {
+                    console.log("✅ Tornato a schermo intero durante pausa SAT - assicurando che lo schermo di pausa rimanga visibile");
+
+                    // Ensure break screen stays visible and on top
+                    breakScreen.style.display = 'flex';
+                    breakScreen.style.zIndex = '9999';
+
+                    // Re-hide all test content that should be hidden during break
+                    const pdfViewer = document.querySelector('.pdf-viewer');
+                    const questionNav = document.getElementById("questionNav");
+                    const prevPageBtn = document.getElementById("prevPage");
+                    const nextPageBtn = document.getElementById("nextPage");
+
+                    if (pdfViewer) pdfViewer.style.display = 'none';
+                    if (questionNav) questionNav.style.display = 'none';
+                    if (prevPageBtn) prevPageBtn.style.display = 'none';
+                    if (nextPageBtn) nextPageBtn.style.display = 'none';
+
+                    // Il timer della pausa continua automaticamente
+                }
+            } catch (err) {
+                console.error("Errore nel ritornare a schermo intero:", err);
+                alert("Impossibile tornare alla modalità schermo intero. Il test è stato annullato.");
+                window.location.href = "test_selection.html";
+            }
+        });
+
+        // Handler per uscire e annullare
+        exitBtn.addEventListener('click', () => {
+            clearInterval(countdownInterval);
+            document.body.removeChild(overlay);
+            alert("Il test è stato annullato.");
+            window.location.href = "test_selection.html";
+        });
+
+        // Previeni ESC key mentre il modal è aperto
+        const escHandler = (e) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        };
+        document.addEventListener('keydown', escHandler);
     }
 });
 
@@ -2312,7 +2522,7 @@ function buildQuestionNav() {
     let testType;
     if (selectedTestUpper.includes("SAT")) {
         testType = "sat";  // SAT has its own adaptive logic
-    } else if (selectedTestUpper.includes("TOLC") || selectedTestUpper.includes("CATTOLICA") || selectedTestUpper.includes("MEDICINA")) {
+    } else if (selectedTestUpper.includes("TOLC") || selectedTestUpper.includes("CATTOLICA") || selectedTestUpper.includes("MEDICINA") || selectedTestUpper.includes("HUMAT")) {
         testType = "tolc";
     } else {
         testType = "bocconi";
