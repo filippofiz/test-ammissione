@@ -610,80 +610,74 @@ async function addTestBadges() {
 }
 
 // Funzione per recuperare il punteggio di un test (Training o Assessment)
-// Funzione per recuperare il punteggio di un test (Training o Assessment)
-// VERSIONE CORRETTA che gestisce i duplicati
+// VERSIONE CON ANSWER-FIRST APPROACH
 async function getTestScore(section, progressivo, selectedTest, tipologiaEsercizi) {
   console.log(`Getting score for: section=${section}, progressivo=${progressivo}, test=${selectedTest}, tipo=${tipologiaEsercizi}`);
-  
+
   const isTestPDF = selectedTest.includes("PDF");
   const questionsTable = isTestPDF ? "questions" : "questions_bancaDati";
   const answersTable = isTestPDF ? "student_answers" : "studentbocconi_answers";
-  
-  // Recupera le domande del test
-  let query = supabase.from(questionsTable).select("id");
+
+  // STEP 0: Get test_id from student_tests
+  const { data: studentTestData, error: studentTestError } = await supabase
+    .from("student_tests")
+    .select("id")
+    .eq("auth_uid", studentId)
+    .eq("section", section)
+    .eq("tipologia_esercizi", tipologiaEsercizi)
+    .eq("progressivo", progressivo)
+    .eq("tipologia_test", selectedTest)
+    .order("start_time", { ascending: false })
+    .limit(1);
+
+  if (studentTestError || !studentTestData || studentTestData.length === 0) {
+    throw new Error('Test non trovato per questo studente');
+  }
+
+  const testId = studentTestData[0].id;
+
+  // STEP 1: Get MAX(question_number) to determine how many questions
+  let maxQuestionQuery = supabase.from(questionsTable).select("question_number");
 
   if (selectedTest === "SAT PDF" && section === "Assessment Iniziale") {
-    // For SAT, get questions from all modules using Materia field
-    query = query
+    maxQuestionQuery = maxQuestionQuery
       .eq("Materia", section)
       .eq("tipologia_esercizi", tipologiaEsercizi)
       .eq("progressivo", progressivo)
       .eq("tipologia_test", selectedTest);
   } else {
-    // Regular query for non-SAT tests
-    query = query
+    maxQuestionQuery = maxQuestionQuery
       .eq("section", section)
       .eq("tipologia_esercizi", tipologiaEsercizi)
       .eq("progressivo", progressivo)
       .eq("tipologia_test", selectedTest);
   }
 
-  const { data: questions, error: questionsError } = await query;
-  
-  if (questionsError) {
-    throw new Error(`Errore query domande: ${questionsError.message}`);
+  maxQuestionQuery = maxQuestionQuery.order("question_number", { ascending: false }).limit(1);
+
+  const { data: maxQuestionData, error: maxQuestionError } = await maxQuestionQuery;
+
+  if (maxQuestionError || !maxQuestionData || maxQuestionData.length === 0) {
+    throw new Error('Nessuna domanda trovata per questo test');
   }
-  
-  if (!questions || questions.length === 0) {
-    throw new Error('Nessuna domanda trovata');
-  }
-  
-  // Rimuovi eventuali domande duplicate
-  const uniqueQuestionIds = [...new Set(questions.map(q => q.id))];
-  const totalQuestions = uniqueQuestionIds.length;
-  
-  // Log di debug per assessment algebra
-  if (section.toLowerCase().includes('algebra') && tipologiaEsercizi === 'Assessment') {
-    console.log('🔍 DEBUG Assessment Algebra:');
-    console.log(`- Domande totali trovate: ${questions.length}`);
-    console.log(`- Domande uniche: ${uniqueQuestionIds.length}`);
-    if (questions.length !== uniqueQuestionIds.length) {
-      console.warn('⚠️ Trovate domande duplicate nel database!');
-    }
-  }
-  
-  // Recupera le risposte dello studente con auto_score E answer per SAT
+
+  const questionCount = maxQuestionData[0].question_number;
+  const totalQuestions = questionCount;
+
+  // STEP 2: Fetch N most recent answers for this test
   const { data: answers, error: answersError } = await supabase
     .from(answersTable)
     .select("question_id, auto_score, answer")
     .eq("auth_uid", studentId)
-    .in("question_id", uniqueQuestionIds);
+    .eq("test_id", testId)
+    .order("submitted_at", { ascending: false })
+    .limit(questionCount);
 
   if (answersError) {
     throw new Error(`Errore query risposte: ${answersError.message}`);
   }
 
-  // Gestisci eventuali risposte duplicate per la stessa domanda
-  // (prendi solo l'ultima risposta per ogni domanda)
-  const answerMap = new Map();
-  if (answers && answers.length > 0) {
-    answers.forEach(answer => {
-      answerMap.set(answer.question_id, answer);
-    });
-  }
-
-  // Converti la mappa in array di risposte uniche
-  const uniqueAnswers = Array.from(answerMap.values());
+  const uniqueAnswers = answers || [];
 
   // For SAT tests, filter out questions that were never shown (answer = 'xx')
   let shownAnswers = uniqueAnswers;
