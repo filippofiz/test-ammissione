@@ -173,7 +173,24 @@ if (materiaError) {
 function displayTestTree(tests, studentTests, testType, selectedTest) {
     const testTree = document.getElementById("testTree");
     testTree.innerHTML = "";
-  
+
+    // Check if no tests assigned
+    if (!tests || tests.length === 0) {
+        const emptyMessage = document.createElement("div");
+        emptyMessage.style.cssText = `
+            text-align: center;
+            padding: 3rem;
+            color: #6c757d;
+            font-size: 1.1rem;
+        `;
+        emptyMessage.innerHTML = `
+            <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;">📭</div>
+            <p>No tests have been assigned yet</p>
+        `;
+        testTree.appendChild(emptyMessage);
+        return;
+    }
+
     // 1️⃣ Group by Materia (blank → "Altro")
     const byMateria = {};
     tests.forEach(test => {

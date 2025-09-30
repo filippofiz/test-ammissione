@@ -110,6 +110,19 @@
       z-index: 2;
     }
 
+    #studentsContainer {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    @media (max-width: 768px) {
+      #studentsContainer {
+        grid-template-columns: 1fr;
+      }
+    }
+
     /* Header della sezione studenti con toggle */
     .students-header {
       display: flex;
@@ -184,71 +197,119 @@
     }
 
     .student-progress {
-      background: #f8f9fa;
-      border: 1px solid #e9ecef;
-      border-radius: 12px;
-      padding: 1.5rem;
-      margin-bottom: 1rem;
+      background: white;
+      border: 2px solid #e9ecef;
+      border-radius: 16px;
+      padding: 1.25rem;
       transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .student-progress::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #00a666, #00c775);
     }
 
     .student-progress:hover {
-      transform: translateX(4px);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
       border-color: #00a666;
     }
 
     .student-progress h3 {
-      font-size: 1.2rem;
+      font-size: 1.1rem;
       margin-bottom: 1rem;
       display: flex;
       align-items: center;
+      justify-content: flex-start;
       gap: 0.5rem;
+      color: rgb(28, 37, 69);
+      flex-wrap: wrap;
     }
 
     .tutor-badge {
       font-size: 0.75rem;
       background: #00a666;
       color: white;
-      padding: 0.2rem 0.6rem;
+      padding: 0.25rem 0.75rem;
       border-radius: 12px;
       font-weight: 600;
     }
 
-    .test-row {
+    /* Tests container with cards */
+    .tests-grid {
       display: flex;
-      align-items: center;
+      flex-direction: column;
       gap: 0.75rem;
-      padding: 0.75rem;
-      background: rgba(0, 166, 102, 0.05);
-      border-radius: 10px;
-      margin-bottom: 0.5rem;
+      flex: 1;
     }
 
-    .test-row span {
-      flex: 1;
-      font-weight: 500;
-      font-size: 0.9rem;
+    .test-card {
+      width: 100%;
+      background: #f8f9fa;
+      border: 2px solid #e9ecef;
+      border-radius: 10px;
+      padding: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    .test-card:hover {
+      border-color: #00a666;
+      background: white;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 166, 102, 0.15);
+    }
+
+    .test-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: rgb(28, 37, 69);
+    }
+
+    .test-card-buttons {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: flex-start;
+      flex-wrap: wrap;
     }
 
     .viewTestsBtn, .dashboardBtn {
-      padding: 0.5rem 1rem;
+      padding: 0.6rem 1rem;
       border: none;
-      border-radius: 6px;
+      border-radius: 8px;
       font-weight: 600;
       cursor: pointer;
       font-size: 0.85rem;
       transition: all 0.3s ease;
+      flex: 1;
+      min-width: 120px;
     }
 
     .viewTestsBtn {
       background: white;
       color: #00a666;
-      border: 1.5px solid #00a666;
+      border: 2px solid #00a666;
     }
 
     .viewTestsBtn:hover {
       background: #00a666;
       color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 166, 102, 0.3);
     }
 
     .dashboardBtn {
@@ -257,7 +318,15 @@
     }
 
     .dashboardBtn:hover {
-      transform: scale(1.05);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(28, 37, 69, 0.3);
+    }
+
+    .no-tests-message {
+      text-align: center;
+      padding: 2rem;
+      color: #6c757d;
+      font-style: italic;
     }
 
     /* Loading state */
@@ -477,20 +546,20 @@
     async function displayStudentProgress(students, showAllMode) {
       const studentsContainer = document.getElementById("studentsContainer");
       studentsContainer.innerHTML = "";
-      
+
       if (students.length === 0) {
-        const message = showAllMode ? 
-          'Nessuno studente nel sistema' : 
+        const message = showAllMode ?
+          'Nessuno studente nel sistema' :
           'Nessuno studente assegnato a te';
         studentsContainer.innerHTML = `<p style="text-align: center; color: #6c757d;">${message}</p>`;
         return;
       }
-      
+
       for (const student of students) {
         const studentDiv = document.createElement("div");
         studentDiv.classList.add("student-progress");
-        
-        // Mostra il nome dello studente con badge del tutor se in modalità "tutti"
+
+        // Student header with tutor badge if in "all" mode
         let studentHeader = `<h3>👤 ${student.name}`;
         if (showAllMode && student.tutors) {
           const isMyStudent = student.tutor_id === currentTutorId;
@@ -500,32 +569,49 @@
         }
         studentHeader += '</h3>';
         studentDiv.innerHTML = studentHeader;
-        
+
         if (student.tests && student.tests.length > 0) {
-          student.tests.forEach(testOption => {
-            const rowDiv = document.createElement("div");
-            rowDiv.classList.add("test-row");
-            
-            const testLabel = document.createElement("span");
-            testLabel.textContent = `📝 ${testOption}`;
-            rowDiv.appendChild(testLabel);
-            
+          // Sort tests: "Assessment Iniziale" first, then alphabetically
+          const sortedTests = [...student.tests].sort((a, b) => {
+            if (a.includes("Assessment Iniziale")) return -1;
+            if (b.includes("Assessment Iniziale")) return 1;
+            return a.localeCompare(b);
+          });
+
+          const testsGrid = document.createElement("div");
+          testsGrid.classList.add("tests-grid");
+
+          sortedTests.forEach(testOption => {
+            const testCard = document.createElement("div");
+            testCard.classList.add("test-card");
+
+            const testHeader = document.createElement("div");
+            testHeader.classList.add("test-card-header");
+            testHeader.textContent = `📝 ${testOption}`;
+            testCard.appendChild(testHeader);
+
+            const buttonsDiv = document.createElement("div");
+            buttonsDiv.classList.add("test-card-buttons");
+
             const viewTestsBtn = document.createElement("button");
             viewTestsBtn.classList.add("viewTestsBtn");
             viewTestsBtn.textContent = "Test assegnati";
             viewTestsBtn.onclick = () => viewStudentTests(student.auth_uid, student.name, testOption);
-            rowDiv.appendChild(viewTestsBtn);
-            
+            buttonsDiv.appendChild(viewTestsBtn);
+
             const dashboardBtn = document.createElement("button");
             dashboardBtn.classList.add("dashboardBtn");
             dashboardBtn.textContent = "Risultati";
             dashboardBtn.onclick = () => viewStudentDashboard(student.auth_uid, student.name, testOption);
-            rowDiv.appendChild(dashboardBtn);
-            
-            studentDiv.appendChild(rowDiv);
+            buttonsDiv.appendChild(dashboardBtn);
+
+            testCard.appendChild(buttonsDiv);
+            testsGrid.appendChild(testCard);
           });
+
+          studentDiv.appendChild(testsGrid);
         } else {
-          studentDiv.innerHTML += '<p style="color: #6c757d; text-align: center;">Nessun test disponibile</p>';
+          studentDiv.innerHTML += '<p class="no-tests-message">Nessun test disponibile</p>';
         }
         studentsContainer.appendChild(studentDiv);
       }

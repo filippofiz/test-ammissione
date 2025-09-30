@@ -292,7 +292,42 @@ async function loadTestAnswers() {
         console.log("✅ DEBUG: No duplicate answers found");
       }
     }
-    
+
+    // ✅ DEDUPLICATE questions - prioritize questions that student actually answered
+    const answeredQuestionIds = new Set(answersData ? answersData.map(a => a.question_id) : []);
+    const uniqueQuestionsMap = new Map();
+    let duplicatesRemoved = 0;
+
+    questionsData.forEach(q => {
+      const key = `${q.question_number}-${q.page_number}`;
+
+      if (!uniqueQuestionsMap.has(key)) {
+        // First occurrence - keep it
+        uniqueQuestionsMap.set(key, q);
+      } else {
+        // Duplicate found
+        duplicatesRemoved++;
+        const existingQuestion = uniqueQuestionsMap.get(key);
+
+        // If this duplicate has an answer but existing doesn't, replace it
+        if (answeredQuestionIds.has(q.id) && !answeredQuestionIds.has(existingQuestion.id)) {
+          console.log(`⚠️ Replacing duplicate Q${q.question_number} (ID ${existingQuestion.id} → ${q.id}) because student answered ${q.id}`);
+          uniqueQuestionsMap.set(key, q);
+        } else {
+          console.warn(`⚠️ Duplicate removed: Question ${q.question_number} on page ${q.page_number} (ID: ${q.id})`);
+        }
+      }
+    });
+
+    // Replace questionsData with deduplicated version
+    questionsData.splice(0, questionsData.length, ...Array.from(uniqueQuestionsMap.values()));
+    totalQuestions = questionsData.length;
+
+    if (duplicatesRemoved > 0) {
+      console.warn(`⚠️ ${duplicatesRemoved} duplicate question(s) removed from tutor view`);
+      console.log(`✅ Unique questions to display: ${questionsData.length}`);
+    }
+
     // Mappa risposte
     const studentAnswersMap = {};
     if (answersData) {

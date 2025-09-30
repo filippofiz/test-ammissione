@@ -65,11 +65,56 @@ async function initializeEventListeners() {
     }
   });
   
+  let fullscreenExitConfirmShown = false;
   document.addEventListener("fullscreenchange", () => {
     if (isSubmitting) return;
-    if (timerStarted && !document.fullscreenElement) {
-      showCustomAlert("⚠ Il test è stato annullato perché sei uscito dallo schermo intero.", () => {
-        window.location.href = "test_selection.html";
+    if (timerStarted && !document.fullscreenElement && !fullscreenExitConfirmShown) {
+      fullscreenExitConfirmShown = true;
+
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.95);display:flex;align-items:center;justify-content:center;z-index:999999';
+
+      const dialog = document.createElement('div');
+      dialog.style.cssText = 'background:white;padding:3rem;border-radius:20px;max-width:600px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.5)';
+      dialog.innerHTML = '<div style="font-size:4rem;margin-bottom:1rem">⚠️</div><h2 style="color:#dc2626;margin-bottom:1rem;font-size:1.8rem">Attenzione!</h2><p style="font-size:1.2rem;color:#374151;margin-bottom:1rem">Sei uscito dalla modalità schermo intero.<br><strong>Devi tornare a schermo intero per continuare.</strong></p><div style="font-size:1.1rem;font-weight:600;color:#dc2626;margin-bottom:0.5rem">⏰ Devi fare una scelta entro <span id="countdown" style="font-size:2.5rem;font-weight:800">5</span> secondi</div><p style="font-size:0.95rem;color:#6b7280;margin-bottom:2rem">altrimenti il test verrà annullato automaticamente</p><div style="display:flex;gap:1rem;justify-content:center"><button id="returnFullscreen" style="background:linear-gradient(135deg,#00a666,#00c775);color:white;border:none;padding:1rem 2rem;border-radius:12px;font-size:1.1rem;font-weight:600;cursor:pointer">🔄 Torna a Schermo Intero</button><button id="exitTest" style="background:#dc2626;color:white;border:none;padding:1rem 2rem;border-radius:12px;font-size:1.1rem;font-weight:600;cursor:pointer">❌ Esci e Annulla Test</button></div>';
+
+      overlay.appendChild(dialog);
+      document.body.appendChild(overlay);
+
+      // Countdown timer
+      let timeLeft = 5;
+      const countdownSpan = dialog.querySelector('#countdown');
+      const countdownInterval = setInterval(() => {
+        timeLeft--;
+        countdownSpan.textContent = timeLeft;
+        if (timeLeft <= 0) {
+          clearInterval(countdownInterval);
+          document.body.removeChild(overlay);
+          showCustomAlert("⚠️ Test annullato - Nessuna scelta è stata effettuata entro il tempo limite.", () => {
+            window.location.href = "test_selection.html";
+          });
+        }
+      }, 1000);
+
+      dialog.querySelector('#returnFullscreen').addEventListener('click', async () => {
+        clearInterval(countdownInterval);
+        try {
+          await document.documentElement.requestFullscreen();
+          document.body.removeChild(overlay);
+          fullscreenExitConfirmShown = false;
+        } catch (err) {
+          showCustomAlert("⚠ Impossibile tornare alla modalità schermo intero. Il test è stato annullato.", () => {
+            window.location.href = "test_selection.html";
+          });
+        }
+      });
+
+      dialog.querySelector('#exitTest').addEventListener('click', () => {
+        clearInterval(countdownInterval);
+        document.body.removeChild(overlay);
+        showCustomAlert("⚠ Il test è stato annullato.", () => {
+          window.location.href = "test_selection.html";
+        });
       });
     }
   });

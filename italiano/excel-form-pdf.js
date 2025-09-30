@@ -96,7 +96,12 @@ class ExcelFormPDF {
       { value: 'Ragionamento numerico', category: 'GEN', color: '#6a1b9a' },
       { value: 'Comprensione verbale', category: 'GEN', color: '#6a1b9a' },
       { value: 'Logica', category: 'GEN', color: '#6a1b9a' },
-      { value: 'Inglese', category: 'GEN', color: '#6a1b9a' }
+      { value: 'Inglese', category: 'GEN', color: '#6a1b9a' },
+      // HUMAT
+      { value: 'Pensiero matematico', category: 'HUMAT', color: '#f57c00' },
+      { value: 'Pensiero procedurale', category: 'HUMAT', color: '#f57c00' },
+      { value: 'Pensiero visivo', category: 'HUMAT', color: '#f57c00' },
+      { value: 'Critical Thinking', category: 'HUMAT', color: '#f57c00' }
     ];
     
     // Lista dei valori validi estratti (usata per validazioni)
@@ -786,8 +791,10 @@ class ExcelFormPDF {
             <option value="TOL PDF">TOL PDF</option>
             <option value="MEDICINA PDF">MEDICINA PDF</option>
             <option value="CATTOLICA PDF">CATTOLICA PDF</option>
+            <option value="HUMAT PDF">HUMAT PDF</option>
             <option value="BOCCONI MAGISTRALE PDF">BOCCONI MAGISTRALE PDF</option>
             <option value="BOCCONI LAW PDF">BOCCONI LAW PDF</option>
+            <option value="SAT PDF">SAT PDF</option>
           </select>
         </div>
         

@@ -250,9 +250,15 @@ body.correction-mode .correction-indicator {
   min-height: 400px;
 }
 
-/* Materia Sections */
+/* Materia Sections - MODERN COLLAPSIBLE DESIGN */
 .materia-section {
-  margin-bottom: 2.5rem;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
   animation: fadeInUp 0.6s ease-out;
 }
 
@@ -267,20 +273,57 @@ body.correction-mode .correction-indicator {
   }
 }
 
-.materia-header {
-  font-size: 1.5rem;
-  color: rgb(28, 37, 69);
-  margin-bottom: 1.5rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 2px solid #e9ecef;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+.materia-section:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
-.materia-header::before {
-  content: '📚';
-  font-size: 1.3rem;
+.materia-section.collapsed {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.materia-header {
+  font-size: 1.4rem;
+  color: rgb(28, 37, 69);
+  padding: 1.5rem 1.75rem 1.5rem 1.5rem;
+  margin: 0;
+  border-bottom: 3px solid #00a666;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.3s ease;
+}
+
+.materia-header:hover {
+  background: #f8f9fa;
+}
+
+/* Icona toggle */
+.toggle-icon {
+  font-size: 1.2rem;
+  transition: transform 0.3s ease;
+  margin-right: 0.5rem;
+}
+
+.materia-section.collapsed .toggle-icon {
+  transform: rotate(-90deg);
+}
+
+/* Content area della materia */
+.materia-content {
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+  max-height: 5000px;
+  opacity: 1;
+  overflow: visible;
+}
+
+.materia-section.collapsed .materia-content {
+  max-height: 0;
+  padding: 0 1.5rem;
+  opacity: 0;
+  overflow: hidden;
 }
 
 .section {

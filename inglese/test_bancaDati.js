@@ -65,11 +65,56 @@ async function initializeEventListeners() {
     }
   });
   
+  let fullscreenExitConfirmShown = false;
   document.addEventListener("fullscreenchange", () => {
     if (isSubmitting) return;
-    if (timerStarted && !document.fullscreenElement) {
-      showCustomAlert("⚠ Il test è stato annullato perché sei uscito dallo schermo intero.", () => {
-        window.location.href = "test_selection.html";
+    if (timerStarted && !document.fullscreenElement && !fullscreenExitConfirmShown) {
+      fullscreenExitConfirmShown = true;
+
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.95);display:flex;align-items:center;justify-content:center;z-index:999999';
+
+      const dialog = document.createElement('div');
+      dialog.style.cssText = 'background:white;padding:3rem;border-radius:20px;max-width:600px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.5)';
+      dialog.innerHTML = '<div style="font-size:4rem;margin-bottom:1rem">⚠️</div><h2 style="color:#dc2626;margin-bottom:1rem;font-size:1.8rem">Warning!</h2><p style="font-size:1.2rem;color:#374151;margin-bottom:1rem">You have exited full screen mode.<br><strong>You must return to full screen to continue.</strong></p><div style="font-size:1.1rem;font-weight:600;color:#dc2626;margin-bottom:0.5rem">⏰ You must make a choice within <span id="countdown" style="font-size:2.5rem;font-weight:800">5</span> seconds</div><p style="font-size:0.95rem;color:#6b7280;margin-bottom:2rem">or the test will be automatically annulled</p><div style="display:flex;gap:1rem;justify-content:center"><button id="returnFullscreen" style="background:linear-gradient(135deg,#00a666,#00c775);color:white;border:none;padding:1rem 2rem;border-radius:12px;font-size:1.1rem;font-weight:600;cursor:pointer">🔄 Return to Full Screen</button><button id="exitTest" style="background:#dc2626;color:white;border:none;padding:1rem 2rem;border-radius:12px;font-size:1.1rem;font-weight:600;cursor:pointer">❌ Exit and Annul Test</button></div>';
+
+      overlay.appendChild(dialog);
+      document.body.appendChild(overlay);
+
+      // Countdown timer
+      let timeLeft = 5;
+      const countdownSpan = dialog.querySelector('#countdown');
+      const countdownInterval = setInterval(() => {
+        timeLeft--;
+        countdownSpan.textContent = timeLeft;
+        if (timeLeft <= 0) {
+          clearInterval(countdownInterval);
+          document.body.removeChild(overlay);
+          showCustomAlert("⚠️ Test annulled - No choice was made within the time limit.", () => {
+            window.location.href = "test_selection.html";
+          });
+        }
+      }, 1000);
+
+      dialog.querySelector('#returnFullscreen').addEventListener('click', async () => {
+        clearInterval(countdownInterval);
+        try {
+          await document.documentElement.requestFullscreen();
+          document.body.removeChild(overlay);
+          fullscreenExitConfirmShown = false;
+        } catch (err) {
+          showCustomAlert("⚠ Unable to return to full screen mode. The test has been annulled.", () => {
+            window.location.href = "test_selection.html";
+          });
+        }
+      });
+
+      dialog.querySelector('#exitTest').addEventListener('click', () => {
+        clearInterval(countdownInterval);
+        document.body.removeChild(overlay);
+        showCustomAlert("⚠ The test has been annulled.", () => {
+          window.location.href = "test_selection.html";
+        });
       });
     }
   });
@@ -168,8 +213,27 @@ async function loadTest() {
     showCustomAlert("Nessuna domanda disponibile per questo test.");
     return;
   }
-  
-  questions = data;
+
+  // ✅ DEDUPLICATE questions based on question_number
+  const uniqueQuestionsMap = new Map();
+  let duplicatesFound = 0;
+
+  data.forEach(q => {
+    const key = `${q.question_number}`;
+    if (!uniqueQuestionsMap.has(key)) {
+      uniqueQuestionsMap.set(key, q);
+    } else {
+      duplicatesFound++;
+      console.warn(`⚠️ Duplicate found: Question ${q.question_number} (ID: ${q.id})`);
+    }
+  });
+
+  questions = Array.from(uniqueQuestionsMap.values());
+
+  if (duplicatesFound > 0) {
+    console.warn(`⚠️ ${duplicatesFound} duplicate question(s) removed from ${data.length} total questions`);
+    console.log(`✅ Unique questions: ${questions.length}`);
+  }
   
   if (hasSections) {
     calculatePageSectionMapping();
