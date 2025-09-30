@@ -732,7 +732,10 @@
 
       const { error } = await supabase
         .from("student_tests")
-        .insert(testEntries);
+        .upsert(testEntries, {
+          onConflict: 'auth_uid,section,tipologia_esercizi,progressivo,tipologia_test',
+          ignoreDuplicates: true
+        });
 
       if (error) {
         console.error("❌ Error assigning tests:", error.message);

@@ -1853,6 +1853,38 @@ async function submitAnswers(timeExpired = false) {
 
     console.log("📌 Submitting answers for student:", studentId);
 
+    // ✅✅ NEW CODE: Fetch test_id from database instead of sessionStorage
+    console.log("🔄 Fetching test_id from database...");
+
+    const { data: testData, error: testError } = await supabase
+        .from("student_tests")
+        .select("id, status")
+        .eq("auth_uid", studentId)
+        .eq("section", sessionStorage.getItem("currentSection"))
+        .eq("tipologia_esercizi", sessionStorage.getItem("currentTipologiaEsercizi"))
+        .eq("progressivo", sessionStorage.getItem("currentTestProgressivo"))
+        .eq("tipologia_test", sessionStorage.getItem("selectedTestType"))
+        .in("status", ["unlocked", "in_progress"])
+        .order("start_time", { ascending: false })
+        .limit(1);
+
+    if (testError) {
+        console.error("❌ ERROR fetching test_id:", testError);
+        showCustomAlert("Errore nel recupero del test. Riprova.");
+        isSubmitting = false;
+        return;
+    }
+
+    if (!testData || testData.length === 0) {
+        console.error("❌ ERROR: No active test found for this student");
+        showCustomAlert("Test non trovato. Contatta il tutor.");
+        isSubmitting = false;
+        return;
+    }
+
+    const testId = testData[0].id;
+    console.log("✅ Test ID fetched from database:", testId);
+
     // For SAT tests, merge all saved answers before submission
     if (isSATTest) {
         // Save current module answers to satAllAnswers
@@ -1912,10 +1944,13 @@ async function submitAnswers(timeExpired = false) {
 
     console.log("✅ Final submission data:", submissions);
 
-    // ✅ Insert into Supabase (with JavaScript protection against duplicates)
+    // ✅ Upsert into Supabase (prevents duplicates at database level)
     let { data, error } = await supabase
         .from("student_answers")
-        .insert(submissions);
+        .upsert(submissions, {
+            onConflict: 'auth_uid,question_id,test_id',
+            ignoreDuplicates: false
+        });
 
     if (error) {
         console.error("❌ ERROR submitting answers:", error);
