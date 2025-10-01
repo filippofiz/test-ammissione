@@ -2179,12 +2179,16 @@ class ExcelFormBancaDati {
     };
 
     localStorage.setItem('bancaDati_draft', JSON.stringify(draft));
-    alert(`📝 Bozza salvata!\n\n` +
-      `Test: ${this.commonData.tipologia_test}\n` +
-      `Materia: ${this.commonData.Materia}\n` +
-      `Test: ${this.commonData.section}: ${this.commonData.tipologia_esercizi} ${this.commonData.progressivo}\n` +
-      `Domande: ${this.tableData.length}\n\n` +
-      `Puoi chiudere e riprendere più tardi.`);
+
+    this.showCustomAlert({
+      title: '📝 Bozza Salvata!',
+      message: `<strong>Test:</strong> ${this.commonData.tipologia_test}<br>
+                <strong>Materia:</strong> ${this.commonData.Materia}<br>
+                <strong>Sezione:</strong> ${this.commonData.section}: ${this.commonData.tipologia_esercizi} ${this.commonData.progressivo}<br>
+                <strong>Domande:</strong> ${this.tableData.length}<br><br>
+                Puoi chiudere e riprendere più tardi.`,
+      type: 'success'
+    });
   }
 
   // Load draft from localStorage
@@ -2207,26 +2211,24 @@ class ExcelFormBancaDati {
     const timestamp = new Date(draft.timestamp);
     const timeAgo = this.getTimeAgo(timestamp);
 
-    const restore = confirm(
-      `📝 Trovata bozza salvata!\n\n` +
-      `Test: ${draft.commonData.tipologia_test}\n` +
-      `Materia: ${draft.commonData.Materia}\n` +
-      `Sezione: ${draft.commonData.section}: ${draft.commonData.tipologia_esercizi} ${draft.commonData.progressivo}\n` +
-      `Domande: ${draft.tableData.length}\n` +
-      `Salvata: ${timeAgo}\n\n` +
-      `Vuoi riprendere questa bozza?`
-    );
+    const action = await this.showDraftOptions({
+      title: '📝 Trovata Bozza Salvata!',
+      message: `<strong>Test:</strong> ${draft.commonData.tipologia_test}<br>
+                <strong>Materia:</strong> ${draft.commonData.Materia}<br>
+                <strong>Sezione:</strong> ${draft.commonData.section}: ${draft.commonData.tipologia_esercizi} ${draft.commonData.progressivo}<br>
+                <strong>Domande:</strong> ${draft.tableData.length}<br>
+                <strong>Salvata:</strong> ${timeAgo}`
+    });
 
-    if (restore) {
+    if (action === 'resume') {
       this.commonData = draft.commonData;
       this.tableData = draft.tableData;
       return true;
+    } else if (action === 'delete') {
+      this.clearDraft();
+      return false;
     } else {
-      // Ask if they want to delete the draft
-      const deleteDraft = confirm('Vuoi eliminare questa bozza?');
-      if (deleteDraft) {
-        this.clearDraft();
-      }
+      // close - do nothing
       return false;
     }
   }
@@ -2247,6 +2249,362 @@ class ExcelFormBancaDati {
     if (hours < 24) return `${hours} or${hours === 1 ? 'a' : 'e'} fa`;
     const days = Math.floor(hours / 24);
     return `${days} giorn${days === 1 ? 'o' : 'i'} fa`;
+  }
+
+  // Custom alert modal
+  showCustomAlert({ title, message, type = 'info' }) {
+    return new Promise((resolve) => {
+      const overlay = document.createElement('div');
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 999999;
+        backdrop-filter: blur(4px);
+      `;
+
+      const modal = document.createElement('div');
+      modal.style.cssText = `
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        max-width: 500px;
+        width: 90%;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        animation: slideIn 0.3s ease-out;
+      `;
+
+      const colors = {
+        success: { bg: '#d4edda', border: '#28a745', text: '#155724' },
+        warning: { bg: '#fff3cd', border: '#ffc107', text: '#856404' },
+        danger: { bg: '#f8d7da', border: '#dc3545', text: '#721c24' },
+        info: { bg: '#d1ecf1', border: '#17a2b8', text: '#0c5460' }
+      };
+
+      const color = colors[type];
+
+      modal.innerHTML = `
+        <style>
+          @keyframes slideIn {
+            from {
+              transform: translateY(-50px);
+              opacity: 0;
+            }
+            to {
+              transform: translateY(0);
+              opacity: 1;
+            }
+          }
+        </style>
+        <div style="background: ${color.bg}; border-left: 5px solid ${color.border}; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+          <h3 style="margin: 0 0 0.5rem 0; color: ${color.text}; font-size: 1.3rem;">${title}</h3>
+          <div style="color: ${color.text}; line-height: 1.6;">${message}</div>
+        </div>
+        <div style="text-align: right;">
+          <button id="customAlertOk" style="
+            background: ${color.border};
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+          ">OK</button>
+        </div>
+      `;
+
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+
+      const okBtn = document.getElementById('customAlertOk');
+      okBtn.addEventListener('mouseenter', () => {
+        okBtn.style.transform = 'scale(1.05)';
+        okBtn.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+      });
+      okBtn.addEventListener('mouseleave', () => {
+        okBtn.style.transform = 'scale(1)';
+        okBtn.style.boxShadow = 'none';
+      });
+
+      okBtn.onclick = () => {
+        document.body.removeChild(overlay);
+        resolve();
+      };
+    });
+  }
+
+  // Draft options modal (3 buttons: resume, delete, close)
+  showDraftOptions({ title, message }) {
+    return new Promise((resolve) => {
+      const overlay = document.createElement('div');
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 999999;
+      `;
+
+      const modal = document.createElement('div');
+      modal.style.cssText = `
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        max-width: 550px;
+        width: 90%;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        animation: slideIn 0.3s ease-out;
+        border: 3px solid #ffc107;
+      `;
+
+      const infoBox = document.createElement('div');
+      infoBox.style.cssText = 'background: #fff3cd; border-left: 5px solid #ffc107; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;';
+      infoBox.innerHTML = `
+        <h3 style="margin: 0 0 0.5rem 0; color: #856404; font-size: 1.4rem;">${title}</h3>
+        <div style="color: #856404; line-height: 1.8; font-size: 1rem;">${message}</div>
+      `;
+
+      const buttonContainer = document.createElement('div');
+      buttonContainer.style.cssText = 'display: flex; flex-direction: column; gap: 0.75rem;';
+
+      const resumeBtn = document.createElement('button');
+      resumeBtn.textContent = '✅ Continua a Lavorare sulla Bozza';
+      resumeBtn.style.cssText = `
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      `;
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.textContent = '🗑️ Elimina Bozza';
+      deleteBtn.style.cssText = `
+        background: #dc3545;
+        color: white;
+        border: none;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      `;
+
+      const closeBtn = document.createElement('button');
+      closeBtn.textContent = '❌ Chiudi (Mantieni Bozza)';
+      closeBtn.style.cssText = `
+        background: #6c757d;
+        color: white;
+        border: none;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      `;
+
+      buttonContainer.appendChild(resumeBtn);
+      buttonContainer.appendChild(deleteBtn);
+      buttonContainer.appendChild(closeBtn);
+
+      modal.appendChild(infoBox);
+      modal.appendChild(buttonContainer);
+
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+
+      // Add hover effects and click handlers
+      [resumeBtn, deleteBtn, closeBtn].forEach(btn => {
+        btn.addEventListener('mouseenter', () => {
+          btn.style.transform = 'scale(1.03)';
+          btn.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+        });
+        btn.addEventListener('mouseleave', () => {
+          btn.style.transform = 'scale(1)';
+          btn.style.boxShadow = 'none';
+        });
+      });
+
+      resumeBtn.addEventListener('click', () => {
+        try {
+          document.body.removeChild(overlay);
+        } catch (e) {}
+        resolve('resume');
+      });
+
+      deleteBtn.addEventListener('click', () => {
+        try {
+          document.body.removeChild(overlay);
+        } catch (e) {}
+        // Hide draft indicator
+        const draftIndicator = document.getElementById('draftIndicator');
+        if (draftIndicator) {
+          draftIndicator.style.display = 'none';
+        }
+        resolve('delete');
+      });
+
+      closeBtn.addEventListener('click', () => {
+        try {
+          document.body.removeChild(overlay);
+        } catch (e) {}
+        // Hide draft indicator
+        const draftIndicator = document.getElementById('draftIndicator');
+        if (draftIndicator) {
+          draftIndicator.style.display = 'none';
+        }
+        resolve('close');
+      });
+
+      // Close on escape key
+      const escapeHandler = (e) => {
+        if (e.key === 'Escape') {
+          document.body.removeChild(overlay);
+          document.removeEventListener('keydown', escapeHandler);
+          resolve('close');
+        }
+      };
+      document.addEventListener('keydown', escapeHandler);
+    });
+  }
+
+  // Custom confirm modal
+  showCustomConfirm({ title, message, confirmText, cancelText, type = 'warning' }) {
+    return new Promise((resolve) => {
+      const overlay = document.createElement('div');
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 999999;
+        backdrop-filter: blur(4px);
+      `;
+
+      const modal = document.createElement('div');
+      modal.style.cssText = `
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        max-width: 500px;
+        width: 90%;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        animation: slideIn 0.3s ease-out;
+      `;
+
+      const colors = {
+        success: { bg: '#d4edda', border: '#28a745', text: '#155724', confirmBg: '#28a745' },
+        warning: { bg: '#fff3cd', border: '#ffc107', text: '#856404', confirmBg: '#ffc107' },
+        danger: { bg: '#f8d7da', border: '#dc3545', text: '#721c24', confirmBg: '#dc3545' },
+        info: { bg: '#d1ecf1', border: '#17a2b8', text: '#0c5460', confirmBg: '#17a2b8' }
+      };
+
+      const color = colors[type];
+
+      modal.innerHTML = `
+        <style>
+          @keyframes slideIn {
+            from {
+              transform: translateY(-50px);
+              opacity: 0;
+            }
+            to {
+              transform: translateY(0);
+              opacity: 1;
+            }
+          }
+        </style>
+        <div style="background: ${color.bg}; border-left: 5px solid ${color.border}; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+          <h3 style="margin: 0 0 0.5rem 0; color: ${color.text}; font-size: 1.3rem;">${title}</h3>
+          <div style="color: ${color.text}; line-height: 1.6;">${message}</div>
+        </div>
+        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+          <button id="customConfirmCancel" style="
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+          ">${cancelText}</button>
+          <button id="customConfirmOk" style="
+            background: ${color.confirmBg};
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+          ">${confirmText}</button>
+        </div>
+      `;
+
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+
+      const okBtn = document.getElementById('customConfirmOk');
+      const cancelBtn = document.getElementById('customConfirmCancel');
+
+      [okBtn, cancelBtn].forEach(btn => {
+        btn.addEventListener('mouseenter', () => {
+          btn.style.transform = 'scale(1.05)';
+          btn.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+        });
+        btn.addEventListener('mouseleave', () => {
+          btn.style.transform = 'scale(1)';
+          btn.style.boxShadow = 'none';
+        });
+      });
+
+      okBtn.onclick = () => {
+        document.body.removeChild(overlay);
+        resolve(true);
+      };
+
+      cancelBtn.onclick = () => {
+        document.body.removeChild(overlay);
+        resolve(false);
+      };
+
+      // Close on escape key
+      const escapeHandler = (e) => {
+        if (e.key === 'Escape') {
+          document.body.removeChild(overlay);
+          document.removeEventListener('keydown', escapeHandler);
+          resolve(false);
+        }
+      };
+      document.addEventListener('keydown', escapeHandler);
+    });
   }
 }
 
