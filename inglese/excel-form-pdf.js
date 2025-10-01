@@ -2842,7 +2842,9 @@ class ExcelFormPDF {
       // Inserisci i dati nella tabella questions
       const { data, error } = await supabase
         .from('questions')
-        .insert(dataToSave);
+        .upsert(dataToSave, {
+          onConflict: 'tipologia_test,Materia,section,tipologia_esercizi,progressivo,question_number,argomento'
+        });
       
       if (error) {
         console.error('Errore Supabase:', error);

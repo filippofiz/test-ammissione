@@ -709,11 +709,12 @@ class ExcelFormBancaDati {
     const header = document.createElement('div');
     header.className = 'excel-bd-header';
     header.innerHTML = `
-      <h3>🏦 Editor Domande Test Banca Dati con LaTeX</h3>
+      <h3>🏦 Question Bank Test Editor with LaTeX</h3>
       <div class="excel-bd-controls">
-        <button class="excel-bd-btn secondary" onclick="excelFormBancaDati.addRow()">➕ Aggiungi Riga</button>
-        <button class="excel-bd-btn primary" onclick="excelFormBancaDati.save()">💾 Salva Tutto</button>
-        <button class="excel-bd-btn danger" onclick="excelFormBancaDati.close()">✖ Chiudi</button>
+        <button class="excel-bd-btn secondary" onclick="excelFormBancaDati.addRow()">➕ Add Row</button>
+        <button class="excel-bd-btn info" onclick="excelFormBancaDati.saveDraft()">📝 Save Draft</button>
+        <button class="excel-bd-btn primary" onclick="excelFormBancaDati.save()">💾 Save to Database</button>
+        <button class="excel-bd-btn danger" onclick="excelFormBancaDati.close()">✖ Close</button>
       </div>
     `;
     
@@ -745,8 +746,46 @@ class ExcelFormBancaDati {
     document.body.appendChild(this.overlay);
   }
 
-  open() {
-    this.showInitialConfig();
+  async open() {
+    // Check for existing draft first
+    const hasDraft = await this.checkForDraft();
+
+    if (hasDraft) {
+      // Draft was restored, show the editor
+      this.buildTable();
+      this.overlay.style.display = 'block';
+
+      document.getElementById('bdTestInfo').textContent =
+        `${this.commonData.tipologia_test} | ${this.commonData.Materia} | ${this.commonData.section}: ${this.commonData.tipologia_esercizi} ${this.commonData.progressivo}`;
+
+      this.showInfoBanner();
+
+      // Rebuild rows from tableData
+      const tbody = document.getElementById('excelBDTableBody');
+      tbody.innerHTML = '';
+      this.tableData.forEach((rowData, index) => {
+        const tr = document.createElement('tr');
+
+        const tdNum = document.createElement('td');
+        tdNum.className = 'row-number';
+        tdNum.textContent = index + 1;
+        tr.appendChild(tdNum);
+
+        this.createCells(tr, rowData, index);
+        tbody.appendChild(tr);
+      });
+
+      this.updateStatus();
+      this.setupKeyboardNavigation();
+
+      // Re-render LaTeX if present
+      if (window.MathJax) {
+        MathJax.typesetPromise().catch(err => console.error('MathJax error:', err));
+      }
+    } else {
+      // No draft, show config modal
+      this.showInitialConfig();
+    }
   }
 
   updateMateriaOptions(tipologiaTest) {
@@ -2101,7 +2140,9 @@ class ExcelFormBancaDati {
       
      const { data, error } = await supabaseBD
   .from('questions_bancaDati')
-  .insert(dataToSave);
+  .upsert(dataToSave, {
+    onConflict: 'tipologia_test,Materia,section,tipologia_esercizi,progressivo,question_number,argomento'
+  });
       
       if (error) {
         console.error('Errore Supabase:', error);
@@ -2116,15 +2157,97 @@ class ExcelFormBancaDati {
         `Domande salvate: ${dataToSave.length}`);
       
       this.overlay.style.display = 'none';
-      
+
       setTimeout(() => {
         window.location.reload();
       }, 1000);
-      
+
+      // Clear draft after successful save
+      this.clearDraft();
+
     } catch (error) {
       console.error('Errore durante il salvataggio:', error);
       alert(`❌ Errore durante il salvataggio:\n${error.message || 'Errore sconosciuto'}`);
     }
+  }
+
+  // Save draft to localStorage
+  saveDraft() {
+    const draft = {
+      commonData: this.commonData,
+      tableData: this.tableData,
+      timestamp: new Date().toISOString()
+    };
+
+    localStorage.setItem('bancaDati_draft', JSON.stringify(draft));
+    alert(`📝 Draft saved!\n\n` +
+      `Test: ${this.commonData.tipologia_test}\n` +
+      `Subject: ${this.commonData.Materia}\n` +
+      `Section: ${this.commonData.section}: ${this.commonData.tipologia_esercizi} ${this.commonData.progressivo}\n` +
+      `Questions: ${this.tableData.length}\n\n` +
+      `You can close and resume later.`);
+  }
+
+  // Load draft from localStorage
+  loadDraft() {
+    const draftStr = localStorage.getItem('bancaDati_draft');
+    if (!draftStr) return null;
+
+    try {
+      return JSON.parse(draftStr);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  // Check for existing draft and offer to restore
+  async checkForDraft() {
+    const draft = this.loadDraft();
+    if (!draft) return false;
+
+    const timestamp = new Date(draft.timestamp);
+    const timeAgo = this.getTimeAgo(timestamp);
+
+    const restore = confirm(
+      `📝 Draft found!\n\n` +
+      `Test: ${draft.commonData.tipologia_test}\n` +
+      `Subject: ${draft.commonData.Materia}\n` +
+      `Section: ${draft.commonData.section}: ${draft.commonData.tipologia_esercizi} ${draft.commonData.progressivo}\n` +
+      `Questions: ${draft.tableData.length}\n` +
+      `Saved: ${timeAgo}\n\n` +
+      `Do you want to resume this draft?`
+    );
+
+    if (restore) {
+      this.commonData = draft.commonData;
+      this.tableData = draft.tableData;
+      return true;
+    } else {
+      // Ask if they want to delete the draft
+      const deleteDraft = confirm('Do you want to delete this draft?');
+      if (deleteDraft) {
+        this.clearDraft();
+      }
+      return false;
+    }
+  }
+
+  // Clear draft from localStorage
+  clearDraft() {
+    localStorage.removeItem('bancaDati_draft');
+  }
+
+  // Helper to format time ago
+  getTimeAgo(date) {
+    const seconds = Math.floor((new Date() - date) / 1000);
+
+    if (seconds < 60) return 'a few seconds ago';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+    const days = Math.floor(hours / 24);
+    return `${days} day${days === 1 ? '' : 's'} ago`;
   }
 }
 
