@@ -799,73 +799,104 @@ async function loadTest() {
           hasSections = false;
         } else {
         
-        // Scegli i boundaries corretti in base al tipo di test
-        let boundariesFilter;
-        const isAssessmentIniziale = currentSection === "Assessment Iniziale" || tipologiaEsercizi === "Assessment";
-        
-        if (isAssessmentIniziale && simulazioniData.boundaries_assessment_iniziale) {
-          boundariesFilter = simulazioniData.boundaries_assessment_iniziale;
-          console.log("Using Assessment Iniziale boundaries:", boundariesFilter);
-        } else if (simulazioniData.boundaries) {
-          boundariesFilter = simulazioniData.boundaries;
-          console.log("Using standard boundaries:", boundariesFilter);
-        } else {
-          console.log("No boundaries found, proceeding without sections");
-          sectionPageBoundaries = {};
-          sectionPageStartPages = {};
-          return;
-        }
-        
-        sectionNames = simulazioniData.nome_parti; // expects an array of section names
-        console.log("Fetched section names:", sectionNames);
-        
-        // Carica le percentuali tempo se disponibili
-        if (isAssessmentIniziale && simulazioniData['time_allocation_assessment_iniziale']) {
-          timeAllocationPercentages = simulazioniData['time_allocation_assessment_iniziale'].map(p => parseFloat(p));
-          console.log("Using Assessment Iniziale time allocation:", timeAllocationPercentages);
-        } else if (simulazioniData['time_allocation']) {
-          timeAllocationPercentages = simulazioniData['time_allocation'].map(p => parseFloat(p));
-          console.log("Using standard time allocation:", timeAllocationPercentages);
-        } else {
-          timeAllocationPercentages = null;
-          console.log("No time allocation found, will use proportional calculation");
-        }
+        // Determine which tests should have sections
+        const isAssessmentIniziale = currentSection === "Assessment Iniziale";
+        const isSimulazioni = currentSection === "Simulazioni";
+        const shouldHaveSections = isSimulazioni || isAssessmentIniziale;
 
-        // Now fetch the page numbers for questions whose question_number is in our dynamic boundaries array.
-        if (!boundariesFilter || boundariesFilter.length === 0) {
-          console.log("No boundaries to fetch, proceeding without sections");
-          sectionPageBoundaries = {};
-          sectionPageStartPages = {};
-          return;
-        }
-        
-        const { data: boundaries, error: boundaryError } = await supabase
-          .from("questions")
-          .select("question_number, page_number")
-          .eq("pdf_url", pdfUrl)
-          .in("question_number", boundariesFilter)
-          .order("question_number");
-        if (boundaryError) {
-          console.error("❌ Error fetching section boundaries:", boundaryError.message);
-          return;
-        }
-        console.log("📌 Section Boundaries (Page Numbers):", boundaries);
-
-        // Reset the section boundaries objects.
-        sectionPageBoundaries = {};
-        sectionPageStartPages = {};
-
-        // Map the fetched boundaries to section numbers.
-        hasSections = true; // Abbiamo sezioni!
-        boundaries.forEach(q => {
-          const index = boundariesFilter.indexOf(q.question_number);
-          if (index !== -1) {
-            const sectionNumber = index + 2; // first boundary becomes section 2, etc.
-            sectionPageBoundaries[sectionNumber] = q.question_number;
-            sectionPageStartPages[sectionNumber] = q.page_number;
-          }
+        console.log(`🎯 Section Check:`, {
+            currentSection,
+            tipologiaEsercizi,
+            isSimulazioni,
+            isAssessmentIniziale,
+            shouldHaveSections
         });
-        console.log("Section Boundaries Loaded:", sectionPageBoundaries);
+
+        if (!shouldHaveSections) {
+          console.log("✅ Training/Non-Iniziale test - proceeding WITHOUT sections");
+          sectionPageBoundaries = {};
+          sectionPageStartPages = {};
+          hasSections = false;
+          timeAllocationPercentages = null;
+          // Skip all section-related processing
+        } else {
+          // Simulazioni OR Assessment Iniziale get boundaries and time allocation
+          let boundariesFilter;
+
+          if (isAssessmentIniziale && simulazioniData.boundaries_assessment_iniziale) {
+            boundariesFilter = simulazioniData.boundaries_assessment_iniziale;
+            console.log("✅ Using Assessment Iniziale boundaries:", boundariesFilter);
+
+            sectionNames = simulazioniData.nome_parti;
+            console.log("Fetched section names:", sectionNames);
+
+            // Load time allocation for Assessment Iniziale
+            if (simulazioniData['time_allocation_assessment_iniziale']) {
+              timeAllocationPercentages = simulazioniData['time_allocation_assessment_iniziale'].map(p => parseFloat(p));
+              console.log("Using Assessment Iniziale time allocation:", timeAllocationPercentages);
+            } else {
+              timeAllocationPercentages = null;
+              console.log("No time allocation found, will use proportional calculation");
+            }
+          } else if (isSimulazioni && simulazioniData.boundaries) {
+            boundariesFilter = simulazioniData.boundaries;
+            console.log("✅ Using Simulazioni boundaries:", boundariesFilter);
+
+            sectionNames = simulazioniData.nome_parti;
+            console.log("Fetched section names:", sectionNames);
+
+            // Load time allocation for Simulazioni
+            if (simulazioniData['time_allocation']) {
+              timeAllocationPercentages = simulazioniData['time_allocation'].map(p => parseFloat(p));
+              console.log("Using Simulazioni time allocation:", timeAllocationPercentages);
+            } else {
+              timeAllocationPercentages = null;
+              console.log("No time allocation found, will use proportional calculation");
+            }
+          } else {
+            // No boundaries found for this test type
+            console.log("No boundaries found for this test type, proceeding without sections");
+            sectionPageBoundaries = {};
+            sectionPageStartPages = {};
+            hasSections = false;
+            timeAllocationPercentages = null;
+            boundariesFilter = null;
+          }
+
+          // Now fetch the page numbers for questions whose question_number is in our dynamic boundaries array.
+          if (boundariesFilter && boundariesFilter.length > 0) {
+            const { data: boundaries, error: boundaryError } = await supabase
+              .from("questions")
+              .select("question_number, page_number")
+              .eq("pdf_url", pdfUrl)
+              .in("question_number", boundariesFilter)
+              .order("question_number");
+            if (boundaryError) {
+              console.error("❌ Error fetching section boundaries:", boundaryError.message);
+              sectionPageBoundaries = {};
+              sectionPageStartPages = {};
+              hasSections = false;
+            } else {
+              console.log("📌 Section Boundaries (Page Numbers):", boundaries);
+
+              // Reset the section boundaries objects.
+              sectionPageBoundaries = {};
+              sectionPageStartPages = {};
+
+              // Map the fetched boundaries to section numbers.
+              hasSections = true; // Abbiamo sezioni!
+              boundaries.forEach(q => {
+                const index = boundariesFilter.indexOf(q.question_number);
+                if (index !== -1) {
+                  const sectionNumber = index + 2; // first boundary becomes section 2, etc.
+                  sectionPageBoundaries[sectionNumber] = q.question_number;
+                  sectionPageStartPages[sectionNumber] = q.page_number;
+                }
+              });
+              console.log("Section Boundaries Loaded:", sectionPageBoundaries);
+            }
+          }
+        }
         } // Chiusura dell'else aggiunto sopra
     } else {
       // Nessuna configurazione trovata per questo test
