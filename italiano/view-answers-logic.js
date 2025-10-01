@@ -665,21 +665,116 @@ function displaySingleQuestion(q, studentAnswerRaw, questionNumber, isNotShown, 
     `;
     questionDiv.appendChild(header);
 
-    // Testo domanda (solo se non PDF)
-    if (!usePDF && q.question) {
-      const qText = document.createElement("div");
-      qText.classList.add("question-text");
-      qText.innerHTML = q.question;
-      questionDiv.appendChild(qText);
+    const isBancaDati = questionsTable === "questions_bancaDati";
+
+    // Testo domanda
+    if (!usePDF) {
+      const questionText = isBancaDati ? q.question_text : q.question;
+      if (questionText) {
+        const qText = document.createElement("div");
+        qText.classList.add("question-text");
+        qText.innerHTML = questionText;
+        questionDiv.appendChild(qText);
+      }
     }
 
-    // Immagine se presente
+    // Immagine se presente (hidden by default)
     if (q.image_url) {
+      const imgContainer = document.createElement("div");
+      imgContainer.classList.add("image-container");
+
+      const toggleBtn = document.createElement("button");
+      toggleBtn.classList.add("toggle-image-btn");
+      toggleBtn.textContent = "📷 Mostra immagine domanda";
+      toggleBtn.onclick = function() {
+        const img = this.nextElementSibling;
+        if (img.style.display === "none" || img.style.display === "") {
+          img.style.display = "block";
+          this.textContent = "📷 Nascondi immagine domanda";
+        } else {
+          img.style.display = "none";
+          this.textContent = "📷 Mostra immagine domanda";
+        }
+      };
+
       const img = document.createElement("img");
       img.src = q.image_url;
       img.alt = "Immagine della domanda";
       img.classList.add("question-image");
-      questionDiv.appendChild(img);
+      img.style.display = "none";
+
+      imgContainer.appendChild(toggleBtn);
+      imgContainer.appendChild(img);
+      questionDiv.appendChild(imgContainer);
+    }
+
+    // For Banca Dati, display options with images
+    if (isBancaDati) {
+      const optionsContainer = document.createElement("div");
+      optionsContainer.classList.add("options-container");
+
+      ['A', 'B', 'C', 'D', 'E'].forEach(letter => {
+        const optionText = q[`option_${letter.toLowerCase()}`];
+        const optionImage = q[`image_option_${letter.toLowerCase()}`];
+
+        if (optionText || optionImage) {
+          const optionDiv = document.createElement("div");
+          optionDiv.classList.add("option-item");
+
+          // Check if this is the correct answer or student answer
+          if (letter === q.correct_answer?.toUpperCase()) {
+            optionDiv.classList.add("option-correct");
+          }
+          if (letter === studentAnswerRaw?.toUpperCase()) {
+            optionDiv.classList.add("option-student");
+          }
+
+          const optionLabel = document.createElement("strong");
+          optionLabel.classList.add("option-label");
+          optionLabel.textContent = `${letter}) `;
+          optionDiv.appendChild(optionLabel);
+
+          const optionContent = document.createElement("div");
+          optionContent.classList.add("option-content");
+
+          if (optionText) {
+            const optionTextSpan = document.createElement("span");
+            optionTextSpan.classList.add("option-text");
+            optionTextSpan.innerHTML = optionText;
+            optionContent.appendChild(optionTextSpan);
+          }
+
+          if (optionImage) {
+            const toggleOptBtn = document.createElement("button");
+            toggleOptBtn.classList.add("toggle-option-image-btn");
+            toggleOptBtn.textContent = "🖼️ Mostra";
+            toggleOptBtn.onclick = function() {
+              const img = this.nextElementSibling;
+              if (img.style.display === "none" || img.style.display === "") {
+                img.style.display = "block";
+                this.textContent = "🖼️ Nascondi";
+              } else {
+                img.style.display = "none";
+                this.textContent = "🖼️ Mostra";
+              }
+            };
+
+            const optionImg = document.createElement("img");
+            optionImg.src = optionImage;
+            optionImg.alt = `Opzione ${letter}`;
+            optionImg.classList.add("option-image");
+            optionImg.style.display = "none";
+
+            optionContent.appendChild(toggleOptBtn);
+            optionContent.appendChild(optionImg);
+          }
+
+          optionDiv.appendChild(optionContent);
+          optionsContainer.appendChild(optionDiv);
+        }
+      });
+
+      questionDiv.appendChild(optionsContainer);
     }
 
     // Risposta corretta
@@ -715,8 +810,8 @@ function displaySingleQuestion(q, studentAnswerRaw, questionNumber, isNotShown, 
       questionDiv.appendChild(answerDiv);
     }
 
-    // Altre risposte possibili (solo se non PDF)
-    if (!usePDF) {
+    // Altre risposte possibili (solo se PDF e non Banca Dati)
+    if (!usePDF && !isBancaDati) {
       let allChoices = [q.correct_answer, q.wrong_1, q.wrong_2, q.wrong_3, q.wrong_4]
         .filter(choice => choice); // Rimuovi valori null/undefined
       allChoices = [...new Set(allChoices)]; // Rimuovi duplicati

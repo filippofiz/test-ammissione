@@ -424,6 +424,110 @@ body {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+/* Image Toggle Buttons */
+.toggle-image-btn {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0.5rem 0;
+  transition: all 0.3s ease;
+}
+
+.toggle-image-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.image-container {
+  margin: 1rem 0;
+}
+
+/* Banca Dati Options Styling */
+.options-container {
+  margin: 1rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.option-item {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 2px solid #e9ecef;
+  background: #f8f9fa;
+  transition: all 0.2s ease;
+}
+
+.option-item:hover {
+  background: #e9ecef;
+}
+
+.option-item.option-correct {
+  border-color: #22c55e;
+  background: rgba(74, 222, 128, 0.1);
+}
+
+.option-item.option-student {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.option-item.option-correct.option-student {
+  border-color: #22c55e;
+  background: rgba(74, 222, 128, 0.15);
+}
+
+.option-label {
+  color: rgb(28, 37, 69);
+  font-size: 1rem;
+  margin-right: 0.5rem;
+}
+
+.option-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.option-text {
+  color: #495057;
+  line-height: 1.6;
+  flex: 1;
+}
+
+.toggle-option-image-btn {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  align-self: flex-start;
+  margin-top: 0.25rem;
+}
+
+.toggle-option-image-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+}
+
+.option-image {
+  max-width: 100%;
+  height: auto;
+  margin-top: 0.5rem;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
 .answer-row {
   margin: 0.5rem 0;
   padding: 0.5rem 0;

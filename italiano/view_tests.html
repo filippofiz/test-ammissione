@@ -1,46 +1,46 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Visualizza Test Studente - Up to Ten</title>
+  <title>View Student Tests - Up to Ten</title>
   <link rel="stylesheet" href="header.css">
   <link rel="stylesheet" href="view-tests.css">
   <link rel="stylesheet" href="floating-back-button.css">
 </head>
 <body>
-  <!-- Container principale che si sposta -->
+  <!-- Main container that moves -->
   <div class="page-container" id="pageContainer">
-    <!-- Header esterno -->
+    <!-- External header -->
     <div id="header-placeholder"></div>
 
     <div class="container">
       <!-- Page Header -->
       <div class="page-header">
-        <h2 id="studentTestProgressTitle">Avanzamento preparazione</h2>
+        <h2 id="studentTestProgressTitle">Preparation progress</h2>
       </div>
       
-      <!-- Legend Section con Toggle Button dentro -->
+      <!-- Legend Section with Toggle Button inside -->
       <div id="legend">
         <div class="legend-content">
-          <h4>📋 Legenda:</h4>
+          <h4>📋 Legend:</h4>
           <ul>
-            <li><span class="legend-box completed"></span> Completato</li>
-            <li><span class="legend-box unlocked"></span> Sbloccato</li>
-            <li><span class="legend-box locked"></span> Bloccato</li>
+            <li><span class="legend-box completed"></span> Completed</li>
+            <li><span class="legend-box unlocked"></span> Unlocked</li>
+            <li><span class="legend-box locked"></span> Locked</li>
           </ul>
         </div>
         
-        <!-- Container per esigenze speciali - NUOVO -->
+        <!-- Container for special needs - NEW -->
         <div class="special-needs-container">
           <label>
             <input type="checkbox" id="specialNeedsCheckbox">
-            <span>⏱️ Esigenze speciali (+30% tempo)</span>
+            <span>⏱️ Special needs (+30% time)</span>
           </label>
         </div>
         
-        <!-- Toggle Button dentro il box -->
-        <button id="toggleViewAnswers">👁️ Vedi risposte dello studente</button>
+        <!-- Toggle Button inside the box -->
+        <button id="toggleViewAnswers">👁️ View student answers</button>
       </div>
       
       <!-- Test Tree -->
@@ -53,6 +53,21 @@
   <!-- Indicatore modalità correzione -->
   <div class="correction-indicator">
     ✏️ MODALITÀ CORREZIONE ATTIVA
+  </div>
+
+  <!-- Toggle Button per Timeline Panel - LEFT SIDE -->
+  <button class="timeline-toggle-btn" id="timelineToggle">
+    📊 Progress Timeline
+  </button>
+
+  <!-- Timeline Panel - LEFT SIDE -->
+  <div id="timelinePanel">
+    <div class="timeline-panel-header">
+      <h3>📊 Progress Timeline</h3>
+    </div>
+    <div id="progressTimeline" class="timeline-content">
+      <!-- Populated dynamically -->
+    </div>
   </div>
 
   <!-- Toggle Button per Unlock Panel - FUORI dal container -->
@@ -82,16 +97,50 @@
 
   <!-- Scripts -->
   <script>
+    // Toggle timeline panel
+    document.getElementById('timelineToggle').addEventListener('click', function() {
+      const panel = document.getElementById('timelinePanel');
+      const container = document.getElementById('pageContainer');
+      const unlockPanel = document.getElementById('unlockPanel');
+      const unlockToggle = document.getElementById('unlockToggle');
+
+      if (panel.classList.contains('open')) {
+        panel.classList.remove('open');
+        container.classList.remove('shifted-left');
+        this.classList.remove('open');
+      } else {
+        // Close unlock panel if open
+        if (unlockPanel.classList.contains('open')) {
+          unlockPanel.classList.remove('open');
+          container.classList.remove('shifted');
+          unlockToggle.classList.remove('open');
+        }
+
+        panel.classList.add('open');
+        container.classList.add('shifted-left');
+        this.classList.add('open');
+      }
+    });
+
     // Toggle unlock panel
     document.getElementById('unlockToggle').addEventListener('click', function() {
       const panel = document.getElementById('unlockPanel');
       const container = document.getElementById('pageContainer');
-      
+      const timelinePanel = document.getElementById('timelinePanel');
+      const timelineToggle = document.getElementById('timelineToggle');
+
       if (panel.classList.contains('open')) {
         panel.classList.remove('open');
         container.classList.remove('shifted');
         this.classList.remove('open');
       } else {
+        // Close timeline panel if open
+        if (timelinePanel.classList.contains('open')) {
+          timelinePanel.classList.remove('open');
+          container.classList.remove('shifted-left');
+          timelineToggle.classList.remove('open');
+        }
+
         panel.classList.add('open');
         container.classList.add('shifted');
         this.classList.add('open');

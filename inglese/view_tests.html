@@ -55,6 +55,21 @@
     ✏️ MODALITÀ CORREZIONE ATTIVA
   </div>
 
+  <!-- Toggle Button per Timeline Panel - LEFT SIDE -->
+  <button class="timeline-toggle-btn" id="timelineToggle">
+    📊 Progress Timeline
+  </button>
+
+  <!-- Timeline Panel - LEFT SIDE -->
+  <div id="timelinePanel">
+    <div class="timeline-panel-header">
+      <h3>📊 Progress Timeline</h3>
+    </div>
+    <div id="progressTimeline" class="timeline-content">
+      <!-- Populated dynamically -->
+    </div>
+  </div>
+
   <!-- Toggle Button per Unlock Panel - FUORI dal container -->
   <button class="unlock-toggle-btn" id="unlockToggle">
     ⚙️ Modalità sblocco
@@ -82,16 +97,50 @@
 
   <!-- Scripts -->
   <script>
+    // Toggle timeline panel
+    document.getElementById('timelineToggle').addEventListener('click', function() {
+      const panel = document.getElementById('timelinePanel');
+      const container = document.getElementById('pageContainer');
+      const unlockPanel = document.getElementById('unlockPanel');
+      const unlockToggle = document.getElementById('unlockToggle');
+
+      if (panel.classList.contains('open')) {
+        panel.classList.remove('open');
+        container.classList.remove('shifted-left');
+        this.classList.remove('open');
+      } else {
+        // Close unlock panel if open
+        if (unlockPanel.classList.contains('open')) {
+          unlockPanel.classList.remove('open');
+          container.classList.remove('shifted');
+          unlockToggle.classList.remove('open');
+        }
+
+        panel.classList.add('open');
+        container.classList.add('shifted-left');
+        this.classList.add('open');
+      }
+    });
+
     // Toggle unlock panel
     document.getElementById('unlockToggle').addEventListener('click', function() {
       const panel = document.getElementById('unlockPanel');
       const container = document.getElementById('pageContainer');
-      
+      const timelinePanel = document.getElementById('timelinePanel');
+      const timelineToggle = document.getElementById('timelineToggle');
+
       if (panel.classList.contains('open')) {
         panel.classList.remove('open');
         container.classList.remove('shifted');
         this.classList.remove('open');
       } else {
+        // Close timeline panel if open
+        if (timelinePanel.classList.contains('open')) {
+          timelinePanel.classList.remove('open');
+          container.classList.remove('shifted-left');
+          timelineToggle.classList.remove('open');
+        }
+
         panel.classList.add('open');
         container.classList.add('shifted');
         this.classList.add('open');

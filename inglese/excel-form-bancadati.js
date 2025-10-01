@@ -54,9 +54,11 @@ class ExcelFormBancaDati {
       'Materia',
       'section',
       'tipologia_esercizi',
+      'GMAT_section',
       'progressivo',
       'criptato',
       'question_number',
+      'GMAT_question_difficulty',
       'question_text',
       'correct_answer',
       'wrong_answers',
@@ -747,21 +749,64 @@ class ExcelFormBancaDati {
     this.showInitialConfig();
   }
 
+  updateMateriaOptions(tipologiaTest) {
+    const materiaSelect = document.getElementById('configBDMateria');
+    if (!materiaSelect) return;
+
+    if (tipologiaTest === 'GMAT') {
+      // GMAT-specific macro-sections
+      materiaSelect.innerHTML = `
+        <option value="">Seleziona...</option>
+        <option value="Assessment Iniziale">Assessment Iniziale</option>
+        <option value="Quantitative Reasoning">Quantitative Reasoning</option>
+        <option value="Data Insights">Data Insights</option>
+        <option value="Verbal Reasoning">Verbal Reasoning</option>
+        <option value="Simulazioni">Simulazioni</option>
+      `;
+    } else {
+      // Default options for other tests
+      materiaSelect.innerHTML = `
+        <option value="">Seleziona...</option>
+        <option value="Matematica">Matematica</option>
+        <option value="Assessment Iniziale">Assessment Iniziale</option>
+        <option value="Simulazioni">Simulazioni</option>
+        <option value="Biologia">Biologia</option>
+        <option value="Chimica">Chimica</option>
+        <option value="Fisica">Fisica</option>
+        <option value="Logica">Logica</option>
+        <option value="Cultura Generale">Cultura Generale</option>
+        <option value="Altro">Altro</option>
+      `;
+    }
+  }
+
   updateSectionField(materia) {
     const sectionField = document.getElementById('sectionField');
-    
-    if (materia === 'Simulazioni') {
+
+    // For GMAT, section = materia (readonly)
+    const tipologiaTest = document.getElementById('configBDTipologiaTest')?.value;
+    const isGMAT = tipologiaTest === 'GMAT';
+
+    if (isGMAT) {
+      // For GMAT, section always equals materia
       sectionField.innerHTML = `
-        <input type="text" id="configBDSection" value="Simulazioni" readonly 
-               style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6; 
+        <input type="text" id="configBDSection" value="${materia}" readonly
+               style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6;
+                      border-radius: 6px; background: #f0f0f0; color: #666;">
+      `;
+      setTimeout(() => this.checkAndCalculateProgressivo(), 0);
+    } else if (materia === 'Simulazioni') {
+      sectionField.innerHTML = `
+        <input type="text" id="configBDSection" value="Simulazioni" readonly
+               style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6;
                       border-radius: 6px; background: #f0f0f0; color: #666;">
       `;
       setTimeout(() => this.checkAndCalculateProgressivo(), 0);
     } else if (materia === 'Assessment Iniziale') {
       // NUOVO: Assessment Iniziale ha sezione fissa
       sectionField.innerHTML = `
-        <input type="text" id="configBDSection" value="Assessment Iniziale" readonly 
-               style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6; 
+        <input type="text" id="configBDSection" value="Assessment Iniziale" readonly
+               style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6;
                       border-radius: 6px; background: #f0f0f0; color: #666;">
       `;
       setTimeout(() => this.checkAndCalculateProgressivo(), 0);
@@ -777,7 +822,7 @@ class ExcelFormBancaDati {
         'Pensiero critico',
         'Ragionamento numerico'
       ];
-      
+
       let selectHTML = '<select id="configBDSection" style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6; border-radius: 6px;">';
       selectHTML += '<option value="">Seleziona...</option>';
       sectionOptions.forEach(option => {
@@ -786,12 +831,12 @@ class ExcelFormBancaDati {
         }
       });
       selectHTML += '</select>';
-      
+
       sectionField.innerHTML = selectHTML;
       document.getElementById('configBDSection').addEventListener('change', () => this.checkAndCalculateProgressivo());
     } else {
       sectionField.innerHTML = `
-        <input type="text" id="configBDSection" placeholder="es. Genetica" 
+        <input type="text" id="configBDSection" placeholder="es. Genetica"
                style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6; border-radius: 6px;">
       `;
       document.getElementById('configBDSection').addEventListener('input', () => this.checkAndCalculateProgressivo());
@@ -800,19 +845,55 @@ class ExcelFormBancaDati {
 
   updateTipologiaField(materia) {
     const tipologiaField = document.getElementById('tipologiaField');
-    
-    if (materia === 'Simulazioni') {
+
+    // Check if GMAT
+    const tipologiaTest = document.getElementById('configBDTipologiaTest')?.value;
+    const isGMAT = tipologiaTest === 'GMAT';
+
+    if (isGMAT) {
+      // GMAT logic
+      if (materia === 'Assessment Iniziale') {
+        tipologiaField.innerHTML = `
+          <input type="text" id="configBDTipologiaEsercizi" value="Assessment" readonly
+                 style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6;
+                        border-radius: 6px; background: #f0f0f0; color: #666;">
+        `;
+        setTimeout(() => this.checkAndCalculateProgressivo(), 0);
+      } else if (materia === 'Simulazioni') {
+        tipologiaField.innerHTML = `
+          <input type="text" id="configBDTipologiaEsercizi" value="Test" readonly
+                 style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6;
+                        border-radius: 6px; background: #f0f0f0; color: #666;">
+        `;
+        setTimeout(() => this.checkAndCalculateProgressivo(), 0);
+      } else if (materia === 'Quantitative Reasoning' || materia === 'Data Insights' || materia === 'Verbal Reasoning') {
+        // Dropdown for the 3 main sections
+        let selectHTML = '<select id="configBDTipologiaEsercizi" style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6; border-radius: 6px;">';
+        selectHTML += '<option value="">Seleziona...</option>';
+        selectHTML += '<option value="Esercizi per casa">Esercizi per casa</option>';
+        selectHTML += '<option value="Assessment">Assessment</option>';
+        selectHTML += '</select>';
+
+        tipologiaField.innerHTML = selectHTML;
+        document.getElementById('configBDTipologiaEsercizi').addEventListener('change', () => this.checkAndCalculateProgressivo());
+      } else {
+        tipologiaField.innerHTML = `
+          <input type="text" id="configBDTipologiaEsercizi" placeholder="Seleziona macro-sezione"
+                 style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6; border-radius: 6px;">
+        `;
+      }
+    } else if (materia === 'Simulazioni') {
       tipologiaField.innerHTML = `
-        <input type="text" id="configBDTipologiaEsercizi" value="Test" readonly 
-               style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6; 
+        <input type="text" id="configBDTipologiaEsercizi" value="Test" readonly
+               style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6;
                       border-radius: 6px; background: #f0f0f0; color: #666;">
       `;
       setTimeout(() => this.checkAndCalculateProgressivo(), 0);
     } else if (materia === 'Assessment Iniziale') {
       // NUOVO: Assessment Iniziale ha tipologia fissa "Assessment"
       tipologiaField.innerHTML = `
-        <input type="text" id="configBDTipologiaEsercizi" value="Assessment" readonly 
-               style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6; 
+        <input type="text" id="configBDTipologiaEsercizi" value="Assessment" readonly
+               style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6;
                       border-radius: 6px; background: #f0f0f0; color: #666;">
       `;
       setTimeout(() => this.checkAndCalculateProgressivo(), 0);
@@ -822,12 +903,12 @@ class ExcelFormBancaDati {
       selectHTML += '<option value="Esercizi per casa">Esercizi per casa</option>';
       selectHTML += '<option value="Assessment">Assessment</option>';
       selectHTML += '</select>';
-      
+
       tipologiaField.innerHTML = selectHTML;
       document.getElementById('configBDTipologiaEsercizi').addEventListener('change', () => this.checkAndCalculateProgressivo());
     } else {
       tipologiaField.innerHTML = `
-        <input type="text" id="configBDTipologiaEsercizi" placeholder="es. Quiz" 
+        <input type="text" id="configBDTipologiaEsercizi" placeholder="es. Quiz"
                style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6; border-radius: 6px;">
       `;
       document.getElementById('configBDTipologiaEsercizi').addEventListener('input', () => this.checkAndCalculateProgressivo());
@@ -856,6 +937,7 @@ class ExcelFormBancaDati {
             <option value="PROFESSIONI SANITARIE BD">PROFESSIONI SANITARIE BD</option>
             <option value="VETERINARIA BD">VETERINARIA BD</option>
             <option value="ARCHITETTURA BD">ARCHITETTURA BD</option>
+            <option value="GMAT">GMAT</option>
           </select>
         </div>
         
@@ -898,7 +980,7 @@ class ExcelFormBancaDati {
         </div>
         
         <div style="margin-bottom: 1.5rem;">
-          <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Numero di domande:*</label>
+          <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Numero di domande:* <span style="font-weight: 400; color: #666;">(aggiungi numero totale includendo adaptive)</span></label>
           <input type="number" id="configBDNumDomande" value="10" min="1" max="200" style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6; border-radius: 6px;">
         </div>
         
@@ -923,7 +1005,10 @@ class ExcelFormBancaDati {
     document.getElementById('configBDTipologiaTest').addEventListener('change', () => {
       const uploadedDropdown = document.getElementById('uploadedTestsDropdown');
       const newTipologia = document.getElementById('configBDTipologiaTest').value;
-      
+
+      // Update Materia options based on test type
+      this.updateMateriaOptions(newTipologia);
+
       if (uploadedDropdown && newTipologia) {
         for (let option of uploadedDropdown.options) {
           if (option.value === newTipologia) {
@@ -933,7 +1018,7 @@ class ExcelFormBancaDati {
           }
         }
       }
-      
+
       this.checkAndCalculateProgressivo();
     });
     
@@ -1380,8 +1465,10 @@ class ExcelFormBancaDati {
       { id: 'Materia', name: 'Macro-sezione', width: '100px' },
       { id: 'section', name: 'Sezione', width: '100px' },
       { id: 'tipologia_esercizi', name: 'Tipologia', width: '100px' },
+      { id: 'GMAT_section', name: 'GMAT Section', width: '120px' },
       { id: 'progressivo', name: 'Prog.', width: '60px' },
       { id: 'question_number', name: 'N°', width: '50px' },
+      { id: 'GMAT_question_difficulty', name: 'Difficulty', width: '100px' },
       { id: 'question_text', name: 'Testo Domanda (LaTeX)', width: '300px' },
       { id: 'image_url', name: 'Img Domanda', width: '120px' },
       { id: 'correct_answer', name: 'Risp.', width: '60px' },
@@ -1425,14 +1512,16 @@ class ExcelFormBancaDati {
     
     const rowData = {
       ...this.commonData,
+      GMAT_section: '',
       criptato: false,
       question_number: rowIndex + 1,
+      GMAT_question_difficulty: '',
       question_text: '',
       correct_answer: '',
       wrong_answers: '',
       is_open_ended: false,
-      argomento: this.commonData.Materia === 'Simulazioni' ? '' : 
-                  this.commonData.Materia === 'Assessment Iniziale' ? 'Assessment Iniziale' : 
+      argomento: this.commonData.Materia === 'Simulazioni' ? '' :
+                  this.commonData.Materia === 'Assessment Iniziale' ? 'Assessment Iniziale' :
                   this.commonData.section,
       image_url: '',
       option_a: '',
@@ -1466,13 +1555,79 @@ class ExcelFormBancaDati {
     
     // Tipologia Esercizi - readonly
     this.createReadonlyCell(tr, rowData.tipologia_esercizi);
-    
+
+    // GMAT Section - only for GMAT tests
+    const isGMAT = rowData.tipologia_test === 'GMAT';
+    if (isGMAT) {
+      const tdGmatSection = document.createElement('td');
+      const gmatSectionSelect = document.createElement('select');
+      gmatSectionSelect.style.width = '100%';
+      gmatSectionSelect.style.padding = '0.5rem';
+
+      const options = ['', 'Quantitative Reasoning', 'Data Insights', 'Verbal Reasoning'];
+      options.forEach(opt => {
+        const option = document.createElement('option');
+        option.value = opt;
+        option.textContent = opt || 'Seleziona...';
+        if (rowData.GMAT_section === opt) {
+          option.selected = true;
+        }
+        gmatSectionSelect.appendChild(option);
+      });
+
+      gmatSectionSelect.addEventListener('change', (e) => {
+        this.updateCell(rowIndex, 'GMAT_section', e.target.value);
+        // Auto-update argomento to match GMAT_section
+        this.updateCell(rowIndex, 'argomento', e.target.value);
+        // Update argomento field in UI
+        const argomentoField = document.getElementById(`argomento-${rowIndex}`);
+        if (argomentoField) {
+          argomentoField.value = e.target.value;
+        }
+      });
+
+      tdGmatSection.appendChild(gmatSectionSelect);
+      tr.appendChild(tdGmatSection);
+    } else {
+      // For non-GMAT tests, add empty readonly cell
+      this.createReadonlyCell(tr, '');
+    }
+
     // Progressivo - readonly
     this.createReadonlyCell(tr, rowData.progressivo);
     
     // N° Domanda - readonly
     this.createReadonlyCell(tr, rowData.question_number);
-    
+
+    // GMAT Question Difficulty - only for GMAT tests
+    if (isGMAT) {
+      const tdDifficulty = document.createElement('td');
+      const difficultySelect = document.createElement('select');
+      difficultySelect.style.width = '100%';
+      difficultySelect.style.padding = '0.5rem';
+
+      const options = ['', 'Easy', 'Medium', 'Hard'];
+      options.forEach(opt => {
+        const option = document.createElement('option');
+        option.value = opt;
+        option.textContent = opt || 'Seleziona...';
+        if (rowData.GMAT_question_difficulty === opt) {
+          option.selected = true;
+        }
+        difficultySelect.appendChild(option);
+      });
+
+      difficultySelect.addEventListener('change', (e) => {
+        this.updateCell(rowIndex, 'GMAT_question_difficulty', e.target.value);
+      });
+
+      tdDifficulty.appendChild(difficultySelect);
+      tr.appendChild(tdDifficulty);
+    } else {
+      // For non-GMAT tests, add empty readonly cell
+      this.createReadonlyCell(tr, '');
+    }
+
     // Testo Domanda con LaTeX
     const tdQuestion = document.createElement('td');
     tdQuestion.className = 'question-cell';
@@ -1577,10 +1732,19 @@ class ExcelFormBancaDati {
       this.createImageCell(tr, rowIndex, `image_option_${letter}`, letter.toUpperCase());
     });
     
-    // Argomento - MODIFICATO PER GESTIRE ASSESSMENT INIZIALE
+    // Argomento - MODIFICATO PER GESTIRE ASSESSMENT INIZIALE E GMAT
     const tdArgomento = document.createElement('td');
-    
-    if (rowData.Materia === 'Simulazioni') {
+
+    if (isGMAT) {
+      // For GMAT, argomento = GMAT_section (readonly, auto-populated)
+      const argomentoInput = document.createElement('input');
+      argomentoInput.type = 'text';
+      argomentoInput.value = rowData.GMAT_section || '';
+      argomentoInput.className = 'cell-readonly';
+      argomentoInput.readOnly = true;
+      argomentoInput.id = `argomento-${rowIndex}`;
+      tdArgomento.appendChild(argomentoInput);
+    } else if (rowData.Materia === 'Simulazioni') {
       const argomentoInput = document.createElement('input');
       argomentoInput.type = 'text';
       argomentoInput.placeholder = 'Clicca o inizia a digitare...';
