@@ -454,7 +454,20 @@
     Banca Dati
   </label>
   <br><br>
-  
+
+  <!-- Draft Indicator -->
+  <div id="draftIndicator" style="display: none; background: #fff3cd; border: 2px solid #ffc107; border-radius: 10px; padding: 1rem; margin-bottom: 1rem;">
+    <div style="display: flex; align-items: center; justify-content: space-between;">
+      <div>
+        <strong style="color: #856404;">📝 Draft in Progress</strong>
+        <div id="draftInfo" style="color: #856404; font-size: 0.85rem; margin-top: 0.5rem;"></div>
+      </div>
+      <button id="openDraftBtn" style="background: #ffc107; color: #856404; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.85rem; transition: all 0.3s ease;">
+        Open Draft
+      </button>
+    </div>
+  </div>
+
   <!-- Bottoni nell'ordine corretto: Template poi Caricamento Avanzato -->
   <button id="templateBtn">
     📄 Open Template
@@ -623,6 +636,65 @@
     } else {
       console.error('newUploadBtn button not found!');
     }
+  });
+</script>
+
+<script>
+  // Check for draft and show indicator
+  window.addEventListener('load', function() {
+    function checkForDraft() {
+      const draftStr = localStorage.getItem('bancaDati_draft');
+      if (!draftStr) return;
+
+      try {
+        const draft = JSON.parse(draftStr);
+        const draftIndicator = document.getElementById('draftIndicator');
+        const draftInfo = document.getElementById('draftInfo');
+        const openDraftBtn = document.getElementById('openDraftBtn');
+
+        if (draftIndicator && draftInfo && openDraftBtn) {
+          // Calculate time ago
+          const timestamp = new Date(draft.timestamp);
+          const now = new Date();
+          const diffMs = now - timestamp;
+          const diffMins = Math.floor(diffMs / 60000);
+          let timeAgo;
+
+          if (diffMins < 1) timeAgo = 'a few seconds ago';
+          else if (diffMins < 60) timeAgo = `${diffMins} minutes ago`;
+          else if (diffMins < 1440) timeAgo = `${Math.floor(diffMins / 60)} hours ago`;
+          else timeAgo = `${Math.floor(diffMins / 1440)} days ago`;
+
+          // Show draft info
+          draftInfo.innerHTML = `
+            <strong>Test:</strong> ${draft.commonData.tipologia_test} |
+            <strong>Subject:</strong> ${draft.commonData.Materia} |
+            <strong>Section:</strong> ${draft.commonData.section}: ${draft.commonData.tipologia_esercizi} ${draft.commonData.progressivo}<br>
+            <strong>Questions:</strong> ${draft.tableData.length} |
+            <strong>Saved:</strong> ${timeAgo}
+          `;
+
+          draftIndicator.style.display = 'block';
+
+          // Handle open draft button
+          openDraftBtn.addEventListener('click', function() {
+            if (typeof excelFormBancaDati !== 'undefined' && excelFormBancaDati.open) {
+              excelFormBancaDati.open();
+            } else {
+              alert('⚠️ The Database upload module is not loaded yet. Reload the page and try again.');
+            }
+          });
+        }
+      } catch (e) {
+        // Silently fail if draft is corrupted
+      }
+    }
+
+    // Check for draft on page load
+    checkForDraft();
+
+    // Re-check periodically in case draft is cleared
+    setInterval(checkForDraft, 5000);
   });
 </script>
 </body>
