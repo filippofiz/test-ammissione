@@ -89,6 +89,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Carica l'albero dei test
   await loadTestTree();
 
+  // Carica la timeline dei progressi
+  await loadProgressTimeline();
+
 // Setup flag esigenze speciali
 await setupSpecialNeedsToggle();
 
@@ -371,7 +374,7 @@ function displayTestTree(tests, studentTests, testType, selectedTest) {
     `;
     emptyMessage.innerHTML = `
       <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;">📭</div>
-      <p>Nessun test è stato ancora assegnato</p>
+      <p>No tests have been assigned yet</p>
     `;
     tree.appendChild(emptyMessage);
     return;
@@ -1056,7 +1059,7 @@ function setupDragDrop(tests) {
           .update({ unlock_mode: newMode })
           .eq('id', id);
         if (error) {
-          alert("Error saving unlock mode: " + error.message);
+          alert("Errore salvando modalità di sblocco: " + error.message);
         }
       }
     });
@@ -1165,7 +1168,7 @@ async function confirmResetTest(section, testProgressivo, studentTestType, selec
       return;
   }
 
-  alert("✅ Test reset successfully. The student will have to retake it.");
+  alert("✅ Test reimpostato con successo. Lo studente dovrà rifarlo.");
   loadTestTree();
 }
 
@@ -1215,7 +1218,373 @@ async function viewStudentAnswers(section, testProgressivo, tipologiaEsercizi, s
   window.location.href = "view_answers.html";
 }
 
+// Load progress timeline
+async function loadProgressTimeline() {
+  const timelineContainer = document.getElementById('progressTimeline');
+  if (!timelineContainer) return;
+
+  const selectedTest = sessionStorage.getItem("selectedTestType");
+  if (!selectedTest) return;
+
+  console.log('📊 Loading progress timeline...');
+
+  // Fetch all completed tests with their results
+  const { data: completedTests, error } = await supabase
+    .from('student_tests')
+    .select('*')
+    .eq('auth_uid', studentId)
+    .eq('tipologia_test', selectedTest)
+    .eq('status', 'completed')
+    .order('start_time', { ascending: false });
+
+  if (error) {
+    console.error('Error loading timeline:', error);
+    timelineContainer.innerHTML = `
+      <div class="timeline-empty">
+        <div class="timeline-empty-icon">⚠️</div>
+        <p>Error loading timeline data</p>
+      </div>
+    `;
+    return;
+  }
+
+  if (!completedTests || completedTests.length === 0) {
+    timelineContainer.innerHTML = `
+      <div class="timeline-empty">
+        <div class="timeline-empty-icon">📭</div>
+        <p>No completed tests yet</p>
+        <p style="font-size: 0.9rem; margin-top: 0.5rem;">Start taking tests to see your progress here!</p>
+      </div>
+    `;
+    return;
+  }
+
+  console.log(`Found ${completedTests.length} completed tests`);
+
+  // Calculate detailed stats with breakdown by test type
+  const testTypeStats = {
+    training: { scores: [], passed: 0, failed: 0 },
+    assessment: { scores: [], passed: 0, failed: 0 },
+    simulation: { scores: [], passed: 0, failed: 0 }
+  };
+
+  // Build timeline items with scores
+  const timelineItems = [];
+  const scoreHistory = {}; // Track scores by test type to show improvement
+
+  for (const test of completedTests) {
+    try {
+      const score = await getTestScore(
+        test.section,
+        test.progressivo,
+        selectedTest,
+        test.tipologia_esercizi
+      );
+
+      // Categorize by test type and collect stats
+      let testType = null;
+      if (test.Materia === 'Simulazioni' || test.section === 'Simulazioni') {
+        testType = 'simulation';
+      } else if (test.tipologia_esercizi === 'Assessment') {
+        testType = 'assessment';
+      } else if (test.tipologia_esercizi === 'Esercizi per casa') {
+        testType = 'training';
+      }
+
+      if (testType) {
+        testTypeStats[testType].scores.push(score.percentage);
+        if (score.passed) {
+          testTypeStats[testType].passed++;
+        } else {
+          testTypeStats[testType].failed++;
+        }
+      }
+
+      // Track score history for improvement detection
+      const testKey = `${test.section}-${test.tipologia_esercizi}`;
+      if (!scoreHistory[testKey]) {
+        scoreHistory[testKey] = [];
+      }
+      scoreHistory[testKey].push({
+        percentage: score.percentage,
+        date: test.start_time
+      });
+
+      timelineItems.push({
+        test,
+        score,
+        date: test.start_time,
+        testType
+      });
+    } catch (error) {
+      console.error('Error getting score for test:', test, error);
+    }
+  }
+
+  // Calculate statistics for each test type
+  function calculateStats(scores) {
+    if (scores.length === 0) {
+      return { mean: 0, median: 0, best: 0, latest: 0, count: 0 };
+    }
+
+    const sorted = [...scores].sort((a, b) => a - b);
+    const mean = Math.round(scores.reduce((sum, s) => sum + s, 0) / scores.length);
+    const median = sorted.length % 2 === 0
+      ? Math.round((sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2)
+      : sorted[Math.floor(sorted.length / 2)];
+    const best = Math.max(...scores);
+    const latest = scores[scores.length - 1];
+
+    return { mean, median, best, latest, count: scores.length };
+  }
+
+  const trainingStats = calculateStats(testTypeStats.training.scores);
+  const assessmentStats = calculateStats(testTypeStats.assessment.scores);
+  const simulationStats = calculateStats(testTypeStats.simulation.scores);
+
+  // Sort by date (most recent first)
+  timelineItems.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  // Build HTML with 3-column detailed stats
+  const trainingPassRate = trainingStats.count > 0
+    ? Math.round((testTypeStats.training.passed / trainingStats.count) * 100)
+    : 0;
+  const assessmentPassRate = assessmentStats.count > 0
+    ? Math.round((testTypeStats.assessment.passed / assessmentStats.count) * 100)
+    : 0;
+  const simulationPassRate = simulationStats.count > 0
+    ? Math.round((testTypeStats.simulation.passed / simulationStats.count) * 100)
+    : 0;
+
+  let html = `
+    <div class="timeline-stats">
+      <h4>📊 Detailed Statistics by Test Type</h4>
+      <div class="timeline-stats-grid">
+
+        <!-- Training Column -->
+        <div class="timeline-type-column training-column">
+          <div class="timeline-type-header">
+            <div>
+              <div class="timeline-type-title">📝 Training</div>
+            </div>
+            <div class="timeline-type-count">${trainingStats.count}</div>
+          </div>
+          <div class="timeline-type-stats">
+            ${trainingStats.count > 0 ? `
+            <div class="timeline-stat-row">
+              <span class="timeline-stat-row-label">Pass Rate</span>
+              <span class="timeline-stat-row-value highlight">${trainingPassRate}%</span>
+            </div>
+            <div class="timeline-pass-rate-bar">
+              <div class="timeline-pass-rate-fill" style="width: ${trainingPassRate}%"></div>
+            </div>
+            <div class="timeline-stat-row">
+              <span class="timeline-stat-row-label">Mean Score</span>
+              <span class="timeline-stat-row-value">${trainingStats.mean}%</span>
+            </div>
+            <div class="timeline-stat-row">
+              <span class="timeline-stat-row-label">Median Score</span>
+              <span class="timeline-stat-row-value">${trainingStats.median}%</span>
+            </div>
+            <div class="timeline-stat-row">
+              <span class="timeline-stat-row-label">Best Score</span>
+              <span class="timeline-stat-row-value">${trainingStats.best}%</span>
+            </div>
+            <div class="timeline-stat-row">
+              <span class="timeline-stat-row-label">Latest Score</span>
+              <span class="timeline-stat-row-value">${trainingStats.latest}%</span>
+            </div>
+            ` : `
+            <div style="text-align: center; padding: 2rem; color: #9ca3af;">
+              <div style="font-size: 2rem; margin-bottom: 0.5rem;">📭</div>
+              <div style="font-size: 0.9rem;">No training completed yet</div>
+            </div>
+            `}
+          </div>
+        </div>
+
+        <!-- Assessment Column -->
+        <div class="timeline-type-column assessment-column">
+          <div class="timeline-type-header">
+            <div>
+              <div class="timeline-type-title">📋 Assessment</div>
+            </div>
+            <div class="timeline-type-count">${assessmentStats.count}</div>
+          </div>
+          <div class="timeline-type-stats">
+            ${assessmentStats.count > 0 ? `
+            <div class="timeline-stat-row">
+              <span class="timeline-stat-row-label">Pass Rate</span>
+              <span class="timeline-stat-row-value highlight">${assessmentPassRate}%</span>
+            </div>
+            <div class="timeline-pass-rate-bar">
+              <div class="timeline-pass-rate-fill" style="width: ${assessmentPassRate}%"></div>
+            </div>
+            <div class="timeline-stat-row">
+              <span class="timeline-stat-row-label">Mean Score</span>
+              <span class="timeline-stat-row-value">${assessmentStats.mean}%</span>
+            </div>
+            <div class="timeline-stat-row">
+              <span class="timeline-stat-row-label">Median Score</span>
+              <span class="timeline-stat-row-value">${assessmentStats.median}%</span>
+            </div>
+            <div class="timeline-stat-row">
+              <span class="timeline-stat-row-label">Best Score</span>
+              <span class="timeline-stat-row-value">${assessmentStats.best}%</span>
+            </div>
+            <div class="timeline-stat-row">
+              <span class="timeline-stat-row-label">Latest Score</span>
+              <span class="timeline-stat-row-value">${assessmentStats.latest}%</span>
+            </div>
+            ` : `
+            <div style="text-align: center; padding: 2rem; color: #93c5fd;">
+              <div style="font-size: 2rem; margin-bottom: 0.5rem;">📭</div>
+              <div style="font-size: 0.9rem;">No assessments completed yet</div>
+            </div>
+            `}
+          </div>
+        </div>
+
+        <!-- Simulation Column -->
+        <div class="timeline-type-column simulation-column">
+          <div class="timeline-type-header">
+            <div>
+              <div class="timeline-type-title">🏆 Simulation</div>
+            </div>
+            <div class="timeline-type-count">${simulationStats.count}</div>
+          </div>
+          <div class="timeline-type-stats">
+            ${simulationStats.count > 0 ? `
+            <div class="timeline-stat-row">
+              <span class="timeline-stat-row-label">Pass Rate</span>
+              <span class="timeline-stat-row-value highlight">${simulationPassRate}%</span>
+            </div>
+            <div class="timeline-pass-rate-bar">
+              <div class="timeline-pass-rate-fill" style="width: ${simulationPassRate}%"></div>
+            </div>
+            <div class="timeline-stat-row">
+              <span class="timeline-stat-row-label">Mean Score</span>
+              <span class="timeline-stat-row-value">${simulationStats.mean}%</span>
+            </div>
+            <div class="timeline-stat-row">
+              <span class="timeline-stat-row-label">Median Score</span>
+              <span class="timeline-stat-row-value">${simulationStats.median}%</span>
+            </div>
+            <div class="timeline-stat-row">
+              <span class="timeline-stat-row-label">Best Score</span>
+              <span class="timeline-stat-row-value">${simulationStats.best}%</span>
+            </div>
+            <div class="timeline-stat-row">
+              <span class="timeline-stat-row-label">Latest Score</span>
+              <span class="timeline-stat-row-value">${simulationStats.latest}%</span>
+            </div>
+            ` : `
+            <div style="text-align: center; padding: 2rem; color: #fbbf24;">
+              <div style="font-size: 2rem; margin-bottom: 0.5rem;">📭</div>
+              <div style="font-size: 0.9rem;">No simulations completed yet</div>
+            </div>
+            `}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  `;
+
+  timelineItems.forEach((item, index) => {
+    const { test, score, date } = item;
+    const statusClass = score.passed ? 'passed' : 'failed';
+    const icon = score.passed ? '✓' : '✗';
+
+    // Determine test type badge
+    let testTypeBadge = 'training';
+    let testTypeLabel = 'Training';
+
+    // Check for Assessment Iniziale first
+    if (test.Materia === 'Assessment Iniziale' || test.section === 'Assessment Iniziale') {
+      testTypeBadge = 'initial-assessment';
+      testTypeLabel = 'Initial Assessment';
+    }
+    // Check for Simulazioni
+    else if (test.Materia === 'Simulazioni' || test.section === 'Simulazioni') {
+      testTypeBadge = 'simulation';
+      testTypeLabel = 'Simulation';
+    }
+    // Check for Assessment
+    else if (test.tipologia_esercizi === 'Assessment') {
+      testTypeBadge = 'assessment';
+      testTypeLabel = 'Assessment';
+    }
+    // Otherwise it's Training (Esercizi per casa)
+    else if (test.tipologia_esercizi === 'Esercizi per casa') {
+      testTypeBadge = 'training';
+      testTypeLabel = 'Training';
+    }
+
+    // Check for improvement
+    const testKey = `${test.section}-${test.tipologia_esercizi}`;
+    const history = scoreHistory[testKey];
+    let improvementBadge = '';
+
+    if (history && history.length > 1) {
+      const currentIndex = history.findIndex(h => h.date === date);
+      if (currentIndex > 0) {
+        const previousScore = history[currentIndex - 1].percentage;
+        const diff = score.percentage - previousScore;
+
+        if (diff > 0) {
+          improvementBadge = `<span class="timeline-improvement-badge improved">+${diff}% improved</span>`;
+        } else if (diff < 0) {
+          improvementBadge = `<span class="timeline-improvement-badge declined">${diff}%</span>`;
+        }
+      } else if (currentIndex === 0) {
+        improvementBadge = `<span class="timeline-improvement-badge first">First attempt</span>`;
+      }
+    } else {
+      improvementBadge = `<span class="timeline-improvement-badge first">First attempt</span>`;
+    }
+
+    // Format date
+    const dateObj = new Date(date);
+    const formattedDate = dateObj.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    html += `
+      <div class="timeline-item">
+        <div class="timeline-dot ${statusClass}"></div>
+        <div class="timeline-content-box ${statusClass}">
+          <span class="timeline-type-badge ${testTypeBadge}">${testTypeLabel}</span>
+          <div class="timeline-header-row">
+            <div class="timeline-test-type">${test.tipologia_esercizi} ${test.progressivo}</div>
+            <div class="timeline-date">${formattedDate}</div>
+          </div>
+          <div class="timeline-section">📚 ${test.section}</div>
+          ${improvementBadge}
+          <div class="timeline-score-row">
+            <div class="timeline-score-badge ${statusClass}">
+              <span>${icon}</span>
+              <span>${score.percentage}%</span>
+            </div>
+            <div class="timeline-score-details">
+              ${score.correctAnswers}/${score.totalQuestions} correct
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  timelineContainer.innerHTML = html;
+  console.log('✅ Timeline loaded successfully');
+}
+
 // Export functions for global access if needed
 window.confirmResetTest = confirmResetTest;
 window.toggleTestLock = toggleTestLock;
 window.viewStudentAnswers = viewStudentAnswers;
+window.loadProgressTimeline = loadProgressTimeline;

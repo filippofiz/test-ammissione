@@ -17,7 +17,9 @@
       "WebSearch",
       "Bash(node:*)",
       "Bash(start \"C:\\App UpToTen\\admission-test\\inglese\\update-sat-boundaries.html\")",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(git restore:*)",
+      "Bash(git branch:*)"
     ],
     "deny": [],
     "ask": []
