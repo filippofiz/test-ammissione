@@ -662,6 +662,7 @@ async function copyTest(test) {
   const tipologieDisponibili = [
     'BOCCONI',
     'TOLC I',
+    'TOLC I PDF',
     'TOLC E',
     'TOL',
     'MEDICINA',

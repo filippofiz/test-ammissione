@@ -43,6 +43,11 @@
         <button id="toggleViewAnswers">👁️ View student answers</button>
       </div>
       
+      <!-- Statistics Section - NOW OUTSIDE PANEL -->
+      <div id="progressStats" class="progress-stats-container">
+        <!-- Populated dynamically by JS -->
+      </div>
+
       <!-- Test Tree -->
       <div id="testTree">
         <!-- Populated dynamically -->
@@ -67,6 +72,10 @@
     </div>
     <div id="progressTimeline" class="timeline-content">
       <!-- Populated dynamically -->
+    </div>
+    <div class="timeline-scroll-indicator" id="timelineScrollIndicator">
+      <div class="scroll-arrow">↓</div>
+      <div class="scroll-text">Scroll for more</div>
     </div>
   </div>
 
@@ -121,6 +130,25 @@
         this.classList.add('open');
       }
     });
+
+    // Handle scroll indicator visibility
+    const timelinePanel = document.getElementById('timelinePanel');
+    const scrollIndicator = document.getElementById('timelineScrollIndicator');
+
+    if (timelinePanel && scrollIndicator) {
+      timelinePanel.addEventListener('scroll', function() {
+        const scrollTop = this.scrollTop;
+        const scrollHeight = this.scrollHeight;
+        const clientHeight = this.clientHeight;
+        const scrolledToBottom = scrollTop + clientHeight >= scrollHeight - 50;
+
+        if (scrolledToBottom) {
+          scrollIndicator.classList.add('hidden');
+        } else {
+          scrollIndicator.classList.remove('hidden');
+        }
+      });
+    }
 
     // Toggle unlock panel
     document.getElementById('unlockToggle').addEventListener('click', function() {

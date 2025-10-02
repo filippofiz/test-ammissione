@@ -1115,6 +1115,29 @@ button.disabled-green, #testTree button.disabled-green {
   transition: left 0.3s ease;
   z-index: 1000;
   overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Custom scrollbar for timeline panel */
+#timelinePanel::-webkit-scrollbar {
+  width: 10px;
+}
+
+#timelinePanel::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+  margin: 10px 0;
+}
+
+#timelinePanel::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #3b82f6, #2563eb);
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+#timelinePanel::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #2563eb, #1d4ed8);
+  border: 2px solid rgba(255, 255, 255, 0.5);
 }
 
 #timelinePanel.open {
@@ -1144,7 +1167,60 @@ button.disabled-green, #testTree button.disabled-green {
 
 .timeline-content {
   padding: 2rem 1.5rem;
+  padding-bottom: 80px;
   position: relative;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Scroll Indicator */
+.timeline-scroll-indicator {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 600px;
+  padding: 1rem;
+  background: linear-gradient(to top, rgba(248, 250, 252, 0.98), transparent);
+  text-align: center;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+  z-index: 10;
+  transform: translateX(-600px);
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+#timelinePanel.open .timeline-scroll-indicator {
+  transform: translateX(0);
+}
+
+.timeline-scroll-indicator.hidden {
+  opacity: 0;
+}
+
+.scroll-arrow {
+  font-size: 2rem;
+  animation: bounce 2s infinite;
+  color: #3b82f6;
+}
+
+.scroll-text {
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: 600;
+  margin-top: 0.25rem;
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-10px);
+  }
+  60% {
+    transform: translateY(-5px);
+  }
 }
 
 /* Vertical Timeline Styles */
@@ -1152,7 +1228,9 @@ button.disabled-green, #testTree button.disabled-green {
   position: relative;
   padding-left: 50px;
   padding-bottom: 2.5rem;
+  padding-right: 10px;
   animation: fadeInSlide 0.5s ease-out;
+  max-width: 100%;
 }
 
 @keyframes fadeInSlide {
@@ -1229,10 +1307,13 @@ button.disabled-green, #testTree button.disabled-green {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
   border-left: 4px solid #e5e7eb;
+  max-width: 100%;
+  word-wrap: break-word;
+  overflow: hidden;
 }
 
 .timeline-content-box:hover {
-  transform: translateX(5px);
+  transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
 }
 
@@ -1262,6 +1343,10 @@ button.disabled-green, #testTree button.disabled-green {
   font-weight: 700;
   font-size: 1.1rem;
   color: #1e293b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
 }
 
 .timeline-date {
@@ -1274,6 +1359,9 @@ button.disabled-green, #testTree button.disabled-green {
   font-size: 0.9rem;
   color: #475569;
   margin-bottom: 0.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .timeline-score-row {
@@ -1308,6 +1396,9 @@ button.disabled-green, #testTree button.disabled-green {
 .timeline-score-details {
   font-size: 0.85rem;
   color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .timeline-improvement-badge {
@@ -1385,13 +1476,203 @@ button.disabled-green, #testTree button.disabled-green {
   font-weight: 700;
 }
 
-/* Stats Summary at top */
-.timeline-stats {
+/* Stats in Main Page (NOT in timeline panel) */
+.progress-stats-container {
+  margin: 2rem 0;
+  animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.progress-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+@media (max-width: 1024px) {
+  .progress-stats-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+.stats-card {
   background: white;
-  border-radius: 12px;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.stats-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #6b7280, #9ca3af);
+  transition: height 0.3s ease;
+}
+
+.stats-card.training-card::before {
+  background: linear-gradient(90deg, #6b7280, #9ca3af);
+}
+
+.stats-card.assessment-card::before {
+  background: linear-gradient(90deg, #3b82f6, #2563eb);
+}
+
+.stats-card.simulation-card::before {
+  background: linear-gradient(90deg, #fbbf24, #f59e0b);
+}
+
+.stats-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+.stats-card:hover::before {
+  height: 8px;
+}
+
+.stats-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #f3f4f6;
+}
+
+.stats-card-header h4 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.stats-count {
+  background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+  color: #374151;
+  padding: 0.4rem 1rem;
+  border-radius: 20px;
+  font-size: 1.3rem;
+  font-weight: 700;
+  min-width: 50px;
+  text-align: center;
+}
+
+.stats-card.assessment-card .stats-count {
+  background: linear-gradient(135deg, #dbeafe, #93c5fd);
+  color: #1e40af;
+}
+
+.stats-card.simulation-card .stats-count {
+  background: linear-gradient(135deg, #fef3c7, #fbbf24);
+  color: #78350f;
+}
+
+.stats-main-metric {
+  text-align: center;
+  margin: 2rem 0;
   padding: 1.5rem;
-  margin-bottom: 2rem;
+  background: linear-gradient(135deg, #f9fafb, #f3f4f6);
+  border-radius: 12px;
+}
+
+.stats-weighted-score {
+  font-size: 3.5rem;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 0.5rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.stats-label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #475569;
+  margin-top: 0.5rem;
+}
+
+.stats-sublabel {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-top: 0.25rem;
+  font-style: italic;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.stats-metric {
+  background: white;
+  padding: 1rem;
+  border-radius: 10px;
+  text-align: center;
+  border: 2px solid #f3f4f6;
+  transition: all 0.2s ease;
+}
+
+.stats-metric:hover {
+  border-color: #e5e7eb;
+  transform: scale(1.05);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.stats-metric-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 0.5rem;
+}
+
+.stats-metric-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stats-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #9ca3af;
+}
+
+.stats-empty-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.4;
+}
+
+.stats-empty p {
+  font-size: 0.95rem;
+  color: #6b7280;
+}
+
+/* Old stats summary (remove or repurpose) */
+.timeline-stats {
+  display: none; /* Hidden since stats are now in main page */
 }
 
 .timeline-stats h4 {

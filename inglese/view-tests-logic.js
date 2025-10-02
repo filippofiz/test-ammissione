@@ -1345,7 +1345,63 @@ async function loadProgressTimeline() {
   // Sort by date (most recent first)
   timelineItems.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-  // Build HTML with 3-column detailed stats
+  // Calculate weighted statistics (recent tests weighted more)
+  function calculateWeightedStats(items, testType) {
+    const filtered = items.filter(item => item.testType === testType);
+    if (filtered.length === 0) return null;
+
+    let weightedSum = 0;
+    let weightSum = 0;
+    let improvements = 0;
+    let declines = 0;
+
+    filtered.forEach((item, index) => {
+      // More recent = higher weight (exponential decay)
+      const weight = Math.exp(-index * 0.15); // Recent tests weighted heavily
+      weightedSum += item.score.percentage * weight;
+      weightSum += weight;
+
+      // Track improvement trend
+      if (index < filtered.length - 1) {
+        const diff = item.score.percentage - filtered[index + 1].score.percentage;
+        if (diff > 0) improvements++;
+        else if (diff < 0) declines++;
+      }
+    });
+
+    const weightedAvg = Math.round(weightedSum / weightSum);
+    const improvementRate = filtered.length > 1
+      ? Math.round((improvements / (filtered.length - 1)) * 100)
+      : 0;
+
+    return {
+      weightedAvg,
+      improvementRate,
+      recentStreak: calculateStreak(filtered)
+    };
+  }
+
+  function calculateStreak(items) {
+    if (items.length === 0) return { type: 'none', count: 0 };
+    let streak = 1;
+    const firstPassed = items[0].score.passed;
+
+    for (let i = 1; i < items.length; i++) {
+      if (items[i].score.passed === firstPassed) streak++;
+      else break;
+    }
+
+    return {
+      type: firstPassed ? 'passing' : 'failing',
+      count: streak
+    };
+  }
+
+  const trainingWeighted = calculateWeightedStats(timelineItems, 'training');
+  const assessmentWeighted = calculateWeightedStats(timelineItems, 'assessment');
+  const simulationWeighted = calculateWeightedStats(timelineItems, 'simulation');
+
+  // Build stats HTML for main page (NOT in panel)
   const trainingPassRate = trainingStats.count > 0
     ? Math.round((testTypeStats.training.passed / trainingStats.count) * 100)
     : 0;
@@ -1356,140 +1412,80 @@ async function loadProgressTimeline() {
     ? Math.round((testTypeStats.simulation.passed / simulationStats.count) * 100)
     : 0;
 
-  let html = `
-    <div class="timeline-stats">
-      <h4>📊 Detailed Statistics by Test Type</h4>
-      <div class="timeline-stats-grid">
-
-        <!-- Training Column -->
-        <div class="timeline-type-column training-column">
-          <div class="timeline-type-header">
-            <div>
-              <div class="timeline-type-title">📝 Training</div>
-            </div>
-            <div class="timeline-type-count">${trainingStats.count}</div>
+  // Generate stats card for main page
+  function generateStatsCard(type, stats, weighted, passRate, color) {
+    if (!weighted) {
+      return `
+        <div class="stats-card ${type}-card">
+          <div class="stats-card-header">
+            <h4>${type === 'training' ? '📝 Training' : type === 'assessment' ? '📋 Assessment' : '🏆 Simulation'}</h4>
+            <span class="stats-count">${stats.count}</span>
           </div>
-          <div class="timeline-type-stats">
-            ${trainingStats.count > 0 ? `
-            <div class="timeline-stat-row">
-              <span class="timeline-stat-row-label">Pass Rate</span>
-              <span class="timeline-stat-row-value highlight">${trainingPassRate}%</span>
-            </div>
-            <div class="timeline-pass-rate-bar">
-              <div class="timeline-pass-rate-fill" style="width: ${trainingPassRate}%"></div>
-            </div>
-            <div class="timeline-stat-row">
-              <span class="timeline-stat-row-label">Mean Score</span>
-              <span class="timeline-stat-row-value">${trainingStats.mean}%</span>
-            </div>
-            <div class="timeline-stat-row">
-              <span class="timeline-stat-row-label">Median Score</span>
-              <span class="timeline-stat-row-value">${trainingStats.median}%</span>
-            </div>
-            <div class="timeline-stat-row">
-              <span class="timeline-stat-row-label">Best Score</span>
-              <span class="timeline-stat-row-value">${trainingStats.best}%</span>
-            </div>
-            <div class="timeline-stat-row">
-              <span class="timeline-stat-row-label">Latest Score</span>
-              <span class="timeline-stat-row-value">${trainingStats.latest}%</span>
-            </div>
-            ` : `
-            <div style="text-align: center; padding: 2rem; color: #9ca3af;">
-              <div style="font-size: 2rem; margin-bottom: 0.5rem;">📭</div>
-              <div style="font-size: 0.9rem;">No training completed yet</div>
-            </div>
-            `}
+          <div class="stats-empty">
+            <div class="stats-empty-icon">📭</div>
+            <p>No tests completed yet</p>
           </div>
         </div>
+      `;
+    }
 
-        <!-- Assessment Column -->
-        <div class="timeline-type-column assessment-column">
-          <div class="timeline-type-header">
-            <div>
-              <div class="timeline-type-title">📋 Assessment</div>
-            </div>
-            <div class="timeline-type-count">${assessmentStats.count}</div>
-          </div>
-          <div class="timeline-type-stats">
-            ${assessmentStats.count > 0 ? `
-            <div class="timeline-stat-row">
-              <span class="timeline-stat-row-label">Pass Rate</span>
-              <span class="timeline-stat-row-value highlight">${assessmentPassRate}%</span>
-            </div>
-            <div class="timeline-pass-rate-bar">
-              <div class="timeline-pass-rate-fill" style="width: ${assessmentPassRate}%"></div>
-            </div>
-            <div class="timeline-stat-row">
-              <span class="timeline-stat-row-label">Mean Score</span>
-              <span class="timeline-stat-row-value">${assessmentStats.mean}%</span>
-            </div>
-            <div class="timeline-stat-row">
-              <span class="timeline-stat-row-label">Median Score</span>
-              <span class="timeline-stat-row-value">${assessmentStats.median}%</span>
-            </div>
-            <div class="timeline-stat-row">
-              <span class="timeline-stat-row-label">Best Score</span>
-              <span class="timeline-stat-row-value">${assessmentStats.best}%</span>
-            </div>
-            <div class="timeline-stat-row">
-              <span class="timeline-stat-row-label">Latest Score</span>
-              <span class="timeline-stat-row-value">${assessmentStats.latest}%</span>
-            </div>
-            ` : `
-            <div style="text-align: center; padding: 2rem; color: #93c5fd;">
-              <div style="font-size: 2rem; margin-bottom: 0.5rem;">📭</div>
-              <div style="font-size: 0.9rem;">No assessments completed yet</div>
-            </div>
-            `}
-          </div>
+    const streakIcon = weighted.recentStreak.type === 'passing' ? '🔥' : '❄️';
+    const streakColor = weighted.recentStreak.type === 'passing' ? '#22c55e' : '#ef4444';
+    const improvementIcon = weighted.improvementRate >= 50 ? '📈' : weighted.improvementRate > 0 ? '➡️' : '📉';
+
+    return `
+      <div class="stats-card ${type}-card">
+        <div class="stats-card-header">
+          <h4>${type === 'training' ? '📝 Training' : type === 'assessment' ? '📋 Assessment' : '🏆 Simulation'}</h4>
+          <span class="stats-count">${stats.count}</span>
         </div>
 
-        <!-- Simulation Column -->
-        <div class="timeline-type-column simulation-column">
-          <div class="timeline-type-header">
-            <div>
-              <div class="timeline-type-title">🏆 Simulation</div>
-            </div>
-            <div class="timeline-type-count">${simulationStats.count}</div>
+        <div class="stats-main-metric">
+          <div class="stats-weighted-score" style="color: ${color}">
+            ${weighted.weightedAvg}%
           </div>
-          <div class="timeline-type-stats">
-            ${simulationStats.count > 0 ? `
-            <div class="timeline-stat-row">
-              <span class="timeline-stat-row-label">Pass Rate</span>
-              <span class="timeline-stat-row-value highlight">${simulationPassRate}%</span>
-            </div>
-            <div class="timeline-pass-rate-bar">
-              <div class="timeline-pass-rate-fill" style="width: ${simulationPassRate}%"></div>
-            </div>
-            <div class="timeline-stat-row">
-              <span class="timeline-stat-row-label">Mean Score</span>
-              <span class="timeline-stat-row-value">${simulationStats.mean}%</span>
-            </div>
-            <div class="timeline-stat-row">
-              <span class="timeline-stat-row-label">Median Score</span>
-              <span class="timeline-stat-row-value">${simulationStats.median}%</span>
-            </div>
-            <div class="timeline-stat-row">
-              <span class="timeline-stat-row-label">Best Score</span>
-              <span class="timeline-stat-row-value">${simulationStats.best}%</span>
-            </div>
-            <div class="timeline-stat-row">
-              <span class="timeline-stat-row-label">Latest Score</span>
-              <span class="timeline-stat-row-value">${simulationStats.latest}%</span>
-            </div>
-            ` : `
-            <div style="text-align: center; padding: 2rem; color: #fbbf24;">
-              <div style="font-size: 2rem; margin-bottom: 0.5rem;">📭</div>
-              <div style="font-size: 0.9rem;">No simulations completed yet</div>
-            </div>
-            `}
-          </div>
+          <div class="stats-label">Weighted Average</div>
+          <div class="stats-sublabel">(Recent tests weighted more)</div>
         </div>
 
+        <div class="stats-grid">
+          <div class="stats-metric">
+            <div class="stats-metric-value" style="color: #22c55e">${passRate}%</div>
+            <div class="stats-metric-label">Pass Rate</div>
+          </div>
+          <div class="stats-metric">
+            <div class="stats-metric-value">${improvementIcon} ${weighted.improvementRate}%</div>
+            <div class="stats-metric-label">Improvement Trend</div>
+          </div>
+          <div class="stats-metric">
+            <div class="stats-metric-value" style="color: ${streakColor}">${streakIcon} ${weighted.recentStreak.count}</div>
+            <div class="stats-metric-label">${weighted.recentStreak.type === 'passing' ? 'Passing' : 'Failing'} Streak</div>
+          </div>
+          <div class="stats-metric">
+            <div class="stats-metric-value">${stats.best}%</div>
+            <div class="stats-metric-label">Best Score</div>
+          </div>
+        </div>
       </div>
+    `;
+  }
+
+  const statsHtml = `
+    <div class="progress-stats-grid">
+      ${generateStatsCard('training', trainingStats, trainingWeighted, trainingPassRate, '#6b7280')}
+      ${generateStatsCard('assessment', assessmentStats, assessmentWeighted, assessmentPassRate, '#2563eb')}
+      ${generateStatsCard('simulation', simulationStats, simulationWeighted, simulationPassRate, '#f59e0b')}
     </div>
   `;
+
+  // Render stats to main page container
+  const statsContainer = document.getElementById('progressStats');
+  if (statsContainer) {
+    statsContainer.innerHTML = statsHtml;
+  }
+
+  // Now build simplified timeline HTML for panel (NO STATS, just timeline)
+  let html = '';
 
   timelineItems.forEach((item, index) => {
     const { test, score, date } = item;
