@@ -8,6 +8,12 @@
   <link rel="stylesheet" href="floating-back-button.css">
   <!-- Include PapaParse from CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+  <!-- Include Chart.js for Graphics Interpretation chart generation -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- Include jsPDF for PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- Include html2canvas for screenshot-based PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
     * {
       margin: 0;
@@ -572,6 +578,7 @@
     script.src = 'excel-form-bancadati.js';
     script.onload = function() {
       console.log('✅ excel-form-bancadati.js loaded successfully!');
+      // GMAT Data Insights modules will load conditionally when needed
     };
     script.onerror = function() {
       console.error('❌ Error loading excel-form-bancadati.js');

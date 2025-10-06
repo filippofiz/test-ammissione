@@ -75,7 +75,9 @@ class ExcelFormBancaDati {
       'image_option_c',
       'image_option_d',
       'image_option_e',
-      'SAT_section'
+      'SAT_section',
+      'di_question_type',
+      'di_question_data'
     ];
   }
 
@@ -1341,20 +1343,25 @@ class ExcelFormBancaDati {
     };
     
     document.body.removeChild(configModal);
-    
+
+    // Load GMAT Data Insights modules if needed
+    if (tipologiaTest === 'GMAT' && ['Assessment Iniziale', 'Data Insights', 'Simulazioni'].includes(materia)) {
+      this.loadGMATDataInsightsModules();
+    }
+
     this.tableData = [];
     this.buildTable();
     this.overlay.style.display = 'block';
-    
-    document.getElementById('bdTestInfo').textContent = 
+
+    document.getElementById('bdTestInfo').textContent =
       `${this.commonData.tipologia_test} | ${this.commonData.Materia} | ${this.commonData.section}: ${this.commonData.tipologia_esercizi} ${this.commonData.progressivo}`;
-    
+
     this.showInfoBanner();
-    
+
     for (let i = 0; i < numDomande; i++) {
       this.addRow();
     }
-    
+
     this.setupKeyboardNavigation();
     
     setTimeout(() => {
@@ -1364,6 +1371,36 @@ class ExcelFormBancaDati {
         firstInput.select();
       }
     }, 100);
+  }
+
+  loadGMATDataInsightsModules() {
+    // Check if already loaded
+    if (window.GMATDataInsights) {
+      console.log('✅ GMAT Data Insights modules already loaded');
+      return;
+    }
+
+    console.log('📊 Loading GMAT Data Insights modules...');
+
+    const scripts = [
+      'gmat/data-insights/config.js',
+      'gmat/data-insights/ai-review-system.js',
+      'gmat/data-insights/ai-question-generator.js',
+      'gmat/data-insights/gmat-data-insights.js',
+      'gmat/data-insights/question-types/data-sufficiency.js',
+      'gmat/data-insights/question-types/graphics-interpretation.js',
+      'gmat/data-insights/question-types/table-analysis.js',
+      'gmat/data-insights/question-types/two-part-analysis.js',
+      'gmat/data-insights/question-types/multi-source-reasoning.js'
+    ];
+
+    scripts.forEach((src) => {
+      const script = document.createElement('script');
+      script.src = src;
+      script.onload = () => console.log(`✅ Loaded: ${src}`);
+      script.onerror = () => console.error(`❌ Failed to load: ${src}`);
+      document.head.appendChild(script);
+    });
   }
 
   showInfoBanner() {
@@ -1498,7 +1535,14 @@ class ExcelFormBancaDati {
     const th = document.createElement('th');
     th.textContent = '#';
     headerRow.appendChild(th);
-    
+
+    // Add delete column header
+    const thDelete = document.createElement('th');
+    thDelete.textContent = '🗑️';
+    thDelete.style.width = '50px';
+    thDelete.style.textAlign = 'center';
+    headerRow.appendChild(thDelete);
+
     const visibleColumns = [
       { id: 'tipologia_test', name: 'Tipologia Test', width: '120px' },
       { id: 'Materia', name: 'Macro-sezione', width: '100px' },
@@ -1508,6 +1552,9 @@ class ExcelFormBancaDati {
       { id: 'progressivo', name: 'Prog.', width: '60px' },
       { id: 'question_number', name: 'N°', width: '50px' },
       { id: 'GMAT_question_difficulty', name: 'Difficulty', width: '100px' },
+      { id: 'di_creator_button', name: 'DI Creator', width: '200px' },
+      { id: 'di_question_type', name: 'DI Type', width: '80px' },
+      { id: 'di_question_data', name: 'DI JSON Data', width: '300px' },
       { id: 'question_text', name: 'Testo Domanda (LaTeX)', width: '300px' },
       { id: 'image_url', name: 'Img Domanda', width: '120px' },
       { id: 'correct_answer', name: 'Risp.', width: '60px' },
@@ -1548,13 +1595,28 @@ class ExcelFormBancaDati {
     tdNum.className = 'row-number';
     tdNum.textContent = rowIndex + 1;
     tr.appendChild(tdNum);
-    
+
+    // Add delete button cell
+    const tdDelete = document.createElement('td');
+    tdDelete.style.textAlign = 'center';
+    const deleteBtn = document.createElement('button');
+    deleteBtn.innerHTML = '🗑️';
+    deleteBtn.className = 'excel-bd-btn danger';
+    deleteBtn.style.padding = '0.25rem 0.5rem';
+    deleteBtn.style.fontSize = '0.9rem';
+    deleteBtn.title = 'Delete this row';
+    deleteBtn.onclick = () => this.deleteRow(rowIndex);
+    tdDelete.appendChild(deleteBtn);
+    tr.appendChild(tdDelete);
+
     const rowData = {
       ...this.commonData,
       GMAT_section: '',
       criptato: false,
       question_number: rowIndex + 1,
       GMAT_question_difficulty: '',
+      di_question_type: '',
+      di_question_data: null,
       question_text: '',
       correct_answer: '',
       wrong_answers: '',
@@ -1580,6 +1642,54 @@ class ExcelFormBancaDati {
     this.tableData.push(rowData);
     tbody.appendChild(tr);
     this.updateStatus();
+  }
+
+  deleteRow(rowIndex) {
+    if (!confirm(`Delete row ${rowIndex + 1}?`)) {
+      return;
+    }
+
+    // Remove from data array
+    this.tableData.splice(rowIndex, 1);
+
+    // Rebuild the entire table to update all indices and row numbers
+    const tbody = document.getElementById('excelBDTableBody');
+    tbody.innerHTML = '';
+
+    // Re-render all rows with updated indices
+    this.tableData.forEach((rowData, index) => {
+      const tr = document.createElement('tr');
+
+      // Row number
+      const tdNum = document.createElement('td');
+      tdNum.className = 'row-number';
+      tdNum.textContent = index + 1;
+      tr.appendChild(tdNum);
+
+      // Delete button
+      const tdDelete = document.createElement('td');
+      tdDelete.style.textAlign = 'center';
+      const deleteBtn = document.createElement('button');
+      deleteBtn.innerHTML = '🗑️';
+      deleteBtn.className = 'excel-bd-btn danger';
+      deleteBtn.style.padding = '0.25rem 0.5rem';
+      deleteBtn.style.fontSize = '0.9rem';
+      deleteBtn.title = 'Delete this row';
+      deleteBtn.onclick = () => this.deleteRow(index);
+      tdDelete.appendChild(deleteBtn);
+      tr.appendChild(tdDelete);
+
+      // Update question_number in data
+      rowData.question_number = index + 1;
+
+      // Create all cells with updated index
+      this.createCells(tr, rowData, index);
+
+      tbody.appendChild(tr);
+    });
+
+    this.updateStatus();
+    this.setupKeyboardNavigation();
   }
 
   createCells(tr, rowData, rowIndex) {
@@ -1622,6 +1732,35 @@ class ExcelFormBancaDati {
         const argomentoField = document.getElementById(`argomento-${rowIndex}`);
         if (argomentoField) {
           argomentoField.value = e.target.value;
+        }
+
+        // Show/hide DI button based on section selection
+        const diBtn = document.getElementById(`di-btn-${rowIndex}`);
+        const diPlaceholder = document.getElementById(`di-placeholder-${rowIndex}`);
+
+        if (e.target.value === 'Data Insights') {
+          // Show button
+          if (diBtn && !this.tableData[rowIndex].di_question_type) {
+            diBtn.textContent = '➕ CREATE DATA INSIGHTS QUESTION';
+            diBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+            diBtn.style.borderColor = '#10b981';
+            diBtn.style.display = 'inline-block';
+            if (diPlaceholder) diPlaceholder.style.display = 'none';
+          }
+
+          // Disable standard fields immediately
+          this.disableStandardFields(rowIndex);
+        } else {
+          // Hide button
+          if (diBtn && !this.tableData[rowIndex].di_question_type) {
+            diBtn.style.display = 'none';
+            if (diPlaceholder) diPlaceholder.style.display = 'inline';
+          }
+
+          // Re-enable standard fields if no DI question saved
+          if (!this.tableData[rowIndex].di_question_type) {
+            this.enableStandardFields(rowIndex);
+          }
         }
       });
 
@@ -1667,23 +1806,189 @@ class ExcelFormBancaDati {
       this.createReadonlyCell(tr, '');
     }
 
+    // DI Question Type - button to create/edit DI question (GMAT only, when GMAT_section is Data Insights)
+    if (isGMAT) {
+      const tdDIType = document.createElement('td');
+      tdDIType.style.padding = '0.5rem';
+      tdDIType.style.textAlign = 'center';
+      tdDIType.id = `di-type-cell-${rowIndex}`;
+
+      // Show as placeholder initially, will update when GMAT_section changes
+      const diButton = document.createElement('button');
+      diButton.type = 'button';
+      diButton.id = `di-btn-${rowIndex}`;
+      diButton.style.cssText = `
+        padding: 0.75rem 1.25rem;
+        border-radius: 8px;
+        border: 2px solid transparent;
+        cursor: pointer;
+        font-weight: 700;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      `;
+      diButton.style.display = 'none'; // Hidden by default
+
+      if (rowData.di_question_type) {
+        // Edit mode - question exists
+        diButton.textContent = `✏️ Edit ${rowData.di_question_type} Question`;
+        diButton.style.background = 'linear-gradient(135deg, #0ea5e9, #06b6d4)';
+        diButton.style.color = 'white';
+        diButton.style.borderColor = '#0ea5e9';
+        diButton.style.display = 'inline-block';
+        diButton.onmouseover = () => {
+          diButton.style.transform = 'translateY(-2px)';
+          diButton.style.boxShadow = '0 4px 8px rgba(14, 165, 233, 0.3)';
+        };
+        diButton.onmouseout = () => {
+          diButton.style.transform = 'translateY(0)';
+          diButton.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+        };
+      } else if (rowData.GMAT_section === 'Data Insights') {
+        // Create mode - only show if Data Insights selected
+        diButton.textContent = '➕ CREATE DATA INSIGHTS QUESTION';
+        diButton.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+        diButton.style.color = 'white';
+        diButton.style.borderColor = '#10b981';
+        diButton.style.display = 'inline-block';
+        diButton.onmouseover = () => {
+          diButton.style.transform = 'translateY(-2px)';
+          diButton.style.boxShadow = '0 4px 8px rgba(16, 185, 129, 0.3)';
+        };
+        diButton.onmouseout = () => {
+          diButton.style.transform = 'translateY(0)';
+          diButton.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+        };
+      }
+
+      diButton.addEventListener('click', () => {
+        if (window.GMATDataInsights) {
+          window.GMATDataInsights.openDIQuestionModal(rowIndex, rowData, this);
+        } else {
+          alert('Data Insights module not loaded. Please refresh the page.');
+        }
+      });
+
+      tdDIType.appendChild(diButton);
+
+      // Add placeholder text when button is hidden
+      const placeholderText = document.createElement('span');
+      placeholderText.id = `di-placeholder-${rowIndex}`;
+      placeholderText.textContent = '—';
+      placeholderText.style.color = '#9ca3af';
+      placeholderText.style.display = rowData.GMAT_section === 'Data Insights' || rowData.di_question_type ? 'none' : 'inline';
+      tdDIType.appendChild(placeholderText);
+
+      tr.appendChild(tdDIType);
+    } else {
+      this.createReadonlyCell(tr, '');
+    }
+
+    // DI Question Type Code (editable text: DS/GI/TA/TPA/MSR)
+    if (isGMAT) {
+      const tdTypeCode = document.createElement('td');
+      const typeInput = document.createElement('input');
+      typeInput.type = 'text';
+      typeInput.id = `di-type-input-${rowIndex}`;
+      typeInput.value = rowData.di_question_type || '';
+      typeInput.placeholder = 'DS/GI/TA/TPA/MSR';
+      typeInput.style.cssText = `
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 0.9rem;
+        text-align: center;
+        text-transform: uppercase;
+      `;
+
+      typeInput.addEventListener('change', (e) => {
+        const value = e.target.value.trim().toUpperCase();
+        const validTypes = ['DS', 'GI', 'TA', 'TPA', 'MSR'];
+        if (value && !validTypes.includes(value)) {
+          alert('Invalid type! Use: DS, GI, TA, TPA, or MSR');
+          typeInput.style.borderColor = '#dc2626';
+        } else {
+          this.updateCell(rowIndex, 'di_question_type', value || null);
+          typeInput.value = value;
+          typeInput.style.borderColor = '#d1d5db';
+        }
+      });
+
+      tdTypeCode.appendChild(typeInput);
+      tr.appendChild(tdTypeCode);
+    } else {
+      this.createReadonlyCell(tr, '');
+    }
+
+    // DI Question Data (JSON) - visible and editable
+    if (isGMAT) {
+      const tdDIData = document.createElement('td');
+      const diDataTextarea = document.createElement('textarea');
+      diDataTextarea.id = `di-data-textarea-${rowIndex}`;
+      diDataTextarea.className = 'di-data-textarea';
+      diDataTextarea.rows = 3;
+      diDataTextarea.style.cssText = `
+        width: 100%;
+        min-height: 60px;
+        padding: 0.5rem;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 0.85rem;
+        resize: vertical;
+      `;
+      diDataTextarea.placeholder = 'DI JSON data...';
+      diDataTextarea.value = rowData.di_question_data ? JSON.stringify(rowData.di_question_data, null, 2) : '';
+
+      diDataTextarea.addEventListener('change', (e) => {
+        try {
+          const jsonData = e.target.value.trim() ? JSON.parse(e.target.value) : null;
+          this.updateCell(rowIndex, 'di_question_data', jsonData);
+          diDataTextarea.style.borderColor = '#d1d5db';
+        } catch (err) {
+          diDataTextarea.style.borderColor = '#dc2626';
+          alert('Invalid JSON format!');
+        }
+      });
+
+      tdDIData.appendChild(diDataTextarea);
+      tr.appendChild(tdDIData);
+    } else {
+      this.createReadonlyCell(tr, '');
+    }
+
     // Testo Domanda con LaTeX
     const tdQuestion = document.createElement('td');
     tdQuestion.className = 'question-cell';
+    tdQuestion.id = `question-cell-${rowIndex}`;
     const questionTextarea = document.createElement('textarea');
     questionTextarea.className = 'question-textarea';
+    questionTextarea.id = `question-textarea-${rowIndex}`;
     questionTextarea.placeholder = 'Testo domanda... Usa $...$ per LaTeX inline';
     questionTextarea.value = rowData.question_text || '';
-    
+
+    // Disable if DI question exists
+    if (rowData.di_question_type) {
+      questionTextarea.disabled = true;
+      questionTextarea.style.background = 'repeating-linear-gradient(45deg, #f9fafb, #f9fafb 10px, #f3f4f6 10px, #f3f4f6 20px)';
+      questionTextarea.style.color = '#9ca3af';
+      questionTextarea.style.border = '2px dashed #d1d5db';
+      questionTextarea.style.cursor = 'not-allowed';
+      questionTextarea.value = '🔒 DI Question - Use button above to edit';
+      questionTextarea.placeholder = '';
+    }
+
     const questionPreview = document.createElement('div');
     questionPreview.className = 'latex-preview';
     questionPreview.id = `question-preview-${rowIndex}`;
-    
+
     questionTextarea.addEventListener('input', (e) => {
       this.updateCell(rowIndex, 'question_text', e.target.value);
       this.renderLaTeX(e.target.value, `question-preview-${rowIndex}`);
     });
-    
+
     tdQuestion.appendChild(questionTextarea);
     tdQuestion.appendChild(questionPreview);
     tr.appendChild(tdQuestion);
@@ -1693,18 +1998,31 @@ class ExcelFormBancaDati {
     
     // Risposta Corretta - conserva il paste handler solo per incollaggio singolo
     const tdCorrect = document.createElement('td');
+    tdCorrect.id = `correct-cell-${rowIndex}`;
     const correctInput = document.createElement('input');
     correctInput.type = 'text';
+    correctInput.id = `correct-input-${rowIndex}`;
     correctInput.placeholder = 'A-E';
     correctInput.maxLength = '1';
     correctInput.style.textTransform = 'uppercase';
-    
+
+    // Disable if DI question exists
+    if (rowData.di_question_type) {
+      correctInput.disabled = true;
+      correctInput.style.background = 'repeating-linear-gradient(45deg, #f9fafb, #f9fafb 10px, #f3f4f6 10px, #f3f4f6 20px)';
+      correctInput.style.color = '#9ca3af';
+      correctInput.style.border = '2px dashed #d1d5db';
+      correctInput.style.cursor = 'not-allowed';
+      correctInput.value = '🔒';
+      correctInput.placeholder = '';
+    }
+
     const normalizeAnswer = (text) => text.trim().toUpperCase();
-    
+
     const validateAnswer = (value) => {
       const normalized = normalizeAnswer(value);
       const isValid = ['A', 'B', 'C', 'D', 'E'].includes(normalized) || normalized === '';
-      
+
       if (!isValid && normalized !== '') {
         correctInput.classList.add('invalid-argomento');
         correctInput.title = '⚠️ Solo A, B, C, D, E';
@@ -1712,17 +2030,17 @@ class ExcelFormBancaDati {
         correctInput.classList.remove('invalid-argomento');
         correctInput.title = 'Risposta corretta (A-E)';
       }
-      
+
       return isValid || normalized === '';
     };
-    
+
     correctInput.addEventListener('input', (e) => {
       const normalized = normalizeAnswer(e.target.value);
       e.target.value = normalized;
-      
+
       if (validateAnswer(normalized)) {
         this.updateCell(rowIndex, 'correct_answer', normalized);
-        
+
         if (normalized && ['A', 'B', 'C', 'D', 'E'].includes(normalized)) {
           const allAnswers = ['A', 'B', 'C', 'D', 'E'];
           const wrongAnswers = allAnswers.filter(a => a !== normalized);
@@ -1730,7 +2048,7 @@ class ExcelFormBancaDati {
         }
       }
     });
-    
+
     tdCorrect.appendChild(correctInput);
     tr.appendChild(tdCorrect);
     
@@ -1739,28 +2057,41 @@ class ExcelFormBancaDati {
       // Testo opzione
       const tdOption = document.createElement('td');
       tdOption.className = 'option-cell';
-      
+      tdOption.id = `option-${letter}-cell-${rowIndex}`;
+
       const optionGroup = document.createElement('div');
       optionGroup.className = 'option-group';
-      
+
       const optionLabel = document.createElement('div');
       optionLabel.className = 'option-label';
       optionLabel.textContent = `Opzione ${letter.toUpperCase()}:`;
-      
+
       const optionTextarea = document.createElement('textarea');
       optionTextarea.className = 'option-textarea';
+      optionTextarea.id = `option-${letter}-textarea-${rowIndex}`;
       optionTextarea.placeholder = `Testo opzione ${letter.toUpperCase()}... Usa $...$ per LaTeX`;
       optionTextarea.value = rowData[`option_${letter}`] || '';
-      
+
+      // Disable if DI question exists
+      if (rowData.di_question_type) {
+        optionTextarea.disabled = true;
+        optionTextarea.style.background = 'repeating-linear-gradient(45deg, #f9fafb, #f9fafb 10px, #f3f4f6 10px, #f3f4f6 20px)';
+        optionTextarea.style.color = '#9ca3af';
+        optionTextarea.style.border = '2px dashed #d1d5db';
+        optionTextarea.style.cursor = 'not-allowed';
+        optionTextarea.value = '🔒 DI Question';
+        optionTextarea.placeholder = '';
+      }
+
       const optionPreview = document.createElement('div');
       optionPreview.className = 'latex-preview';
       optionPreview.id = `option-${letter}-preview-${rowIndex}`;
-      
+
       optionTextarea.addEventListener('input', (e) => {
         this.updateCell(rowIndex, `option_${letter}`, e.target.value);
         this.renderLaTeX(e.target.value, `option-${letter}-preview-${rowIndex}`);
       });
-      
+
       optionGroup.appendChild(optionLabel);
       optionGroup.appendChild(optionTextarea);
       optionGroup.appendChild(optionPreview);
@@ -1902,17 +2233,30 @@ class ExcelFormBancaDati {
   createImageCell(tr, rowIndex, field, label) {
     const td = document.createElement('td');
     td.className = 'image-upload-cell';
-    
+    td.id = `image-cell-${field}-${rowIndex}`;
+
     const uploadBtn = document.createElement('button');
     uploadBtn.textContent = `📷 ${label}`;
     uploadBtn.className = 'image-upload-btn';
+    uploadBtn.id = `image-btn-${field}-${rowIndex}`;
+
     if (this.tableData[rowIndex] && this.tableData[rowIndex][field]) {
       uploadBtn.classList.add('uploaded');
       uploadBtn.textContent = `✓ ${label}`;
     }
-    
-    uploadBtn.onclick = () => this.uploadImage(rowIndex, field, label, uploadBtn);
-    
+
+    // Disable if DI question type exists
+    if (this.tableData[rowIndex] && this.tableData[rowIndex].di_question_type) {
+      uploadBtn.disabled = true;
+      uploadBtn.style.background = 'repeating-linear-gradient(45deg, #f9fafb, #f9fafb 10px, #f3f4f6 10px, #f3f4f6 20px)';
+      uploadBtn.style.color = '#9ca3af';
+      uploadBtn.style.border = '2px dashed #d1d5db';
+      uploadBtn.style.cursor = 'not-allowed';
+      uploadBtn.textContent = '🔒';
+    } else {
+      uploadBtn.onclick = () => this.uploadImage(rowIndex, field, label, uploadBtn);
+    }
+
     td.appendChild(uploadBtn);
     tr.appendChild(td);
   }
@@ -2062,26 +2406,37 @@ class ExcelFormBancaDati {
     const validRisposte = ['A', 'B', 'C', 'D', 'E'];
     
     this.tableData.forEach((row, index) => {
+      // Skip standard field validation for GMAT Data Insights questions
+      if (row.di_question_type) {
+        // Validate DI-specific fields instead
+        if (!row.di_question_data) {
+          errors.push(`Riga ${index + 1}: GMAT Data Insights question is missing JSON data`);
+        }
+        // Skip all other validation for DI questions
+        return;
+      }
+
+      // Standard validation for non-DI questions
       // Valida testo domanda
       if (!row.question_text || !row.question_text.trim()) {
         errors.push(`Riga ${index + 1}: Manca il testo della domanda`);
       }
-      
+
       // Valida risposta corretta
       if (!row.correct_answer) {
         errors.push(`Riga ${index + 1}: Manca la risposta corretta`);
       } else if (!validRisposte.includes(row.correct_answer)) {
         errors.push(`Riga ${index + 1}: Risposta "${row.correct_answer}" non valida (deve essere A, B, C, D o E)`);
       }
-      
+
       // Valida opzioni
       ['a', 'b', 'c', 'd', 'e'].forEach(letter => {
         if (!row[`option_${letter}`] || !row[`option_${letter}`].trim()) {
           errors.push(`Riga ${index + 1}: Manca il testo dell'opzione ${letter.toUpperCase()}`);
         }
       });
-      
-           
+
+
       // Per Simulazioni verifica che l'argomento sia valido
       if (this.commonData.Materia === 'Simulazioni') {
         if (!row.argomento) {
@@ -2118,25 +2473,65 @@ class ExcelFormBancaDati {
       
       const dataToSave = this.tableData.map(row => {
         const cleanRow = {};
-        
+
         this.columns.forEach(col => {
           if (row.hasOwnProperty(col)) {
             if (col === 'is_open_ended') {
               cleanRow[col] = Boolean(row[col]);
             } else if (col === 'question_number' || col === 'progressivo') {
               cleanRow[col] = parseInt(row[col]) || 0;
-            } else if (col === 'wrong_answers' && typeof row[col] === 'string' && row[col].startsWith('{')) {
-              cleanRow[col] = row[col];
+            } else if (col === 'wrong_answers') {
+              // Handle wrong_answers array field
+              if (row.di_question_type) {
+                // For DI questions, set to NULL (not needed)
+                cleanRow[col] = null;
+              } else if (typeof row[col] === 'string' && row[col].startsWith('{')) {
+                // Valid array format like {A,B,C,D}
+                cleanRow[col] = row[col];
+              } else if (!row[col] || row[col].trim() === '') {
+                // Empty string - convert to NULL
+                cleanRow[col] = null;
+              } else {
+                cleanRow[col] = row[col];
+              }
+            } else if (col === 'di_question_data') {
+              // Handle GMAT DI JSON data - Supabase expects object for JSONB
+              cleanRow[col] = row[col] || null;
             } else {
               cleanRow[col] = row[col];
             }
           }
         });
-        
+
         return cleanRow;
       });
       
       console.log('Dati pronti per il salvataggio:', dataToSave);
+
+      // Debug: Check if DI data is present
+      const rowsWithDI = dataToSave.filter(r => r.di_question_type);
+      if (rowsWithDI.length > 0) {
+        console.log('🔍 GMAT DI Questions found:', rowsWithDI.length);
+        rowsWithDI.forEach((r, i) => {
+          console.log(`DI Row ${i + 1}:`, {
+            type: r.di_question_type,
+            difficulty: r.GMAT_question_difficulty,
+            question_number: r.question_number,
+            hasData: !!r.di_question_data,
+            dataKeys: r.di_question_data ? Object.keys(r.di_question_data) : 'NO DATA',
+            // Show the conflict key fields
+            conflictKey: {
+              tipologia_test: r.tipologia_test,
+              Materia: r.Materia,
+              section: r.section,
+              tipologia_esercizi: r.tipologia_esercizi,
+              progressivo: r.progressivo,
+              question_number: r.question_number,
+              argomento: r.argomento
+            }
+          });
+        });
+      }
       
      const { data, error } = await supabaseBD
   .from('questions_bancaDati')
@@ -2237,6 +2632,125 @@ class ExcelFormBancaDati {
   // Clear draft from localStorage
   clearDraft() {
     localStorage.removeItem('bancaDati_draft');
+  }
+
+  // Disable standard question fields (for Data Insights questions)
+  disableStandardFields(rowIndex) {
+    const questionTextarea = document.getElementById(`question-textarea-${rowIndex}`);
+    if (questionTextarea) {
+      questionTextarea.disabled = true;
+      questionTextarea.style.background = 'repeating-linear-gradient(45deg, #f9fafb, #f9fafb 10px, #f3f4f6 10px, #f3f4f6 20px)';
+      questionTextarea.style.color = '#9ca3af';
+      questionTextarea.style.border = '2px dashed #d1d5db';
+      questionTextarea.style.cursor = 'not-allowed';
+      questionTextarea.value = '🔒 Data Insights Question - Use button above to create';
+      questionTextarea.placeholder = '';
+    }
+
+    const correctInput = document.getElementById(`correct-input-${rowIndex}`);
+    if (correctInput) {
+      correctInput.disabled = true;
+      correctInput.style.background = 'repeating-linear-gradient(45deg, #f9fafb, #f9fafb 10px, #f3f4f6 10px, #f3f4f6 20px)';
+      correctInput.style.color = '#9ca3af';
+      correctInput.style.border = '2px dashed #d1d5db';
+      correctInput.style.cursor = 'not-allowed';
+      correctInput.value = '🔒';
+      correctInput.placeholder = '';
+    }
+
+    ['a', 'b', 'c', 'd', 'e'].forEach(letter => {
+      const optionTextarea = document.getElementById(`option-${letter}-textarea-${rowIndex}`);
+      if (optionTextarea) {
+        optionTextarea.disabled = true;
+        optionTextarea.style.background = 'repeating-linear-gradient(45deg, #f9fafb, #f9fafb 10px, #f3f4f6 10px, #f3f4f6 20px)';
+        optionTextarea.style.color = '#9ca3af';
+        optionTextarea.style.border = '2px dashed #d1d5db';
+        optionTextarea.style.cursor = 'not-allowed';
+        optionTextarea.value = '🔒 Data Insights';
+        optionTextarea.placeholder = '';
+      }
+    });
+
+    // Disable all image upload buttons
+    const imageFields = ['image_url', 'image_option_a', 'image_option_b', 'image_option_c', 'image_option_d', 'image_option_e'];
+    imageFields.forEach(field => {
+      const imageBtn = document.getElementById(`image-btn-${field}-${rowIndex}`);
+      if (imageBtn) {
+        imageBtn.disabled = true;
+        imageBtn.style.background = 'repeating-linear-gradient(45deg, #f9fafb, #f9fafb 10px, #f3f4f6 10px, #f3f4f6 20px)';
+        imageBtn.style.color = '#9ca3af';
+        imageBtn.style.border = '2px dashed #d1d5db';
+        imageBtn.style.cursor = 'not-allowed';
+        imageBtn.textContent = '🔒';
+        imageBtn.onclick = null;
+      }
+    });
+  }
+
+  // Enable standard question fields (when switching away from Data Insights)
+  enableStandardFields(rowIndex) {
+    const questionTextarea = document.getElementById(`question-textarea-${rowIndex}`);
+    if (questionTextarea) {
+      questionTextarea.disabled = false;
+      questionTextarea.style.background = '';
+      questionTextarea.style.color = '';
+      questionTextarea.style.border = '';
+      questionTextarea.style.cursor = '';
+      questionTextarea.value = '';
+      questionTextarea.placeholder = 'Testo domanda... Usa $...$ per LaTeX inline';
+    }
+
+    const correctInput = document.getElementById(`correct-input-${rowIndex}`);
+    if (correctInput) {
+      correctInput.disabled = false;
+      correctInput.style.background = '';
+      correctInput.style.color = '';
+      correctInput.style.border = '';
+      correctInput.style.cursor = '';
+      correctInput.value = '';
+      correctInput.placeholder = 'A-E';
+    }
+
+    ['a', 'b', 'c', 'd', 'e'].forEach(letter => {
+      const optionTextarea = document.getElementById(`option-${letter}-textarea-${rowIndex}`);
+      if (optionTextarea) {
+        optionTextarea.disabled = false;
+        optionTextarea.style.background = '';
+        optionTextarea.style.color = '';
+        optionTextarea.style.border = '';
+        optionTextarea.style.cursor = '';
+        optionTextarea.value = '';
+        optionTextarea.placeholder = `Testo opzione ${letter.toUpperCase()}... Usa $...$ per LaTeX`;
+      }
+    });
+
+    // Re-enable all image upload buttons
+    const imageFields = ['image_url', 'image_option_a', 'image_option_b', 'image_option_c', 'image_option_d', 'image_option_e'];
+    imageFields.forEach(field => {
+      const imageBtn = document.getElementById(`image-btn-${field}-${rowIndex}`);
+      if (imageBtn) {
+        imageBtn.disabled = false;
+        imageBtn.style.background = '';
+        imageBtn.style.color = '';
+        imageBtn.style.border = '';
+        imageBtn.style.cursor = '';
+        imageBtn.classList.remove('uploaded');
+
+        // Restore proper text based on whether image exists
+        const fieldLabel = field === 'image_url' ? 'Domanda' :
+                          field.replace('image_option_', '').toUpperCase();
+
+        if (this.tableData[rowIndex] && this.tableData[rowIndex][field]) {
+          imageBtn.textContent = `✓ ${fieldLabel}`;
+          imageBtn.classList.add('uploaded');
+        } else {
+          imageBtn.textContent = `📷 ${fieldLabel}`;
+        }
+
+        // Re-attach click handler
+        imageBtn.onclick = () => this.uploadImage(rowIndex, field, fieldLabel, imageBtn);
+      }
+    });
   }
 
   // Helper to format time ago

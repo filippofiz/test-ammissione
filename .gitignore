@@ -40,3 +40,6 @@ package-lock.json
 
 # ignore backup folders
 backup-*/
+
+# AI API Configuration - DO NOT COMMIT
+inglese/gmat/data-insights/config.js

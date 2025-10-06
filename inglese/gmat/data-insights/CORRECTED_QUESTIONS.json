@@ -1,0 +1,414 @@
+[
+  {
+    "problem": "A company allocates its annual budget among three departments: Marketing, Research, and Operations. If the total budget is $3.6 million and Marketing receives 40% of the total budget, what is the ratio of Research budget to Operations budget?",
+    "statement1": "The Operations department receives $200,000 more than the Research department.",
+    "statement2": "The Research department receives 25% of the total budget.",
+    "correct_answer": "D",
+    "explanation": "",
+    "image_url": null,
+    "answer_choices": {
+      "A": "Statement (1) ALONE is sufficient, but statement (2) alone is not sufficient.",
+      "B": "Statement (2) ALONE is sufficient, but statement (1) alone is not sufficient.",
+      "C": "BOTH statements TOGETHER are sufficient, but NEITHER statement ALONE is sufficient.",
+      "D": "EACH statement ALONE is sufficient.",
+      "E": "Statements (1) and (2) TOGETHER are NOT sufficient."
+    }
+  },
+  {
+    "problem": "In a rectangle ABCD, point E is on side AB and point F is on side CD. If line segment EF divides the rectangle into two regions, what is the ratio of the areas of these two regions?",
+    "statement1": "E is the midpoint of AB and F is located 3/4 of the way from C to D.",
+    "statement2": "The length of AB is 12 units and the length of BC is 8 units.",
+    "correct_answer": "A",
+    "explanation": "",
+    "image_url": null,
+    "answer_choices": {
+      "A": "Statement (1) ALONE is sufficient, but statement (2) alone is not sufficient.",
+      "B": "Statement (2) ALONE is sufficient, but statement (1) alone is not sufficient.",
+      "C": "BOTH statements TOGETHER are sufficient, but NEITHER statement ALONE is sufficient.",
+      "D": "EACH statement ALONE is sufficient.",
+      "E": "Statements (1) and (2) TOGETHER are NOT sufficient."
+    }
+  },
+  {
+    "problem": "A technology company has exactly 450 employees divided among three offices: Silicon Valley, Austin, and Seattle. If 180 employees work in Silicon Valley, how many employees work in Seattle?",
+    "statement1": "The number of employees in Austin is 30 more than the number of employees in Seattle.",
+    "statement2": "Seattle has 40% of the total number of employees not working in Silicon Valley.",
+    "correct_answer": "D",
+    "explanation": "",
+    "image_url": null,
+    "answer_choices": {
+      "A": "Statement (1) ALONE is sufficient, but statement (2) alone is not sufficient.",
+      "B": "Statement (2) ALONE is sufficient, but statement (1) alone is not sufficient.",
+      "C": "BOTH statements TOGETHER are sufficient, but NEITHER statement ALONE is sufficient.",
+      "D": "EACH statement ALONE is sufficient.",
+      "E": "Statements (1) and (2) TOGETHER are NOT sufficient."
+    }
+  },
+  {
+    "problem": "An investor purchased shares of stock X at price p per share and later sold all shares. If the investor owned n shares, what was the total profit from this transaction?",
+    "statement1": "The selling price was 1.25p per share and n = 400.",
+    "statement2": "The profit per share was $15 and the total selling price was $30,000.",
+    "correct_answer": "B",
+    "explanation": "",
+    "image_url": null,
+    "answer_choices": {
+      "A": "Statement (1) ALONE is sufficient, but statement (2) alone is not sufficient.",
+      "B": "Statement (2) ALONE is sufficient, but statement (1) alone is not sufficient.",
+      "C": "BOTH statements TOGETHER are sufficient, but NEITHER statement ALONE is sufficient.",
+      "D": "EACH statement ALONE is sufficient.",
+      "E": "Statements (1) and (2) TOGETHER are NOT sufficient."
+    }
+  },
+  {
+    "problem": "A factory produces widgets using two machines, A and B. Machine A produces widgets at a constant rate of x widgets per hour, and Machine B produces widgets at a constant rate of y widgets per hour. If both machines operated for the same number of hours yesterday, how many widgets did they produce in total?",
+    "statement1": "Machine A produced 240 widgets and x = 30.",
+    "statement2": "The ratio of x to y is 3:5 and Machine B produced 400 widgets.",
+    "correct_answer": "D",
+    "explanation": "",
+    "image_url": null,
+    "answer_choices": {
+      "A": "Statement (1) ALONE is sufficient, but statement (2) alone is not sufficient.",
+      "B": "Statement (2) ALONE is sufficient, but statement (1) alone is not sufficient.",
+      "C": "BOTH statements TOGETHER are sufficient, but NEITHER statement ALONE is sufficient.",
+      "D": "EACH statement ALONE is sufficient.",
+      "E": "Statements (1) and (2) TOGETHER are NOT sufficient."
+    }
+  },
+  {
+    "problem": "In a data set of 15 positive integers, the mean is 24. What is the median of this data set?",
+    "statement1": "The sum of the 7 smallest numbers is 126 and the sum of the 7 largest numbers is 210.",
+    "statement2": "When arranged in ascending order, the 8th number is 24 and the difference between consecutive numbers is constant.",
+    "correct_answer": "B",
+    "explanation": "",
+    "image_url": null,
+    "answer_choices": {
+      "A": "Statement (1) ALONE is sufficient, but statement (2) alone is not sufficient.",
+      "B": "Statement (2) ALONE is sufficient, but statement (1) alone is not sufficient.",
+      "C": "BOTH statements TOGETHER are sufficient, but NEITHER statement ALONE is sufficient.",
+      "D": "EACH statement ALONE is sufficient.",
+      "E": "Statements (1) and (2) TOGETHER are NOT sufficient."
+    }
+  },
+  {
+    "sources": [
+      {
+        "tab_name": "Executive Summary",
+        "content_type": "text",
+        "content": "TO: Board of Directors\nFROM: Sarah Mitchell, VP Retail Operations\nDATE: March 15, 2025\n\nOur retail division completed Q1 with mixed results across our 28 stores in four regions. Total revenue reached $42.8 million, a 8% increase from Q4 2024. However, profit margins varied significantly by region:\n\n- Northeast (9 stores): $15.2M revenue, 22% profit margin\n- Southeast (7 stores): $11.4M revenue, 18% profit margin\n- Midwest (6 stores): $8.7M revenue, 25% profit margin\n- West (6 stores): $7.5M revenue, 15% profit margin\n\nWe have $8 million allocated for new store openings in Q2. Each new store requires $1.6 million initial investment. New stores can only be opened in regions with profit margins above 20% and where we currently have fewer than 10 stores."
+      },
+      {
+        "tab_name": "Operating Metrics",
+        "content_type": "table",
+        "table_headers": ["Region", "Stores", "Avg Store Size (sq ft)", "Employees per Store", "Revenue per Sq Ft", "Customer Traffic (Monthly)"],
+        "table_data": [
+          ["Northeast", "9", "12,000", "45", "$140", "28,500"],
+          ["Southeast", "7", "14,500", "52", "$112", "31,200"],
+          ["Midwest", "6", "10,500", "38", "$138", "22,400"],
+          ["West", "6", "15,000", "48", "$83", "18,900"]
+        ]
+      },
+      {
+        "tab_name": "Market Analysis",
+        "content_type": "text",
+        "content": "REGIONAL MARKET CONDITIONS - Q2 2025 OUTLOOK\n\nNortheast: Population density highest. Two competitors closed. Real estate: MODERATE. Lease: $42/sq ft. Consumer confidence: 78.\n\nSoutheast: Fastest growing (3.8% annually). Four new competitors. Real estate: HIGH. Lease: $28/sq ft. Consumer confidence: 71.\n\nMidwest: Stable market, loyal customers. Limited competition. Real estate: HIGH. Lease: $22/sq ft. Consumer confidence: 75.\n\nWest: Highly competitive. Population growth 2.1%. Real estate: LOW. Lease: $55/sq ft. Consumer confidence: 69."
+      }
+    ],
+    "questions": [
+      {
+        "text": "What is the maximum number of new stores that can be opened in Q2?",
+        "question_type": "multiple_choice",
+        "options": ["A) 2", "B) 3", "C) 4", "D) 5", "E) 6"],
+        "correct_answer": "C"
+      },
+      {
+        "text": "Evaluate each statement",
+        "question_type": "two_column",
+        "column1_title": "Yes",
+        "column2_title": "No",
+        "statements": [
+          "Midwest has highest margin and revenue/sqft",
+          "Only Northeast qualifies for new stores",
+          "West has lowest traffic and revenue/sqft"
+        ],
+        "correct_answers": {
+          "Midwest has highest margin and revenue/sqft": "col2",
+          "Only Northeast qualifies for new stores": "col2",
+          "West has lowest traffic and revenue/sqft": "col1"
+        }
+      },
+      {
+        "text": "Which region offers best ROI for new store?",
+        "question_type": "multiple_choice",
+        "options": ["A) Northeast", "B) Southeast", "C) Midwest", "D) West", "E) Cannot determine"],
+        "correct_answer": "C"
+      }
+    ]
+  },
+  {
+    "sources": [
+      {
+        "tab_name": "Production Report",
+        "content_type": "text",
+        "content": "FROM: Operations Director\nTO: Executive Team\nDATE: February 28, 2025\n\nOur three manufacturing facilities produced 485,000 units in February:\n- Plant A (Ohio): 180,000 units, 92% efficiency, $12.50/unit cost\n- Plant B (Texas): 165,000 units, 88% efficiency, $11.80/unit cost\n- Plant C (Nevada): 140,000 units, 85% efficiency, $13.20/unit cost\n\nWe need to increase production to 550,000 units in March. Plants can increase output by maximum 15% with overtime, which increases costs by 20%."
+      },
+      {
+        "tab_name": "Supply Chain Data",
+        "content_type": "table",
+        "table_headers": ["Plant", "Raw Material Cost/Unit", "Labor Cost/Unit", "Shipping Cost/Unit", "Lead Time (days)", "Quality Rate"],
+        "table_data": [
+          ["Ohio", "$5.20", "$4.80", "$2.50", "3", "98.5%"],
+          ["Texas", "$4.90", "$4.60", "$2.30", "2", "97.8%"],
+          ["Nevada", "$5.80", "$4.90", "$2.50", "4", "96.2%"]
+        ]
+      },
+      {
+        "tab_name": "Customer Orders",
+        "content_type": "text",
+        "content": "March Orders Summary:\n- East Coast: 220,000 units (priority delivery)\n- Central: 185,000 units (standard delivery)\n- West Coast: 145,000 units (flexible delivery)\n\nContract penalties: $5/unit for late delivery to East Coast, $3/unit for Central. Quality below 97% incurs $8/unit penalty."
+      }
+    ],
+    "questions": [
+      {
+        "text": "Which plant combination can meet March demand most cost-effectively?",
+        "question_type": "multiple_choice",
+        "options": ["A) All plants at 15% overtime", "B) A and B at overtime, C normal", "C) A at overtime, B and C normal", "D) All plants normal production", "E) Cannot meet demand"],
+        "correct_answer": "B"
+      },
+      {
+        "text": "Determine if statements are true",
+        "question_type": "two_column",
+        "column1_title": "True",
+        "column2_title": "False",
+        "statements": [
+          "Texas has lowest total cost per unit",
+          "Plant C risks quality penalties",
+          "Ohio can fulfill entire East Coast order"
+        ],
+        "correct_answers": {
+          "Texas has lowest total cost per unit": "col1",
+          "Plant C risks quality penalties": "col1",
+          "Ohio can fulfill entire East Coast order": "col2"
+        }
+      },
+      {
+        "text": "What is the maximum profit impact of quality issues?",
+        "question_type": "multiple_choice",
+        "options": ["A) $67,200", "B) $89,600", "C) $112,000", "D) $134,400", "E) $156,800"],
+        "correct_answer": "C"
+      }
+    ]
+  },
+  {
+    "table_title": "Quarterly Product Performance",
+    "statement_column_title": "Statement",
+    "answer_col1_title": "True",
+    "answer_col2_title": "False",
+    "column_headers": ["Product", "Q1 Sales", "Q2 Sales", "Q3 Sales", "Q4 Sales", "Annual Total", "YoY Growth %"],
+    "table_data": [
+      ["Laptops", "3450", "3780", "4120", "4580", "15930", "12.5"],
+      ["Tablets", "2890", "2760", "2980", "3210", "11840", "8.3"],
+      ["Phones", "5670", "5890", "6230", "6780", "24570", "15.7"],
+      ["Accessories", "1230", "1450", "1680", "1890", "6250", "22.4"],
+      ["Software", "890", "920", "1050", "1180", "4040", "18.6"]
+    ],
+    "statements": [
+      {
+        "text": "Phones had the highest sales in every quarter",
+        "is_true": true
+      },
+      {
+        "text": "Accessories showed the highest year-over-year growth rate",
+        "is_true": true
+      },
+      {
+        "text": "More than 60% of Laptop sales occurred in the second half of the year",
+        "is_true": false
+      }
+    ]
+  },
+  {
+    "table_title": "Department Productivity Metrics",
+    "statement_column_title": "Statement",
+    "answer_col1_title": "True",
+    "answer_col2_title": "False",
+    "column_headers": ["Department", "Employees", "Tasks Completed", "Hours Worked", "Tasks/Hour", "Overtime %", "Efficiency Score"],
+    "table_data": [
+      ["Sales", "45", "2340", "7650", "0.31", "12%", "87"],
+      ["Marketing", "38", "1976", "6460", "0.31", "8%", "85"],
+      ["Engineering", "62", "3844", "10540", "0.36", "18%", "92"],
+      ["Support", "28", "1652", "4760", "0.35", "5%", "89"],
+      ["Admin", "22", "1012", "3740", "0.27", "3%", "78"]
+    ],
+    "statements": [
+      {
+        "text": "Engineering has both the highest tasks/hour rate and efficiency score",
+        "is_true": true
+      },
+      {
+        "text": "Sales and Marketing have identical productivity rates",
+        "is_true": false
+      },
+      {
+        "text": "Departments with lower overtime percentages have higher efficiency scores",
+        "is_true": false
+      }
+    ]
+  },
+  {
+    "table_title": "Industry Market Share Analysis",
+    "statement_column_title": "Statement",
+    "answer_col1_title": "True",
+    "answer_col2_title": "False",
+    "column_headers": ["Company", "2023 Share %", "2024 Share %", "Revenue ($M)", "Customer Base", "Growth Rate %", "Satisfaction Score"],
+    "table_data": [
+      ["TechCorp", "28.5", "31.2", "4680", "2.8", "15.2", "8.7"],
+      ["DataSoft", "22.3", "21.8", "3270", "2.1", "7.8", "8.3"],
+      ["CloudNet", "18.7", "19.5", "2925", "1.8", "12.4", "8.9"],
+      ["InfoSys", "15.2", "14.1", "2115", "1.4", "5.3", "8.1"],
+      ["NetWave", "9.8", "8.9", "1335", "0.9", "-2.1", "7.8"],
+      ["Others", "5.5", "4.5", "675", "0.4", "-8.5", "7.5"]
+    ],
+    "statements": [
+      {
+        "text": "TechCorp gained the most market share points from 2023 to 2024",
+        "is_true": true
+      },
+      {
+        "text": "Companies with higher satisfaction scores have higher growth rates",
+        "is_true": false
+      },
+      {
+        "text": "The top 3 companies control over 70% of the market in 2024",
+        "is_true": true
+      }
+    ]
+  },
+  {
+    "table_title": "Banking Sector Financial Ratios",
+    "statement_column_title": "Statement",
+    "answer_col1_title": "True",
+    "answer_col2_title": "False",
+    "column_headers": ["Bank", "Total Assets ($B)", "ROA %", "ROE %", "Efficiency Ratio", "Tier 1 Capital %", "NPL Ratio %"],
+    "table_data": [
+      ["MegaBank", "487", "1.42", "14.8", "58.2", "13.2", "0.82"],
+      ["FirstNational", "392", "1.38", "13.6", "61.4", "12.8", "0.91"],
+      ["GlobalTrust", "345", "1.51", "15.3", "56.7", "13.8", "0.68"],
+      ["UnionFinance", "278", "1.29", "12.9", "63.8", "11.9", "1.12"],
+      ["PremierBank", "256", "1.48", "14.2", "57.9", "13.5", "0.74"]
+    ],
+    "statements": [
+      {
+        "text": "GlobalTrust has the best performance across all profitability metrics",
+        "is_true": true
+      },
+      {
+        "text": "Banks with higher Tier 1 Capital have lower NPL ratios",
+        "is_true": false
+      },
+      {
+        "text": "The efficiency ratio is inversely related to ROA",
+        "is_true": true
+      }
+    ]
+  },
+  {
+    "image_url": "revenue_trend_chart.png",
+    "statement_text": "The highest single-quarter revenue was [BLANK1] million dollars, and Product B's revenue pattern is best described as [BLANK2].",
+    "blank1_options": ["18.5", "21.3", "24.7", "27.2"],
+    "blank1_correct": "24.7",
+    "blank2_options": ["steadily increasing", "cyclical with peaks in Q2 and Q4", "randomly fluctuating", "declining overall"],
+    "blank2_correct": "cyclical with peaks in Q2 and Q4"
+  },
+  {
+    "image_url": "scatter_plot_analysis.png",
+    "statement_text": "The correlation between advertising spend and sales revenue is [BLANK1], and a store spending $75,000 on advertising would expect approximately [BLANK2] in sales.",
+    "blank1_options": ["strongly negative", "weakly negative", "weakly positive", "strongly positive"],
+    "blank1_correct": "strongly positive",
+    "blank2_options": ["$2.8 million", "$3.4 million", "$4.1 million", "$4.7 million"],
+    "blank2_correct": "$4.1 million"
+  },
+  {
+    "image_url": "market_pie_chart.png",
+    "statement_text": "The largest three companies control [BLANK1] of the total market, and the average market share for companies in the 'Others' category is approximately [BLANK2].",
+    "blank1_options": ["52%", "58%", "64%", "71%"],
+    "blank1_correct": "64%",
+    "blank2_options": ["0.3%", "0.5%", "0.7%", "0.9%"],
+    "blank2_correct": "0.5%"
+  },
+  {
+    "image_url": "production_efficiency.png",
+    "statement_text": "The month with maximum production efficiency was [BLANK1], and the relationship between production volume and efficiency can best be described as [BLANK2].",
+    "blank1_options": ["March", "June", "September", "November"],
+    "blank1_correct": "September",
+    "blank2_options": ["directly proportional", "inversely proportional", "no clear correlation", "U-shaped relationship"],
+    "blank2_correct": "inversely proportional"
+  },
+  {
+    "image_url": "customer_satisfaction.png",
+    "statement_text": "The service category showing the most improvement from 2021 to 2024 is [BLANK1], and in 2024, the percentage of 'Excellent' ratings across all categories averages [BLANK2].",
+    "blank1_options": ["Customer Support", "Product Quality", "Delivery Speed", "Pricing Value"],
+    "blank1_correct": "Delivery Speed",
+    "blank2_options": ["31%", "37%", "43%", "49%"],
+    "blank2_correct": "43%"
+  },
+  {
+    "scenario": "A project manager must assign a team leader and a technical specialist for a critical software deployment. The team leader must have management certification and availability for 6 weeks. The technical specialist needs cloud architecture experience and can work remotely. Budget constraint is $85,000 total for both positions.",
+    "statement_title": "Candidate",
+    "column1_title": "Team Leader",
+    "column2_title": "Technical Specialist",
+    "shared_options": [
+      "Alice: PMP certified, 8 weeks available, $280/hr, cloud expert",
+      "Bob: MBA, 6 weeks available, $220/hr, database specialist",
+      "Carol: PMP certified, 5 weeks available, $260/hr, cloud expert",
+      "David: Agile certified, 6 weeks available, $200/hr, cloud expert",
+      "Emma: PMP certified, 6 weeks available, $240/hr, security specialist"
+    ],
+    "correct_answers": {
+      "Alice: PMP certified, 8 weeks available, $280/hr, cloud expert": "col2",
+      "Bob: MBA, 6 weeks available, $220/hr, database specialist": "col2",
+      "Carol: PMP certified, 5 weeks available, $260/hr, cloud expert": "col2",
+      "David: Agile certified, 6 weeks available, $200/hr, cloud expert": "col2",
+      "Emma: PMP certified, 6 weeks available, $240/hr, security specialist": "col1"
+    }
+  },
+  {
+    "scenario": "An investment advisor needs to select one growth stock and one value stock for a conservative client's portfolio. The growth stock should have minimum 15% annual return potential with beta below 1.3. The value stock should have P/E ratio below 15 and dividend yield above 3%. Total investment is $100,000 split equally.",
+    "statement_title": "Stock",
+    "column1_title": "Growth Stock",
+    "column2_title": "Value Stock",
+    "shared_options": [
+      "Stock A: 18% return potential, beta 1.2, P/E 22, dividend 2.1%",
+      "Stock B: 14% return potential, beta 0.9, P/E 12, dividend 3.8%",
+      "Stock C: 16% return potential, beta 1.4, P/E 14, dividend 3.2%",
+      "Stock D: 20% return potential, beta 1.1, P/E 18, dividend 1.8%",
+      "Stock E: 12% return potential, beta 0.8, P/E 13, dividend 4.1%"
+    ],
+    "correct_answers": {
+      "Stock A: 18% return potential, beta 1.2, P/E 22, dividend 2.1%": "col1",
+      "Stock B: 14% return potential, beta 0.9, P/E 12, dividend 3.8%": "col2",
+      "Stock C: 16% return potential, beta 1.4, P/E 14, dividend 3.2%": "col2",
+      "Stock D: 20% return potential, beta 1.1, P/E 18, dividend 1.8%": "col1",
+      "Stock E: 12% return potential, beta 0.8, P/E 13, dividend 4.1%": "col2"
+    }
+  },
+  {
+    "scenario": "A conference organizer must select a morning keynote speaker and an afternoon workshop facilitator. The keynote must be available on March 15, have published books, and charge less than $15,000. The workshop facilitator needs interactive training experience and must accommodate 200 participants. Combined speaker budget is $22,000.",
+    "statement_title": "Speaker",
+    "column1_title": "Morning Keynote",
+    "column2_title": "Afternoon Workshop",
+    "shared_options": [
+      "Dr. Anderson: March 15 available, 3 books, $12,000, handles 150 participants",
+      "Prof. Baker: March 15 available, 1 book, $8,000, handles 250 participants",
+      "Ms. Carter: March 14 only, 5 books, $14,000, handles 200 participants",
+      "Dr. Davis: March 15 available, 2 books, $13,500, handles 300 participants",
+      "Mr. Evans: March 15 available, no books, $7,500, handles 200 participants"
+    ],
+    "correct_answers": {
+      "Dr. Anderson: March 15 available, 3 books, $12,000, handles 150 participants": "col1",
+      "Prof. Baker: March 15 available, 1 book, $8,000, handles 250 participants": "col2",
+      "Ms. Carter: March 14 only, 5 books, $14,000, handles 200 participants": "col2",
+      "Dr. Davis: March 15 available, 2 books, $13,500, handles 300 participants": "col1",
+      "Mr. Evans: March 15 available, no books, $7,500, handles 200 participants": "col2"
+    }
+  }
+]

@@ -1,0 +1,117 @@
+{
+  "corrected_msr_two_column": {
+    "type": "MSR",
+    "sources": [
+      {
+        "tab_name": "Executive Summary",
+        "content_type": "text",
+        "content": "TO: Board of Directors\nFROM: Sarah Mitchell, VP Retail Operations\nDATE: March 15, 2025\n\nOur retail division completed Q1 with mixed results across our 28 stores in four regions. Total revenue reached $42.8 million, a 8% increase from Q4 2024. However, profit margins varied significantly by region:\n\n- Northeast (9 stores): $15.2M revenue, 22% profit margin\n- Southeast (7 stores): $11.4M revenue, 18% profit margin\n- Midwest (6 stores): $8.7M revenue, 25% profit margin\n- West (6 stores): $7.5M revenue, 15% profit margin\n\nWe have $8 million allocated for new store openings in Q2. Each new store requires $1.6 million initial investment. New stores can only be opened in regions with profit margins above 20% and where we currently have fewer than 10 stores."
+      },
+      {
+        "tab_name": "Operating Metrics",
+        "content_type": "table",
+        "table_headers": ["Region", "Stores", "Avg Store Size (sq ft)", "Employees per Store", "Revenue per Sq Ft", "Customer Traffic (Monthly)"],
+        "table_data": [
+          ["Northeast", "9", "12,000", "45", "$140", "28,500"],
+          ["Southeast", "7", "14,500", "52", "$112", "31,200"],
+          ["Midwest", "6", "10,500", "38", "$138", "22,400"],
+          ["West", "6", "15,000", "48", "$83", "18,900"]
+        ]
+      },
+      {
+        "tab_name": "Market Analysis",
+        "content_type": "text",
+        "content": "REGIONAL MARKET CONDITIONS - Q2 2025 OUTLOOK\n\nNortheast: Population density highest. Two competitors closed. Real estate: MODERATE. Lease: $42/sq ft. Consumer confidence: 78.\n\nSoutheast: Fastest growing (3.8% annually). Four new competitors. Real estate: HIGH. Lease: $28/sq ft. Consumer confidence: 71.\n\nMidwest: Stable market, loyal customers. Limited competition. Real estate: HIGH. Lease: $22/sq ft. Consumer confidence: 75.\n\nWest: Highly competitive. Population growth 2.1%. Real estate: LOW. Lease: $55/sq ft. Consumer confidence: 69."
+      }
+    ],
+    "questions": [
+      {
+        "text": "What is the maximum number of new stores that can be opened in Q2?",
+        "question_type": "multiple_choice",
+        "options": ["A) 2", "B) 3", "C) 4", "D) 5", "E) 6"],
+        "correct_answer": "C"
+      },
+      {
+        "text": "Evaluate each statement",
+        "question_type": "two_column",
+        "column1_title": "Yes",
+        "column2_title": "No",
+        "statements": [
+          "Midwest has highest margin and revenue/sqft",
+          "Only Northeast qualifies for new stores",
+          "West has lowest traffic and revenue/sqft"
+        ],
+        "correct_answers": {
+          "Midwest has highest margin and revenue/sqft": "col2",
+          "Only Northeast qualifies for new stores": "col2",
+          "West has lowest traffic and revenue/sqft": "col1"
+        }
+      },
+      {
+        "text": "Which region offers best ROI for new store?",
+        "question_type": "multiple_choice",
+        "options": ["A) Northeast", "B) Southeast", "C) Midwest", "D) West", "E) Cannot determine"],
+        "correct_answer": "C"
+      }
+    ]
+  },
+  "corrected_table_analysis": {
+    "type": "TA",
+    "table_title": "Quarterly Product Performance",
+    "statement_column_title": "Statement",
+    "answer_col1_title": "True",
+    "answer_col2_title": "False",
+    "column_headers": ["Product", "Q1 Sales", "Q2 Sales", "Q3 Sales", "Q4 Sales", "Annual Total", "YoY Growth %"],
+    "table_data": [
+      ["Laptops", "3450", "3780", "4120", "4580", "15930", "12.5"],
+      ["Tablets", "2890", "2760", "2980", "3210", "11840", "8.3"],
+      ["Phones", "5670", "5890", "6230", "6780", "24570", "15.7"],
+      ["Accessories", "1230", "1450", "1680", "1890", "6250", "22.4"],
+      ["Software", "890", "920", "1050", "1180", "4040", "18.6"]
+    ],
+    "statements": [
+      {
+        "text": "Phones had the highest sales in every quarter",
+        "is_true": true
+      },
+      {
+        "text": "Accessories showed the highest year-over-year growth rate",
+        "is_true": true
+      },
+      {
+        "text": "More than 60% of Laptop sales occurred in the second half of the year",
+        "is_true": false
+      }
+    ]
+  },
+  "corrected_graphics_interpretation": {
+    "type": "GI",
+    "image_url": "revenue_trend_chart.png",
+    "statement_text": "The highest single-quarter revenue was [BLANK1] million dollars, and Product B's revenue pattern is best described as [BLANK2].",
+    "blank1_options": ["18.5", "21.3", "24.7", "27.2"],
+    "blank1_correct": "24.7",
+    "blank2_options": ["steadily increasing", "cyclical with peaks in Q2 and Q4", "randomly fluctuating", "declining overall"],
+    "blank2_correct": "cyclical with peaks in Q2 and Q4"
+  },
+  "corrected_two_part_analysis": {
+    "type": "TPA",
+    "scenario": "A project manager must assign a team leader and a technical specialist for a critical software deployment. The team leader must have management certification and availability for 6 weeks. The technical specialist needs cloud architecture experience and can work remotely. Budget constraint is $85,000 total for both positions.",
+    "statement_title": "Candidate",
+    "column1_title": "Team Leader",
+    "column2_title": "Technical Specialist",
+    "shared_options": [
+      "Alice: PMP certified, 8 weeks available, $280/hr, cloud expert",
+      "Bob: MBA, 6 weeks available, $220/hr, database specialist",
+      "Carol: PMP certified, 5 weeks available, $260/hr, cloud expert",
+      "David: Agile certified, 6 weeks available, $200/hr, cloud expert",
+      "Emma: PMP certified, 6 weeks available, $240/hr, security specialist"
+    ],
+    "correct_answers": {
+      "Alice: PMP certified, 8 weeks available, $280/hr, cloud expert": "col2",
+      "Bob: MBA, 6 weeks available, $220/hr, database specialist": "col2",
+      "Carol: PMP certified, 5 weeks available, $260/hr, cloud expert": "col2",
+      "David: Agile certified, 6 weeks available, $200/hr, cloud expert": "col2",
+      "Emma: PMP certified, 6 weeks available, $240/hr, security specialist": "col1"
+    }
+  }
+}

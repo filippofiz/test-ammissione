@@ -498,10 +498,10 @@
       while (hasMore) {
         const { data, error } = await supabase
           .from("questions_bancaDati")
-          .select("section, tipologia_esercizi, tipologia_test")
+          .select("id, section, tipologia_esercizi, progressivo, tipologia_test, di_question_type")
           .in("tipologia_test", studentTests)
           .range(page * 1000, (page + 1) * 1000 - 1);
-        
+
         if (error || !data || data.length === 0) {
           hasMore = false;
         } else {
@@ -526,7 +526,7 @@
 
       const tests2 = (bocconiTests || []).map(test => {
         const tipologia_esercizi = test.tipologia_esercizi || "BOCCONI";
-        const progressivo = 1;
+        const progressivo = test.progressivo || 1;
         const compositeKey = `${test.section}-${tipologia_esercizi}-${progressivo}-${test.tipologia_test}`;
         return {
           section: test.section,
@@ -534,7 +534,7 @@
           progressivo: progressivo,
           tipologia_test: test.tipologia_test,
           compositeKey,
-          compositeName: `${test.section}: ${tipologia_esercizi} (${test.tipologia_test})`
+          compositeName: `${test.section}: ${tipologia_esercizi} ${progressivo} (${test.tipologia_test})`
         };
       });
 
@@ -654,9 +654,9 @@
       while (hasMore) {
         const { data, error } = await supabase
           .from("questions_bancaDati")
-          .select("tipologia_test")
+          .select("tipologia_test, di_question_type")
           .range(page * 1000, (page + 1) * 1000 - 1);
-        
+
         if (error || !data || data.length === 0) {
           hasMore = false;
         } else {

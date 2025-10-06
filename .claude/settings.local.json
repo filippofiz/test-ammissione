@@ -19,7 +19,14 @@
       "Bash(start \"C:\\App UpToTen\\admission-test\\inglese\\update-sat-boundaries.html\")",
       "Bash(findstr:*)",
       "Bash(git restore:*)",
-      "Bash(git branch:*)"
+      "Bash(git branch:*)",
+      "WebFetch(domain:e-gmat.com)",
+      "Read(//c/**)",
+      "Bash(find:*)",
+      "WebFetch(domain:www.uptoten.it)",
+      "Bash(cat:*)",
+      "Bash(psql:*)",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": []

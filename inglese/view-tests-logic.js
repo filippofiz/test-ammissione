@@ -665,16 +665,14 @@ async function getTestScore(section, progressivo, selectedTest, tipologiaEserciz
   }
 
   const questionCount = maxQuestionData[0].question_number;
-  const totalQuestions = questionCount;
 
-  // STEP 2: Fetch N most recent answers for this test
+  // STEP 2: Fetch ALL answers for this test (no limit for adaptive)
   const { data: answers, error: answersError } = await supabase
     .from(answersTable)
     .select("question_id, auto_score, answer")
     .eq("auth_uid", studentId)
     .eq("test_id", testId)
-    .order("submitted_at", { ascending: false })
-    .limit(questionCount);
+    .order("submitted_at", { ascending: false });
 
   if (answersError) {
     throw new Error(`Errore query risposte: ${answersError.message}`);
@@ -682,9 +680,9 @@ async function getTestScore(section, progressivo, selectedTest, tipologiaEserciz
 
   const uniqueAnswers = answers || [];
 
-  // For SAT tests, filter out questions that were never shown (answer = 'xx')
+  // For adaptive tests (SAT and GMAT), use only the questions that were actually shown
   let shownAnswers = uniqueAnswers;
-  let totalQuestionsToUse = totalQuestions;
+  let totalQuestionsToUse = uniqueAnswers.length; // Default: count actual answers/shown questions
 
   let satModulesShown = null;
   if (selectedTest === "SAT PDF") {

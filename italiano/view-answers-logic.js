@@ -171,15 +171,14 @@ async function loadTestAnswers() {
     const questionCount = maxQuestionData[0].question_number;
     console.log("🔍 DEBUG: Test has", questionCount, "questions (max question_number)");
 
-    // ✅ STEP 2: Fetch student answers FOR THIS TEST, ordered by timestamp DESC, take top N
-    console.log("🔍 DEBUG: Step 2 - Fetching", questionCount, "most recent answers for this test");
+    // ✅ STEP 2: Fetch student answers FOR THIS TEST, ordered by timestamp ASC (order student answered)
+    console.log("🔍 DEBUG: Step 2 - Fetching answers for this test in order answered");
     const { data: answersData, error: allAnswersError } = await supabase
       .from(answersTable)
       .select("*")
       .eq("auth_uid", selectedStudentId)
       .eq("test_id", testId)
-      .order("submitted_at", { ascending: false })
-      .limit(questionCount);
+      .order("submitted_at", { ascending: true });
 
     if (allAnswersError) {
       console.error("Errore nel recupero delle risposte:", allAnswersError.message);
@@ -198,12 +197,11 @@ async function loadTestAnswers() {
     const answeredQuestionIds = answersData.map(a => a.question_id);
     console.log("🔍 DEBUG: Question IDs to fetch:", answeredQuestionIds.length);
 
-    // ✅ STEP 4: Fetch ONLY the questions that were answered
+    // ✅ STEP 4: Fetch ONLY the questions that were answered (no ordering here, we'll sort by answer order)
     const { data: questionsData, error: questionsError } = await supabase
       .from(questionsTable)
       .select("*")
-      .in("id", answeredQuestionIds)
-      .order("question_number");
+      .in("id", answeredQuestionIds);
 
     if (questionsError) {
       console.error("Errore nel recupero delle domande:", questionsError.message);
@@ -218,7 +216,20 @@ async function loadTestAnswers() {
 
     console.log("🔍 DEBUG: Questions fetched:", questionsData.length);
 
-    totalQuestions = questionsData.length;
+    // ✅ STEP 5: Sort questions in the order student answered them
+    const questionsMap = {};
+    questionsData.forEach(q => {
+      questionsMap[q.id] = q;
+    });
+
+    // Create sorted questions array based on answer submission order
+    const sortedQuestionsData = answersData
+      .map(answer => questionsMap[answer.question_id])
+      .filter(q => q); // Remove any nulls if question not found
+
+    console.log("🔍 DEBUG: Questions sorted by answer order:", sortedQuestionsData.length);
+
+    totalQuestions = sortedQuestionsData.length;
 
     // 2. Gestione PDF se disponibile - con supporto multilingua
     const pdfUrlsIt = questionsData.map(q => q.pdf_url).filter(url => url);
@@ -256,8 +267,8 @@ async function loadTestAnswers() {
       });
     }
 
-    // 5. Display domande e risposte
-    displayQuestionsAndAnswers(questionsData, studentAnswersMap);
+    // 5. Display domande e risposte (use sorted questions)
+    displayQuestionsAndAnswers(sortedQuestionsData, studentAnswersMap);
     
     // 6. Aggiorna statistiche
     updateStatistics();
@@ -575,10 +586,103 @@ function displayQuestionsAndAnswers(questionsData, studentAnswersMap) {
       });
     }
   } else {
-    // For non-SAT tests, display all questions normally
-    questionsData.forEach((q, index) => {
-      displaySingleQuestion(q, studentAnswersMap[q.id] || "", index + 1, false);
-    });
+    // Check if this is a GMAT test
+    const isGMATTest = questionsData.length > 0 && questionsData[0].GMAT_section;
+
+    if (isGMATTest) {
+      // Group questions by GMAT section in ORDER ANSWERED
+      const sectionOrder = [];
+      const sections = {};
+
+      questionsData.forEach(q => {
+        const section = q.GMAT_section || 'Data Insights';
+
+        // Track section order
+        if (!sections[section]) {
+          sections[section] = [];
+          sectionOrder.push(section);
+        }
+
+        sections[section].push(q);
+      });
+
+      // Display each section in ORDER STUDENT ANSWERED THEM
+      let overallIndex = 1;
+      sectionOrder.forEach((sectionName) => {
+        const questions = sections[sectionName];
+        if (questions.length > 0) {
+          // Create section wrapper
+          const sectionWrapper = document.createElement("div");
+          sectionWrapper.className = "gmat-section-wrapper";
+          sectionWrapper.style.marginBottom = "2rem";
+
+          // Add section header
+          const sectionHeader = document.createElement("div");
+          sectionHeader.className = "gmat-section-header collapsible";
+          sectionHeader.style.cssText = `
+            background: linear-gradient(135deg, #1c2545 0%, #2a3a5f 100%);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          `;
+
+          const sectionId = `section-${sectionName.replace(/\s+/g, '-')}`;
+          sectionHeader.innerHTML = `
+            <div class="section-title" style="font-size: 1.2rem; font-weight: 600;">${sectionName}</div>
+            <div class="section-info" style="display: flex; gap: 1rem; align-items: center;">
+              <span>${questions.length} domande</span>
+              <span class="toggle-arrow" id="arrow-${sectionId}">▼</span>
+            </div>
+          `;
+          sectionWrapper.appendChild(sectionHeader);
+
+          // Create container for section questions
+          const sectionContainer = document.createElement("div");
+          sectionContainer.className = "gmat-section-content";
+          sectionContainer.id = sectionId;
+          sectionContainer.style.display = "block"; // Start expanded
+
+          // Store original listContainer and temporarily switch
+          const originalContainer = listContainer;
+          listContainer = sectionContainer;
+
+          // Display questions with renumbered indices starting from 1 for each section
+          questions.forEach((q, index) => {
+            displaySingleQuestion(q, studentAnswersMap[q.id] || "", index + 1, false, sectionContainer);
+            overallIndex++;
+          });
+
+          // Restore original listContainer
+          listContainer = originalContainer;
+
+          sectionWrapper.appendChild(sectionContainer);
+          listContainer.appendChild(sectionWrapper);
+
+          // Add toggle functionality
+          sectionHeader.addEventListener("click", function() {
+            const content = document.getElementById(sectionId);
+            const arrow = document.getElementById(`arrow-${sectionId}`);
+            if (content.style.display === "none") {
+              content.style.display = "block";
+              arrow.textContent = "▼";
+            } else {
+              content.style.display = "none";
+              arrow.textContent = "▶";
+            }
+          });
+        }
+      });
+    } else {
+      // For non-GMAT/non-SAT tests, display all questions normally
+      questionsData.forEach((q, index) => {
+        displaySingleQuestion(q, studentAnswersMap[q.id] || "", index + 1, false);
+      });
+    }
   }
 }
 
@@ -722,11 +826,31 @@ function displaySingleQuestion(q, studentAnswerRaw, questionNumber, isNotShown, 
           optionDiv.classList.add("option-item");
 
           // Check if this is the correct answer or student answer
-          if (letter === q.correct_answer?.toUpperCase()) {
-            optionDiv.classList.add("option-correct");
-          }
-          if (letter === studentAnswerRaw?.toUpperCase()) {
-            optionDiv.classList.add("option-student");
+          const isCorrect = letter === q.correct_answer?.toUpperCase();
+          const isStudent = letter === studentAnswerRaw?.toUpperCase();
+
+          // Apply visual styling like DI questions
+          if (isCorrect && isStudent) {
+            // Student selected correct - green
+            optionDiv.style.background = '#d1fae5';
+            optionDiv.style.borderColor = '#10b981';
+            optionDiv.style.borderWidth = '3px';
+            optionDiv.style.borderStyle = 'solid';
+          } else if (isCorrect) {
+            // Correct answer (not selected) - light green
+            optionDiv.style.background = '#f0fdf4';
+            optionDiv.style.borderColor = '#10b981';
+            optionDiv.style.borderWidth = '3px';
+            optionDiv.style.borderStyle = 'solid';
+          } else if (isStudent) {
+            // Student selected wrong - red
+            optionDiv.style.background = '#fee2e2';
+            optionDiv.style.borderColor = '#ef4444';
+            optionDiv.style.borderWidth = '3px';
+            optionDiv.style.borderStyle = 'solid';
+          } else {
+            // Not selected - dim
+            optionDiv.style.opacity = '0.5';
           }
 
           const optionLabel = document.createElement("strong");
@@ -742,6 +866,24 @@ function displaySingleQuestion(q, studentAnswerRaw, questionNumber, isNotShown, 
             optionTextSpan.classList.add("option-text");
             optionTextSpan.innerHTML = optionText;
             optionContent.appendChild(optionTextSpan);
+          }
+
+          // Add visual indicator
+          if (isCorrect && isStudent) {
+            const indicator = document.createElement("span");
+            indicator.style.cssText = 'color: #10b981; font-weight: bold; margin-left: 0.5rem;';
+            indicator.textContent = '✓ CORRETTO';
+            optionContent.appendChild(indicator);
+          } else if (isCorrect) {
+            const indicator = document.createElement("span");
+            indicator.style.cssText = 'color: #10b981; font-weight: bold; margin-left: 0.5rem;';
+            indicator.textContent = '✓ Risposta Corretta';
+            optionContent.appendChild(indicator);
+          } else if (isStudent) {
+            const indicator = document.createElement("span");
+            indicator.style.cssText = 'color: #ef4444; font-weight: bold; margin-left: 0.5rem;';
+            indicator.textContent = '✗ Tua Risposta';
+            optionContent.appendChild(indicator);
           }
 
           if (optionImage) {
