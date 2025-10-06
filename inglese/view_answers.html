@@ -21,6 +21,9 @@
   <!-- Librerie per generazione PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <!-- Chart.js for GMAT Graphics Interpretation questions -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
   <!-- Header -->
@@ -249,6 +252,14 @@
     document.addEventListener('DOMContentLoaded', setupClickableFilters);
   </script>
   
+  <!-- GMAT Data Insights Student Renderers (so tutor sees exactly what student saw) -->
+  <script src="gmat/data-insights/di-student-data-sufficiency.js"></script>
+  <script src="gmat/data-insights/di-student-graphics-interpretation.js"></script>
+  <script src="gmat/data-insights/di-student-table-analysis.js"></script>
+  <script src="gmat/data-insights/di-student-two-part-analysis.js"></script>
+  <script src="gmat/data-insights/di-student-multi-source-reasoning.js"></script>
+  <script src="gmat/data-insights/di-renderer.js"></script>
+
   <!-- Script principale per caricare le risposte -->
   <script type="module" src="view-answers-logic.js"></script>
   <script src="floating-back-button.js"></script>

@@ -11,10 +11,16 @@
       tex: {
         inlineMath: [['$', '$'], ['\\(', '\\)']],
         displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      },
+      options: {
+        skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+        ignoreHtmlClass: 'tex2jax_ignore|mathjax_ignore|di-ds-student-container|di-gi-student-container|di-ta-student-container|di-tpa-student-container|di-msr-student-container',
+        processHtmlClass: 'tex2jax_process'
       }
     };
   </script>
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
   <!-- Container principale per fullscreen -->
@@ -94,7 +100,14 @@
       }
     }, 100);
   </script>
-  
+
+  <!-- GMAT Data Insights Student Renderers -->
+  <script src="gmat/data-insights/di-student-data-sufficiency.js"></script>
+  <script src="gmat/data-insights/di-student-graphics-interpretation.js"></script>
+  <script src="gmat/data-insights/di-student-table-analysis.js"></script>
+  <script src="gmat/data-insights/di-student-two-part-analysis.js"></script>
+  <script src="gmat/data-insights/di-student-multi-source-reasoning.js"></script>
+
   <script type="module" src="test_bancaDati.js"></script>
 </body>
 </html>
