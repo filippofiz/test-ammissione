@@ -2422,7 +2422,7 @@ function updateNavigationButtons() {
     let testType;
     if (selectedTestUpper.includes("SAT")) {
         testType = "sat";  // SAT has its own adaptive logic
-    } else if (selectedTestUpper.includes("TOLC") || selectedTestUpper.includes("CATTOLICA") || selectedTestUpper.includes("MEDICINA") || selectedTestUpper.includes("HUMAT")) {
+    } else if (selectedTestUpper.includes("TOLC") || selectedTestUpper.includes("CATTOLICA") || selectedTestUpper.includes("MEDICINA") || selectedTestUpper.includes("HUMAT") || selectedTestUpper.includes("SAN RAFFAELE PDF")) {
         testType = "tolc";
     } else {
         testType = "bocconi";
@@ -2755,7 +2755,7 @@ function buildQuestionNav() {
     let testType;
     if (selectedTestUpper.includes("SAT")) {
         testType = "sat";  // SAT has its own adaptive logic
-    } else if (selectedTestUpper.includes("TOLC") || selectedTestUpper.includes("CATTOLICA") || selectedTestUpper.includes("MEDICINA") || selectedTestUpper.includes("HUMAT")) {
+    } else if (selectedTestUpper.includes("TOLC") || selectedTestUpper.includes("CATTOLICA") || selectedTestUpper.includes("MEDICINA") || selectedTestUpper.includes("HUMAT") || selectedTestUpper.includes("SAN RAFFAELE PDF")) {
         testType = "tolc";
     } else {
         testType = "bocconi";
