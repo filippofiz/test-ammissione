@@ -111,7 +111,15 @@ class ExcelFormPDF {
       { value: 'Pensiero matematico', category: 'HUMAT', color: '#f57c00' },
       { value: 'Pensiero procedurale', category: 'HUMAT', color: '#f57c00' },
       { value: 'Pensiero visivo', category: 'HUMAT', color: '#f57c00' },
-      { value: 'Critical Thinking', category: 'HUMAT', color: '#f57c00' }
+      { value: 'Critical Thinking', category: 'HUMAT', color: '#f57c00' },
+      // San Raffaele
+      { value: 'Logical Reasoning', category: 'SAN RAFFAELE', color: '#c62828' },
+      { value: 'Problem Solving', category: 'SAN RAFFAELE', color: '#c62828' },
+      { value: 'Text Comprehension', category: 'SAN RAFFAELE', color: '#c62828' },
+      { value: 'Biology', category: 'SAN RAFFAELE', color: '#c62828' },
+      { value: 'Chemistry', category: 'SAN RAFFAELE', color: '#c62828' },
+      { value: 'Mathematics', category: 'SAN RAFFAELE', color: '#c62828' },
+      { value: 'Physics', category: 'SAN RAFFAELE', color: '#c62828' }
     ];
     
     // Lista dei valori validi estratti (usata per validazioni)
@@ -825,6 +833,7 @@ class ExcelFormPDF {
             <option value="HUMAT PDF">HUMAT PDF</option>
             <option value="BOCCONI MAGISTRALE PDF">BOCCONI MAGISTRALE PDF</option>
             <option value="BOCCONI LAW PDF">BOCCONI LAW PDF</option>
+            <option value="SAN RAFFAELE PDF">SAN RAFFAELE PDF</option>
             <option value="SAT PDF">SAT PDF</option>
           </select>
         </div>
@@ -2485,7 +2494,15 @@ class ExcelFormPDF {
           'ragionamento numerico': 'Ragionamento numerico',
           'comprensione verbale': 'Comprensione verbale',
           'logica': 'Logica',
-          'inglese': 'Inglese'
+          'inglese': 'Inglese',
+          // San Raffaele
+          'logical reasoning': 'Logical Reasoning',
+          'problem solving': 'Problem Solving',
+          'text comprehension': 'Text Comprehension',
+          'biology': 'Biology',
+          'chemistry': 'Chemistry',
+          'mathematics': 'Mathematics',
+          'physics': 'Physics'
         };
         
         // Cerca corrispondenza (anche parziale)
@@ -2843,7 +2860,7 @@ class ExcelFormPDF {
       const { data, error } = await supabase
         .from('questions')
         .upsert(dataToSave, {
-          onConflict: 'tipologia_test,Materia,section,tipologia_esercizi,progressivo,question_number,argomento'
+          onConflict: 'section,tipologia_esercizi,progressivo,tipologia_test,question_number,pdf_url,page_number,Materia,argomento'
         });
       
       if (error) {

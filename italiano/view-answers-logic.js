@@ -197,11 +197,12 @@ async function loadTestAnswers() {
     const answeredQuestionIds = answersData.map(a => a.question_id);
     console.log("🔍 DEBUG: Question IDs to fetch:", answeredQuestionIds.length);
 
-    // ✅ STEP 4: Fetch ONLY the questions that were answered (no ordering here, we'll sort by answer order)
+    // ✅ STEP 4: Fetch ONLY the questions that were answered, ordered by question_number
     const { data: questionsData, error: questionsError } = await supabase
       .from(questionsTable)
       .select("*")
-      .in("id", answeredQuestionIds);
+      .in("id", answeredQuestionIds)
+      .order("question_number", { ascending: true });
 
     if (questionsError) {
       console.error("Errore nel recupero delle domande:", questionsError.message);
@@ -216,20 +217,7 @@ async function loadTestAnswers() {
 
     console.log("🔍 DEBUG: Questions fetched:", questionsData.length);
 
-    // ✅ STEP 5: Sort questions in the order student answered them
-    const questionsMap = {};
-    questionsData.forEach(q => {
-      questionsMap[q.id] = q;
-    });
-
-    // Create sorted questions array based on answer submission order
-    const sortedQuestionsData = answersData
-      .map(answer => questionsMap[answer.question_id])
-      .filter(q => q); // Remove any nulls if question not found
-
-    console.log("🔍 DEBUG: Questions sorted by answer order:", sortedQuestionsData.length);
-
-    totalQuestions = sortedQuestionsData.length;
+    totalQuestions = questionsData.length;
 
     // 2. Gestione PDF se disponibile - con supporto multilingua
     const pdfUrlsIt = questionsData.map(q => q.pdf_url).filter(url => url);
@@ -267,8 +255,8 @@ async function loadTestAnswers() {
       });
     }
 
-    // 5. Display domande e risposte (use sorted questions)
-    displayQuestionsAndAnswers(sortedQuestionsData, studentAnswersMap);
+    // 5. Display domande e risposte
+    displayQuestionsAndAnswers(questionsData, studentAnswersMap);
     
     // 6. Aggiorna statistiche
     updateStatistics();
