@@ -548,8 +548,11 @@ window.DIStudentMultiSourceReasoning = {
   navigateQuestion(questionId, direction, totalQuestions) {
     const currentIndex = this.currentQuestionIndex[questionId] || 0;
 
-    // Check if trying to go forward - must have answered current question
-    if (direction > 0 && !this.isQuestionAnswered(questionId, currentIndex)) {
+    // Check if in view mode (don't enforce answer requirements in view mode)
+    const isViewMode = this.isViewMode && this.isViewMode[questionId];
+
+    // Check if trying to go forward - must have answered current question (only in student mode)
+    if (!isViewMode && direction > 0 && !this.isQuestionAnswered(questionId, currentIndex)) {
       alert('Please answer the current question before proceeding.');
       return;
     }
@@ -606,21 +609,41 @@ window.DIStudentMultiSourceReasoning = {
     const prevBtn = document.getElementById(`msr-prev-${questionId}`);
     const nextBtn = document.getElementById(`msr-next-${questionId}`);
 
-    // Previous button always disabled
-    if (prevBtn) {
-      prevBtn.disabled = true;
-      prevBtn.style.opacity = '0.5';
-      prevBtn.style.cursor = 'not-allowed';
-    }
+    // Check if in view mode
+    const isViewMode = this.isViewMode && this.isViewMode[questionId];
 
-    // Next button disabled if last question OR current question not answered
-    if (nextBtn) {
-      const isLastQuestion = currentIndex === totalQuestions - 1;
-      const isAnswered = this.isQuestionAnswered(questionId, currentIndex);
+    if (isViewMode) {
+      // In view mode, keep all buttons enabled
+      if (prevBtn) {
+        prevBtn.disabled = currentIndex === 0;
+        prevBtn.style.opacity = currentIndex === 0 ? '0.5' : '1';
+        prevBtn.style.cursor = currentIndex === 0 ? 'not-allowed' : 'pointer';
+      }
 
-      nextBtn.disabled = isLastQuestion || !isAnswered;
-      nextBtn.style.opacity = (isLastQuestion || !isAnswered) ? '0.5' : '1';
-      nextBtn.style.cursor = (isLastQuestion || !isAnswered) ? 'not-allowed' : 'pointer';
+      if (nextBtn) {
+        const isLastQuestion = currentIndex === totalQuestions - 1;
+        nextBtn.disabled = isLastQuestion;
+        nextBtn.style.opacity = isLastQuestion ? '0.5' : '1';
+        nextBtn.style.cursor = isLastQuestion ? 'not-allowed' : 'pointer';
+      }
+    } else {
+      // In student mode, enforce answer requirements
+      // Previous button always disabled
+      if (prevBtn) {
+        prevBtn.disabled = true;
+        prevBtn.style.opacity = '0.5';
+        prevBtn.style.cursor = 'not-allowed';
+      }
+
+      // Next button disabled if last question OR current question not answered
+      if (nextBtn) {
+        const isLastQuestion = currentIndex === totalQuestions - 1;
+        const isAnswered = this.isQuestionAnswered(questionId, currentIndex);
+
+        nextBtn.disabled = isLastQuestion || !isAnswered;
+        nextBtn.style.opacity = (isLastQuestion || !isAnswered) ? '0.5' : '1';
+        nextBtn.style.cursor = (isLastQuestion || !isAnswered) ? 'not-allowed' : 'pointer';
+      }
     }
   },
 
@@ -701,11 +724,20 @@ window.DIStudentMultiSourceReasoning = {
     console.log('🔍 MSR correctAnswer:', correctAnswer);
     console.log('🔍 MSR questionData.questions:', questionData.questions);
 
+    // Set view mode flag for this question
+    if (!this.isViewMode) this.isViewMode = {};
+    this.isViewMode[questionId] = true;
+
     const container = this.render(questionData, questionId, studentAnswer);
 
     // Keep navigation interactive (tabs, table sorting) but prevent answer changes
     setTimeout(() => {
       console.log('🔍 MSR View Mode TIMEOUT FIRED');
+
+      // Update navigation buttons to respect view mode
+      const currentIndex = this.currentQuestionIndex[questionId] || 0;
+      const totalQuestions = (questionData.questions || []).length;
+      this.updateNavigationButtons(questionId, currentIndex, totalQuestions);
 
       // Prevent radio/input changes but keep buttons/tabs working
       container.querySelectorAll('input[type="radio"]').forEach(radio => {
@@ -726,15 +758,22 @@ window.DIStudentMultiSourceReasoning = {
 
         console.log(`🔍 MSR ${qKey}: student=${JSON.stringify(studentSubAnswer)}, correct=${JSON.stringify(correctSubAnswer)}`);
 
+        // Find the question div for this index
+        const questionDiv = container.querySelector(`.msr-question-${questionId}[data-question-index="${idx}"]`);
+        if (!questionDiv) {
+          console.warn(`🔍 MSR ${qKey} - Question div not found`);
+          return;
+        }
+
         if (subQ.question_type === 'multiple_choice') {
           // Multiple choice - highlight the selected option
-          const choiceOptions = container.querySelectorAll(`.msr-choice-item[data-question="${qKey}"]`);
+          const choiceOptions = questionDiv.querySelectorAll('.msr-choice-item');
           console.log(`🔍 MSR ${qKey} - Found choice options:`, choiceOptions.length);
 
           choiceOptions.forEach(choiceDiv => {
             const letter = choiceDiv.dataset.letter;
-            const isStudent = studentSubAnswer === letter;
-            const isCorrect = correctSubAnswer === letter;
+            const isStudent = studentSubAnswer === letter || studentSubAnswer === letter?.toLowerCase() || studentSubAnswer === letter?.toUpperCase();
+            const isCorrect = correctSubAnswer === letter || correctSubAnswer === letter?.toLowerCase() || correctSubAnswer === letter?.toUpperCase();
 
             console.log(`🔍 MSR ${qKey} option ${letter}: isStudent=${isStudent}, isCorrect=${isCorrect}`);
 
@@ -766,35 +805,65 @@ window.DIStudentMultiSourceReasoning = {
             }
           });
         } else if (subQ.question_type === 'two_column') {
-          // Two-column - highlight radio selections
-          const statements = container.querySelectorAll(`[data-statement-question="${qKey}"]`);
-          statements.forEach(stmtRow => {
-            const stmtKey = stmtRow.dataset.statement;
+          // Two-column - highlight radio selections in table rows
+          const tableRows = questionDiv.querySelectorAll('tbody tr');
+          console.log(`🔍 MSR ${qKey} - Found table rows:`, tableRows.length);
+
+          tableRows.forEach((tr, stmtIdx) => {
+            const stmtKey = `stmt${stmtIdx}`;
             const studentValue = studentSubAnswer?.[stmtKey];
             const correctValue = correctSubAnswer?.[stmtKey];
 
-            stmtRow.querySelectorAll('.msr-radio-option').forEach(optionDiv => {
-              const radioValue = optionDiv.querySelector('input[type="radio"]')?.value;
+            console.log(`🔍 MSR ${qKey} ${stmtKey}: student=${studentValue}, correct=${correctValue}`);
 
-              if (radioValue === correctValue && radioValue === studentValue) {
-                optionDiv.style.background = '#d1fae5';
-                optionDiv.style.borderColor = '#10b981';
-                optionDiv.style.borderWidth = '3px';
-                optionDiv.querySelector('label').innerHTML += ' <span style="color: #10b981; font-weight: bold;">✓</span>';
-              } else if (radioValue === correctValue) {
-                optionDiv.style.background = '#f0fdf4';
-                optionDiv.style.borderColor = '#10b981';
-                optionDiv.style.borderWidth = '3px';
-                optionDiv.querySelector('label').innerHTML += ' <span style="color: #10b981; font-weight: bold;">✓</span>';
-              } else if (radioValue === studentValue) {
-                optionDiv.style.background = '#fee2e2';
-                optionDiv.style.borderColor = '#ef4444';
-                optionDiv.style.borderWidth = '3px';
-                optionDiv.querySelector('label').innerHTML += ' <span style="color: #ef4444; font-weight: bold;">✗</span>';
-              } else {
-                optionDiv.style.opacity = '0.5';
+            // Get all cells in this row (statement, col1, col2)
+            const cells = tr.querySelectorAll('td');
+            if (cells.length === 3) {
+              const col1Cell = cells[1];
+              const col2Cell = cells[2];
+
+              // Mark col1
+              if (correctValue === 'col1' && studentValue === 'col1') {
+                col1Cell.style.background = '#d1fae5';
+                col1Cell.style.borderColor = '#10b981';
+                col1Cell.style.borderWidth = '3px';
+                col1Cell.style.borderStyle = 'solid';
+                col1Cell.innerHTML += ' <span style="color: #10b981; font-weight: bold;">✓</span>';
+              } else if (correctValue === 'col1') {
+                col1Cell.style.background = '#f0fdf4';
+                col1Cell.style.borderColor = '#10b981';
+                col1Cell.style.borderWidth = '3px';
+                col1Cell.style.borderStyle = 'solid';
+                col1Cell.innerHTML += ' <span style="color: #10b981; font-weight: bold;">✓</span>';
+              } else if (studentValue === 'col1') {
+                col1Cell.style.background = '#fee2e2';
+                col1Cell.style.borderColor = '#ef4444';
+                col1Cell.style.borderWidth = '3px';
+                col1Cell.style.borderStyle = 'solid';
+                col1Cell.innerHTML += ' <span style="color: #ef4444; font-weight: bold;">✗</span>';
               }
-            });
+
+              // Mark col2
+              if (correctValue === 'col2' && studentValue === 'col2') {
+                col2Cell.style.background = '#d1fae5';
+                col2Cell.style.borderColor = '#10b981';
+                col2Cell.style.borderWidth = '3px';
+                col2Cell.style.borderStyle = 'solid';
+                col2Cell.innerHTML += ' <span style="color: #10b981; font-weight: bold;">✓</span>';
+              } else if (correctValue === 'col2') {
+                col2Cell.style.background = '#f0fdf4';
+                col2Cell.style.borderColor = '#10b981';
+                col2Cell.style.borderWidth = '3px';
+                col2Cell.style.borderStyle = 'solid';
+                col2Cell.innerHTML += ' <span style="color: #10b981; font-weight: bold;">✓</span>';
+              } else if (studentValue === 'col2') {
+                col2Cell.style.background = '#fee2e2';
+                col2Cell.style.borderColor = '#ef4444';
+                col2Cell.style.borderWidth = '3px';
+                col2Cell.style.borderStyle = 'solid';
+                col2Cell.innerHTML += ' <span style="color: #ef4444; font-weight: bold;">✗</span>';
+              }
+            }
           });
         }
       });

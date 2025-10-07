@@ -667,6 +667,24 @@ function displaySingleQuestion(q, studentAnswerRaw, questionNumber, isNotShown, 
 
     const isBancaDati = questionsTable === "questions_bancaDati";
 
+    // Check if this is a GMAT Data Insights question
+    if (isBancaDati && q.di_question_type && q.di_question_data && window.GMATDataInsightsRenderer) {
+      console.log('📊 Rendering DI question:', q.di_question_type);
+      // Use GMAT DI renderer
+      const diQuestionDiv = window.GMATDataInsightsRenderer.renderQuestion(q, studentAnswerRaw, questionNumber);
+
+      // Replace the current questionDiv with the DI-rendered one
+      if (targetContainer) {
+        targetContainer.appendChild(diQuestionDiv);
+      } else if (isNotShown) {
+        return diQuestionDiv;
+      } else {
+        const listContainer = document.getElementById("questionsList");
+        listContainer.appendChild(diQuestionDiv);
+      }
+      return; // Skip standard rendering
+    }
+
     // Testo domanda
     if (!usePDF) {
       const questionText = isBancaDati ? q.question_text : q.question;

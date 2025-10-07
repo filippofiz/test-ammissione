@@ -33,7 +33,7 @@ Browser → Edge Function → Claude API → Response back
    - Go to Edge Functions → Secrets
    - Click "Add new secret"
    - Name: `ANTHROPIC_API_KEY`
-   - Value: `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`
+   - Value: `<your-anthropic-api-key-here>`
    - Save
 
 5. **Test It**
@@ -65,7 +65,7 @@ supabase link --project-ref yfbdalhlkykeqcmjdjqe
 
 3. **Set Secret**
 ```bash
-supabase secrets set ANTHROPIC_API_KEY=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
+supabase secrets set ANTHROPIC_API_KEY=<your-anthropic-api-key-here>
 ```
 
 4. **Deploy Function**
