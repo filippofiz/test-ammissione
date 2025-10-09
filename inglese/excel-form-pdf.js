@@ -651,12 +651,58 @@ class ExcelFormPDF {
     } else if (materia === 'Assessment Iniziale') {
       // Per Assessment Iniziale: campo readonly
       sectionField.innerHTML = `
-        <input type="text" id="configPDFSection" value="Assessment Iniziale" readonly 
-               style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6; 
+        <input type="text" id="configPDFSection" value="Assessment Iniziale" readonly
+               style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6;
                       border-radius: 6px; background: #f0f0f0; color: #666;">
       `;
       // Trigger calcolo progressivo dopo aver impostato il valore
       setTimeout(() => this.checkAndCalculateProgressivo(), 0);
+    } else if (materia === 'Math') {
+      // SAT Math sections
+      const sectionOptions = [
+        '',
+        'Geometry and Trigonometry',
+        'Problem Solving and Data Analysis',
+        'Algebra',
+        'Advanced Math'
+      ];
+
+      let selectHTML = '<select id="configPDFSection" style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6; border-radius: 6px;">';
+      selectHTML += '<option value="">Seleziona...</option>';
+      sectionOptions.forEach(option => {
+        if (option) {
+          selectHTML += `<option value="${option}">${option}</option>`;
+        }
+      });
+      selectHTML += '</select>';
+
+      sectionField.innerHTML = selectHTML;
+
+      // Aggiungi event listener al nuovo select
+      document.getElementById('configPDFSection').addEventListener('change', () => this.checkAndCalculateProgressivo());
+    } else if (materia === 'Reading and Writing') {
+      // SAT Reading & Writing sections
+      const sectionOptions = [
+        '',
+        'Information and Ideas',
+        'Craft and Structure',
+        'Expression of Ideas',
+        'Standard English Conventions'
+      ];
+
+      let selectHTML = '<select id="configPDFSection" style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6; border-radius: 6px;">';
+      selectHTML += '<option value="">Seleziona...</option>';
+      sectionOptions.forEach(option => {
+        if (option) {
+          selectHTML += `<option value="${option}">${option}</option>`;
+        }
+      });
+      selectHTML += '</select>';
+
+      sectionField.innerHTML = selectHTML;
+
+      // Aggiungi event listener al nuovo select
+      document.getElementById('configPDFSection').addEventListener('change', () => this.checkAndCalculateProgressivo());
     } else if (materia === 'Fisica') {
       // Per Fisica: opzioni specifiche
       const sectionOptions = [
@@ -995,18 +1041,11 @@ class ExcelFormPDF {
     document.getElementById('configPDFTipologiaTest').addEventListener('change', () => {
       const testType = document.getElementById('configPDFTipologiaTest').value;
 
-      // Show/hide SAT module configuration
-      const satModuleConfig = document.getElementById('satModuleConfig');
-      const numDomandeContainer = document.getElementById('configPDFNumDomande').parentElement;
+      // Update macro-section options based on test type
+      this.updateMacroSectionOptions(testType);
 
-      if (testType === 'SAT PDF') {
-        satModuleConfig.style.display = 'block';
-        numDomandeContainer.style.display = 'none'; // Hide standard number input
-        this.updateSATTotal(); // Calculate initial total
-      } else {
-        satModuleConfig.style.display = 'none';
-        numDomandeContainer.style.display = 'block'; // Show standard number input
-      }
+      // Update SAT module visibility based on both test type AND macro-section
+      this.updateSATModuleVisibility();
 
       // Prova a sincronizzare il dropdown dei test caricati
       const uploadedDropdown = document.getElementById('uploadedTestsDropdown');
@@ -1023,6 +1062,11 @@ class ExcelFormPDF {
       }
 
       this.checkAndCalculateProgressivo();
+    });
+
+    // Also listen to macro-section changes to update SAT visibility
+    materiaSelect.addEventListener('change', () => {
+      this.updateSATModuleVisibility();
     });
 
     // Add event listeners for SAT module inputs
@@ -1118,6 +1162,86 @@ class ExcelFormPDF {
     }
 
     document.getElementById(thresholdDetailsId).innerHTML = thresholdHTML;
+  }
+
+  updateMacroSectionOptions(testType) {
+    const materiaSelect = document.getElementById('configPDFMateria');
+    if (!materiaSelect) return;
+
+    // Store current value
+    const currentValue = materiaSelect.value;
+
+    // Clear existing options
+    materiaSelect.innerHTML = '<option value="">Seleziona...</option>';
+
+    if (testType === 'SAT PDF') {
+      // SAT-specific macro-sections
+      const satOptions = [
+        { value: 'Math', label: 'Math' },
+        { value: 'Reading and Writing', label: 'Reading and Writing' },
+        { value: 'Assessment Iniziale', label: 'Assessment Iniziale' },
+        { value: 'Simulazioni', label: 'Simulazioni' }
+      ];
+
+      satOptions.forEach(opt => {
+        const option = document.createElement('option');
+        option.value = opt.value;
+        option.textContent = opt.label;
+        materiaSelect.appendChild(option);
+      });
+    } else {
+      // Default macro-sections for other tests
+      const defaultOptions = [
+        { value: 'Matematica', label: 'Matematica' },
+        { value: 'Fisica', label: 'Fisica' },
+        { value: 'Scienze', label: 'Scienze' },
+        { value: 'Assessment Iniziale', label: 'Assessment Iniziale' },
+        { value: 'Simulazioni', label: 'Simulazioni' },
+        { value: 'Altro', label: 'Altro' }
+      ];
+
+      defaultOptions.forEach(opt => {
+        const option = document.createElement('option');
+        option.value = opt.value;
+        option.textContent = opt.label;
+        materiaSelect.appendChild(option);
+      });
+    }
+
+    // Restore previous value if it's still valid
+    const isValueValid = Array.from(materiaSelect.options).some(opt => opt.value === currentValue);
+    if (isValueValid) {
+      materiaSelect.value = currentValue;
+    } else {
+      materiaSelect.value = ''; // Reset if previous value is not available
+      // Trigger section field update
+      this.updateSectionField('');
+      this.updateTipologiaField('');
+    }
+  }
+
+  updateSATModuleVisibility() {
+    const testType = document.getElementById('configPDFTipologiaTest')?.value;
+    const macroSection = document.getElementById('configPDFMateria')?.value;
+    const satModuleConfig = document.getElementById('satModuleConfig');
+    const numDomandeContainer = document.getElementById('configPDFNumDomande')?.parentElement;
+
+    if (!testType || !satModuleConfig || !numDomandeContainer) return;
+
+    // Show SAT module config ONLY if:
+    // 1. Test type is "SAT PDF" AND
+    // 2. Macro-section is "Simulazioni" OR "Assessment Iniziale"
+    const isSAT = testType === 'SAT PDF';
+    const isModuleBased = macroSection === 'Simulazioni' || macroSection === 'Assessment Iniziale';
+
+    if (isSAT && isModuleBased) {
+      satModuleConfig.style.display = 'block';
+      numDomandeContainer.style.display = 'none'; // Hide standard number input
+      this.updateSATTotal(); // Calculate initial total
+    } else {
+      satModuleConfig.style.display = 'none';
+      numDomandeContainer.style.display = 'block'; // Show standard number input
+    }
   }
 
   async checkAndCalculateProgressivo() {
@@ -1587,33 +1711,39 @@ class ExcelFormPDF {
     // Handle SAT module configuration
     let satModuleInfo = null;
     if (tipologiaTest === 'SAT PDF') {
-      const rw1 = parseInt(document.getElementById('satRW1Count').value) || 0;
-      const rw2 = parseInt(document.getElementById('satRW2Count').value) || 0;
-      const math1 = parseInt(document.getElementById('satMath1Count').value) || 0;
-      const math2 = parseInt(document.getElementById('satMath2Count').value) || 0;
-      const rw2Versions = parseInt(document.getElementById('satRW2Versions').value) || 2;
-      const math2Versions = parseInt(document.getElementById('satMath2Versions').value) || 2;
+      // Only validate/use module config for Simulazioni and Assessment Iniziale
+      const isModuleBased = materia === 'Simulazioni' || materia === 'Assessment Iniziale';
 
-      if (rw1 === 0 && rw2 === 0 && math1 === 0 && math2 === 0) {
-        alert('Please specify at least one SAT module!');
-        return;
+      if (isModuleBased) {
+        const rw1 = parseInt(document.getElementById('satRW1Count').value) || 0;
+        const rw2 = parseInt(document.getElementById('satRW2Count').value) || 0;
+        const math1 = parseInt(document.getElementById('satMath1Count').value) || 0;
+        const math2 = parseInt(document.getElementById('satMath2Count').value) || 0;
+        const rw2Versions = parseInt(document.getElementById('satRW2Versions').value) || 2;
+        const math2Versions = parseInt(document.getElementById('satMath2Versions').value) || 2;
+
+        if (rw1 === 0 && rw2 === 0 && math1 === 0 && math2 === 0) {
+          alert('Please specify at least one SAT module!');
+          return;
+        }
+
+        satModuleInfo = {
+          rw1Count: rw1,
+          rw2Count: rw2,
+          math1Count: math1,
+          math2Count: math2,
+          rw2Versions: rw2Versions,
+          math2Versions: math2Versions,
+          rw2Total: rw2 * rw2Versions,
+          math2Total: math2 * math2Versions,
+          // Store thresholds for reference
+          rw2Threshold: 70,  // 70% for RW harder module
+          math2Threshold: 65  // 65% for Math harder module
+        };
+
+        numDomande = rw1 + (rw2 * rw2Versions) + math1 + (math2 * math2Versions);
       }
-
-      satModuleInfo = {
-        rw1Count: rw1,
-        rw2Count: rw2,
-        math1Count: math1,
-        math2Count: math2,
-        rw2Versions: rw2Versions,
-        math2Versions: math2Versions,
-        rw2Total: rw2 * rw2Versions,
-        math2Total: math2 * math2Versions,
-        // Store thresholds for reference
-        rw2Threshold: 70,  // 70% for RW harder module
-        math2Threshold: 65  // 65% for Math harder module
-      };
-
-      numDomande = rw1 + (rw2 * rw2Versions) + math1 + (math2 * math2Versions);
+      // For Math/Reading and Writing, numDomande is already set from the input field
     }
 
     // Validazioni
@@ -1918,16 +2048,22 @@ class ExcelFormPDF {
   buildTable() {
     const table = document.getElementById('excelPDFTable');
     table.innerHTML = '';
-    
+
     const thead = document.createElement('thead');
     const headerRow = document.createElement('tr');
-    
+
     const th = document.createElement('th');
     th.textContent = '#';
     headerRow.appendChild(th);
-    
+
+    // Check if SAT_section column should be shown
+    // Only show for SAT PDF with Simulazioni or Assessment Iniziale
+    const isSAT = this.commonData.tipologia_test === 'SAT PDF';
+    const isModuleBased = this.commonData.Materia === 'Simulazioni' || this.commonData.Materia === 'Assessment Iniziale';
+    const showSATSection = isSAT && isModuleBased;
+
     // Colonne da mostrare (esclude criptato, pdf_url, is_open_ended)
-    const visibleColumns = [
+    const baseColumns = [
       'tipologia_test',       // readonly dal form
       'Materia',             // readonly dal form
       'section',             // readonly dal form
@@ -1937,19 +2073,23 @@ class ExcelFormPDF {
       'question_number',     // readonly auto
       'correct_answer',      // modificabile
       'wrong_answers',       // readonly auto
-      'argomento',           // modificabile
-      'SAT_section'          // modificabile per SAT
+      'argomento'            // modificabile
     ];
-    
+
+    // Add SAT_section column only if needed
+    const visibleColumns = showSATSection
+      ? [...baseColumns, 'SAT_section']
+      : baseColumns;
+
     visibleColumns.forEach(col => {
       const th = document.createElement('th');
       th.textContent = this.formatColumnName(col);
       headerRow.appendChild(th);
     });
-    
+
     thead.appendChild(headerRow);
     table.appendChild(thead);
-    
+
     const tbody = document.createElement('tbody');
     tbody.id = 'excelPDFTableBody';
     table.appendChild(tbody);
@@ -2575,26 +2715,29 @@ class ExcelFormPDF {
     
     tr.appendChild(tdArgomento);
 
-    // SAT Section - for SAT tests only, show the module
-    const tdSATSection = document.createElement('td');
-    const satSectionInput = document.createElement('input');
-    satSectionInput.type = 'text';
-    satSectionInput.className = 'cell-input';
+    // SAT Section - only show for SAT PDF with Simulazioni or Assessment Iniziale
+    const isModuleBased = this.commonData.Materia === 'Simulazioni' || this.commonData.Materia === 'Assessment Iniziale';
+    if (isSATTest && isModuleBased) {
+      const tdSATSection = document.createElement('td');
+      const satSectionInput = document.createElement('input');
+      satSectionInput.type = 'text';
+      satSectionInput.className = 'cell-input';
 
-    if (isSATTest && rowData.argomento) {
-      // For SAT tests, auto-populate with the module from argomento
-      if (rowData.argomento.startsWith('RW') || rowData.argomento.startsWith('Math')) {
-        satSectionInput.value = rowData.argomento;
+      if (rowData.argomento) {
+        // For SAT tests, auto-populate with the module from argomento
+        if (rowData.argomento.startsWith('RW') || rowData.argomento.startsWith('Math')) {
+          satSectionInput.value = rowData.argomento;
+        }
       }
+
+      // Make it editable for manual override if needed
+      satSectionInput.addEventListener('input', (e) => {
+        this.updateCell(rowIndex, 'SAT_section', e.target.value);
+      });
+
+      tdSATSection.appendChild(satSectionInput);
+      tr.appendChild(tdSATSection);
     }
-
-    // Make it editable for manual override if needed
-    satSectionInput.addEventListener('input', (e) => {
-      this.updateCell(rowIndex, 'SAT_section', e.target.value);
-    });
-
-    tdSATSection.appendChild(satSectionInput);
-    tr.appendChild(tdSATSection);
   }
 
   createReadonlyCell(tr, value) {

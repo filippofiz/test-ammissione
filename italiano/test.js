@@ -776,12 +776,13 @@ async function loadTest() {
     // Determina il tipo di test per la navigazione
     isBocconiTest = selectedTestType && selectedTestType.toLowerCase().includes("bocconi");
     isMedicinaTest = selectedTestType && selectedTestType.toLowerCase().includes("medicina");
-    isSATTest = selectedTestType && selectedTestType.toUpperCase().includes("SAT");
+    // SAT is NOT managed in Italian version - always disable SAT logic
+    isSATTest = false;
 
     console.log(`🎯 Tipo test: ${selectedTestType}`);
     console.log(`   - Navigazione unidirezionale (Bocconi): ${isBocconiTest ? 'Sì' : 'No'}`);
     console.log(`   - Test Medicina: ${isMedicinaTest ? 'Sì' : 'No'}`);
-    console.log(`   - Test SAT adattivo: ${isSATTest ? 'Sì' : 'No'}`);
+    console.log(`   - Test SAT adattivo: ${isSATTest ? 'Sì (NON GESTITO nella versione italiana)' : 'No'}`);
     
     // Cerca se esiste configurazione per questo test type
     if (selectedTestType) {

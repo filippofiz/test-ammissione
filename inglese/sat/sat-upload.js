@@ -45,6 +45,25 @@ window.selectTestType = function(type) {
   });
   document.querySelector(`[data-test-type="${type}"]`).classList.add('selected');
 
+  // Show/hide module section based on test type
+  const moduleSection = document.getElementById('moduleSection');
+  const isModuleBased = type === 'Simulazioni' || type === 'Assessment Iniziale';
+
+  if (isModuleBased) {
+    // Show module selector for Simulazioni and Assessment Iniziale
+    moduleSection.style.display = 'block';
+    selectedModule = null; // Reset module selection
+    document.querySelectorAll('.module-card').forEach(card => {
+      card.classList.remove('selected');
+    });
+  } else {
+    // Hide module selector for Training and Assessment
+    moduleSection.style.display = 'none';
+    selectedModule = 'ALL'; // Use special marker for non-module tests
+    // Show simplified question input
+    generateSimpleQuestionRows();
+  }
+
   updateAutoFields();
 };
 
@@ -181,9 +200,60 @@ async function uploadPDFToStorage() {
   }
 }
 
-// Generate question rows
+// Generate simple question rows for Training/Assessment (no modules, no SAT_section)
+function generateSimpleQuestionRows(count = 98) {
+  const tbody = document.getElementById('questionsTableBody');
+  const thead = document.querySelector('#questionsTable thead tr');
+
+  // Update table header - hide SAT Section column
+  thead.innerHTML = `
+    <th width="80">Question</th>
+    <th width="100">Correct Answer</th>
+    <th width="100">Page Number</th>
+    <th>Notes (optional)</th>
+  `;
+
+  tbody.innerHTML = '';
+
+  for (let i = 1; i <= count; i++) {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${i}</td>
+      <td><input type="text" class="answer-input" maxlength="1" placeholder="A-E" data-question="${i}"></td>
+      <td><input type="number" class="page-input" min="1" placeholder="1" data-question="${i}"></td>
+      <td><input type="text" placeholder="Optional notes" data-question="${i}"></td>
+    `;
+    tbody.appendChild(row);
+  }
+
+  questionCount = count;
+  updateQuestionCount();
+
+  // Add input validation
+  document.querySelectorAll('.answer-input').forEach(input => {
+    input.addEventListener('input', function() {
+      this.value = this.value.toUpperCase();
+      if (!/^[A-E]?$/.test(this.value)) {
+        this.value = '';
+      }
+    });
+  });
+}
+
+// Generate question rows with module info (for Simulazioni/Assessment Iniziale)
 function generateQuestionRows(count) {
   const tbody = document.getElementById('questionsTableBody');
+  const thead = document.querySelector('#questionsTable thead tr');
+
+  // Update table header - show SAT Section column
+  thead.innerHTML = `
+    <th width="80">Question</th>
+    <th width="120">SAT Section</th>
+    <th width="100">Correct Answer</th>
+    <th width="100">Page Number</th>
+    <th>Notes (optional)</th>
+  `;
+
   tbody.innerHTML = '';
 
   // Determine SAT section to display
@@ -319,12 +389,15 @@ window.saveTest = async function() {
     return;
   }
 
-  if (!selectedModule) {
+  // For Training/Assessment, selectedModule is 'ALL' and doesn't need module validation
+  const isModuleBased = selectedTestType === 'Simulazioni' || selectedTestType === 'Assessment Iniziale';
+
+  if (isModuleBased && !selectedModule) {
     showStatus('Please select a module', 'error');
     return;
   }
 
-  if (moduleConfigs[selectedModule].isAdaptive && !selectedDifficulty) {
+  if (isModuleBased && moduleConfigs[selectedModule] && moduleConfigs[selectedModule].isAdaptive && !selectedDifficulty) {
     showStatus('Please select a difficulty level for adaptive module', 'error');
     return;
   }
@@ -374,26 +447,39 @@ window.saveTest = async function() {
   // Build test type string
   let testType = `SAT PDF`;
 
-  // Determine the actual section for adaptive modules
-  let moduleSection = selectedModule;
-  if (moduleConfigs[selectedModule].isAdaptive && selectedDifficulty) {
-    // For adaptive modules, append difficulty to create the full section name
-    if (selectedModule === 'RW2') {
-      moduleSection = selectedDifficulty === 'EASY' ? 'RW2-Easy' :
-                      selectedDifficulty === 'HARD' ? 'RW2-Hard' : 'RW2-Medium';
-    } else if (selectedModule === 'MATH2') {
-      moduleSection = selectedDifficulty === 'EASY' ? 'MATH2-Easy' :
-                      selectedDifficulty === 'HARD' ? 'MATH2-Hard' : 'MATH2-Medium';
+  // Determine the actual section and module info
+  let moduleSection = null;
+  let materia = 'SAT'; // Default for Training/Assessment
+  let tipologiaEsercizi = selectedTestType; // Training (Esercizi per casa) or Assessment
+  let moduleDuration = null;
+  let isAdaptive = false;
+
+  if (isModuleBased) {
+    // For Simulazioni/Assessment Iniziale with modules
+    moduleSection = selectedModule;
+    if (moduleConfigs[selectedModule].isAdaptive && selectedDifficulty) {
+      // For adaptive modules, append difficulty to create the full section name
+      if (selectedModule === 'RW2') {
+        moduleSection = selectedDifficulty === 'EASY' ? 'RW2-Easy' :
+                        selectedDifficulty === 'HARD' ? 'RW2-Hard' : 'RW2-Medium';
+      } else if (selectedModule === 'MATH2') {
+        moduleSection = selectedDifficulty === 'EASY' ? 'MATH2-Easy' :
+                        selectedDifficulty === 'HARD' ? 'MATH2-Hard' : 'MATH2-Medium';
+      }
     }
+    materia = selectedModule.startsWith('RW') ? 'English' : 'Math';
+    tipologiaEsercizi = moduleConfigs[selectedModule].isAdaptive ? 'Adaptive' : 'Standard';
+    moduleDuration = moduleConfigs[selectedModule].duration;
+    isAdaptive = moduleConfigs[selectedModule].isAdaptive;
   }
 
   // Prepare data for database
   const testData = questions.map(q => ({
     tipologia_test: testType,
-    Materia: selectedModule.startsWith('RW') ? 'English' : 'Math',
-    section: selectedTestType, // Use the selected test type (Assessment Iniziale or Simulazioni)
-    SAT_section: moduleSection, // New field specifically for SAT modules
-    tipologia_esercizi: moduleConfigs[selectedModule].isAdaptive ? 'Adaptive' : 'Standard',
+    Materia: materia,
+    section: selectedTestType, // Training (Esercizi per casa), Assessment, Assessment Iniziale, or Simulazioni
+    SAT_section: moduleSection, // Only for Simulazioni/Assessment Iniziale
+    tipologia_esercizi: tipologiaEsercizi,
     progressivo: 1, // You might want to calculate this based on existing tests
     num_domande: questions.length,
     question_number: q.question_number,
@@ -402,8 +488,8 @@ window.saveTest = async function() {
     pdf_url: pdfUrl,
     notes: q.notes,
     difficulty: selectedDifficulty || 'standard',
-    module_duration: moduleConfigs[selectedModule].duration,
-    is_adaptive: moduleConfigs[selectedModule].isAdaptive
+    module_duration: moduleDuration,
+    is_adaptive: isAdaptive
   }));
 
   // Save to database
