@@ -751,6 +751,24 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
     }
 
+    // Add event listener for SAT Training/Assessment submit button (below questions)
+    const submitBtnSAT = document.getElementById("submitAnswersSAT");
+    if (submitBtnSAT) {
+        console.log("✅ SAT submit button found, attaching event listener");
+        submitBtnSAT.addEventListener("click", async () => {
+            // Protection against multiple clicks
+            if (isSubmitting) {
+                console.log("⚠️ Submit already in progress, ignoring click");
+                return;
+            }
+            console.log("📤 SAT submit button clicked - submitting answers!");
+            submitBtnSAT.disabled = true; // Disable button immediately
+            await submitAnswers(false); // false = non è scaduto il tempo
+        });
+    } else {
+        console.log("⚠️ SAT submit button NOT found in DOM");
+    }
+
     // Ensure navigation buttons exist
     const prevPageBtn = document.getElementById("prevPage");
     const nextPageBtn = document.getElementById("nextPage");
@@ -766,10 +784,46 @@ document.addEventListener("DOMContentLoaded", async () => {
             console.log("Navigazione indietro disabilitata per test BOCCONI");
             return;
         }
+
+        // Check if SAT Training/Assessment mode - validate questions are answered
+        const isSATTestType = selectedTestType && selectedTestType.toUpperCase().includes("SAT");
+        const currentSectionName = sessionStorage.getItem("currentSection");
+        const isModuleBasedSAT = currentSectionName === "Simulazioni" || currentSectionName === "Assessment Iniziale";
+        const isSATTrainingOrAssessment = isSATTestType && !isModuleBasedSAT;
+
+        if (isSATTrainingOrAssessment) {
+            // Validate that all questions on current page are answered
+            const pageQuestions = questions.filter(q => q.page_number === currentPage);
+            const unansweredQuestions = pageQuestions.filter(q => !studentAnswers[q.id]);
+
+            if (unansweredQuestions.length > 0) {
+                alert(`Please answer all questions before proceeding. You have ${unansweredQuestions.length} unanswered question(s) on this page.`);
+                return;
+            }
+        }
+
         if (currentPage > 1) loadQuestionsForPage(currentPage - 1);
     });
     nextPageBtn.addEventListener("click", () => {
         console.log(`➡️ Next button clicked - Current page: ${currentPage}, Total pages: ${totalPages}`);
+
+        // Check if SAT Training/Assessment mode - validate questions are answered
+        const isSATTestType = selectedTestType && selectedTestType.toUpperCase().includes("SAT");
+        const currentSectionName = sessionStorage.getItem("currentSection");
+        const isModuleBasedSAT = currentSectionName === "Simulazioni" || currentSectionName === "Assessment Iniziale";
+        const isSATTrainingOrAssessment = isSATTestType && !isModuleBasedSAT;
+
+        if (isSATTrainingOrAssessment) {
+            // Validate that all questions on current page are answered
+            const pageQuestions = questions.filter(q => q.page_number === currentPage);
+            const unansweredQuestions = pageQuestions.filter(q => !studentAnswers[q.id]);
+
+            if (unansweredQuestions.length > 0) {
+                alert(`Please answer all questions before proceeding. You have ${unansweredQuestions.length} unanswered question(s) on this page.`);
+                return;
+            }
+        }
+
         const nextPage = currentPage + 1;
 
         // Check for SAT module transition FIRST (before checking if we're at last page)
@@ -873,12 +927,23 @@ async function loadTest() {
     // Determina il tipo di test per la navigazione
     isBocconiTest = selectedTestType && selectedTestType.toLowerCase().includes("bocconi");
     isMedicinaTest = selectedTestType && selectedTestType.toLowerCase().includes("medicina");
-    isSATTest = selectedTestType && selectedTestType.toUpperCase().includes("SAT");
+
+    // SAT adaptive logic should ONLY apply to Simulazioni and Assessment Iniziale
+    // Training and Assessment modes should work as flat tests (no modules, no adaptive)
+    const isSATTestType = selectedTestType && selectedTestType.toUpperCase().includes("SAT");
+    // Check if it's module-based SAT (Simulazioni or Assessment Iniziale) by section name
+    const isModuleBasedSAT = currentSection === "Simulazioni" || currentSection === "Assessment Iniziale";
+    isSATTest = isSATTestType && isModuleBasedSAT;
 
     console.log(`🎯 Tipo test: ${selectedTestType}`);
+    console.log(`   - Sezione corrente: ${currentSection}`);
+    console.log(`   - Tipologia esercizi: ${tipologiaEsercizi}`);
     console.log(`   - Navigazione unidirezionale (Bocconi): ${isBocconiTest ? 'Sì' : 'No'}`);
     console.log(`   - Test Medicina: ${isMedicinaTest ? 'Sì' : 'No'}`);
     console.log(`   - Test SAT adattivo: ${isSATTest ? 'Sì' : 'No'}`);
+    if (isSATTestType && !isModuleBasedSAT) {
+        console.log(`   ✅ SAT Training/Assessment mode - using flat test structure (no modules, no adaptive)`);
+    }
     
     // Cerca se esiste configurazione per questo test type
     if (selectedTestType) {
@@ -1625,13 +1690,36 @@ function loadQuestionsForPage(page) {
         console.log(`⏰ Keeping navigation buttons hidden due to timer expiry transition`);
     }
 
-    // For SAT tests, only show submit button when all modules are complete
+    // Check if this is SAT Training/Assessment mode
+    const submitButtonSAT = document.getElementById("submitAnswersSAT");
+    const isSATTestType = selectedTestType && selectedTestType.toUpperCase().includes("SAT");
+    const currentSectionName = sessionStorage.getItem("currentSection");
+    const isModuleBasedSAT = currentSectionName === "Simulazioni" || currentSectionName === "Assessment Iniziale";
+    const isSATTrainingOrAssessment = isSATTestType && !isModuleBasedSAT;
+
+    // For SAT tests, handle submit button visibility
     if (submitButton) {
-        if (isSATTest) {
+        if (isSATTrainingOrAssessment) {
+            // SAT Training/Assessment: always hide navigation panel button
+            submitButton.style.display = "none";
+        } else if (isSATTest) {
+            // SAT Simulazioni/Assessment Iniziale: only show when all modules complete
             const hasMath2Complete = satCompletedModules.has("Math2-Complete");
             submitButton.style.display = hasMath2Complete ? "inline-block" : "none";
         } else {
+            // All other tests: always show
             submitButton.style.display = "inline-block";
+        }
+    }
+
+    // Handle SAT Training/Assessment mode submit button (below questions)
+    if (submitButtonSAT) {
+        // Only show for SAT Training/Assessment modes and only on the last page
+        if (isSATTrainingOrAssessment && currentPage === totalPages) {
+            console.log(`✅ SAT Training/Assessment: Showing submit button on last page (${currentPage}/${totalPages})`);
+            submitButtonSAT.style.display = "block";
+        } else {
+            submitButtonSAT.style.display = "none";
         }
     }
 
@@ -2842,6 +2930,23 @@ function buildQuestionNav() {
       // Per tutti gli altri casi (Bocconi banca_dati o domande non precedenti)
       else {
         btn.addEventListener("click", () => {
+          // Check if SAT Training/Assessment mode - validate questions are answered before navigating
+          const isSATTestType = selectedTest && selectedTest.toUpperCase().includes("SAT");
+          const currentSectionName = sessionStorage.getItem("currentSection");
+          const isModuleBasedSAT = currentSectionName === "Simulazioni" || currentSectionName === "Assessment Iniziale";
+          const isSATTrainingOrAssessment = isSATTestType && !isModuleBasedSAT;
+
+          if (isSATTrainingOrAssessment && q.page_number !== currentPage) {
+            // Validate that all questions on current page are answered before allowing navigation
+            const pageQuestions = questions.filter(qq => qq.page_number === currentPage);
+            const unansweredQuestions = pageQuestions.filter(qq => !studentAnswers[qq.id]);
+
+            if (unansweredQuestions.length > 0) {
+              alert(`Please answer all questions on the current page before navigating. You have ${unansweredQuestions.length} unanswered question(s).`);
+              return;
+            }
+          }
+
           loadQuestionsForPage(q.page_number);
         });
       }

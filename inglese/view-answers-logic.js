@@ -991,6 +991,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // SAT Score Report Generation
 function generateSATScoreReport(questionsData, studentAnswersMap) {
+  // Detect if this is module-based (Simulazioni/Assessment Iniziale) or section-based (Training/Assessment)
+  const hasModules = questionsData.some(q => {
+    const satSection = q.SAT_section || q.section || "";
+    return satSection === 'RW1' || satSection.includes('RW2') || satSection === 'Math1' || satSection === 'MATH1' || satSection.includes('Math2');
+  });
+
+  if (hasModules) {
+    // Module-based SAT (Simulazioni/Assessment Iniziale) - use existing logic
+    generateModuleBasedReport(questionsData, studentAnswersMap);
+  } else {
+    // Section-based SAT (Training/Assessment) - use simple section scoring
+    generateSectionBasedReport(questionsData, studentAnswersMap);
+  }
+}
+
+// Original module-based report for Simulazioni/Assessment Iniziale
+function generateModuleBasedReport(questionsData, studentAnswersMap) {
   // Calculate raw scores by module
   const moduleScores = {
     'RW1': { correct: 0, total: 0 },
@@ -1036,7 +1053,71 @@ function generateSATScoreReport(questionsData, studentAnswersMap) {
     rwScore: rwScaledScore,
     mathScore: mathScaledScore,
     moduleScores: moduleScores,
-    rawScores: { rw: rwRawScore, math: mathRawScore }
+    rawScores: { rw: rwRawScore, math: mathRawScore },
+    isModuleBased: true
+  }));
+  reportWindow.document.close();
+}
+
+// New section-based report for Training/Assessment
+function generateSectionBasedReport(questionsData, studentAnswersMap) {
+  // Group by main category (Math or Reading & Writing)
+  const sectionScores = {
+    'Reading and Writing': { correct: 0, total: 0, subsections: {} },
+    'Math': { correct: 0, total: 0, subsections: {} }
+  };
+
+  questionsData.forEach(q => {
+    const answer = studentAnswersMap[q.id] || "";
+    const section = q.section || q.Materia || "";
+
+    // Determine main category
+    let mainCategory = '';
+    if (section === 'Math' || section.includes('Geometry') || section.includes('Algebra') ||
+        section.includes('Problem Solving') || section.includes('Advanced Math')) {
+      mainCategory = 'Math';
+    } else if (section === 'Reading and Writing' || section.includes('Information and Ideas') ||
+               section.includes('Craft and Structure') || section.includes('Expression of Ideas') ||
+               section.includes('Standard English')) {
+      mainCategory = 'Reading and Writing';
+    }
+
+    if (mainCategory && sectionScores[mainCategory]) {
+      sectionScores[mainCategory].total++;
+
+      // Track subsection
+      if (!sectionScores[mainCategory].subsections[section]) {
+        sectionScores[mainCategory].subsections[section] = { correct: 0, total: 0 };
+      }
+      sectionScores[mainCategory].subsections[section].total++;
+
+      if (answer === q.correct_answer) {
+        sectionScores[mainCategory].correct++;
+        sectionScores[mainCategory].subsections[section].correct++;
+      }
+    }
+  });
+
+  // Calculate simple percentage-based scores (no adaptive weighting)
+  const rwPercentage = sectionScores['Reading and Writing'].total > 0 ?
+    sectionScores['Reading and Writing'].correct / sectionScores['Reading and Writing'].total : 0;
+  const mathPercentage = sectionScores['Math'].total > 0 ?
+    sectionScores['Math'].correct / sectionScores['Math'].total : 0;
+
+  // Convert to 200-800 scale (simple linear conversion)
+  const rwScore = Math.round(200 + (rwPercentage * 600));
+  const mathScore = Math.round(200 + (mathPercentage * 600));
+
+  // Open score report in new tab
+  const reportWindow = window.open('', '_blank');
+  reportWindow.document.write(generateSectionScoreReportHTML({
+    studentName: selectedStudentName || 'Student',
+    testDate: new Date().toLocaleDateString(),
+    totalScore: rwScore + mathScore,
+    rwScore: rwScore,
+    mathScore: mathScore,
+    sectionScores: sectionScores,
+    isModuleBased: false
   }));
   reportWindow.document.close();
 }
@@ -1485,6 +1566,256 @@ function generateScoreReportHTML(data) {
             }
         }
     </script>
+</body>
+</html>`;
+}
+
+// Generate section-based score report HTML for SAT Training/Assessment
+function generateSectionScoreReportHTML(data) {
+  // Build subsection cards HTML
+  let subsectionHTML = '';
+
+  // Add Reading & Writing subsections
+  if (data.sectionScores['Reading and Writing'].total > 0) {
+    Object.entries(data.sectionScores['Reading and Writing'].subsections).forEach(([name, scores]) => {
+      const percentage = scores.total > 0 ? Math.round((scores.correct / scores.total) * 100) : 0;
+      subsectionHTML += `
+        <div class="module-card">
+          <div class="module-name">${name}</div>
+          <div class="module-score">${scores.correct}/${scores.total}</div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: ${percentage}%"></div>
+          </div>
+          <div class="module-details">${percentage}% Correct</div>
+        </div>
+      `;
+    });
+  }
+
+  // Add Math subsections
+  if (data.sectionScores['Math'].total > 0) {
+    Object.entries(data.sectionScores['Math'].subsections).forEach(([name, scores]) => {
+      const percentage = scores.total > 0 ? Math.round((scores.correct / scores.total) * 100) : 0;
+      subsectionHTML += `
+        <div class="module-card">
+          <div class="module-name">${name}</div>
+          <div class="module-score">${scores.correct}/${scores.total}</div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: ${percentage}%"></div>
+          </div>
+          <div class="module-details">${percentage}% Correct</div>
+        </div>
+      `;
+    });
+  }
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAT Score Report - ${data.studentName}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8f4f0 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .report-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #1c2545 0%, #2a3a5f 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        .logo-section {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .logo { width: 50px; height: 50px; }
+        .header h1 { font-size: 2.5rem; margin: 0; }
+        .header p { font-size: 1.2rem; opacity: 0.9; }
+        .content { padding: 2rem; }
+        .student-info {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        .info-item { text-align: center; }
+        .info-label { font-size: 0.9rem; color: #6c757d; margin-bottom: 0.5rem; }
+        .info-value { font-size: 1.2rem; font-weight: 600; color: #1c2545; }
+        .scores-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        .score-card {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .score-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #00a666, #1c2545);
+        }
+        .score-title { font-size: 1.1rem; color: #6c757d; margin-bottom: 1rem; }
+        .score-main { font-size: 3rem; font-weight: 700; color: #1c2545; margin-bottom: 0.5rem; }
+        .score-range { font-size: 0.9rem; color: #6c757d; margin-bottom: 1rem; }
+        .total-score {
+            background: linear-gradient(135deg, #00a666, #1c2545);
+            color: white;
+            border: none;
+        }
+        .total-score .score-title { color: rgba(255,255,255,0.9); }
+        .total-score .score-main { color: white; }
+        .total-score .score-range { color: rgba(255,255,255,0.8); }
+        .breakdown {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .breakdown h3 {
+            color: #1c2545;
+            margin-bottom: 1.5rem;
+            font-size: 1.3rem;
+        }
+        .module-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        .module-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #00a666;
+        }
+        .module-name { font-weight: 600; color: #1c2545; margin-bottom: 0.5rem; }
+        .module-score { font-size: 1.5rem; font-weight: 700; color: #00a666; }
+        .module-details { font-size: 0.9rem; color: #6c757d; margin-top: 0.5rem; }
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            margin: 0.5rem 0;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #22c55e, #16a34a);
+            border-radius: 4px;
+            transition: width 1s ease;
+        }
+        .insights {
+            background: linear-gradient(135deg, #00a666, #1c2545);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-top: 2rem;
+        }
+        .insights h3 { margin-bottom: 1rem; }
+        .insights ul { padding-left: 1.5rem; }
+        .insights li { margin-bottom: 0.5rem; }
+        @media print {
+            body { background: white; padding: 0; }
+            .report-container { box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="report-container">
+        <div class="header">
+            <div class="logo-section">
+                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiMwMGE2NjYiLz4KPHR4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0id2hpdGUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9ImJvbGQiPlU8L3R4dD4KPC9zdmc+" alt="UpToTen Logo" class="logo">
+                <h1>UpToTen SAT Practice</h1>
+            </div>
+            <p>Digital SAT • Practice Test Results</p>
+        </div>
+
+        <div class="content">
+            <div class="student-info">
+                <div class="info-item">
+                    <div class="info-label">Student Name</div>
+                    <div class="info-value">${data.studentName}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Test Date</div>
+                    <div class="info-value">${data.testDate}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Test Type</div>
+                    <div class="info-value">SAT Practice</div>
+                </div>
+            </div>
+
+            <div class="scores-grid">
+                <div class="score-card total-score">
+                    <div class="score-title">Total Score</div>
+                    <div class="score-main">${data.totalScore}</div>
+                    <div class="score-range">400-1600 Scale</div>
+                </div>
+
+                <div class="score-card">
+                    <div class="score-title">Reading & Writing</div>
+                    <div class="score-main">${data.rwScore}</div>
+                    <div class="score-range">200-800 Scale</div>
+                </div>
+
+                <div class="score-card">
+                    <div class="score-title">Math</div>
+                    <div class="score-main">${data.mathScore}</div>
+                    <div class="score-range">200-800 Scale</div>
+                </div>
+            </div>
+
+            <div class="breakdown">
+                <h3>📊 Section Performance Breakdown</h3>
+                <div class="module-grid">
+                    ${subsectionHTML}
+                </div>
+            </div>
+
+            <div class="insights">
+                <h3>🎯 Performance Insights</h3>
+                <ul>
+                    <li><strong>Practice Test:</strong> This is a practice test score based on linear scoring (not adaptive).</li>
+                    <li><strong>Score Calculation:</strong> Simple percentage-based conversion to SAT scale (200-800 per section).</li>
+                    <li><strong>Reading & Writing:</strong> ${data.sectionScores['Reading and Writing'].correct}/${data.sectionScores['Reading and Writing'].total} correct (${Math.round((data.sectionScores['Reading and Writing'].correct / data.sectionScores['Reading and Writing'].total) * 100)}%)</li>
+                    <li><strong>Math:</strong> ${data.sectionScores['Math'].correct}/${data.sectionScores['Math'].total} correct (${Math.round((data.sectionScores['Math'].correct / data.sectionScores['Math'].total) * 100)}%)</li>
+                    <li><strong>Educational Purpose:</strong> Use this score to identify strengths and areas for improvement. Only official SAT tests provide College Board scores.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
 </body>
 </html>`;
 }

@@ -318,18 +318,27 @@
     <!-- Test Type Selector -->
     <div class="module-selector">
       <h3>Select Test Type</h3>
-      <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+        <div class="difficulty-option" data-test-type="Esercizi per casa" onclick="selectTestType('Esercizi per casa')">
+          <h4>Training</h4>
+          <p>Practice exercises (Esercizi per casa)</p>
+        </div>
+        <div class="difficulty-option" data-test-type="Assessment" onclick="selectTestType('Assessment')">
+          <h4>Assessment</h4>
+          <p>Regular assessment test</p>
+        </div>
         <div class="difficulty-option" data-test-type="Assessment Iniziale" onclick="selectTestType('Assessment Iniziale')">
           <h4>Assessment Iniziale</h4>
           <p>Initial assessment test</p>
         </div>
         <div class="difficulty-option" data-test-type="Simulazioni" onclick="selectTestType('Simulazioni')">
           <h4>Simulazioni</h4>
-          <p>Simulation test</p>
+          <p>Full simulation test</p>
         </div>
       </div>
-      <h3>Select Module Type</h3>
-      <div class="module-grid">
+      <div id="moduleSection">
+        <h3>Select Module Type</h3>
+        <div class="module-grid">
         <div class="module-card" data-module="RW1" onclick="selectModule('RW1')">
           <h3>Reading & Writing - Module 1</h3>
           <p>27 questions, 32 minutes</p>
@@ -353,6 +362,7 @@
           <p>22 questions, 35 minutes</p>
           <span class="module-badge" style="background: #ff9800;">Adaptive</span>
         </div>
+      </div>
       </div>
     </div>
 

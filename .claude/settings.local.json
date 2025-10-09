@@ -26,7 +26,8 @@
       "WebFetch(domain:www.uptoten.it)",
       "Bash(cat:*)",
       "Bash(psql:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(start test.html)"
     ],
     "deny": [],
     "ask": []
