@@ -1090,7 +1090,7 @@ async function loadTest() {
   
     // Fetch questions - VERSIONE INGLESE: cerca sempre in pdf_url_eng
     console.log("🔍 English version - searching with pdf_url_eng:", pdfUrl);
-    
+
     let { data, error } = await supabase
       .from("questions")
       .select("*")
@@ -1102,6 +1102,30 @@ async function loadTest() {
       alert("Error loading questions! Check Console.");
       return;
     }
+
+    // ✅ FALLBACK: For SAT tests, if no English questions found, try Italian field (they're identical)
+    if ((!data || data.length === 0) && selectedTestType && selectedTestType.toUpperCase().includes("SAT")) {
+      console.log("⚠️ No questions found with pdf_url_eng for SAT test");
+      console.log("🔄 Fallback: Trying with pdf_url (Italian) - SAT questions are identical");
+
+      const fallbackResult = await supabase
+        .from("questions")
+        .select("*")
+        .eq("pdf_url", pdfUrl)
+        .order("page_number, question_number", { ascending: true });
+
+      data = fallbackResult.data;
+      error = fallbackResult.error;
+
+      console.log("Fallback Supabase Response:", data, error);
+
+      if (error) {
+        console.error("ERROR fetching questions (fallback):", error);
+        alert("Error loading questions! Check Console.");
+        return;
+      }
+    }
+
     if (!data || data.length === 0) {
       console.warn("⚠️ WARNING: No questions found for this PDF.");
       alert("No questions available for this test.");
