@@ -34,13 +34,19 @@ body {
 
 /* Container principale - 2 colonne invece di 3 (no PDF) */
 .test-container {
-  display: grid;
-  grid-template-columns: 1fr 300px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
   gap: 1.5rem;
   height: calc(100vh - 80px);
   padding: 1.5rem;
   max-width: 100%;
   margin: 0 auto;
+}
+
+/* Center question section when on welcome page (page 1) */
+.test-container:has(.welcome-page) .nav-container {
+  display: none;
 }
 
 /* Question Section - stile identico */
@@ -53,6 +59,10 @@ body {
   flex-direction: column;
   gap: 1.5rem;
   overflow-y: auto;
+  flex: 1;
+  max-width: 1400px;
+  height: 100%;
+  max-height: calc(100vh - 80px - 3rem);
 }
 
 /* Timer - identico all'originale */
@@ -155,6 +165,11 @@ body {
   margin: 0 auto;
   text-align: center;
   padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
 }
 
 .welcome-page h2 {
@@ -170,6 +185,7 @@ body {
   margin-bottom: 1.5rem;
   text-align: left;
   border-left: 4px solid #00a666;
+  width: 100%;
 }
 
 .instructions-box h3 {
@@ -205,6 +221,7 @@ body {
   padding: 1.5rem;
   border-radius: 12px;
   margin-bottom: 2rem;
+  width: 100%;
 }
 
 .sections-box h4 {
