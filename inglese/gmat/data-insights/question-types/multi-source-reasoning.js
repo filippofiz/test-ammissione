@@ -168,7 +168,6 @@ window.DIMultiSourceReasoning = {
   },
 
   populateFormWithAIData(data) {
-    console.log('🔍 MSR populateFormWithAIData called with:', data);
 
     // Populate sources - convert table_headers/table_data to HTML if needed
     if (data.sources && data.sources.length > 0) {

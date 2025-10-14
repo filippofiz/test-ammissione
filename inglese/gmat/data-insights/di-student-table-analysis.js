@@ -21,8 +21,6 @@ window.DIStudentTableAnalysis = {
       }
     }
 
-    console.log('📊 TA Question Data:', data);
-
     // Initialize sorted data
     this.sortedData = [...(data.table_data || [])];
     this.sortColumn = null;
@@ -335,23 +333,13 @@ window.DIStudentTableAnalysis = {
 
   // View mode for tutors - shows both student answer and correct answer visually
   renderViewMode(questionData, questionId, studentAnswer, correctAnswer) {
-    console.log('🔍🔍🔍 TA renderViewMode CALLED');
-    console.log('🔍 questionData:', questionData);
-    console.log('🔍 questionId:', questionId);
-    console.log('🔍 studentAnswer:', studentAnswer);
-    console.log('🔍 correctAnswer:', correctAnswer);
-
     const container = this.render(questionData, questionId, studentAnswer);
 
     // Keep table sorting interactive - do NOT disable
     // Find statement table rows and mark them to show student vs correct
     setTimeout(() => {
-      console.log('🔍 TA View Mode TIMEOUT - studentAnswer:', studentAnswer);
-      console.log('🔍 TA View Mode TIMEOUT - correctAnswer:', correctAnswer);
-
       // Find ALL tables in the container
       const tables = container.querySelectorAll('table');
-      console.log('🔍 TA Found tables:', tables.length);
 
       // Try both tables to find which one has radio buttons
       let stmtTable = null;
@@ -362,7 +350,6 @@ window.DIStudentTableAnalysis = {
         if (testRows.length > 0) {
           const testRadio = testRows[0].querySelector('input[type="radio"]');
           if (testRadio) {
-            console.log(`🔍 TA Found statements table at index ${i}`);
             stmtTable = tables[i];
             stmtRows = testRows;
             break;
@@ -371,36 +358,25 @@ window.DIStudentTableAnalysis = {
       }
 
       if (!stmtTable || !stmtRows) {
-        console.log('🔍 TA ERROR: No statements table with radio buttons found');
         return;
       }
-
-      console.log('🔍 TA Found stmtRows:', stmtRows.length);
 
       stmtRows.forEach((tr, si) => {
         const stmtKey = `stmt${si}`;
         const studentValue = studentAnswer?.[stmtKey];
         const correctValue = correctAnswer?.[stmtKey];
 
-        console.log(`🔍 TA Row ${si} - ${stmtKey}: student="${studentValue}", correct="${correctValue}"`);
-
         // Find both radio cells
         const col1Cell = tr.querySelector('td:nth-child(2)');
         const col2Cell = tr.querySelector('td:nth-child(3)');
 
-        console.log(`🔍 TA Row ${si} - Found col1Cell:`, !!col1Cell, 'col2Cell:', !!col2Cell);
-
         const radio1 = col1Cell?.querySelector('input[type="radio"]');
         const radio2 = col2Cell?.querySelector('input[type="radio"]');
-
-        console.log(`🔍 TA Row ${si} - Found radio1:`, !!radio1, 'radio2:', !!radio2);
 
         // Mark col1 radio
         if (col1Cell && radio1) {
           const isStudentAnswer = studentValue === 'col1';
           const isCorrectAnswer = correctValue === 'col1';
-
-          console.log(`🔍 TA Row ${si} Col1 - isStudentAnswer:`, isStudentAnswer, 'isCorrectAnswer:', isCorrectAnswer);
 
           // Remove existing indicators
           const existingIndicator = col1Cell.querySelector('.answer-indicator');
@@ -408,7 +384,6 @@ window.DIStudentTableAnalysis = {
 
           if (isStudentAnswer && isCorrectAnswer) {
             // Student selected correct - green
-            console.log(`🔍 TA Row ${si} Col1 - Applying CORRECT style (green)`);
             col1Cell.style.background = '#d1fae5';
             col1Cell.style.border = '3px solid #10b981';
             radio1.checked = true;
@@ -419,7 +394,6 @@ window.DIStudentTableAnalysis = {
             col1Cell.appendChild(indicator);
           } else if (isStudentAnswer && !isCorrectAnswer) {
             // Student selected wrong - red
-            console.log(`🔍 TA Row ${si} Col1 - Applying WRONG style (red)`);
             col1Cell.style.background = '#fee2e2';
             col1Cell.style.border = '3px solid #ef4444';
             radio1.checked = true;
@@ -430,7 +404,6 @@ window.DIStudentTableAnalysis = {
             col1Cell.appendChild(indicator);
           } else if (!isStudentAnswer && isCorrectAnswer) {
             // Correct answer not selected - green outline
-            console.log(`🔍 TA Row ${si} Col1 - Applying CORRECT ANSWER style (light green)`);
             col1Cell.style.background = '#f0fdf4';
             col1Cell.style.border = '3px solid #10b981';
             radio1.checked = false;
@@ -439,8 +412,6 @@ window.DIStudentTableAnalysis = {
             indicator.style.cssText = 'color: #10b981; font-weight: 700; font-size: 0.85rem; text-align: center; margin-top: 0.5rem;';
             indicator.textContent = '✓ Correct';
             col1Cell.appendChild(indicator);
-          } else {
-            console.log(`🔍 TA Row ${si} Col1 - No styling applied`);
           }
 
           // Prevent changes

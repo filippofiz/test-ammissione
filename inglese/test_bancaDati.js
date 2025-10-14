@@ -2016,7 +2016,7 @@ async function showGMATBreakOption(nextPage) {
 
 function startGMATBreak(nextPage) {
   inBreak = true;
-  let breakTimeRemaining = 10 * 60; // 10 minutes in seconds
+  let breakTimeRemaining = 15; // 15 seconds for testing
 
   const overlay = document.createElement('div');
   overlay.id = 'breakOverlay';
@@ -2027,18 +2027,8 @@ function startGMATBreak(nextPage) {
 
   dialog.innerHTML = `
     <h2 style="color:#1e40af;margin-bottom:1rem;font-size:2rem;">☕ Break Time</h2>
-    <div style="font-size:4rem;font-weight:800;color:#3b82f6;margin:2rem 0;" id="breakTimer">10:00</div>
+    <div style="font-size:4rem;font-weight:800;color:#3b82f6;margin:2rem 0;" id="breakTimer">0:15</div>
     <p style="color:#6b7280;margin-bottom:2rem;">Take a break and relax. The test will resume automatically.</p>
-    <button id="endBreakBtn" style="
-      background:linear-gradient(135deg,#00a666,#00c775);
-      color:white;
-      border:none;
-      padding:1rem 2rem;
-      border-radius:8px;
-      font-size:1.1rem;
-      font-weight:600;
-      cursor:pointer;
-    ">Resume Test Early</button>
   `;
 
   overlay.appendChild(dialog);
@@ -2057,10 +2047,6 @@ function startGMATBreak(nextPage) {
       endBreak(nextPage);
     }
   }, 1000);
-
-  dialog.querySelector('#endBreakBtn').addEventListener('click', () => {
-    endBreak(nextPage);
-  });
 }
 
 function endBreak(nextPage) {
@@ -2234,16 +2220,15 @@ function selectAnswerBocconi(questionId, selectedLetter, choiceDiv, parent) {
         console.log(`🎯 Answer tracked: ${isCorrect ? '✅ Correct' : '❌ Incorrect'}`);
       }
 
-      // Update full history (all answers)
-      studentPerformanceHistoryFull.push(isCorrect);
+      // Find the index of this question in the questions array
+      const questionIndex = questions.findIndex(q => q.id === questionId);
 
-      // Update recent history (last 5 for adaptive algorithm)
-      studentPerformanceHistory.push(isCorrect);
-      if (studentPerformanceHistory.length > 5) {
-        studentPerformanceHistory.shift();
+      if (questionIndex !== -1) {
+        // Update or add to full history at the specific index
+        studentPerformanceHistoryFull[questionIndex] = isCorrect;
+
+        console.log(`📊 Performance history: ${studentPerformanceHistoryFull.filter(x => x === true).length}/${studentPerformanceHistoryFull.filter(x => x !== undefined).length} correct`);
       }
-
-      console.log(`📊 Performance history: ${studentPerformanceHistoryFull.filter(x => x).length}/${studentPerformanceHistoryFull.length} correct`);
     }
   }
 
