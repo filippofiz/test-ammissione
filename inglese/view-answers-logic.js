@@ -1229,15 +1229,32 @@ document.addEventListener("DOMContentLoaded", () => {
       // Traduci interfaccia
       if (isEnglish) {
         // Traduci le etichette in inglese
-        document.querySelector("#testTitle").textContent = "Student's answers";
-        document.querySelector('.stat-card.correct .stat-label').textContent = "Correct";
-        document.querySelector('.stat-card.wrong .stat-label').textContent = "Wrong";
-        document.querySelector('.stat-card.unsure .stat-label').textContent = "Unsure";
-        document.querySelector('.stat-card.no-idea .stat-label').textContent = "No idea";
-        document.querySelector('.stat-card.skipped .stat-label').textContent = "Skipped";
-        document.querySelector('.stat-card.timeout .stat-label').textContent = "Timeout";
-        document.querySelector('.filter-hint span').textContent = "💡 Click on boxes to filter answers";
-        document.querySelector('#printBtn').innerHTML = "🖨️ Generate PDF";
+        const testTitle = document.querySelector("#testTitle");
+        if (testTitle) testTitle.textContent = "Student's answers";
+
+        const correctLabel = document.querySelector('.stat-card.correct .stat-label');
+        if (correctLabel) correctLabel.textContent = "Correct";
+
+        const wrongLabel = document.querySelector('.stat-card.wrong .stat-label');
+        if (wrongLabel) wrongLabel.textContent = "Wrong";
+
+        const unsureLabel = document.querySelector('.stat-card.unsure .stat-label');
+        if (unsureLabel) unsureLabel.textContent = "Unsure";
+
+        const noIdeaLabel = document.querySelector('.stat-card.no-idea .stat-label');
+        if (noIdeaLabel) noIdeaLabel.textContent = "No idea";
+
+        const skippedLabel = document.querySelector('.stat-card.skipped .stat-label');
+        if (skippedLabel) skippedLabel.textContent = "Skipped";
+
+        const timeoutLabel = document.querySelector('.stat-card.timeout .stat-label');
+        if (timeoutLabel) timeoutLabel.textContent = "Timeout";
+
+        const filterHint = document.querySelector('.filter-hint span');
+        if (filterHint) filterHint.textContent = "💡 Click on boxes to filter answers";
+
+        const printBtn = document.querySelector('#printBtn');
+        if (printBtn) printBtn.innerHTML = "🖨️ Generate PDF";
         
         // Traduci le etichette delle risposte
         document.querySelectorAll('.answer-header').forEach(header => {
@@ -1265,15 +1282,32 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       } else {
         // Ripristina italiano
-        document.querySelector("#testTitle").textContent = "Risposte dello studente";
-        document.querySelector('.stat-card.correct .stat-label').textContent = "Corrette";
-        document.querySelector('.stat-card.wrong .stat-label').textContent = "Errate";
-        document.querySelector('.stat-card.unsure .stat-label').textContent = "Insicuro";
-        document.querySelector('.stat-card.no-idea .stat-label').textContent = "Non ho idea";
-        document.querySelector('.stat-card.skipped .stat-label').textContent = "Non date";
-        document.querySelector('.stat-card.timeout .stat-label').textContent = "Tempo esaurito";
-        document.querySelector('.filter-hint span').textContent = "💡 Clicca sui box per filtrare le risposte";
-        document.querySelector('#printBtn').innerHTML = "🖨️ Genera PDF";
+        const testTitle = document.querySelector("#testTitle");
+        if (testTitle) testTitle.textContent = "Risposte dello studente";
+
+        const correctLabel = document.querySelector('.stat-card.correct .stat-label');
+        if (correctLabel) correctLabel.textContent = "Corrette";
+
+        const wrongLabel = document.querySelector('.stat-card.wrong .stat-label');
+        if (wrongLabel) wrongLabel.textContent = "Errate";
+
+        const unsureLabel = document.querySelector('.stat-card.unsure .stat-label');
+        if (unsureLabel) unsureLabel.textContent = "Insicuro";
+
+        const noIdeaLabel = document.querySelector('.stat-card.no-idea .stat-label');
+        if (noIdeaLabel) noIdeaLabel.textContent = "Non ho idea";
+
+        const skippedLabel = document.querySelector('.stat-card.skipped .stat-label');
+        if (skippedLabel) skippedLabel.textContent = "Non date";
+
+        const timeoutLabel = document.querySelector('.stat-card.timeout .stat-label');
+        if (timeoutLabel) timeoutLabel.textContent = "Tempo esaurito";
+
+        const filterHint = document.querySelector('.filter-hint span');
+        if (filterHint) filterHint.textContent = "💡 Clicca sui box per filtrare le risposte";
+
+        const printBtn = document.querySelector('#printBtn');
+        if (printBtn) printBtn.innerHTML = "🖨️ Genera PDF";
         
         // Ripristina etichette italiane
         document.querySelectorAll('.answer-header').forEach(header => {
