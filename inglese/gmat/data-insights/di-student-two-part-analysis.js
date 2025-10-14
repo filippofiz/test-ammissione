@@ -17,7 +17,6 @@ window.DIStudentTwoPartAnalysis = {
       }
     }
 
-    console.log('📊 TPA Question Data:', data);
 
     const container = document.createElement('div');
     container.classList.add('di-tpa-student-container');
@@ -205,8 +204,6 @@ window.DIStudentTwoPartAnalysis = {
 
     // Find all radio buttons and mark them to show student vs correct
     setTimeout(() => {
-      console.log('🔍 TPA View Mode - studentAnswer:', studentAnswer);
-      console.log('🔍 TPA View Mode - correctAnswer:', correctAnswer);
 
       // Prevent radio changes but keep interactive
       container.querySelectorAll('input[type="radio"]').forEach(radio => {
@@ -236,7 +233,6 @@ window.DIStudentTwoPartAnalysis = {
         const isCorrectCol1 = correctAnswer?.col1 === optionValue;
         const isCorrectCol2 = correctAnswer?.col2 === optionValue;
 
-        console.log(`🔍 TPA ${optionValue}: student col1=${isStudentCol1}, col2=${isStudentCol2}, correct col1=${isCorrectCol1}, col2=${isCorrectCol2}`);
 
         // Get the radio cells
         const col1Cell = col1Radio.closest('td');

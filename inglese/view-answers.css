@@ -2113,3 +2113,92 @@ button.disabled-green, #testTree button.disabled-green {
   margin-top: 0.25rem;
   font-style: italic;
 }
+
+/* GMAT-specific styles */
+.gmat-section-wrapper {
+  margin-bottom: 0.5rem;
+}
+
+.gmat-section-header {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  color: white;
+  padding: 1rem 1.5rem;
+  margin: 0.25rem 0;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+}
+
+.gmat-section-header.collapsible {
+  cursor: pointer;
+}
+
+.gmat-section-header.collapsible:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(14, 165, 233, 0.3);
+  background: linear-gradient(135deg, #06b6d4 0%, #0ea5e9 100%);
+}
+
+.gmat-section-header .section-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.gmat-section-header .section-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.9rem;
+}
+
+.gmat-section {
+  transition: all 0.3s ease;
+  padding: 0.5rem 0;
+}
+
+.gmat-section .question-item {
+  margin-bottom: 1rem;
+}
+/* Difficulty Badge Styles */
+.difficulty-badge {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-left: 0.5rem;
+  letter-spacing: 0.5px;
+}
+
+.difficulty-badge.difficulty-easy {
+  background: linear-gradient(135deg, #86efac, #4ade80);
+  color: #14532d;
+  box-shadow: 0 2px 4px rgba(74, 222, 128, 0.3);
+}
+
+.difficulty-badge.difficulty-medium {
+  background: linear-gradient(135deg, #fde047, #facc15);
+  color: #713f12;
+  box-shadow: 0 2px 4px rgba(250, 204, 21, 0.3);
+}
+
+.difficulty-badge.difficulty-hard {
+  background: linear-gradient(135deg, #fca5a5, #ef4444);
+  color: #7f1d1d;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+}
+
+/* Answer header for DI questions - same style as question-header */
+.answer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: rgb(28, 37, 69);
+}

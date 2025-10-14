@@ -17,8 +17,6 @@ window.DIStudentGraphicsInterpretation = {
       }
     }
 
-    console.log('📊 GI Question Data:', data);
-
     const container = document.createElement('div');
     container.classList.add('di-gi-student-container');
     container.classList.add('tex2jax_ignore');  // Tell MathJax to skip this container
@@ -72,7 +70,6 @@ window.DIStudentGraphicsInterpretation = {
           if (window.Chart) {
             this.renderChart(canvas, data.chart_config);
           } else {
-            console.warn('Chart.js not loaded yet, retrying...');
             setTimeout(() => {
               this.renderChart(canvas, data.chart_config);
             }, 500);
@@ -167,7 +164,6 @@ window.DIStudentGraphicsInterpretation = {
 
   renderChart(canvas, chartConfig) {
     if (!window.Chart) {
-      console.error('Chart.js not loaded');
       const parent = canvas.parentElement;
       if (parent) {
         parent.innerHTML = '<div style="color: red; padding: 1rem; text-align: center;">⚠️ Chart library not loaded. Please refresh the page.</div>';
@@ -177,13 +173,11 @@ window.DIStudentGraphicsInterpretation = {
 
     // Check if chart already exists on this canvas
     if (canvas.chart) {
-      console.log('📊 Chart already exists, destroying old chart');
       canvas.chart.destroy();
     }
 
     try {
       const ctx = canvas.getContext('2d');
-      console.log('📊 Rendering chart with config:', chartConfig);
 
       canvas.chart = new Chart(ctx, {
         type: chartConfig.type,
@@ -231,10 +225,7 @@ window.DIStudentGraphicsInterpretation = {
           }
         }
       });
-
-      console.log('✅ Chart rendered successfully');
     } catch (error) {
-      console.error('❌ Error rendering chart:', error);
       const parent = canvas.parentElement;
       if (parent) {
         parent.innerHTML = `<div style="color: red; padding: 1rem; text-align: center;">⚠️ Error rendering chart: ${error.message}</div>`;

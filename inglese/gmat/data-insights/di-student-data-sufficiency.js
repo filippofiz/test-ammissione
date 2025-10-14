@@ -25,12 +25,6 @@ window.DIStudentDataSufficiency = {
       }
     }
 
-    console.log('📊 DS Question Data:', data);
-    console.log('📊 Problem text:', data.problem);
-    console.log('📊 Statement1:', data.statement1);
-    console.log('📊 Statement2:', data.statement2);
-    console.log('📊 Answer choices:', data.answer_choices);
-
     const container = document.createElement('div');
     container.classList.add('di-ds-student-container');
     container.classList.add('tex2jax_ignore');  // Tell MathJax to skip this container

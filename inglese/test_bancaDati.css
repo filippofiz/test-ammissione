@@ -61,8 +61,8 @@ body {
   overflow-y: auto;
   flex: 1;
   max-width: 1400px;
-  height: 100%;
-  max-height: calc(100vh - 80px - 3rem);
+  height: 95vh;
+  max-height: 95vh;
 }
 
 /* Timer - identico all'originale */
