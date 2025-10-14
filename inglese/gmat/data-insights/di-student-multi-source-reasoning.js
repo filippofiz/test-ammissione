@@ -26,7 +26,6 @@ window.DIStudentMultiSourceReasoning = {
     // Store data for access in event handlers
     this.msrQuestionData[questionId] = data;
 
-    console.log('📊 MSR Question Data:', data);
 
     const container = document.createElement('div');
     container.classList.add('di-msr-student-container');
@@ -718,11 +717,6 @@ window.DIStudentMultiSourceReasoning = {
 
   // View mode for tutors - shows both student answer and correct answer visually
   renderViewMode(questionData, questionId, studentAnswer, correctAnswer) {
-    console.log('🔍🔍🔍 MSR renderViewMode CALLED');
-    console.log('🔍 MSR questionId:', questionId);
-    console.log('🔍 MSR studentAnswer:', studentAnswer);
-    console.log('🔍 MSR correctAnswer:', correctAnswer);
-    console.log('🔍 MSR questionData.questions:', questionData.questions);
 
     // Set view mode flag for this question
     if (!this.isViewMode) this.isViewMode = {};
@@ -730,9 +724,14 @@ window.DIStudentMultiSourceReasoning = {
 
     const container = this.render(questionData, questionId, studentAnswer);
 
+    // If student didn't answer (null/undefined), don't mark correct answers
+    // Just show the question in neutral state
+    if (!studentAnswer) {
+      return container;
+    }
+
     // Keep navigation interactive (tabs, table sorting) but prevent answer changes
     setTimeout(() => {
-      console.log('🔍 MSR View Mode TIMEOUT FIRED');
 
       // Update navigation buttons to respect view mode
       const currentIndex = this.currentQuestionIndex[questionId] || 0;
@@ -748,15 +747,12 @@ window.DIStudentMultiSourceReasoning = {
       });
 
       // Mark answers for each sub-question
-      console.log('🔍 MSR View Mode - studentAnswer:', studentAnswer);
-      console.log('🔍 MSR View Mode - correctAnswer:', correctAnswer);
 
       questionData.questions?.forEach((subQ, idx) => {
         const qKey = `q${idx}`;
         const studentSubAnswer = studentAnswer?.[qKey];
         const correctSubAnswer = correctAnswer?.[qKey];
 
-        console.log(`🔍 MSR ${qKey}: student=${JSON.stringify(studentSubAnswer)}, correct=${JSON.stringify(correctSubAnswer)}`);
 
         // Find the question div for this index
         const questionDiv = container.querySelector(`.msr-question-${questionId}[data-question-index="${idx}"]`);
@@ -768,14 +764,12 @@ window.DIStudentMultiSourceReasoning = {
         if (subQ.question_type === 'multiple_choice') {
           // Multiple choice - highlight the selected option
           const choiceOptions = questionDiv.querySelectorAll('.msr-choice-item');
-          console.log(`🔍 MSR ${qKey} - Found choice options:`, choiceOptions.length);
 
           choiceOptions.forEach(choiceDiv => {
             const letter = choiceDiv.dataset.letter;
             const isStudent = studentSubAnswer === letter || studentSubAnswer === letter?.toLowerCase() || studentSubAnswer === letter?.toUpperCase();
             const isCorrect = correctSubAnswer === letter || correctSubAnswer === letter?.toLowerCase() || correctSubAnswer === letter?.toUpperCase();
 
-            console.log(`🔍 MSR ${qKey} option ${letter}: isStudent=${isStudent}, isCorrect=${isCorrect}`);
 
             // Prevent click changes
             choiceDiv.style.cursor = 'default';
@@ -807,14 +801,12 @@ window.DIStudentMultiSourceReasoning = {
         } else if (subQ.question_type === 'two_column') {
           // Two-column - highlight radio selections in table rows
           const tableRows = questionDiv.querySelectorAll('tbody tr');
-          console.log(`🔍 MSR ${qKey} - Found table rows:`, tableRows.length);
 
           tableRows.forEach((tr, stmtIdx) => {
             const stmtKey = `stmt${stmtIdx}`;
             const studentValue = studentSubAnswer?.[stmtKey];
             const correctValue = correctSubAnswer?.[stmtKey];
 
-            console.log(`🔍 MSR ${qKey} ${stmtKey}: student=${studentValue}, correct=${correctValue}`);
 
             // Get all cells in this row (statement, col1, col2)
             const cells = tr.querySelectorAll('td');
