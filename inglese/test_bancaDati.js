@@ -62,7 +62,7 @@ async function initializeTest() {
   
   if (!testId) {
     console.error("❌ Test ID non trovato nel sessionStorage");
-    showCustomAlert("Errore: Test ID non trovato. Verrai reindirizzato alla selezione test.", () => {
+    showCustomAlert("Error: Test ID not found. You will be redirected to test selection.", () => {
       window.location.href = "test_selection.html";
     });
     return;
@@ -140,7 +140,7 @@ async function initializeEventListeners() {
   });
 }
 
-// Alert personalizzato con timeout automatico per tempo scaduto
+// Custom alert with automatic timeout for time expired
 function showCustomAlert(message, onOk, autoClose = false) {
   const overlay = document.createElement("div");
   overlay.className = "modal-overlay";
@@ -177,8 +177,8 @@ function showCustomAlert(message, onOk, autoClose = false) {
   okButton.addEventListener("click", closeDialog);
   okButton.focus();
   
-  // 🔧 Auto-chiusura dopo 3 secondi per tempo scaduto
-  if (message.includes("Tempo scaduto")) {
+  // 🔧 Auto-close after 3 seconds for time expired
+  if (message.includes("Time expired")) {
     setTimeout(closeDialog, 3000);
     
     // Aggiungi countdown visivo
@@ -235,11 +235,11 @@ async function loadTest() {
   
   if (error) {
     console.error("Errore nel caricamento domande:", error);
-    showCustomAlert("Errore nel caricamento del test. Controlla la console.");
+    showCustomAlert("Error loading test. Check the console.");
     return;
   }
   if (!data || data.length === 0) {
-    showCustomAlert("Nessuna domanda disponibile per questo test.");
+    showCustomAlert("No questions available for this test.");
     return;
   }
 
@@ -503,7 +503,7 @@ async function loadQuestionsForPage(page) {
     instructionsBox.className = "instructions-box";
     
     const instructionsTitle = document.createElement("h3");
-    instructionsTitle.textContent = "📋 Istruzioni:";
+    instructionsTitle.textContent = "📋 Instructions:";
     instructionsBox.appendChild(instructionsTitle);
     
     const instructionsList = document.createElement("ul");
@@ -535,14 +535,14 @@ async function loadQuestionsForPage(page) {
           let durationText = "";
           
           if (minutes > 0 && seconds > 0) {
-            durationText = `<strong>${minutes} minuti e ${seconds} secondi</strong>`;
+            durationText = `<strong>${minutes} minutes and ${seconds} seconds</strong>`;
           } else if (minutes > 0) {
-            durationText = `<strong>${minutes} minuti</strong>`;
+            durationText = `<strong>${minutes} minutes</strong>`;
           } else {
-            durationText = `<strong>${seconds} secondi</strong>`;
+            durationText = `<strong>${seconds} seconds</strong>`;
           }
-          
-          instructions.push(`Durata del test: ${durationText}`);
+
+          instructions.push(`Test duration: ${durationText}`);
         }
       }
     } catch (error) {
@@ -552,23 +552,23 @@ async function loadQuestionsForPage(page) {
     // Aggiungi le altre istruzioni
     instructions.push(
       isGMATTest ?
-        "Il test prevede <strong>1 domanda per pagina</strong>" :
-        "Il test prevede <strong>3 domande per pagina</strong>"
+        "The test has <strong>1 question per page</strong>" :
+        "The test has <strong>3 questions per page</strong>"
     );
-    
+
     instructions.push(
-      isBocconiTest ? 
-        "Non potrai tornare indietro: la navigazione è <strong>solo in avanti</strong>" :
-        hasSections ? 
-          "Puoi navigare <strong>solo all'interno della sezione corrente</strong>" :
-          "Puoi navigare liberamente tra le domande"
+      isBocconiTest ?
+        "You cannot go back: navigation is <strong>forward only</strong>" :
+        hasSections ?
+          "You can navigate <strong>only within the current section</strong>" :
+          "You can navigate freely between questions"
     );
-    
-    instructions.push("Il test va svolto a <strong>schermo intero</strong>");
-    instructions.push("Ogni tentativo di uscita <strong>annulla il test</strong>");
-    
+
+    instructions.push("The test must be taken in <strong>full screen mode</strong>");
+    instructions.push("Any attempt to exit <strong>will cancel the test</strong>");
+
     if (hasSections && sectionNames.length > 0) {
-      instructions.push(`Le domande sono organizzate in <strong>${sectionNames.length} sezioni</strong>`);
+      instructions.push(`Questions are organized into <strong>${sectionNames.length} sections</strong>`);
     }
     
     instructions.forEach(text => {
@@ -586,7 +586,7 @@ async function loadQuestionsForPage(page) {
       sectionsBox.className = "sections-box";
       
       const sectionsTitle = document.createElement("h4");
-      sectionsTitle.textContent = "📊 Sezioni del test:";
+      sectionsTitle.textContent = "📊 Test Sections:";
       sectionsBox.appendChild(sectionsTitle);
       
       const sectionsList = document.createElement("ol");
@@ -603,7 +603,7 @@ async function loadQuestionsForPage(page) {
     // Bottone start
     const startBtn = document.createElement("button");
     startBtn.id = "startTestBtn";
-    startBtn.textContent = "🚀 Inizia Test";
+    startBtn.textContent = "🚀 Start Test";
     startBtn.addEventListener("click", async () => {
       // For GMAT tests, show section order selection
       if (isGMATTest) {
@@ -771,7 +771,7 @@ async function loadQuestionsForPage(page) {
   // Header sezione se applicabile
   if (hasSections && sectionNames.length > 0 && !isGMATTest) {
     const currentSection = getCurrentSectionForPage(page);
-    const sectionName = sectionNames[currentSection - 1] || `Sezione ${currentSection}`;
+    const sectionName = sectionNames[currentSection - 1] || `Section ${currentSection}`;
 
     const sectionHeader = document.createElement("div");
     sectionHeader.className = expiredSections.has(currentSection) ?
@@ -779,8 +779,8 @@ async function loadQuestionsForPage(page) {
 
     if (expiredSections.has(currentSection)) {
       sectionHeader.innerHTML = `
-        <span>🔒 ${sectionName} - TEMPO SCADUTO</span>
-        <span style="font-size: 14px; font-weight: normal;">Le risposte non possono essere modificate</span>
+        <span>🔒 ${sectionName} - TIME EXPIRED</span>
+        <span style="font-size: 14px; font-weight: normal;">Answers cannot be modified</span>
       `;
     } else {
       sectionHeader.textContent = `📍 ${sectionName}`;
@@ -821,15 +821,15 @@ function createQuestionElement(q) {
   // For other GMAT tests: show number within section
   if (isGMATTest && isGMATAssessmentIniziale) {
     const globalIndex = questions.findIndex(qu => qu.id === q.id);
-    questionNumber.textContent = `Domanda ${globalIndex + 1}`;
+    questionNumber.textContent = `Question ${globalIndex + 1}`;
   } else if (isGMATTest && q.GMAT_section) {
     const currentGMATSection = q.GMAT_section;
     const questionsInSection = questions.filter(qu => qu.GMAT_section === currentGMATSection);
     const questionIndexInSection = questionsInSection.findIndex(qu => qu.question_number === q.question_number);
     const sectionQuestionNumber = questionIndexInSection + 1;
-    questionNumber.textContent = `Domanda ${sectionQuestionNumber}`;
+    questionNumber.textContent = `Question ${sectionQuestionNumber}`;
   } else {
-    questionNumber.textContent = `Domanda ${q.question_number}`;
+    questionNumber.textContent = `Question ${q.question_number}`;
   }
 
   qDiv.appendChild(questionNumber);
@@ -934,7 +934,7 @@ function createQuestionElement(q) {
   if (q.image_url) {
     const img = document.createElement("img");
     img.src = q.image_url;
-    img.alt = "Immagine domanda";
+    img.alt = "Question image";
     img.className = "question-image";
     img.onerror = function() {
       this.style.display = "none";
@@ -1039,7 +1039,7 @@ function createChoiceElement(question, choice) {
   if (!choiceDiv.classList.contains("disabled")) {
     choiceDiv.addEventListener("click", () => {
       if (hasSections && expiredSections.has(questionSection)) {
-        showCustomAlert("⏰ Il tempo per questa sezione è scaduto. Non puoi più modificare le risposte.");
+        showCustomAlert("⏰ Time for this section has expired. You can no longer modify answers.");
         return;
       }
       selectAnswerBocconi(question.id, choice.letter, choiceDiv, choiceDiv.parentElement);
@@ -1663,10 +1663,10 @@ function createNavigationContainer() {
 
   if (hasSections && !isBocconiTest && currentPage < totalPages &&
       isPageInDifferentSection(currentPage, currentPage + 1)) {
-    nextBtn.textContent = "Prossima Sezione →";
+    nextBtn.textContent = "Next Section →";
     nextBtn.classList.add("section-change");
   } else {
-    nextBtn.textContent = "Avanti →";
+    nextBtn.textContent = "Next →";
   }
 
   if (currentPage >= totalPages) {
@@ -1720,7 +1720,7 @@ function createNavigationContainer() {
   // Bottone Submit - SEMPRE VISIBILE
   const submitBtn = document.createElement("button");
   submitBtn.id = "submitAnswers";
-  submitBtn.textContent = "📤 Invia Test";
+  submitBtn.textContent = "📤 Submit Test";
 
   // Controlla se siamo nell'ultima sezione
   const currentSection = getCurrentSectionForPage(currentPage);
@@ -1731,7 +1731,7 @@ function createNavigationContainer() {
     // Non nell'ultima sezione - disabilita il bottone
     submitBtn.disabled = true;
     submitBtn.classList.add("disabled");
-    submitBtn.title = "Disponibile solo nell'ultima sezione";
+    submitBtn.title = "Available only in the last section";
     submitBtn.style.opacity = "0.5";
     submitBtn.style.cursor = "not-allowed";
   } else {
@@ -1755,7 +1755,7 @@ function navigateToPrevPage() {
     if (targetPage < 2) return;
     
     if (isPageInDifferentSection(currentPage, targetPage)) {
-      showCustomAlert("Non puoi tornare alla sezione precedente!");
+      showCustomAlert("You cannot go back to the previous section!");
       return;
     }
   }
@@ -2109,27 +2109,27 @@ function showSectionChangeDialog(onConfirm) {
   dialog.className = "modal-dialog";
   
   const title = document.createElement("h3");
-  title.textContent = "⚠️ Attenzione: Cambio Sezione";
+  title.textContent = "⚠️ Warning: Section Change";
   title.className = "text-warning";
   
   const content = document.createElement("p");
   content.innerHTML = `
-    Stai per passare alla prossima sezione.<br>
-    <strong>Non potrai tornare indietro.</strong><br>
-    Vuoi continuare?
+    You are about to move to the next section.<br>
+    <strong>You will not be able to go back.</strong><br>
+    Do you want to continue?
   `;
   
   const buttons = document.createElement("div");
   buttons.className = "modal-buttons";
   
   const cancelBtn = document.createElement("button");
-  cancelBtn.textContent = "Annulla";
+  cancelBtn.textContent = "Cancel";
   cancelBtn.addEventListener("click", () => {
     document.body.removeChild(overlay);
   });
   
   const confirmBtn = document.createElement("button");
-  confirmBtn.textContent = "Continua →";
+  confirmBtn.textContent = "Continue →";
   confirmBtn.className = "section-change";
   confirmBtn.addEventListener("click", () => {
     document.body.removeChild(overlay);
@@ -2155,7 +2155,7 @@ function selectAnswerBocconi(questionId, selectedLetter, choiceDiv, parent) {
   const questionSection = getCurrentSectionForQuestion(question.question_number);
   
   if (hasSections && expiredSections.has(questionSection)) {
-    showCustomAlert("⏰ Il tempo per questa sezione è scaduto. Non puoi più modificare le risposte.");
+    showCustomAlert("⏰ Time for this section has expired. You can no longer modify answers.");
     return;
   }
   
@@ -2291,9 +2291,9 @@ function buildQuestionNavBocconi() {
       "section-nav-header expired" : "section-nav-header";
     
     if (expiredSections.has(currentSection)) {
-      sectionHeader.innerHTML = `🔒 ${sectionNames[currentSection - 1] || `Sezione ${currentSection}`} (SCADUTA)`;
+      sectionHeader.innerHTML = `🔒 ${sectionNames[currentSection - 1] || `Section ${currentSection}`} (EXPIRED)`;
     } else {
-      sectionHeader.textContent = sectionNames[currentSection - 1] || `Sezione ${currentSection}`;
+      sectionHeader.textContent = sectionNames[currentSection - 1] || `Section ${currentSection}`;
     }
     
     questionNav.appendChild(sectionHeader);
@@ -2346,7 +2346,7 @@ function buildQuestionNavBocconi() {
     const questionSection = getCurrentSectionForQuestion(q.question_number);
     if (hasSections && expiredSections.has(questionSection)) {
       btn.classList.add("expired");
-      btn.title = "Sezione scaduta - risposte bloccate";
+      btn.title = "Section expired - answers locked";
     }
     
     if (shouldDisable) {
@@ -2483,7 +2483,7 @@ function setupNormalTimer(durationSeconds) {
     
     if (timeLeft <= 0) {
       clearInterval(globalTimerInterval);
-      showCustomAlert("⏳ Tempo scaduto! Invio automatico delle risposte.", () => {
+      showCustomAlert("⏳ Time expired! Automatic submission of answers.", () => {
         performSubmit();
       });
       return;
@@ -2582,7 +2582,7 @@ function setupSectionTimers(totalDurationSeconds) {
           }
         });
       } else {
-        showCustomAlert("⏳ Tempo totale del test scaduto! Invio automatico delle risposte.", () => {
+        showCustomAlert("⏳ Total test time expired! Automatic submission of answers.", () => {
           performSubmit();
         });
       }
@@ -2617,7 +2617,7 @@ function updateSectionTimer() {
     // Aggiorna display con sezione e tempo
     let displayHTML = '';
     if (sectionNames && sectionNames.length >= currentSectionNumber) {
-      displayHTML = `<div style="font-weight: bold; margin-bottom: 5px;">📚 Sezione ${currentSectionNumber}: ${sectionNames[currentSectionNumber - 1]}</div>`;
+      displayHTML = `<div style="font-weight: bold; margin-bottom: 5px;">📚 Section ${currentSectionNumber}: ${sectionNames[currentSectionNumber - 1]}</div>`;
       displayHTML += `<div>⏳ Tempo: <span id="time-left">${timeString}</span></div>`;
     } else {
       displayHTML = `⏳ Tempo: <span id="time-left">${timeString}</span>`;
@@ -2639,10 +2639,10 @@ function updateSectionTimer() {
     // Display quando tempo scaduto
     let displayHTML = '';
     if (sectionNames && sectionNames.length >= currentSectionNumber) {
-      displayHTML = `<div style="font-weight: bold; margin-bottom: 5px;">📚 Sezione ${currentSectionNumber}: ${sectionNames[currentSectionNumber - 1]}</div>`;
-      displayHTML += `<div class="text-danger">⏳ Tempo: <span id="time-left">Scaduto!</span></div>`;
+      displayHTML = `<div style="font-weight: bold; margin-bottom: 5px;">📚 Section ${currentSectionNumber}: ${sectionNames[currentSectionNumber - 1]}</div>`;
+      displayHTML += `<div class="text-danger">⏳ Time: <span id="time-left">Expired!</span></div>`;
     } else {
-      displayHTML = `⏳ Tempo: <span id="time-left" class="text-danger">Scaduto!</span>`;
+      displayHTML = `⏳ Time: <span id="time-left" class="text-danger">Expired!</span>`;
     }
     timerElement.innerHTML = displayHTML;
     timerElement.style.backgroundColor = "#ff6b6b";
@@ -2662,7 +2662,7 @@ function handleSectionExpired() {
   
   if (hasNextSection) {
     // Passa automaticamente alla prossima sezione
-    showCustomAlert(`⏰ Tempo scaduto per ${sectionNames[currentSectionNumber - 1] || 'questa sezione'}! Passaggio alla sezione successiva...`, () => {
+    showCustomAlert(`⏰ Time expired for ${sectionNames[currentSectionNumber - 1] || 'this section'}! Moving to the next section...`, () => {
       const nextSection = currentSectionNumber + 1;
       const firstPageOfNextSection = sectionToFirstPageMap[nextSection];
       if (firstPageOfNextSection) {
@@ -2671,7 +2671,7 @@ function handleSectionExpired() {
     });
   } else {
     // 🔧 Ultima sezione - invio completamente automatico
-    console.log("⏰ Tempo scaduto per l'ultima sezione - invio automatico!");
+    console.log("⏰ Time expired for last section - automatic submission!");
     
     // Mostra messaggio di invio senza interazione
     const overlay = document.createElement("div");
@@ -2692,9 +2692,9 @@ function handleSectionExpired() {
     `;
     
     message.innerHTML = `
-      <h2 style="color: #f44336; margin-bottom: 1rem;">⏰ Tempo Scaduto!</h2>
+      <h2 style="color: #f44336; margin-bottom: 1rem;">⏰ Time Expired!</h2>
       <p style="font-size: 1.1rem; color: #333; margin-bottom: 1rem;">
-        Invio automatico delle risposte in corso...
+        Automatic submission of answers in progress...
       </p>
       <div style="
         width: 50px;
@@ -2776,26 +2776,26 @@ function showSubmitConfirmDialog(unansweredCount, onConfirm) {
   dialog.className = "modal-dialog";
   
   const title = document.createElement("h3");
-  title.textContent = "⚠️ Attenzione";
+  title.textContent = "⚠️ Warning";
   title.className = "text-warning";
-  
+
   const content = document.createElement("p");
   content.innerHTML = `
-    Hai <strong>${unansweredCount} domande</strong> senza risposta.<br>
-    Vuoi inviare comunque il test?
+    You have <strong>${unansweredCount} questions</strong> without an answer.<br>
+    Do you want to submit the test anyway?
   `;
-  
+
   const buttons = document.createElement("div");
   buttons.className = "modal-buttons";
-  
+
   const cancelBtn = document.createElement("button");
-  cancelBtn.textContent = "Torna al test";
+  cancelBtn.textContent = "Back to test";
   cancelBtn.addEventListener("click", () => {
     document.body.removeChild(overlay);
   });
-  
+
   const confirmBtn = document.createElement("button");
-  confirmBtn.textContent = "Invia comunque";
+  confirmBtn.textContent = "Submit anyway";
   confirmBtn.id = "submitAnswers";
   confirmBtn.addEventListener("click", () => {
     document.body.removeChild(overlay);
@@ -2906,7 +2906,7 @@ async function performSubmit(isAutoSubmit = false) {
   if (isAutoSubmit) {
     window.location.href = "test_selection.html";
   } else {
-    showCustomAlert("✅ Test completato con successo!", () => {
+    showCustomAlert("✅ Test completed successfully!", () => {
       window.location.href = "test_selection.html";
     });
   }
