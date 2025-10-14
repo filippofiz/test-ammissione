@@ -2583,7 +2583,7 @@ function updateNavigationButtons() {
     if (testType === "sat") {
         // For SAT: Hide Previous button completely, rename Next button
         prevPageBtn.style.display = "none";
-        nextPageBtn.textContent = "Vai alle prossime domande";
+        nextPageBtn.textContent = "Go to next questions";
 
         // Never disable the Next button - let module transitions handle navigation
         nextPageBtn.disabled = false;
@@ -3022,7 +3022,7 @@ function buildQuestionNav() {
       overlay.style.alignItems = 'center';
       overlay.style.justifyContent = 'center';
       overlay.style.zIndex = '10000';
-  
+
       // Create dialog box
       const dialog = document.createElement('div');
       dialog.style.background = '#fff';
@@ -3030,34 +3030,46 @@ function buildQuestionNav() {
       dialog.style.borderRadius = '5px';
       dialog.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
       dialog.innerHTML = `<p>${message}</p>`;
-  
+
       // Create buttons container
       const btnContainer = document.createElement('div');
       btnContainer.style.marginTop = '10px';
       btnContainer.style.textAlign = 'right';
-  
+
       // Create Yes button
       const btnYes = document.createElement('button');
       btnYes.textContent = 'Yes';
       btnYes.style.marginRight = '10px';
       btnYes.addEventListener('click', () => {
-        document.body.removeChild(overlay);
+        // Remove from the correct parent (could be testContainer or body)
+        const parent = overlay.parentElement;
+        if (parent) parent.removeChild(overlay);
         resolve(true);
       });
-  
+
       // Create No button
       const btnNo = document.createElement('button');
       btnNo.textContent = 'No';
       btnNo.addEventListener('click', () => {
-        document.body.removeChild(overlay);
+        // Remove from the correct parent (could be testContainer or body)
+        const parent = overlay.parentElement;
+        if (parent) parent.removeChild(overlay);
         resolve(false);
       });
-  
+
       btnContainer.appendChild(btnYes);
       btnContainer.appendChild(btnNo);
       dialog.appendChild(btnContainer);
       overlay.appendChild(dialog);
-      document.body.appendChild(overlay);
+
+      // 🔧 FIX: Append to fullscreen element if in fullscreen, otherwise to body
+      // This ensures the dialog is visible in fullscreen mode for SAT tests
+      const fullscreenElement = document.fullscreenElement || document.getElementById('testContainer');
+      if (document.fullscreenElement && fullscreenElement) {
+        fullscreenElement.appendChild(overlay);
+      } else {
+        document.body.appendChild(overlay);
+      }
     });
   }  
 

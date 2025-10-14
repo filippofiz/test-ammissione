@@ -568,15 +568,15 @@ async function addTestBadges() {
     }
     
     console.log(`Found section: ${section} for ${tipologiaEsercizi} ${progressivo}`);
-    
+
     try {
       const selectedTest = sessionStorage.getItem("selectedTestType");
       const score = await getTestScore(section, progressivo, selectedTest, tipologiaEsercizi);
       
       console.log('Score retrieved:', score);
-      
-      // Aggiorna il badge
-      updateTestBadge(badge, tooltip, details, score, isAssessment);
+
+      // Aggiorna il badge, passando anche la sezione per il filtro
+      updateTestBadge(badge, tooltip, details, score, isAssessment, section);
       
       // Per gli assessment, salva il risultato per la sezione
       if (isAssessment) {
@@ -586,10 +586,47 @@ async function addTestBadges() {
         sectionAssessmentResults.get(section).push(score);
       }
       
-      // Aggiungi evento click per espandere i dettagli
+      // Aggiungi evento click per espandere i dettagli con posizionamento dinamico
       badge.addEventListener('click', (e) => {
         e.stopPropagation();
-        details.classList.toggle('show');
+
+        // Chiudi altri popup aperti
+        document.querySelectorAll('.score-details.show').forEach(otherDetail => {
+          if (otherDetail !== details) {
+            otherDetail.classList.remove('show');
+          }
+        });
+
+        // Toggle il popup corrente
+        const isShowing = details.classList.toggle('show');
+
+        if (isShowing) {
+          // Posiziona il popup vicino al badge
+          const badgeRect = badge.getBoundingClientRect();
+
+          // Posiziona il popup a destra del badge, centrato verticalmente
+          let left = badgeRect.right + 10; // 10px di distanza dal badge
+          let top = badgeRect.top + (badgeRect.height / 2);
+
+          // Se esce dallo schermo a destra, mostralo a sinistra
+          const popupWidth = 300; // max-width dal CSS
+          if (left + popupWidth > window.innerWidth) {
+            left = badgeRect.left - popupWidth - 10;
+          }
+
+          // Se esce dallo schermo in basso, aggiusta verso l'alto
+          if (top + 200 > window.innerHeight) {
+            top = window.innerHeight - 220;
+          }
+
+          // Se esce dallo schermo in alto, aggiusta verso il basso
+          if (top < 20) {
+            top = 20;
+          }
+
+          details.style.left = left + 'px';
+          details.style.top = top + 'px';
+        }
       });
       
     } catch (error) {
@@ -690,7 +727,7 @@ async function getTestScore(section, progressivo, selectedTest, tipologiaEserciz
     shownAnswers = uniqueAnswers.filter(a => a.answer !== 'xx');
     // For SAT, use only shown questions for percentage calculation
     totalQuestionsToUse = shownAnswers.length;
-    console.log(`SAT Test: ${shownAnswers.length} questions shown out of ${totalQuestions} total`);
+    console.log(`SAT Test: ${shownAnswers.length} questions shown out of ${questionCount} total`);
 
     // Determine which adaptive modules were shown
     // Get questions with their SAT_section to identify modules
@@ -746,7 +783,7 @@ async function getTestScore(section, progressivo, selectedTest, tipologiaEserciz
 }
 
 // Funzione per aggiornare il badge con i dati
-function updateTestBadge(badge, tooltip, details, score, isAssessment) {
+function updateTestBadge(badge, tooltip, details, score, isAssessment, section) {
   // Rimuovi lo stato di caricamento
   badge.classList.remove('loading');
   
@@ -777,8 +814,10 @@ function updateTestBadge(badge, tooltip, details, score, isAssessment) {
       <span class="score-value" style="color: #6b7280;">${score.unansweredQuestions}</span>
     </div>`;
 
-  // Add SAT module information if available
-  if (score.satModulesShown) {
+  // 🎯 Add SAT module information ONLY for Assessment Iniziale and Simulazioni
+  const shouldShowModules = (section === "Assessment Iniziale" || section === "Simulazioni");
+
+  if (score.satModulesShown && shouldShowModules) {
     detailsHTML += `
     <div class="score-row" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e5e7eb;">
       <span class="score-label">📚 Moduli SAT:</span>
