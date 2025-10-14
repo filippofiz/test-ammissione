@@ -362,6 +362,26 @@ function displayTestTree(tests, studentTests, testType, selectedTest) {
 async function startPdfTest(section, tipologia_esercizi, testProgressivo, selectedTest, testId) {
     console.log(`🚀 Starting PDF Test: ${section} - ${tipologia_esercizi} - ${testProgressivo} - ${selectedTest} - ${testId}`);
 
+    // 🌐 AUTOMATIC LANGUAGE SWITCH FOR SAT AND GMAT TESTS
+    // SAT and GMAT tests must always run in English version regardless of current interface language
+    // This applies to both PDF and normal (Banca Dati) versions
+    if (selectedTest === "SAT PDF" || selectedTest === "SAT" ||
+        selectedTest === "GMAT PDF" || selectedTest === "GMAT") {
+        console.log(`🌍 ${selectedTest} detected - switching to English version automatically`);
+
+        // Save test parameters in sessionStorage so they persist across language switch
+        sessionStorage.setItem("currentSection", section);
+        sessionStorage.setItem("currentTipologiaEsercizi", tipologia_esercizi);
+        sessionStorage.setItem("currentTestProgressivo", testProgressivo);
+        sessionStorage.setItem("selectedTestId", testId);
+        sessionStorage.setItem("selectedTestType", selectedTest);
+
+        // Redirect to English version test_selection page
+        // It will automatically detect the test and start it
+        window.location.href = "../inglese/test_selection.html";
+        return;
+    }
+
     // Regular PDF test logic - same for all PDF tests including SAT
     // Get the first question matching criteria to get the PDF (all questions share same PDF)
     const { data: results, error } = await supabase
@@ -392,8 +412,26 @@ async function startPdfTest(section, tipologia_esercizi, testProgressivo, select
 }
 
 // ✅ Start Banca Dati test
-async function startBancaDatiTest(section, tipologia_esercizi, testProgressivo, selectedTest, testId) {  
-    console.log(`🚀 Starting Banca Dati Test: ${section} - ${tipologia_esercizi} - ${testProgressivo} - ${selectedTest}`);   
+async function startBancaDatiTest(section, tipologia_esercizi, testProgressivo, selectedTest, testId) {
+    console.log(`🚀 Starting Banca Dati Test: ${section} - ${tipologia_esercizi} - ${testProgressivo} - ${selectedTest}`);
+
+    // 🌐 AUTOMATIC LANGUAGE SWITCH FOR SAT AND GMAT TESTS
+    // SAT and GMAT tests must always run in English version (Banca Dati versions)
+    if (selectedTest === "SAT" || selectedTest === "GMAT") {
+        console.log(`🌍 ${selectedTest} detected - switching to English version automatically`);
+
+        // Save test parameters in sessionStorage so they persist across language switch
+        sessionStorage.setItem("currentSection", section);
+        sessionStorage.setItem("currentTipologiaEsercizi", tipologia_esercizi);
+        sessionStorage.setItem("currentTestProgressivo", testProgressivo);
+        sessionStorage.setItem("selectedTestId", testId);
+        sessionStorage.setItem("selectedTestType", selectedTest);
+
+        // Redirect to English version test_selection page
+        window.location.href = "../inglese/test_selection.html";
+        return;
+    }
+
     sessionStorage.setItem("currentSection", section);
     sessionStorage.setItem("currentTipologiaEsercizi", tipologia_esercizi);
     sessionStorage.setItem("currentTestProgressivo", testProgressivo);

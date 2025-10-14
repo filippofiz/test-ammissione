@@ -112,6 +112,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Save the selected test
     sessionStorage.setItem("selectedTestType", selectedTest);
 
+    // 🌐 AUTOMATIC LANGUAGE SWITCH FOR SAT AND GMAT TESTS
+    // SAT and GMAT test selection pages must always be in English (both PDF and normal versions)
+    if (selectedTest === "SAT PDF" || selectedTest === "SAT" ||
+        selectedTest === "GMAT PDF" || selectedTest === "GMAT") {
+      console.log(`🌍 ${selectedTest} selected - switching to English version automatically`);
+      window.location.href = "../inglese/test_selection.html";
+      return;
+    }
+
     // Redirect to test selection page
     window.location.href = "test_selection.html";
   });

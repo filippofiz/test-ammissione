@@ -819,17 +819,16 @@ button.disabled-green, #testTree button.disabled-green {
 
 /* Stile per il punteggio espanso */
 .score-details {
-  position: absolute;
-  top: 35px;
-  right: 0;
+  position: fixed;
   background: white;
   border: 2px solid #e5e7eb;
   border-radius: 8px;
   padding: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
   display: none;
-  z-index: 20;
+  z-index: 10001;
   min-width: 200px;
+  max-width: 300px;
 }
 
 .score-details.show {

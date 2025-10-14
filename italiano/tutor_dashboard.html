@@ -630,6 +630,15 @@
       sessionStorage.setItem("selectedStudentId", studentId);
       sessionStorage.setItem("selectedStudentName", studentName);
       sessionStorage.setItem("selectedTestType", selectedTest);
+
+      // 🌐 AUTOMATIC LANGUAGE SWITCH FOR SAT AND GMAT TESTS
+      // SAT and GMAT test views must always be in English
+      if (selectedTest === "SAT PDF" || selectedTest === "GMAT") {
+        console.log(`🌍 ${selectedTest} selected - switching to English version automatically`);
+        window.location.href = "../inglese/view_tests.html";
+        return;
+      }
+
       window.location.href = "view_tests.html";
     };
 

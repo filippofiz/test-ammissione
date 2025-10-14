@@ -288,11 +288,54 @@ function displayQuestionsAndAnswers(questionsData, studentAnswersMap) {
   // Check if this is a SAT test
   const isSATTest = selectedTestType === "SAT PDF";
 
-  // For SAT, separate shown questions from non-shown modules
+  // 🔍 CHECK: Only show modules for Simulazioni and Assessment Iniziale
+  const shouldShowModules = (selectedSection === "Simulazioni" || selectedSection === "Assessment Iniziale");
+
+  console.log(`📊 Display Mode: isSATTest=${isSATTest}, selectedSection=${selectedSection}, shouldShowModules=${shouldShowModules}`);
+
+  // 📊 Add SAT Score Report button for ALL SAT tests (at the top of questions list)
+  if (isSATTest) {
+    const scoreReportBtn = document.createElement("button");
+    scoreReportBtn.className = "sat-score-report-btn";
+    scoreReportBtn.innerHTML = "📊 SAT Score Report";
+    scoreReportBtn.style.cssText = `
+      position: relative;
+      margin: 0 0 1.5rem 0;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+      transition: all 0.3s ease;
+      display: block;
+      width: 100%;
+      max-width: 300px;
+    `;
+    scoreReportBtn.onmouseover = () => {
+      scoreReportBtn.style.transform = "translateY(-2px)";
+      scoreReportBtn.style.boxShadow = "0 4px 12px rgba(34, 197, 94, 0.4)";
+    };
+    scoreReportBtn.onmouseout = () => {
+      scoreReportBtn.style.transform = "translateY(0)";
+      scoreReportBtn.style.boxShadow = "0 2px 8px rgba(34, 197, 94, 0.3)";
+    };
+    scoreReportBtn.onclick = (e) => {
+      e.stopPropagation();
+      generateSATScoreReport(questionsData, studentAnswersMap);
+    };
+    listContainer.appendChild(scoreReportBtn);
+  }
+
+  // For SAT with modules (Simulazioni/Assessment Iniziale), separate shown questions from non-shown modules
   let shownQuestions = [];
   let notShownQuestions = [];
 
-  if (isSATTest) {
+  if (isSATTest && shouldShowModules) {
     // Separate questions by module based on SAT_section field
     const moduleQuestions = {
       'RW1': [],
