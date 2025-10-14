@@ -78,6 +78,7 @@ class GMATDataInsightsRenderer {
     const questionDiv = document.createElement('div');
     questionDiv.classList.add('question-item', 'di-question');
     questionDiv.classList.add(`di-type-${di_question_type.toLowerCase()}`);
+    questionDiv.classList.add('tex2jax_ignore');  // Disable LaTeX/MathJax for DI questions
 
     // Add answer status classes
     const isCorrect = this.checkAnswer(di_question_type, di_question_data, parsedStudentAnswer, parsedCorrectAnswer);
@@ -93,21 +94,26 @@ class GMATDataInsightsRenderer {
       questionDiv.classList.add('timeout');
     }
 
-    // Question header with status
-    const header = this.renderHeader(questionNumber, studentAnswer, isCorrect);
+    // Question header with status and difficulty
+    const difficulty = questionData.GMAT_question_difficulty || '';
+    const header = this.renderHeader(questionNumber, studentAnswer, isCorrect, difficulty);
     questionDiv.appendChild(header);
 
     // Render question content using STUDENT renderer in VIEW MODE
-    // Pass both student answer and correct answer so renderer can show both graphically
+    // If student answer is a special marker (x, y, z, xx), don't pass it to renderViewMode
+    // This prevents showing green checkmarks when student didn't actually answer
+    const hasActualAnswer = studentAnswer && !['x', 'y', 'z', 'xx'].includes(studentAnswer.toLowerCase());
+    const answerToPass = hasActualAnswer ? parsedStudentAnswer : null;
+
     const content = renderer.renderViewMode
-      ? renderer.renderViewMode(di_question_data, questionData.id, parsedStudentAnswer, parsedCorrectAnswer)
-      : renderer.render(di_question_data, questionData.id, parsedStudentAnswer);
+      ? renderer.renderViewMode(di_question_data, questionData.id, answerToPass, parsedCorrectAnswer)
+      : renderer.render(di_question_data, questionData.id, answerToPass);
     questionDiv.appendChild(content);
 
     return questionDiv;
   }
 
-  renderHeader(questionNumber, studentAnswer, isCorrect) {
+  renderHeader(questionNumber, studentAnswer, isCorrect, difficulty = '') {
     const header = document.createElement('div');
     header.classList.add('answer-header');
 
@@ -126,8 +132,11 @@ class GMATDataInsightsRenderer {
       mark = '<span class="timeout-mark">⏱️</span>';
     }
 
+    // Add difficulty badge if present
+    const difficultyBadge = difficulty ? `<span class="difficulty-badge difficulty-${difficulty.toLowerCase()}">${difficulty}</span>` : '';
+
     header.innerHTML = `
-      <span>Question ${questionNumber}</span>
+      <span>Question ${questionNumber} ${difficultyBadge}</span>
       ${mark}
     `;
 
@@ -180,8 +189,19 @@ class GMATDataInsightsRenderer {
       return false;
     }
 
-    // For multi-part questions (TPA, TA), compare JSON objects
-    if (type === 'TPA' || type === 'TA') {
+    // For Graphics Interpretation (GI), compare blank1 and blank2
+    if (type === 'GI') {
+      try {
+        const studentObj = typeof studentAnswer === 'string' ? JSON.parse(studentAnswer) : studentAnswer;
+        const correctObj = typeof correctAnswer === 'string' ? JSON.parse(correctAnswer) : correctAnswer;
+        return studentObj.blank1 === correctObj.blank1 && studentObj.blank2 === correctObj.blank2;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    // For multi-part questions (TPA, TA, MSR), compare JSON objects
+    if (type === 'TPA' || type === 'TA' || type === 'MSR') {
       try {
         const studentObj = typeof studentAnswer === 'string' ? JSON.parse(studentAnswer) : studentAnswer;
         const correctObj = typeof correctAnswer === 'string' ? JSON.parse(correctAnswer) : correctAnswer;
@@ -191,7 +211,7 @@ class GMATDataInsightsRenderer {
       }
     }
 
-    // For single-answer questions (DS, GI, MSR)
+    // For single-answer questions (DS)
     return String(studentAnswer).toUpperCase() === String(correctAnswer).toUpperCase();
   }
 

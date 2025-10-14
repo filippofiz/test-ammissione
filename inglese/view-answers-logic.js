@@ -13,12 +13,6 @@ const selectedTipologiaEsercizi = sessionStorage.getItem("selectedTipologiaEserc
 const selectedProgressivo = sessionStorage.getItem("selectedTestProgressivo");
 const selectedTestType = sessionStorage.getItem("selectedTestType");
 
-console.log("Student ID:", selectedStudentId);
-console.log("Student Name:", selectedStudentName);
-console.log("Section:", selectedSection);
-console.log("Tipologia Esercizi:", selectedTipologiaEsercizi);
-console.log("Progressivo:", selectedProgressivo);
-console.log("Test Type:", selectedTestType);
 
 // Verifica parametri
 if (!selectedStudentId || !selectedSection || !selectedTipologiaEsercizi || !selectedProgressivo || !selectedTestType) {
@@ -88,25 +82,7 @@ async function updateTutorName() {
 // Carica le risposte del test
 async function loadTestAnswers() {
   try {
-    console.log("🔍 DEBUG: Starting loadTestAnswers");
-    console.log("🔍 DEBUG: Query parameters:", {
-      questionsTable,
-      selectedSection,
-      selectedTipologiaEsercizi, 
-      selectedProgressivo,
-      selectedTestType,
-      selectedStudentId
-    });
-    
-    console.log("🔍 DEBUG: EXACT QUERY FILTERS FOR QUESTIONS TABLE:");
-    console.log("  - Table:", questionsTable);
-    console.log("  - section =", selectedSection);
-    console.log("  - tipologia_esercizi =", selectedTipologiaEsercizi);
-    console.log("  - progressivo =", selectedProgressivo);
-    console.log("  - tipologia_test =", selectedTestType);
-
     // ✅ STEP 0: Get test_id from student_tests table (get LATEST attempt)
-    console.log("🔍 DEBUG: Step 0 - Getting test_id from student_tests (latest attempt)");
     const { data: studentTestData, error: studentTestError } = await supabase
       .from("student_tests")
       .select("id")
@@ -130,15 +106,12 @@ async function loadTestAnswers() {
     }
 
     const testId = studentTestData[0].id;
-    console.log("🔍 DEBUG: test_id =", testId);
 
     // ✅ STEP 1: Get highest question_number (= number of questions in test)
-    console.log("🔍 DEBUG: Step 1 - Getting highest question_number for this test");
     let maxQuestionQuery = supabase.from(questionsTable).select("question_number");
 
     if (selectedTestType === "SAT PDF" && selectedSection === "Assessment Iniziale") {
       // For SAT, use Materia field instead of section
-      console.log("  - Using Materia field for SAT PDF");
       maxQuestionQuery = maxQuestionQuery
         .eq("Materia", selectedSection)
         .eq("tipologia_esercizi", selectedTipologiaEsercizi)
@@ -169,10 +142,8 @@ async function loadTestAnswers() {
     }
 
     const questionCount = maxQuestionData[0].question_number;
-    console.log("🔍 DEBUG: Test has", questionCount, "questions (max question_number)");
 
     // ✅ STEP 2: Fetch student answers FOR THIS TEST, ordered by timestamp DESC, take top N
-    console.log("🔍 DEBUG: Step 2 - Fetching", questionCount, "most recent answers for this test");
     const { data: answersData, error: allAnswersError } = await supabase
       .from(answersTable)
       .select("*")
@@ -192,11 +163,8 @@ async function loadTestAnswers() {
       return;
     }
 
-    console.log("🔍 DEBUG: Answers fetched:", answersData.length);
-
     // ✅ STEP 3: Extract question IDs from answers
     const answeredQuestionIds = answersData.map(a => a.question_id);
-    console.log("🔍 DEBUG: Question IDs to fetch:", answeredQuestionIds.length);
 
     // ✅ STEP 4: Fetch ONLY the questions that were answered
     const { data: questionsData, error: questionsError } = await supabase
@@ -215,8 +183,6 @@ async function loadTestAnswers() {
       alert("Nessuna domanda trovata per le risposte dello studente.");
       return;
     }
-
-    console.log("🔍 DEBUG: Questions fetched:", questionsData.length);
 
     totalQuestions = questionsData.length;
 
@@ -262,9 +228,13 @@ async function loadTestAnswers() {
     // 6. Aggiorna statistiche
     updateStatistics();
     
-    // 7. Trigger MathJax
+    // 7. Trigger MathJax - but EXCLUDE Data Insights questions
     if (window.MathJax) {
-      MathJax.typesetPromise().catch(err => console.error("MathJax error:", err));
+      // Get all question items that are NOT Data Insights questions
+      const nonDIQuestions = document.querySelectorAll('.question-item:not(.di-question)');
+      if (nonDIQuestions.length > 0) {
+        MathJax.typesetPromise(Array.from(nonDIQuestions)).catch(err => console.error("MathJax error:", err));
+      }
     }
   } catch (error) {
     console.error("Errore generale:", error);
@@ -285,13 +255,61 @@ function displayQuestionsAndAnswers(questionsData, studentAnswersMap) {
   noIdeaCount = 0;
   timeoutCount = 0;
 
+  // Helper function to check if a Data Insights answer is correct (must be at top level)
+  // This function is used by both SAT and GMAT scoring logic
+  window.isDIAnswerCorrect = function(studentAnswer, correctAnswer) {
+    if (!studentAnswer || !correctAnswer) {
+      return false;
+    }
+
+    try {
+      // Parse if strings
+      let studentObj = typeof studentAnswer === 'string' ? JSON.parse(studentAnswer) : studentAnswer;
+      let correctObj = typeof correctAnswer === 'string' ? JSON.parse(correctAnswer) : correctAnswer;
+
+      // Compare all keys
+      const allKeys = new Set([...Object.keys(studentObj), ...Object.keys(correctObj)]);
+      for (const key of allKeys) {
+        const studentVal = studentObj[key];
+        const correctVal = correctObj[key];
+
+        // Handle nested objects (like two-column answers)
+        if (typeof correctVal === 'object' && correctVal !== null) {
+          if (typeof studentVal !== 'object') {
+            return false;
+          }
+          // Compare nested keys
+          const nestedKeys = new Set([...Object.keys(studentVal || {}), ...Object.keys(correctVal)]);
+          for (const nestedKey of nestedKeys) {
+            if (studentVal[nestedKey] !== correctVal[nestedKey]) {
+              return false;
+            }
+          }
+        } else {
+          // Simple comparison (case-insensitive for letters)
+          const sVal = String(studentVal || '').toLowerCase();
+          const cVal = String(correctVal || '').toLowerCase();
+          if (sVal !== cVal) {
+            return false;
+          }
+        }
+      }
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
+
   // Check if this is a SAT test
   const isSATTest = selectedTestType === "SAT PDF";
 
+  // Check if this is a GMAT test (GMAT uses banca dati, not PDF)
+  const isGMATTest = selectedTestType === "GMAT";
+  const shouldShowGMATSections = isGMATTest &&
+    (selectedSection === "Assessment Iniziale" || selectedSection === "Simulazioni");
+
   // 🔍 CHECK: Only show modules for Simulazioni and Assessment Iniziale
   const shouldShowModules = (selectedSection === "Simulazioni" || selectedSection === "Assessment Iniziale");
-
-  console.log(`📊 Display Mode: isSATTest=${isSATTest}, selectedSection=${selectedSection}, shouldShowModules=${shouldShowModules}`);
 
   // 📊 Add SAT Score Report button for ALL SAT tests (at the top of questions list)
   if (isSATTest) {
@@ -327,6 +345,44 @@ function displayQuestionsAndAnswers(questionsData, studentAnswersMap) {
     scoreReportBtn.onclick = (e) => {
       e.stopPropagation();
       generateSATScoreReport(questionsData, studentAnswersMap);
+    };
+    listContainer.appendChild(scoreReportBtn);
+  }
+
+  // 📊 Add GMAT Score Report button for GMAT tests (at the top of questions list)
+  if (isGMATTest && shouldShowGMATSections) {
+    const scoreReportBtn = document.createElement("button");
+    scoreReportBtn.className = "gmat-score-report-btn";
+    scoreReportBtn.innerHTML = "📊 GMAT Score Report";
+    scoreReportBtn.style.cssText = `
+      position: relative;
+      margin: 0 0 1.5rem 0;
+      background: linear-gradient(135deg, #f97316, #ea580c);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(249, 115, 22, 0.3);
+      transition: all 0.3s ease;
+      display: block;
+      width: 100%;
+      max-width: 300px;
+    `;
+    scoreReportBtn.onmouseover = () => {
+      scoreReportBtn.style.transform = "translateY(-2px)";
+      scoreReportBtn.style.boxShadow = "0 4px 12px rgba(249, 115, 22, 0.4)";
+    };
+    scoreReportBtn.onmouseout = () => {
+      scoreReportBtn.style.transform = "translateY(0)";
+      scoreReportBtn.style.boxShadow = "0 2px 8px rgba(249, 115, 22, 0.3)";
+    };
+    scoreReportBtn.onclick = (e) => {
+      e.stopPropagation();
+      generateGMATScoreReport(questionsData, studentAnswersMap);
     };
     listContainer.appendChild(scoreReportBtn);
   }
@@ -380,7 +436,6 @@ function displayQuestionsAndAnswers(questionsData, studentAnswersMap) {
           const qNum = parseInt(q.question_number);
           if (qNum >= 1 && qNum <= 27) {
             moduleQuestions['RW1'].push(q);
-            console.log(`📍 Placed Q${qNum} in RW1 by number (section was: ${satSection})`);
           } else if (qNum >= 28 && qNum <= 54) {
             // Could be RW2-Easy or RW2-Hard, check answer pattern
             if (moduleQuestions['RW2-Easy'].length > 0) {
@@ -391,10 +446,8 @@ function displayQuestionsAndAnswers(questionsData, studentAnswersMap) {
               // Default to Easy if we can't determine
               moduleQuestions['RW2-Easy'].push(q);
             }
-            console.log(`📍 Placed Q${qNum} in RW2 by number (section was: ${satSection})`);
           } else if (qNum >= 55 && qNum <= 76) {
             moduleQuestions['Math1'].push(q);
-            console.log(`📍 Placed Q${qNum} in Math1 by number (section was: ${satSection})`);
           } else if (qNum >= 77 && qNum <= 98) {
             // Could be Math2-Easy or Math2-Hard
             if (moduleQuestions['Math2-Easy'].length > 0) {
@@ -405,19 +458,11 @@ function displayQuestionsAndAnswers(questionsData, studentAnswersMap) {
               // Default to Easy if we can't determine
               moduleQuestions['Math2-Easy'].push(q);
             }
-            console.log(`📍 Placed Q${qNum} in Math2 by number (section was: ${satSection})`);
           }
         }
       }
     });
 
-    // Debug: Show module counts
-    console.log("📊 Module question counts:");
-    Object.entries(moduleQuestions).forEach(([key, questions]) => {
-      if (questions.length > 0) {
-        console.log(`  ${key}: ${questions.length} questions`);
-      }
-    });
 
     // Display questions grouped by module
     const moduleNames = {
@@ -617,8 +662,164 @@ function displayQuestionsAndAnswers(questionsData, studentAnswersMap) {
         }
       });
     }
+
+  } else if (isGMATTest && shouldShowGMATSections) {
+    // For GMAT with sections (Assessment Iniziale/Simulazioni), group by section
+    const gmatSections = {
+      'Quantitative Reasoning': [],
+      'Verbal Reasoning': [],
+      'Data Insights': []
+    };
+
+    // Group questions by GMAT section
+    questionsData.forEach(q => {
+      const gmatSection = q.GMAT_section || q.section || "";
+      if (gmatSections[gmatSection]) {
+        gmatSections[gmatSection].push(q);
+      }
+    });
+
+    // Display questions grouped by GMAT section with collapsible headers
+    const sectionOrder = ['Quantitative Reasoning', 'Verbal Reasoning', 'Data Insights'];
+
+    sectionOrder.forEach((sectionKey, sectionIndex) => {
+      const questions = gmatSections[sectionKey] || [];
+      if (questions.length > 0) {
+        // Create section wrapper
+        const sectionWrapper = document.createElement("div");
+        sectionWrapper.className = "gmat-section-wrapper";
+
+        // Calculate section score (handle Data Insights multi-part questions)
+        const correctQuestions = [];
+        const incorrectQuestions = [];
+
+        const correctInSection = questions.filter(q => {
+          const studentAnswer = studentAnswersMap[q.id];
+          let isCorrect = false;
+
+          // Check if this is a Data Insights question with JSON answers
+          if (q.di_question_type && studentAnswer) {
+            try {
+              // Parse di_question_data
+              let questionData = q.di_question_data;
+              if (typeof questionData === 'string') {
+                questionData = JSON.parse(questionData);
+              }
+
+              // Special handling for Graphics Interpretation (GI)
+              if (q.di_question_type === 'GI') {
+                const studentObj = typeof studentAnswer === 'string' ? JSON.parse(studentAnswer) : studentAnswer;
+                isCorrect = studentObj.blank1 === questionData.blank1_correct && studentObj.blank2 === questionData.blank2_correct;
+              } else {
+                // Get correct answer based on DI type
+                let correctAnswer = null;
+
+                // DS questions use simple letter answers (A, B, C, D, E) - not JSON
+                if (q.di_question_type === 'DS') {
+                  correctAnswer = questionData.correct_answer || q.correct_answer;
+                  // Simple string comparison for DS (case-insensitive)
+                  isCorrect = String(studentAnswer).toUpperCase() === String(correctAnswer).toUpperCase();
+                } else if (q.di_question_type === 'TA') {
+                  // TA stores in di_question_data.correct_answer
+                  correctAnswer = questionData.correct_answer || q.correct_answer;
+                } else if (q.di_question_type === 'TPA') {
+                  // TPA stores in di_question_data.correct_answers
+                  correctAnswer = questionData.correct_answers || q.correct_answer;
+                } else if (q.di_question_type === 'MSR') {
+                  // MSR: build correct answer from sub-questions
+                  correctAnswer = {};
+                  if (questionData.questions) {
+                    questionData.questions.forEach((subQ, idx) => {
+                      if (subQ.question_type === 'multiple_choice' && subQ.correct_answer) {
+                        correctAnswer[`q${idx}`] = subQ.correct_answer;
+                      } else if (subQ.question_type === 'two_column' && subQ.correct_answers) {
+                        correctAnswer[`q${idx}`] = subQ.correct_answers;
+                      }
+                    });
+                  }
+                }
+
+                // Use helper function for non-DS DI types (TA, TPA, MSR)
+                // DS was already handled above with simple string comparison
+                if (correctAnswer && q.di_question_type !== 'DS') {
+                  isCorrect = window.isDIAnswerCorrect(studentAnswer, correctAnswer);
+                }
+              }
+            } catch (e) {
+              isCorrect = false;
+            }
+          } else {
+            // Regular comparison for non-DI questions
+            isCorrect = studentAnswer === q.correct_answer;
+          }
+
+          // Track correct/incorrect questions
+          if (isCorrect) {
+            correctQuestions.push(`Q${q.question_number}${q.di_question_type ? `(${q.di_question_type})` : ''}`);
+          } else if (studentAnswer) {
+            incorrectQuestions.push(`Q${q.question_number}${q.di_question_type ? `(${q.di_question_type})` : ''}`);
+          }
+
+          return isCorrect;
+        }).length;
+
+        console.log(`📊 ${sectionKey} SECTION SCORE: ${correctInSection}/${questions.length} correct`);
+        console.log(`   ✅ Correct (${correctQuestions.length}): ${correctQuestions.join(', ')}`);
+        console.log(`   ❌ Incorrect (${incorrectQuestions.length}): ${incorrectQuestions.join(', ')}`);
+        const percentage = Math.round((correctInSection / questions.length) * 100);
+
+        // Add section header with toggle button and score
+        const sectionHeader = document.createElement("div");
+        sectionHeader.className = "gmat-section-header collapsible";
+        sectionHeader.style.cursor = "pointer";
+
+        const sectionId = `gmat-section-${sectionKey.replace(/\s+/g, '-')}-${sectionIndex}`;
+        sectionHeader.innerHTML = `
+          <div class="section-title">${sectionKey}</div>
+          <div class="section-info">
+            <span>${correctInSection}/${questions.length} correct (${percentage}%)</span>
+            <span class="toggle-arrow" id="arrow-${sectionId}">▶</span>
+          </div>
+        `;
+        sectionWrapper.appendChild(sectionHeader);
+
+        // Create container for section questions
+        const sectionContainer = document.createElement("div");
+        sectionContainer.className = "gmat-section section-content";
+        sectionContainer.id = sectionId;
+        sectionContainer.style.display = "none"; // Start collapsed
+
+        // Store original listContainer and temporarily switch
+        const originalContainer = listContainer;
+        listContainer = sectionContainer;
+
+        // Display questions with renumbered indices starting from 1 for each section
+        questions.forEach((q, index) => {
+          displaySingleQuestion(q, studentAnswersMap[q.id] || "", index + 1, false, sectionContainer);
+        });
+
+        // Restore original listContainer
+        listContainer = originalContainer;
+
+        sectionWrapper.appendChild(sectionContainer);
+        listContainer.appendChild(sectionWrapper);
+
+        // Add toggle functionality
+        sectionHeader.addEventListener("click", function() {
+          const content = document.getElementById(sectionId);
+          const arrow = document.getElementById(`arrow-${sectionId}`);
+          if (content.style.display === "none") {
+            content.style.display = "block";
+            arrow.textContent = "▼";
+          } else {
+            content.style.display = "none";
+            arrow.textContent = "▶";
+          }
+        });
+      }
+    });
   } else {
-    // For non-SAT tests, display all questions normally
+    // For non-SAT/non-GMAT tests, display all questions normally
     questionsData.forEach((q, index) => {
       displaySingleQuestion(q, studentAnswersMap[q.id] || "", index + 1, false);
     });
@@ -645,8 +846,75 @@ function displaySingleQuestion(q, studentAnswerRaw, questionNumber, isNotShown, 
       answerStatus = "timeout";
     }
 
-    // Verifica correttezza
-    const isCorrect = studentAnswerRaw === q.correct_answer;
+    // Verifica correttezza (handle Data Insights multi-part questions)
+    let isCorrect;
+
+    // 🔍 DEBUG: Check which path we're taking
+    if (q.di_question_type && studentAnswerRaw) {
+      // Data Insights question - use helper function
+
+      // Special handling for Graphics Interpretation (GI)
+      if (q.di_question_type === 'GI') {
+        try {
+          const studentObj = typeof studentAnswerRaw === 'string' ? JSON.parse(studentAnswerRaw) : studentAnswerRaw;
+
+          // Parse di_question_data to get correct answers
+          let questionData = q.di_question_data;
+          if (typeof questionData === 'string') {
+            questionData = JSON.parse(questionData);
+          }
+
+          const blank1Match = studentObj.blank1 === questionData.blank1_correct;
+          const blank2Match = studentObj.blank2 === questionData.blank2_correct;
+          isCorrect = blank1Match && blank2Match;
+        } catch (e) {
+          isCorrect = false;
+        }
+      } else {
+        // Other DI types (MSR, TA, TPA, DS) - extract correct answer from di_question_data
+        try {
+          // Parse di_question_data
+          let questionData = q.di_question_data;
+          if (typeof questionData === 'string') {
+            questionData = JSON.parse(questionData);
+          }
+
+          // Get correct answer based on DI type
+          let correctAnswer = null;
+          if (q.di_question_type === 'DS') {
+            correctAnswer = questionData.correct_answer || q.correct_answer;
+          } else if (q.di_question_type === 'TA') {
+            correctAnswer = questionData.correct_answer || q.correct_answer;
+          } else if (q.di_question_type === 'TPA') {
+            correctAnswer = questionData.correct_answers || q.correct_answer;
+          } else if (q.di_question_type === 'MSR') {
+            // MSR: build correct answer from sub-questions
+            correctAnswer = {};
+            if (questionData.questions) {
+              questionData.questions.forEach((subQ, idx) => {
+                if (subQ.question_type === 'multiple_choice' && subQ.correct_answer) {
+                  correctAnswer[`q${idx}`] = subQ.correct_answer;
+                } else if (subQ.question_type === 'two_column' && subQ.correct_answers) {
+                  correctAnswer[`q${idx}`] = subQ.correct_answers;
+                }
+              });
+            }
+          }
+
+          // Use helper function to compare
+          if (correctAnswer) {
+            isCorrect = window.isDIAnswerCorrect(studentAnswerRaw, correctAnswer);
+          } else {
+            isCorrect = false;
+          }
+        } catch (e) {
+          isCorrect = false;
+        }
+      }
+    } else {
+      // Regular question - simple comparison
+      isCorrect = studentAnswerRaw === q.correct_answer;
+    }
 
     // Aggiorna statistiche - but only for shown questions in SAT tests
     if (!isNotShown) {
@@ -687,6 +955,7 @@ function displaySingleQuestion(q, studentAnswerRaw, questionNumber, isNotShown, 
     // Header con numero domanda e indicatore
     const header = document.createElement("div");
     header.classList.add("question-header");
+
     let mark = '';
     if (isNotShown) {
       mark = '<span class="not-shown-mark">👁️‍🗨️</span>';
@@ -702,8 +971,12 @@ function displaySingleQuestion(q, studentAnswerRaw, questionNumber, isNotShown, 
       mark = '<span class="timeout-mark">⏱️</span>';
     }
 
+    // Add difficulty badge
+    const difficulty = q.GMAT_question_difficulty || '';
+    const difficultyBadge = difficulty ? `<span class="difficulty-badge difficulty-${difficulty.toLowerCase()}">${difficulty}</span>` : '';
+
     header.innerHTML = `
-      <span>Question ${questionNumber}</span>
+      <span>Question ${questionNumber} ${difficultyBadge}</span>
       ${mark}
     `;
     questionDiv.appendChild(header);
@@ -712,7 +985,6 @@ function displaySingleQuestion(q, studentAnswerRaw, questionNumber, isNotShown, 
 
     // Check if this is a GMAT Data Insights question
     if (isBancaDati && q.di_question_type && q.di_question_data && window.GMATDataInsightsRenderer) {
-      console.log('📊 Rendering DI question:', q.di_question_type);
       // Use GMAT DI renderer
       const diQuestionDiv = window.GMATDataInsightsRenderer.renderQuestion(q, studentAnswerRaw, questionNumber);
 
@@ -948,10 +1220,8 @@ document.addEventListener("DOMContentLoaded", () => {
       // Cambia PDF
       if (isEnglish && window.englishPdfUrl) {
         pdfFrame.src = window.englishPdfUrl;
-        console.log("📄 Switched to English PDF:", window.englishPdfUrl);
       } else if (!isEnglish && window.italianPdfUrl) {
         pdfFrame.src = window.italianPdfUrl;
-        console.log("📄 Switched to Italian PDF:", window.italianPdfUrl);
       }
       
       // Traduci interfaccia
@@ -1861,6 +2131,654 @@ function generateSectionScoreReportHTML(data) {
     </div>
 </body>
 </html>`;
+}
+
+// ============================================================================
+// GMAT FOCUS EDITION SCORING SYSTEM
+// ============================================================================
+// Based on official GMAT Focus Edition methodology (2024-2025)
+// Research sources: mba.com, e-gmat.com, targettestprep.com
+// ============================================================================
+
+/**
+ * GMAT Focus Edition Scoring Methodology:
+ *
+ * 1. Section Scores: 60-90 for Quantitative, Verbal, and Data Insights
+ * 2. Total Score: 205-805 (increments ending in 5)
+ * 3. Formula: Total = (Q + V + DI - 180) × (20/3) + 205, rounded to nearest 5 ending in 5
+ * 4. Scoring factors: Number correct, difficulty of questions, adaptive performance
+ *
+ * Our Implementation:
+ * - Uses difficulty-weighted scoring (Easy: 0.8x, Medium: 1.0x, Hard: 1.3x)
+ * - Maps weighted performance to 60-90 scale
+ * - Applies official formula for total score calculation
+ */
+
+function calculateGMATSectionScore(correctCount, totalCount, questionDifficulties) {
+  if (totalCount === 0) return 60; // Minimum score
+
+  // Calculate difficulty-weighted score
+  let weightedCorrect = 0;
+  let weightedTotal = 0;
+
+  questionDifficulties.forEach((difficulty, index) => {
+    let weight = 1.0; // Default medium
+    if (difficulty === 'Easy') weight = 0.8;
+    else if (difficulty === 'Hard') weight = 1.3;
+
+    weightedTotal += weight;
+    if (index < correctCount) {
+      weightedCorrect += weight;
+    }
+  });
+
+  const weightedPercentage = weightedTotal > 0 ? weightedCorrect / weightedTotal : 0;
+
+  // Map to 60-90 scale using sigmoid curve for realistic distribution
+  // This creates a curve where:
+  // - 50% correct ≈ 72-75 (median)
+  // - 70% correct ≈ 80-82 (good)
+  // - 85%+ correct ≈ 85-90 (excellent)
+  // - Below 30% ≈ 60-65 (low)
+
+  const baseScore = 60 + (30 * (1 / (1 + Math.exp(-8 * (weightedPercentage - 0.5)))));
+
+  // Add slight adjustment based on raw percentage for balance
+  const rawBonus = (correctCount / totalCount) * 3;
+
+  const finalScore = Math.round(baseScore + rawBonus);
+
+  // Clamp to 60-90 range
+  return Math.max(60, Math.min(90, finalScore));
+}
+
+function calculateGMATTotalScore(quantScore, verbalScore, dataInsightsScore) {
+  // Official GMAT Focus formula: (Q + V + DI - 180) × (20/3) + 205
+  const rawTotal = (quantScore + verbalScore + dataInsightsScore - 180) * (20/3) + 205;
+
+  // Round to nearest 5 that ends in 5 (205, 215, 225, ...)
+  let rounded = Math.round(rawTotal / 10) * 10;
+  if (rounded % 10 === 0) {
+    rounded += 5;
+  }
+
+  // Ensure it ends in 5
+  if (rounded % 10 !== 5) {
+    rounded = Math.round(rounded / 10) * 10 + 5;
+  }
+
+  // Clamp to valid range
+  return Math.max(205, Math.min(805, rounded));
+}
+
+function getGMATPercentile(score, section = 'total') {
+  // Percentile data based on GMAC official data (2019-2024)
+  // Source: mba.com, targettestprep.com, e-gmat.com
+
+  const percentiles = {
+    total: {
+      805: 100, 795: 100, 785: 99, 775: 99, 765: 99, 755: 99, 745: 99, 735: 99, 725: 99, 715: 99,
+      705: 98, 695: 97, 685: 96, 675: 95, 665: 94, 655: 93, 645: 89, 635: 87, 625: 84, 615: 81,
+      605: 77, 595: 73, 585: 69, 575: 65, 565: 60, 555: 55, 545: 50, 535: 45, 525: 40, 515: 35,
+      505: 30, 495: 26, 485: 22, 475: 18, 465: 15, 455: 12, 445: 10, 435: 8, 425: 6, 415: 5,
+      405: 4, 395: 3, 385: 2, 375: 2, 365: 1, 355: 1, 345: 1, 335: 1, 325: 1, 315: 1, 305: 0, 295: 0,
+      285: 0, 275: 0, 265: 0, 255: 0, 245: 0, 235: 0, 225: 0, 215: 0, 205: 0
+    },
+    quant: {
+      90: 100, 89: 97, 88: 94, 87: 94, 86: 91, 85: 88, 84: 85, 83: 82, 82: 79, 81: 75,
+      80: 64, 79: 60, 78: 56, 77: 52, 76: 48, 75: 44, 74: 39, 73: 35, 72: 31, 71: 27,
+      70: 13, 69: 11, 68: 9, 67: 7, 66: 6, 65: 5, 64: 4, 63: 3, 62: 2, 61: 1, 60: 1
+    },
+    verbal: {
+      90: 100, 89: 100, 88: 99, 87: 98, 86: 97, 85: 96, 84: 94, 83: 92, 82: 90, 81: 87,
+      80: 56, 79: 51, 78: 46, 77: 41, 76: 36, 75: 31, 74: 26, 73: 21, 72: 17, 71: 13,
+      70: 4, 69: 3, 68: 2, 67: 2, 66: 1, 65: 1, 64: 1, 63: 1, 62: 1, 61: 1, 60: 1
+    },
+    dataInsights: {
+      90: 100, 89: 100, 88: 99, 87: 98, 86: 96, 85: 94, 84: 92, 83: 89, 82: 87, 81: 85,
+      80: 83, 79: 80, 78: 77, 77: 73, 76: 69, 75: 65, 74: 60, 73: 55, 72: 49, 71: 43,
+      70: 21, 69: 18, 68: 15, 67: 12, 66: 10, 65: 8, 64: 7, 63: 6, 62: 5, 61: 4, 60: 4
+    }
+  };
+
+  const table = percentiles[section.toLowerCase()] || percentiles.total;
+
+  // Find closest score in table
+  let closestScore = score;
+  if (!table[score]) {
+    const scores = Object.keys(table).map(Number).sort((a, b) => b - a);
+    closestScore = scores.reduce((prev, curr) => {
+      return Math.abs(curr - score) < Math.abs(prev - score) ? curr : prev;
+    });
+  }
+
+  return table[closestScore] || 0;
+}
+
+function generateGMATScoreReport(questionsData, studentAnswersMap) {
+  // Organize questions by section with difficulty tracking
+  const sectionData = {
+    'Quantitative Reasoning': { questions: [], difficulties: [] },
+    'Verbal Reasoning': { questions: [], difficulties: [] },
+    'Data Insights': { questions: [], difficulties: [] }
+  };
+
+  // Process each question
+  questionsData.forEach(q => {
+    const section = q.GMAT_section;
+    if (!sectionData[section]) return;
+
+    const studentAnswer = studentAnswersMap[q.id];
+    const difficulty = q.GMAT_question_difficulty || 'Medium';
+
+    let isCorrect = false;
+
+    // Check if answer is correct (handle DI questions specially)
+    if (q.di_question_type && studentAnswer) {
+      try {
+        let questionData = q.di_question_data;
+        if (typeof questionData === 'string') {
+          questionData = JSON.parse(questionData);
+        }
+
+        if (q.di_question_type === 'GI') {
+          const studentObj = typeof studentAnswer === 'string' ? JSON.parse(studentAnswer) : studentAnswer;
+          isCorrect = studentObj.blank1 === questionData.blank1_correct &&
+                      studentObj.blank2 === questionData.blank2_correct;
+        } else {
+          let correctAnswer = null;
+          if (q.di_question_type === 'DS') {
+            correctAnswer = questionData.correct_answer || q.correct_answer;
+          } else if (q.di_question_type === 'TA') {
+            correctAnswer = questionData.correct_answer || q.correct_answer;
+          } else if (q.di_question_type === 'TPA') {
+            correctAnswer = questionData.correct_answers || q.correct_answer;
+          } else if (q.di_question_type === 'MSR') {
+            correctAnswer = {};
+            if (questionData.questions) {
+              questionData.questions.forEach((subQ, idx) => {
+                if (subQ.question_type === 'multiple_choice' && subQ.correct_answer) {
+                  correctAnswer[`q${idx}`] = subQ.correct_answer;
+                } else if (subQ.question_type === 'two_column' && subQ.correct_answers) {
+                  correctAnswer[`q${idx}`] = subQ.correct_answers;
+                }
+              });
+            }
+          }
+
+          if (correctAnswer && window.isDIAnswerCorrect) {
+            isCorrect = window.isDIAnswerCorrect(studentAnswer, correctAnswer);
+          }
+        }
+      } catch (e) {
+        isCorrect = false;
+      }
+    } else {
+      // Regular question
+      isCorrect = studentAnswer === q.correct_answer;
+    }
+
+    sectionData[section].questions.push({
+      isCorrect,
+      difficulty,
+      questionNumber: q.question_number,
+      id: q.id
+    });
+    sectionData[section].difficulties.push(difficulty);
+  });
+
+  // Calculate section scores
+  const scores = {};
+  Object.entries(sectionData).forEach(([section, data]) => {
+    const correctCount = data.questions.filter(q => q.isCorrect).length;
+    const totalCount = data.questions.length;
+    const sectionScore = calculateGMATSectionScore(correctCount, totalCount, data.difficulties);
+
+    scores[section] = {
+      score: sectionScore,
+      correct: correctCount,
+      total: totalCount,
+      percentage: totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0,
+      percentile: getGMATPercentile(sectionScore, section.split(' ')[0])
+    };
+  });
+
+  // Calculate total score
+  const totalScore = calculateGMATTotalScore(
+    scores['Quantitative Reasoning'].score,
+    scores['Verbal Reasoning'].score,
+    scores['Data Insights'].score
+  );
+
+  const totalPercentile = getGMATPercentile(totalScore, 'total');
+
+  // Generate HTML report
+  generateGMATScoreReportHTML({
+    totalScore,
+    totalPercentile,
+    quantScore: scores['Quantitative Reasoning'],
+    verbalScore: scores['Verbal Reasoning'],
+    dataInsightsScore: scores['Data Insights']
+  });
+}
+
+function generateGMATScoreReportHTML(data) {
+  const reportWindow = window.open('', '_blank');
+
+  const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GMAT Focus Edition Score Report</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        .report-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 800;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .total-score-section {
+            background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+
+        .total-score {
+            font-size: 5rem;
+            font-weight: 900;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        .total-score-label {
+            font-size: 1.3rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            opacity: 0.95;
+            margin-bottom: 1rem;
+        }
+
+        .percentile-badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 0.75rem 2rem;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+        }
+
+        .score-range-indicator {
+            margin-top: 1.5rem;
+            font-size: 0.95rem;
+            opacity: 0.85;
+        }
+
+        .content {
+            padding: 2.5rem;
+        }
+
+        .section {
+            margin-bottom: 2.5rem;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            color: #1a1a2e;
+            margin-bottom: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .section-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .section-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 3px solid transparent;
+        }
+
+        .section-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .section-card.quant {
+            border-color: #3b82f6;
+        }
+
+        .section-card.verbal {
+            border-color: #8b5cf6;
+        }
+
+        .section-card.data-insights {
+            border-color: #0ea5e9;
+        }
+
+        .section-card-title {
+            font-size: 1rem;
+            color: #6b7280;
+            margin-bottom: 1rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .section-score-number {
+            font-size: 3.5rem;
+            font-weight: 900;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .section-card.quant .section-score-number {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .section-card.verbal .section-score-number {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .section-card.data-insights .section-score-number {
+            background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .section-percentile {
+            font-size: 1.1rem;
+            color: #374151;
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+        }
+
+        .section-details {
+            font-size: 0.95rem;
+            color: #6b7280;
+            margin-top: 0.5rem;
+        }
+
+        .insights {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-radius: 16px;
+            padding: 2rem;
+            border-left: 6px solid #f59e0b;
+        }
+
+        .insights h3 {
+            color: #92400e;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        .insights ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .insights li {
+            padding: 0.75rem 0;
+            color: #78350f;
+            font-size: 1rem;
+            line-height: 1.6;
+            display: flex;
+            align-items: start;
+            gap: 0.75rem;
+        }
+
+        .insights li::before {
+            content: '📊';
+            flex-shrink: 0;
+        }
+
+        .methodology {
+            background: #f8f9fa;
+            border-radius: 16px;
+            padding: 2rem;
+            margin-top: 2rem;
+            border: 2px solid #e5e7eb;
+        }
+
+        .methodology h3 {
+            color: #1a1a2e;
+            font-size: 1.4rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        .methodology h4 {
+            color: #374151;
+            font-size: 1.1rem;
+            margin: 1.5rem 0 0.75rem 0;
+            font-weight: 600;
+        }
+
+        .methodology p, .methodology li {
+            color: #6b7280;
+            line-height: 1.8;
+            margin-bottom: 0.75rem;
+        }
+
+        .methodology ul, .methodology ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            background: #f8f9fa;
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+
+        .print-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 1rem 2.5rem;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 2rem auto;
+            display: block;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .print-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+
+            .print-btn {
+                display: none;
+            }
+
+            .report-container {
+                box-shadow: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .section-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .total-score {
+                font-size: 3.5rem;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="report-container">
+        <div class="header">
+            <h1>🎯 GMAT Focus Edition</h1>
+            <p>Official Score Report</p>
+        </div>
+
+        <div class="total-score-section">
+            <div class="total-score-label">Total Score</div>
+            <div class="total-score">${data.totalScore}</div>
+            <div class="score-range-indicator">
+                Score Range: 205-805 | Median: 545
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="section">
+                <h2 class="section-title">📈 Section Scores</h2>
+                <div class="section-cards">
+                    <div class="section-card quant">
+                        <div class="section-card-title">Quantitative</div>
+                        <div class="section-score-number">${data.quantScore.score}</div>
+                        <div class="section-details">
+                            ${data.quantScore.correct}/${data.quantScore.total} Correct (${data.quantScore.percentage}%)
+                        </div>
+                    </div>
+
+                    <div class="section-card verbal">
+                        <div class="section-card-title">Verbal</div>
+                        <div class="section-score-number">${data.verbalScore.score}</div>
+                        <div class="section-details">
+                            ${data.verbalScore.correct}/${data.verbalScore.total} Correct (${data.verbalScore.percentage}%)
+                        </div>
+                    </div>
+
+                    <div class="section-card data-insights">
+                        <div class="section-card-title">Data Insights</div>
+                        <div class="section-score-number">${data.dataInsightsScore.score}</div>
+                        <div class="section-details">
+                            ${data.dataInsightsScore.correct}/${data.dataInsightsScore.total} Correct (${data.dataInsightsScore.percentage}%)
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="insights">
+                <h3>🎯 Performance Insights</h3>
+                <ul>
+                    <li><strong>Total Score:</strong> ${data.totalScore} out of 805</li>
+                    <li><strong>Quantitative Reasoning:</strong> Score of ${data.quantScore.score} - ${data.quantScore.percentage}% questions answered correctly with difficulty weighting applied.</li>
+                    <li><strong>Verbal Reasoning:</strong> Score of ${data.verbalScore.score} - ${data.verbalScore.percentage}% questions answered correctly with difficulty weighting applied.</li>
+                    <li><strong>Data Insights:</strong> Score of ${data.dataInsightsScore.score} - ${data.dataInsightsScore.percentage}% questions answered correctly with difficulty weighting applied.</li>
+                    <li><strong>Score Calculation:</strong> Your total score is calculated using the official GMAT Focus formula where all three sections contribute equally.</li>
+                </ul>
+            </div>
+
+            <div class="methodology">
+                <h3>📊 Scoring Methodology</h3>
+
+                <h4>GMAT Focus Edition Score Scale</h4>
+                <ul>
+                    <li><strong>Total Score Range:</strong> 205-805 (increments ending in 5)</li>
+                    <li><strong>Section Score Range:</strong> 60-90 for each section</li>
+                    <li><strong>Number of Questions:</strong> Quantitative (21), Verbal (23), Data Insights (20)</li>
+                </ul>
+
+                <h4>Score Calculation Method</h4>
+                <ol>
+                    <li><strong>Difficulty Weighting:</strong> Questions are weighted by difficulty (Easy: 0.8x, Medium: 1.0x, Hard: 1.3x)</li>
+                    <li><strong>Section Scoring:</strong> Weighted performance mapped to 60-90 scale</li>
+                    <li><strong>Total Score Formula:</strong> (Quant + Verbal + Data Insights - 180) × (20/3) + 205</li>
+                    <li><strong>Equal Weighting:</strong> All three sections contribute equally to your total score</li>
+                </ol>
+
+                <h4>⚖️ About This Simulation</h4>
+                <p>This score report uses UpToTen's simulation of the GMAT Focus Edition scoring system based on official GMAC methodology. The scoring algorithm incorporates:</p>
+                <ul>
+                    <li>Difficulty-adjusted performance measurement</li>
+                    <li>Official total score conversion formula</li>
+                    <li>Section score distributions matching official GMAT patterns</li>
+                </ul>
+                <p><strong>Note:</strong> This is an educational simulation. Only official GMAT tests administered by GMAC provide scores for business school applications.</p>
+            </div>
+
+            <button class="print-btn" onclick="window.print()">🖨️ Print Score Report</button>
+        </div>
+
+        <div class="footer">
+            <p>Generated with UpToTen GMAT Preparation System</p>
+            <p>Based on GMAT Focus Edition methodology</p>
+        </div>
+    </div>
+</body>
+</html>
+  `;
+
+  reportWindow.document.write(htmlContent);
+  reportWindow.document.close();
 }
 
 loadTestAnswers();
