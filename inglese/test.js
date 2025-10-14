@@ -717,8 +717,19 @@ function moveSubmitButtonForTablet() {
             
             // Aggiungi evento click
             submitClone.addEventListener("click", async () => {
+                if (isSubmitting) {
+                    console.log("⚠️ Submit already in progress, ignoring click");
+                    return;
+                }
                 console.log("Submit button clicked!");
-                await submitAnswers();
+                submitClone.disabled = true;
+
+                const submitted = await submitAnswers(false);
+
+                // Re-enable button if submission was cancelled
+                if (!submitted) {
+                    submitClone.disabled = false;
+                }
             });
             
             // Aggiungi alla navigazione
@@ -747,7 +758,13 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
             console.log("Submit button clicked!");
             submitBtn.disabled = true; // Disable button immediately
-            await submitAnswers(false); // false = non è scaduto il tempo
+
+            const submitted = await submitAnswers(false); // false = non è scaduto il tempo
+
+            // Re-enable button if submission was cancelled
+            if (!submitted) {
+                submitBtn.disabled = false;
+            }
         });
     }
 
@@ -763,7 +780,13 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
             console.log("📤 SAT submit button clicked - submitting answers!");
             submitBtnSAT.disabled = true; // Disable button immediately
-            await submitAnswers(false); // false = non è scaduto il tempo
+
+            const submitted = await submitAnswers(false); // false = non è scaduto il tempo
+
+            // Re-enable button if submission was cancelled
+            if (!submitted) {
+                submitBtnSAT.disabled = false;
+            }
         });
     } else {
         console.log("⚠️ SAT submit button NOT found in DOM");
@@ -1945,24 +1968,24 @@ async function submitAnswers(timeExpired = false) {
     // Controllo priorità timer - se il timer è scaduto durante un submit manuale
     if (timeExpired && isSubmitting) {
         console.log("⏰ Timer expired during manual submit - manual submit will continue");
-        return; // Lascia completare il submit manuale già in corso
+        return false; // Lascia completare il submit manuale già in corso
     }
-    
+
     // Controllo per evitare submit multipli
     if (isSubmitting) {
         console.log("⚠️ Submit already in progress, ignoring duplicate call");
-        return;
+        return false;
     }
     
     // Imposta immediatamente il flag per bloccare altre chiamate
     isSubmitting = true;
-    
+
     // Se NON è scaduto il tempo, chiedi conferma con dialog personalizzato
     if (!timeExpired) {
         const confirmSubmit = await customConfirm("Are you sure you want to submit your answers?");
         if (!confirmSubmit) {
             isSubmitting = false; // Reset il flag se l'utente annulla
-            return;
+            return false; // Return false to indicate submission was cancelled
         }
     }
     let studentId = sessionStorage.getItem("studentId");
@@ -1977,7 +2000,7 @@ async function submitAnswers(timeExpired = false) {
             console.error("❌ ERROR: No active session found.");
             showCustomAlert("Sessione scaduta. Effettua nuovamente il login.");
             window.location.href = "login.html";
-            return;
+            return false;
         }
 
         studentId = sessionData.session.user.id;
@@ -2007,14 +2030,14 @@ async function submitAnswers(timeExpired = false) {
         console.error("❌ ERROR fetching test_id:", testError);
         showCustomAlert("Errore nel recupero del test. Riprova.");
         isSubmitting = false;
-        return;
+        return false;
     }
 
     if (!testData || testData.length === 0) {
         console.error("❌ ERROR: No active test found for this student");
         showCustomAlert("Test non trovato. Contatta il tutor.");
         isSubmitting = false;
-        return;
+        return false;
     }
 
     const testId = testData[0].id;
@@ -2091,7 +2114,7 @@ async function submitAnswers(timeExpired = false) {
         console.error("❌ ERROR submitting answers:", error);
         showCustomAlert("Invio fallito. Riprova.");
         isSubmitting = false;
-        return;
+        return false; // Re-enable submit button
     } else {
         console.log("✅ Answers submitted successfully!", data);
     }
@@ -2123,6 +2146,7 @@ async function submitAnswers(timeExpired = false) {
 
     sessionStorage.setItem("testCompleted", "true");
     window.location.href = "test_selection.html";
+    return true; // Indicate successful submission (though page will redirect)
 }
 
 function showCustomAlert(message, isTimeExpired = false) {

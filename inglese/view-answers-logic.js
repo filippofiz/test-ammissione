@@ -203,10 +203,12 @@ async function loadTestAnswers() {
 
       // Se non c'è PDF inglese, disabilita il toggle
       const englishToggle = document.getElementById("englishCorrectionToggle");
-      if (!window.englishPdfUrl) {
+      if (englishToggle && !window.englishPdfUrl) {
         englishToggle.disabled = true;
-        document.querySelector(".toggle-label").textContent = "🇬🇧 PDF Inglese non disponibile";
-        document.querySelector(".language-toggle-correction").style.opacity = "0.5";
+        const toggleLabel = document.querySelector(".toggle-label");
+        const languageToggle = document.querySelector(".language-toggle-correction");
+        if (toggleLabel) toggleLabel.textContent = "🇬🇧 PDF Inglese non disponibile";
+        if (languageToggle) languageToggle.style.opacity = "0.5";
       }
     } else {
       // Nascondi pannello PDF e espandi risposte
