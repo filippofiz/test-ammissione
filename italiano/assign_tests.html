@@ -428,6 +428,17 @@
             .select("auth_uid, name, tests")
             .eq("tutor_id", tutorId);
 
+        if (error) {
+          console.error("Error loading students:", error);
+          alert("Errore nel caricamento degli studenti: " + error.message);
+          return;
+        }
+
+        if (!students || students.length === 0) {
+          studentDropdown.innerHTML = '<option value="">Nessuno studente assegnato</option>';
+          return;
+        }
+
         students.forEach(student => {
           const option = document.createElement("option");
           option.value = student.auth_uid;
