@@ -418,26 +418,38 @@
 
     async function loadStudents() {
         const tutorId = await getTutorId();
-        if (!tutorId) return;
+        if (!tutorId) {
+          console.error("No tutor ID found");
+          return;
+        }
+
+        console.log("Loading students for tutor:", tutorId);
 
         const studentDropdown = document.getElementById("studentDropdown");
-        studentDropdown.innerHTML = '<option value="">Seleziona uno studente...</option>';
+        studentDropdown.innerHTML = '<option value="">Caricamento studenti...</option>';
 
-        // Load ALL students (not filtered by tutor_id) - requires RLS policy adjustment
+        // Load ALL students (not filtered by tutor_id)
         const { data: students, error } = await supabase
             .from("students")
             .select("auth_uid, name, tests");
 
+        console.log("Students query result:", { students, error });
+
         if (error) {
           console.error("Error loading students:", error);
           alert("Errore nel caricamento degli studenti. Potrebbe essere un problema di permessi RLS: " + error.message);
+          studentDropdown.innerHTML = '<option value="">Errore caricamento</option>';
           return;
         }
 
         if (!students || students.length === 0) {
+          console.warn("No students found");
           studentDropdown.innerHTML = '<option value="">Nessuno studente disponibile</option>';
           return;
         }
+
+        console.log(`Loaded ${students.length} students:`, students.map(s => s.name));
+        studentDropdown.innerHTML = '<option value="">Seleziona uno studente...</option>';
 
         students.forEach(student => {
           const option = document.createElement("option");
