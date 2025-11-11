@@ -423,19 +423,19 @@
         const studentDropdown = document.getElementById("studentDropdown");
         studentDropdown.innerHTML = '<option value="">Seleziona uno studente...</option>';
 
+        // Load ALL students (not filtered by tutor_id) - requires RLS policy adjustment
         const { data: students, error } = await supabase
             .from("students")
-            .select("auth_uid, name, tests")
-            .eq("tutor_id", tutorId);
+            .select("auth_uid, name, tests");
 
         if (error) {
           console.error("Error loading students:", error);
-          alert("Errore nel caricamento degli studenti: " + error.message);
+          alert("Errore nel caricamento degli studenti. Potrebbe essere un problema di permessi RLS: " + error.message);
           return;
         }
 
         if (!students || students.length === 0) {
-          studentDropdown.innerHTML = '<option value="">Nessuno studente assegnato</option>';
+          studentDropdown.innerHTML = '<option value="">Nessuno studente disponibile</option>';
           return;
         }
 
