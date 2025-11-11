@@ -423,19 +423,19 @@
         const studentDropdown = document.getElementById("studentDropdown");
         studentDropdown.innerHTML = '<option value="">Select a student...</option>';
 
+        // Load ALL students (not filtered by tutor_id) - requires RLS policy adjustment
         const { data: students, error } = await supabase
             .from("students")
-            .select("auth_uid, name, tests")
-            .eq("tutor_id", tutorId);
+            .select("auth_uid, name, tests");
 
         if (error) {
           console.error("Error loading students:", error);
-          alert("Error loading students: " + error.message);
+          alert("Error loading students. This may be an RLS permissions issue: " + error.message);
           return;
         }
 
         if (!students || students.length === 0) {
-          studentDropdown.innerHTML = '<option value="">No students assigned</option>';
+          studentDropdown.innerHTML = '<option value="">No students available</option>';
           return;
         }
 
