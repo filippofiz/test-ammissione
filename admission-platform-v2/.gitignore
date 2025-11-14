@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+.nyc_output
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+.turbo/
+
+# Environment variables - NEVER COMMIT THESE!
+.env
+.env*.local
+.env.production
+
+# Secrets - NEVER COMMIT THESE!
+**/config.js
+**/*secret*.js
+**/*key*.js
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# OS
+.DS_Store
+*.pem
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Misc
+.cache/
+*.tsbuildinfo
