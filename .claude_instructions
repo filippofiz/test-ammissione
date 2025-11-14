@@ -1,161 +1,610 @@
-# Istruzioni permanenti per ADMISSION_TEST
+# 🚀 ADMISSION_TEST - COMPLETE DEVELOPMENT INSTRUCTIONS
 
-## Contesto progetto
-- Applicazione test di ammissione per Up to Ten
-- Multilingua (italiano/inglese)
-- Database: Supabase
+## 🏗️ STACK TECNOLOGICO OBBLIGATORIO
+- **TUTTO in TypeScript** - MAI JavaScript vanilla
+  - Web app: React + TypeScript + Vite (Turborepo monorepo)
+  - Mobile app: React Native + TypeScript (Expo)
+  - Shared packages: TypeScript
+  - Supabase Edge Functions: TypeScript/Deno
+  - Database: PostgreSQL + TypeScript types auto-generati da Supabase
+  - Build System: Turborepo per monorepo management
+  - Package Manager: pnpm (workspaces)
 
-## Regole sempre attive
-- Mantieni sempre la struttura multilingua
-- Prima di modifiche al database, verifica lo schema in Supabase
+## ⚡ REGOLE FERREE - ZERO SPRECHI
 
-## Quando scrivi codice
-- Commenta in italiano
-- Usa async/await per operazioni Supabase
-- Gestisci sempre gli errori con try/catch
-
-## Prima di ogni modifica
-- Controlla TODO.md per priorità
-- Verifica che le modifiche funzionino in entrambe le lingue
-
-## Testing obbligatorio
-
-### Per OGNI modifica o nuova feature:
-1. **Scrivi test PRIMA del codice (TDD quando possibile)**
-2. **Crea test automatici per:**
-   - Unit test per funzioni isolate
-   - Integration test per interazioni con Supabase
-   - E2E test per flussi utente critici
-
-### Struttura testing:
-```javascript
-// Per ogni nuova funzione
-function nuovaFunzione() { /* ... */ }
-
-// DEVE avere il suo test
-test('nuovaFunzione - caso normale', () => { /* ... */ })
-test('nuovaFunzione - caso errore', () => { /* ... */ })
-```
-
-### Testing specifico per ADMISSION_TEST:
-- Test multilingua: verifica IT e EN per ogni feature
-- Test database: mock Supabase per test offline
-- Test form validazione: tutti i campi required/optional
-- Test punteggi: verifica calcoli corretti
-
-### Comandi testing automatico:
+### PRIMA di scrivere QUALSIASI codice (30 secondi check):
 ```bash
-# Aggiungi sempre questi script in package.json
-npm run test          # esegue tutti i test
-npm run test:watch    # test in modalità watch
-npm run test:coverage # verifica copertura codice
+# SEMPRE eseguire prima:
+grep -r "function.*[nome-simile]" --include="*.ts" --include="*.tsx" .
+grep -r "interface.*[tipo-simile]" --include="*.ts" --include="*.tsx" .
+ls types/supabase.ts  # Tipi già generati?
+cat TODO.md | grep -A 5 "IN CORSO"  # Chi sta lavorando su cosa?
 ```
 
-### NON fare commit se:
-- I test non passano
-- La coverage scende sotto il 70%
-- Non hai scritto test per la nuova feature
+### 🚫 MAI FARE (blocca subito):
+- ❌ Creare file .js (solo .ts/.tsx)
+- ❌ Usare `any` in TypeScript (usa `unknown` o tipi specifici)
+- ❌ Duplicare logica tra web e mobile (→ shared packages)
+- ❌ Scrivere query SQL inline (→ Edge Functions)
+- ❌ Committare senza test passati (coverage >80%)
+- ❌ Hardcode secrets nel codice
+- ❌ Disabilitare RLS su tabelle
+- ❌ Ignorare edge cases
 
-markdown## 📝 GESTIONE TODO.md - OBBLIGATORIO
-
-### PRIMA di iniziare qualsiasi lavoro:
-1. **SEMPRE leggere TODO.md** per capire:
-   - Cosa è già stato fatto ✅
-   - Cosa è in progress 🔄
-   - Cosa deve essere fatto 📋
-   - Cosa NON fare ⛔
-
-2. **Controlla duplicazioni:**
-   - Cerca nel codice se esiste già una funzione simile
-   - Verifica se c'è codice riutilizzabile
-   - Non reinventare la ruota
-
-### DURANTE il lavoro:
-```markdown
-## TODO.md - Aggiorna SUBITO quando:
-- [ ] INIZI una task → 🔄 In progress: [task] - [timestamp]
-- [ ] CREI una funzione → 📝 Creata: functionName() in file.js
-- [ ] TROVI un bug → 🐛 Bug trovato: [descrizione] in [file]
-- [ ] COMPLETI una task → ✅ Completata: [task] - [timestamp]
+## 📦 STRUTTURA PROGETTO OBBLIGATORIA
+```
+admission-test/
+├── admission-platform-v2/   # NUOVO CODICE TYPESCRIPT
+│   ├── apps/                # Applicazioni
+│   │   ├── web/            # React + Vite
+│   │   │   ├── src/
+│   │   │   │   ├── features/      # Feature modules
+│   │   │   │   ├── components/    # UI components
+│   │   │   │   ├── pages/         # Route pages
+│   │   │   │   ├── hooks/         # Custom hooks
+│   │   │   │   └── main.tsx       # Entry point
+│   │   │   ├── public/
+│   │   │   └── package.json
+│   │   └── mobile/         # React Native + Expo
+│   │       ├── src/
+│   │       │   ├── screens/
+│   │       │   ├── navigation/
+│   │       │   └── App.tsx
+│   │       └── package.json
+│   ├── packages/           # Shared packages (60-70% code reuse)
+│   │   ├── shared/         # TUTTO IL CODICE RIUSABILE QUI
+│   │   │   ├── src/
+│   │   │   │   ├── api/           # Supabase client & queries
+│   │   │   │   ├── hooks/         # Custom hooks
+│   │   │   │   ├── types/         # TypeScript types
+│   │   │   │   ├── utils/         # Utility functions
+│   │   │   │   │   ├── validators/
+│   │   │   │   │   ├── formatters/
+│   │   │   │   │   ├── encryption/
+│   │   │   │   │   └── sanitize/
+│   │   │   │   ├── stores/        # Zustand stores
+│   │   │   │   ├── constants/     # Config, routes
+│   │   │   │   └── validation/    # Zod schemas
+│   │   │   └── package.json
+│   │   ├── ui/             # UI component library
+│   │   │   ├── src/
+│   │   │   │   ├── button/
+│   │   │   │   ├── input/
+│   │   │   │   ├── card/
+│   │   │   │   ├── modal/
+│   │   │   │   └── index.ts
+│   │   │   └── package.json
+│   │   └── test-engine/    # Test logic engine
+│   │       ├── src/
+│   │       │   ├── adapters/      # SAT, GMAT adapters
+│   │       │   ├── scoring/       # Scoring logic
+│   │       │   ├── timer/         # Timer service
+│   │       │   └── navigation/    # Question navigation
+│   │       └── package.json
+│   ├── supabase/
+│   │   ├── functions/      # Edge Functions TypeScript
+│   │   │   ├── generate-question/
+│   │   │   └── claude-proxy/
+│   │   ├── migrations/     # SQL migrations con rollback
+│   │   └── types/         # Auto-generated types
+│   ├── DOCUMENTATION/      # Docs sempre aggiornate
+│   │   ├── README.md
+│   │   ├── DEVELOPER.md
+│   │   ├── API.md
+│   │   ├── DATABASE.md
+│   │   ├── SECURITY.md
+│   │   ├── EDGE_CASES.md
+│   │   └── USER_MANUAL.md
+│   ├── package.json        # Root monorepo config
+│   ├── turbo.json          # Turborepo pipeline
+│   ├── tsconfig.json       # Base TypeScript config
+│   └── .env.example        # Environment template
+├── inglese/               # OLD CODE (legacy, read-only)
+├── italiano/              # OLD CODE (legacy, read-only)
+├── TODO.md                # SEMPRE aggiornato
+├── IMPLEMENTATION_PLAN.md # Tracker con checkboxes
+└── .claude_instructions   # Questo file
 ```
 
-### DOPO ogni modifica:
-```markdown
-## Aggiungi al TODO.md:
+## 📝 GESTIONE TODO.md - OBBLIGATORIO
 
-### ✅ COMPLETATO [data]
-- Implementato [feature]: [file modificati]
-- Test aggiunti: [quali test]
-- Funzioni create: [lista funzioni e loro scopo]
-
-### 🔄 IN PROGRESS
-- [cosa stai facendo]
-- Bloccato da: [eventuale blocco]
-
-### 📋 DA FARE
-- [prossimi step]
-
-### 🚫 NON DUPLICARE
-- Funzione esistente: useAuth() in auth.js
-- Component esistente: FormValidator in components/
-- Query Supabase: getQuestions() già ottimizzata
-```
-
-## Anti-duplicazione - Regole ferree:
-
-### PRIMA di scrivere nuovo codice:
-1. **Cerca nel progetto** (Ctrl+Shift+F):
-```bash
-   # Cerca funzioni simili
-   grep -r "function.*[nome-simile]" .
-   # Cerca import/export
-   grep -r "export.*[functionality]" .
-```
-
-2. **Controlla utility esistenti:**
-   - C'è già una funzione helper?
-   - Esiste già un component simile?
-   - C'è già una query Supabase per questo?
-
-3. **Refactoring invece di duplicazione:**
-```javascript
-   // MALE ❌ - Duplicazione
-   function validateEmailAdmin() { /* ... */ }
-   function validateEmailUser() { /* ... */ }
-   
-   // BENE ✅ - Riuso
-   function validateEmail(email, userType) { /* ... */ }
-```
-
-### Struttura TODO.md ottimale:
+### FORMATO TODO.md STRICT:
 ```markdown
 # TODO - ADMISSION_TEST
 
 ## 🎯 OBIETTIVO ATTUALE
-[Cosa stiamo cercando di completare]
+[Sprint goal chiaro e misurabile]
 
-## ✅ COMPLETATO (non rifare!)
-### Autenticazione
-- [x] Login multilingua - `auth.js` - NON TOCCARE
-- [x] Validazione email - `validators.js::validateEmail()`
+## ⏱️ TIME TRACKING
+- Task iniziata: [timestamp]
+- Tempo stimato: [ore]
+- Tempo effettivo: [aggiornare sempre]
 
-### Database
-- [x] Schema Supabase - `supabase/schema.sql` - STABILE
-- [x] Query questions - `api/questions.js::getQuestions()`
+## ✅ COMPLETATO (NON RIFARE!)
+### Feature X - STABILE
+- Files: `src/feature.ts`, `tests/feature.test.ts`
+- Test coverage: 95%
+- Performance: <50ms
+- Riusabile: web ✅ mobile ✅
+- Data: 2024-01-15
+- Author: @giovanni
+- **NON MODIFICARE SENZA DISCUSSIONE**
 
-## 🔄 IN CORSO (non duplicare!)
-- [ ] Fix punteggi - Giovanni sta lavorando - `scoring.js`
+## 🔄 IN CORSO (NON DUPLICARE!)
+- [ ] Fix punteggi - @giovanni - Started: 2024-01-16 10:00
+  - Branch: fix/scoring-system
+  - Bloccato da: [niente]
+  - ETA: 2024-01-16 18:00
 
-## 📋 DA FARE
-- [ ] Test automatici per multilingua
-- [ ] Ottimizzazione performance query
+## 📋 DA FARE (priorità)
+1. [ ] Test multilingua (CRITICO)
+2. [ ] Ottimizzazione query (IMPORTANTE)
+3. [ ] Refactor UI (NICE TO HAVE)
 
 ## ⚠️ CODICE DA RIUTILIZZARE
-- `utils/validation.js` - Tutte le validazioni
-- `api/supabase.js` - Tutte le query DB
-- `components/Form.js` - Base per tutti i form
+- `utils/validation.ts` - TUTTE le validazioni
+- `api/supabase.ts` - TUTTE le query DB
+- `components/BaseModal.tsx` - Base per modals
 
-## 🚫 NON FARE / DEPRECATO
-- Non usare fetch diretto, usa `api/client.js`
-- Non creare nuovi validator, estendi `validators.js`
+## 🚫 DEPRECATO/NON USARE
+- fetch diretto → usa `api/client.ts`
+- localStorage → usa sessionStorage
 ```
+
+### WORKFLOW TODO:
+1. **INIZIO**: Aggiorna status → "🔄 IN CORSO"
+2. **DURANTE**: Log progressi ogni 2 ore
+3. **FINE**: Move a "✅ COMPLETATO" con metriche
+
+## 🔐 SICUREZZA - ZERO COMPROMESSI
+
+### SECRETS MANAGEMENT:
+```typescript
+// ❌ MAI NEL CODICE
+const API_KEY = "sk-..."  // BLOCCATO!
+
+// ✅ SEMPRE IN ENV
+const key = process.env.ANTHROPIC_API_KEY!
+
+// ✅ SERVICE ROLE SOLO IN EDGE FUNCTIONS
+// MAI nel frontend!
+```
+
+### RLS OBBLIGATORIO SU OGNI TABELLA:
+```sql
+-- SEMPRE abilitare
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+
+-- Policy stringenti
+CREATE POLICY "users_own_data" ON users
+FOR ALL USING (auth.uid() = id);
+
+-- Verifica RLS attivo
+SELECT tablename, rowsecurity FROM pg_tables 
+WHERE schemaname = 'public' AND NOT rowsecurity;
+-- DEVE essere vuoto!
+```
+
+### INPUT VALIDATION SEMPRE:
+```typescript
+import { z } from 'zod'
+import DOMPurify from 'isomorphic-dompurify'
+
+// OGNI input DEVE essere validato
+const schema = z.object({
+  email: z.string().email().transform(v => DOMPurify.sanitize(v)),
+  age: z.number().min(0).max(120)
+})
+
+// Check SQL injection patterns
+const sqlPattern = /(\b(SELECT|INSERT|UPDATE|DELETE|DROP)\b)/gi
+```
+
+## 🧪 TESTING OBBLIGATORIO
+
+### PER OGNI FEATURE:
+```typescript
+// 1. Unit test (PRIMA del codice)
+describe('Feature', () => {
+  it('should work with valid input', () => {})
+  it('should handle null/undefined', () => {})
+  it('should handle empty string', () => {})
+  it('should handle special chars 🔥', () => {})
+  it('should prevent XSS', () => {})
+  it('should prevent SQL injection', () => {})
+  it('works in Italian', () => {})
+  it('works in English', () => {})
+})
+
+// 2. Integration test
+it('integrates with Supabase correctly', () => {})
+
+// 3. E2E test
+it('user can complete full flow', () => {})
+
+// 4. Performance test
+it('responds in <100ms', () => {})
+
+// 5. Load test
+it('handles 1000 concurrent users', () => {})
+```
+
+### COVERAGE MINIMA: 80%
+```bash
+npm test -- --coverage
+# Se <80% → FIX PRIMA DI CONTINUARE
+```
+
+## 🎨 UI/UX DESIGN SYSTEM
+
+### COLORI BRAND:
+```css
+--primary: #1E40AF;      /* Blu Up to Ten */
+--secondary: #DB2777;    /* Rosa accent */
+--success: #10B981;
+--error: #EF4444;
+--warning: #F59E0B;
+```
+
+### SPACING (8px base):
+```css
+--xs: 0.5rem;  /* 8px */
+--sm: 1rem;    /* 16px */
+--md: 1.5rem;  /* 24px */
+--lg: 2rem;    /* 32px */
+--xl: 3rem;    /* 48px */
+```
+
+### RESPONSIVE BREAKPOINTS:
+```css
+--mobile: 640px;
+--tablet: 768px;
+--laptop: 1024px;
+--desktop: 1280px;
+```
+
+### ACCESSIBILITY (WCAG AAA):
+- Contrast ratio: 7:1 minimo
+- Touch target: 44x44px minimo
+- Font size: 16px minimo mobile
+- Focus visible: 2px solid outline
+
+## 💡 PROACTIVE AI & VALUE-ADD SUGGESTIONS
+
+### SEMPRE proporre miglioramenti AI dove utili:
+```typescript
+// 💡 AI IDEA: [Description of AI enhancement]
+// Example: "Use AI to auto-generate test explanations"
+// Benefits: Saves tutor time, improves student learning
+// Implementation: 2 hours
+```
+
+### Quando suggerire AI:
+- ✅ Automation di task ripetitivi
+- ✅ Generazione contenuti (domande, spiegazioni)
+- ✅ Analisi dati / insights
+- ✅ Personalizzazione user experience
+- ✅ Code generation / refactoring
+- ✅ Testing automatizzato
+- ✅ Documentation auto-generata
+- ✅ Security scanning
+- ✅ Performance optimization suggestions
+
+### SEMPRE proporre VALUE-ADD per il cliente:
+```typescript
+// 💼 VALUE-ADD: [Feature/improvement description]
+// Client benefit: [How this helps the business]
+// User benefit: [How this helps end users]
+// Effort: [Low/Medium/High]
+```
+
+### Esempi Value-Add:
+- 📊 Analytics dashboard per tutors
+- 📱 Mobile app per studenti
+- 🎯 Adaptive learning paths
+- 🏆 Gamification (badges, leaderboards)
+- 📧 Email notifications (test reminders)
+- 💬 In-app chat support
+- 🎥 Video explanations
+- 📖 Study guides generation
+- 🔄 Integration con altre piattaforme
+
+### Template per suggeri menti:
+```
+💡 AI IDEA: [Title]
+Description: [What it does]
+Benefits: [Why it's valuable]
+Effort: [Time estimate]
+Priority: [High/Medium/Low]
+
+💼 VALUE-ADD: [Title]
+Client benefit: [Business value]
+User benefit: [User experience improvement]
+Effort: [Time estimate]
+ROI: [Expected return on investment]
+```
+
+---
+
+## 👥 AGISCI COME TEAM COMPLETO
+
+### RUOLI SIMULTANEI DA ASSUMERE:
+
+#### 1️⃣ SENIOR DEVELOPER
+- Architettura scalabile
+- Codice DRY e SOLID
+- Performance ottimizzata
+- Documentazione inline
+
+#### 2️⃣ SECURITY ENGINEER
+- Validazione OGNI input
+- RLS su tutte tabelle
+- No secrets nel codice
+- Audit trail completo
+
+#### 3️⃣ QA TESTER
+- Test TUTTI edge cases
+- Cross-browser testing
+- Performance testing
+- Multilingua testing
+
+#### 4️⃣ UI/UX DESIGNER
+- Design system consistente
+- Responsive su tutti device
+- Accessibility WCAG AAA
+- Animations smooth
+
+#### 5️⃣ CODE REVIEWER
+- Naming conventions
+- No code smells
+- No dead code
+- TypeScript strict
+
+#### 6️⃣ DEVOPS ENGINEER
+- Bundle <200KB
+- Lighthouse >90
+- Monitoring attivo
+- Backup automatici
+
+## 🔬 EDGE CASES - ANALISI COMPLETA
+
+### EDGE CASES UMANI DA TESTARE:
+```typescript
+const humanEdgeCases = [
+  // INPUT
+  "",                           // Vuoto
+  " ",                         // Solo spazi
+  "a".repeat(1000000),        // 1MB testo
+  "🔥💀👻",                   // Emoji
+  "'; DROP TABLE--",          // SQL injection
+  "<script>alert()</script>", // XSS
+  
+  // BEHAVIOR
+  "Doppio click rapidissimo",
+  "Refresh durante submit",
+  "Back button dopo submit",
+  "Multiple tabs stesso user",
+  "Offline durante operazione",
+  
+  // TIMING
+  "Submit dopo 0.1 secondi (bot?)",
+  "Session aperta 72 ore",
+  "Cambio timezone durante uso",
+  
+  // DEVICE
+  "Screen 280px (Galaxy Fold)",
+  "Screen 8K (7680px)",
+  "RAM 512MB",
+  "IE11 ancora usato",
+  "Touch + mouse insieme"
+]
+```
+
+### EDGE CASES TECNICI:
+```typescript
+const technicalEdgeCases = [
+  // RACE CONDITIONS
+  "Double submit simultaneo",
+  "Concurrent updates stesso record",
+  "Deadlock su transactions",
+  
+  // NETWORK
+  "Offline mid-request",
+  "2G connection (50kbps)",
+  "Packet loss 30%",
+  "Latency 2000ms",
+  
+  // DATABASE
+  "Connection pool exhausted",
+  "Transaction timeout >60s",
+  "Unique constraint violation",
+  
+  // TIME
+  "Daylight saving change",
+  "Leap second",
+  "Client clock 3 giorni futuro"
+]
+```
+
+### PER OGNI EDGE CASE:
+1. Identifica
+2. Testa
+3. Gestisci
+4. Documenta
+5. Monitora
+
+## 🔄 WORKFLOW SVILUPPO
+
+### FASE 1: PLANNING
+```bash
+# Check existing code
+npm run search:[functionality]
+# Check TODO
+cat TODO.md
+# Update status
+echo "🔄 IN PROGRESS: [task] - $(date)" >> TODO.md
+```
+
+### FASE 2: DEVELOPMENT
+```typescript
+// 1. Write test first (TDD)
+// 2. Implement feature
+// 3. Check shared components
+// 4. Add to shared if reusable
+// 5. Document inline
+```
+
+### FASE 3: SECURITY CHECK
+```bash
+# No secrets exposed?
+grep -r "sk-" . --include="*.ts"
+# RLS enabled?
+npm run db:check-rls
+# Inputs validated?
+npm run security:scan
+```
+
+### FASE 4: TESTING
+```bash
+npm test               # Unit
+npm run test:e2e      # E2E
+npm run test:load     # Load
+npm run test:security # Security
+```
+
+### FASE 5: REVIEW
+- Code quality ✓
+- Performance ✓
+- Security ✓
+- Documentation ✓
+- Edge cases ✓
+
+### FASE 6: DEPLOY
+```bash
+npm run build
+npm run deploy:staging
+npm run test:smoke
+npm run deploy:production
+```
+
+## 🚀 PERFORMANCE REQUIREMENTS
+
+### METRICHE TARGET:
+- First Paint: <1.8s
+- Full Load: <3s
+- Time to Interactive: <3.5s
+- Bundle size: <200KB gzipped
+- Lighthouse: >90
+
+### OTTIMIZZAZIONI OBBLIGATORIE:
+- Code splitting per route
+- Lazy loading immagini
+- WebP format
+- CDN per assets
+- Cache headers
+- Compression gzip/brotli
+
+## 📊 MONITORING & OBSERVABILITY
+
+### LOGGING STRUTTURATO:
+```typescript
+logger.info('Operation completed', {
+  userId,
+  sessionId,
+  duration: performance.now() - start,
+  metadata: {...}
+})
+```
+
+### METRICS:
+- Response time per endpoint
+- Error rate
+- Database query time
+- Cache hit ratio
+- User sessions
+
+### ALERTS:
+- Error rate >1%
+- Response time >3s
+- Database connection fails
+- Memory usage >80%
+- Disk usage >80%
+
+## 🔴 EMERGENCY PROCEDURES
+
+### IN CASO DI:
+
+#### Security Breach:
+1. Enable maintenance mode
+2. Revoke all sessions
+3. Audit logs
+4. Notify team
+5. Fix vulnerability
+6. Security review
+
+#### Performance Issue:
+1. Check metrics
+2. Scale if needed
+3. Clear cache
+4. Optimize queries
+5. Enable CDN
+
+#### Data Loss:
+1. Stop writes
+2. Check backups
+3. Restore from backup
+4. Verify integrity
+5. Resume operations
+
+## ✅ CHECKLIST FINALE
+
+### Prima di OGNI commit:
+- [ ] Test coverage >80%
+- [ ] TypeScript no errors
+- [ ] Lint passa
+- [ ] No console.log
+- [ ] No commented code
+- [ ] No TODO comments
+- [ ] Documentation aggiornata
+- [ ] TODO.md aggiornato
+- [ ] Security check passato
+- [ ] Performance target raggiunto
+
+### Prima di OGNI deploy:
+- [ ] Tutti test passano
+- [ ] Build successo
+- [ ] Bundle size OK
+- [ ] Migrations testate
+- [ ] Rollback plan ready
+- [ ] Monitoring attivo
+- [ ] Alerts configurati
+- [ ] Backup recente
+- [ ] Team notificato
+
+## 🎯 OBIETTIVI QUALITÀ
+
+### Codice:
+- Leggibile come prosa
+- Testabile facilmente
+- Manutenibile nel tempo
+- Performante sempre
+- Sicuro by design
+
+### User Experience:
+- Fast (<3s load)
+- Responsive (tutti device)
+- Accessible (WCAG AAA)
+- Intuitive (no manual)
+- Reliable (99.9% uptime)
+
+## 📞 CONTATTI EMERGENZA
+
+- Security issue: security@uptoten.it
+- Production down: ops@uptoten.it
+- Slack: #admission-test-alerts
+- On-call: [phone number]
+
+---
+**RICORDA**: Questo documento È la verità. Se non è qui, chiedi. Se è qui, seguilo.
+**AGGIORNATO**: 2024-01-16
+**VERSIONE**: 1.0.0
