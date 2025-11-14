@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl:*)",
+      "Bash(mkdir:*)",
+      "Bash(rmdir:*)",
+      "Bash(git checkout:*)",
+      "Bash(cp:*)",
+      "Bash(rm:*)",
+      "Bash(start index.html)",
+      "Bash(del index.html)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)",
+      "Bash(dir:*)",
+      "WebSearch",
+      "Bash(node:*)",
+      "Bash(start \"C:\\App UpToTen\\admission-test\\inglese\\update-sat-boundaries.html\")",
+      "Bash(findstr:*)",
+      "Bash(git restore:*)",
+      "Bash(git branch:*)",
+      "WebFetch(domain:e-gmat.com)",
+      "Read(//c/**)",
+      "Bash(find:*)",
+      "WebFetch(domain:www.uptoten.it)",
+      "Bash(cat:*)",
+      "Bash(psql:*)",
+      "Bash(ls:*)",
+      "Bash(start test.html)",
+      "WebFetch(domain:www.mba.com)",
+      "WebFetch(domain:gmat.targettestprep.com)",
+      "WebFetch(domain:www.joinleland.com)",
+      "Bash(start \"C:\\App UpToTen\\admission-test\\inglese\\view-answers.html\")",
+      "Bash(start \"C:\\App UpToTen\\admission-test\\inglese\\test.html\")",
+      "Bash(awk:*)",
+      "Bash(start assign_tests.html)",
+      "Bash(nul)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
