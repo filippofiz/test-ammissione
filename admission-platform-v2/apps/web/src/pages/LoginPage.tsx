@@ -4,7 +4,6 @@ import { Button, Input } from '@admission/ui';
 export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'student' | 'tutor'>('student');
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -12,11 +11,12 @@ export function LoginPage() {
     setLoading(true);
 
     // TODO: Connect to Supabase auth
-    console.log('Login:', { email, password, role });
+    // Role will be determined automatically from user profile after login
+    console.log('Login:', { email, password });
 
     setTimeout(() => {
       setLoading(false);
-      alert('Login functionality coming soon! Database connection next.');
+      alert('Login functionality coming soon! Role will be auto-detected from profile.');
     }, 1000);
   };
 
@@ -26,8 +26,30 @@ export function LoginPage() {
       <div className="absolute top-0 right-0 w-96 h-96 bg-brand-green/5 rounded-full blur-3xl animate-pulse-slow" />
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl animate-pulse-slow" style={{ animationDelay: '2s' }} />
 
-      {/* Login Container */}
-      <div className="w-full max-w-md animate-fadeInUp relative z-10">
+      {/* Mobile Warning - Only for phones (< 768px) */}
+      <div className="md:hidden w-full max-w-md animate-fadeInUp relative z-10 text-center">
+        <div className="bg-white rounded-2xl shadow-2xl p-8">
+          <div className="flex justify-center mb-6">
+            <img
+              src="/logo.png"
+              alt="Up to Ten"
+              className="h-16 w-auto object-contain"
+            />
+          </div>
+          <h2 className="text-2xl font-bold text-brand-dark mb-4">
+            📱 Mobile Not Supported
+          </h2>
+          <p className="text-gray-700 mb-4">
+            Please use a <strong>PC</strong>, <strong>tablet</strong>, or <strong>iPad</strong> to access the platform.
+          </p>
+          <p className="text-sm text-gray-600">
+            Our platform requires a larger screen for the best testing experience.
+          </p>
+        </div>
+      </div>
+
+      {/* Login Container - Hidden on mobile phones */}
+      <div className="hidden md:block w-full max-w-md animate-fadeInUp relative z-10">
         {/* Logo Section */}
         <div className="text-center mb-8">
           {/* Up to Ten Logo */}
@@ -35,7 +57,7 @@ export function LoginPage() {
             <img
               src="/logo.png"
               alt="Up to Ten"
-              className="h-24 md:h-32 w-auto object-contain animate-fadeInUp"
+              className="h-16 md:h-20 w-auto object-contain animate-fadeInUp"
             />
           </div>
 
@@ -57,32 +79,6 @@ export function LoginPage() {
           <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-brand-green/10 to-transparent rounded-full blur-2xl animate-pulse-slow" />
 
           <div className="relative z-10">
-            {/* Role Toggle */}
-            <div className="flex gap-2 mb-6 bg-gray-100 rounded-lg p-1">
-              <button
-                type="button"
-                onClick={() => setRole('student')}
-                className={`flex-1 py-3 px-4 rounded-md font-semibold transition-all ${
-                  role === 'student'
-                    ? 'bg-white text-brand-dark shadow-md'
-                    : 'text-gray-600 hover:text-brand-dark'
-                }`}
-              >
-                👨‍🎓 Student
-              </button>
-              <button
-                type="button"
-                onClick={() => setRole('tutor')}
-                className={`flex-1 py-3 px-4 rounded-md font-semibold transition-all ${
-                  role === 'tutor'
-                    ? 'bg-white text-brand-dark shadow-md'
-                    : 'text-gray-600 hover:text-brand-dark'
-                }`}
-              >
-                👨‍🏫 Tutor
-              </button>
-            </div>
-
             {/* Login Form */}
             <form onSubmit={handleLogin} className="space-y-5">
               <Input
@@ -131,7 +127,7 @@ export function LoginPage() {
             <div className="mt-6 text-center text-sm text-gray-600">
               Don't have an account?{' '}
               <a href="#" className="text-blue-600 hover:text-blue-700 font-semibold">
-                Sign up as {role}
+                Sign up
               </a>
             </div>
           </div>
