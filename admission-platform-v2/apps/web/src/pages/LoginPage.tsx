@@ -30,24 +30,20 @@ export function LoginPage() {
       <div className="w-full max-w-md animate-fadeInUp relative z-10">
         {/* Logo Section */}
         <div className="text-center mb-8">
+          {/* Up to Ten Logo */}
+          <div className="flex justify-center mb-6">
+            <img
+              src="/logo.png"
+              alt="Up to Ten"
+              className="h-24 md:h-32 w-auto object-contain animate-fadeInUp"
+            />
+          </div>
+
           {/* "Admission Test Platform" Title */}
           <h1 className="text-3xl md:text-4xl font-bold mb-4 text-brand-dark">
             <span className="inline-block">Admission</span>{' '}
             <span className="inline-block text-brand-green">Test</span>
           </h1>
-
-          {/* "UP TO TEN MAKES IT EASY" */}
-          <div className="text-2xl md:text-3xl font-extrabold mb-6 space-y-1">
-            <div className="flex items-center justify-center gap-2 flex-wrap">
-              <span className="text-brand-dark text-3xl">UP</span>
-              <span className="text-gray-600 text-2xl">TO</span>
-              <span className="text-brand-dark text-3xl">TEN</span>
-            </div>
-            <div className="flex items-center justify-center gap-2 flex-wrap">
-              <span className="text-gray-600 text-xl">MAKES IT</span>
-              <span className="text-brand-green text-3xl">EASY</span>
-            </div>
-          </div>
 
           {/* Subtitle */}
           <p className="text-gray-600 text-sm">
