@@ -27,7 +27,22 @@
       "Bash(cat:*)",
       "Bash(psql:*)",
       "Bash(ls:*)",
-      "Bash(start test.html)"
+      "Bash(start test.html)",
+      "Bash(npm install:*)",
+      "Bash(pnpm install:*)",
+      "Bash(start cmd /k \"pnpm --filter web dev\")",
+      "Bash(pnpm dev)",
+      "Bash(npx create-expo-app@latest mobile --template blank-typescript)",
+      "Bash(pnpm start)",
+      "Bash(pnpm expo start:*)",
+      "Bash(pnpm add:*)",
+      "Bash(taskkill:*)",
+      "Bash(npx expo start:*)",
+      "Bash(netstat:*)",
+      "Bash(start http://localhost:8081)",
+      "Bash(npm uninstall:*)",
+      "Bash(start http://localhost:8082)",
+      "Bash(del nul)"
     ],
     "deny": [],
     "ask": []
