@@ -94,7 +94,8 @@ admission-test/
 │   │   ├── DATABASE.md
 │   │   ├── SECURITY.md
 │   │   ├── EDGE_CASES.md
-│   │   └── USER_MANUAL.md
+│   │   ├── USER_MANUAL.md
+│   │   └── COST_ESTIMATION.md  # ⚠️ UPDATE OGNI COMMIT!
 │   ├── package.json        # Root monorepo config
 │   ├── turbo.json          # Turborepo pipeline
 │   ├── tsconfig.json       # Base TypeScript config
@@ -478,6 +479,7 @@ npm run test:security # Security
 - Security ✓
 - Documentation ✓
 - Edge cases ✓
+- **COST_ESTIMATION.md aggiornato** ✓ (OBBLIGATORIO!)
 
 ### FASE 6: DEPLOY
 ```bash

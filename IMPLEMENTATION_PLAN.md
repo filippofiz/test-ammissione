@@ -55,7 +55,32 @@ npm create turbo@latest
 - [x] Running at http://localhost:5173
 
 **Status**: ✅ Login page visible and working (no DB yet)
-**Next**: Add logo support, then connect Supabase auth
+**Changes Made**:
+- ✅ Removed student/tutor toggle (auto-detect from profile)
+- ✅ Made logo smaller (h-16 md:h-20)
+- ✅ Added mobile phone warning (<768px)
+
+---
+
+## 📱 MOBILE APP SETUP (Day 1) ✅ COMPLETED
+
+### React Native + Expo Setup
+- [x] Initialize Expo app with SDK 54 (Android compatible)
+- [x] Install React Navigation dependencies
+- [x] Configure TypeScript strict mode
+- [x] Set up project structure (src/screens, src/navigation)
+
+### Mobile Login Screen
+- [x] Create AppNavigator with Stack navigation
+- [x] Build LoginScreen component aligned with web design
+- [x] Implement device size detection (block phones <768px)
+- [x] Add Up to Ten branding and colors
+- [x] Touch-friendly UI (48px min touch targets)
+- [x] Email/Password form with validation
+
+**Status**: ✅ Mobile foundation complete, ready for GMAT test screen
+**Location**: `admission-platform-v2/apps/mobile/`
+**Next**: Build GMAT test interface (priority)
 
 ---
 
