@@ -1,0 +1,161 @@
+# Istruzioni permanenti per ADMISSION_TEST
+
+## Contesto progetto
+- Applicazione test di ammissione per Up to Ten
+- Multilingua (italiano/inglese)
+- Database: Supabase
+
+## Regole sempre attive
+- Mantieni sempre la struttura multilingua
+- Prima di modifiche al database, verifica lo schema in Supabase
+
+## Quando scrivi codice
+- Commenta in italiano
+- Usa async/await per operazioni Supabase
+- Gestisci sempre gli errori con try/catch
+
+## Prima di ogni modifica
+- Controlla TODO.md per priorità
+- Verifica che le modifiche funzionino in entrambe le lingue
+
+## Testing obbligatorio
+
+### Per OGNI modifica o nuova feature:
+1. **Scrivi test PRIMA del codice (TDD quando possibile)**
+2. **Crea test automatici per:**
+   - Unit test per funzioni isolate
+   - Integration test per interazioni con Supabase
+   - E2E test per flussi utente critici
+
+### Struttura testing:
+```javascript
+// Per ogni nuova funzione
+function nuovaFunzione() { /* ... */ }
+
+// DEVE avere il suo test
+test('nuovaFunzione - caso normale', () => { /* ... */ })
+test('nuovaFunzione - caso errore', () => { /* ... */ })
+```
+
+### Testing specifico per ADMISSION_TEST:
+- Test multilingua: verifica IT e EN per ogni feature
+- Test database: mock Supabase per test offline
+- Test form validazione: tutti i campi required/optional
+- Test punteggi: verifica calcoli corretti
+
+### Comandi testing automatico:
+```bash
+# Aggiungi sempre questi script in package.json
+npm run test          # esegue tutti i test
+npm run test:watch    # test in modalità watch
+npm run test:coverage # verifica copertura codice
+```
+
+### NON fare commit se:
+- I test non passano
+- La coverage scende sotto il 70%
+- Non hai scritto test per la nuova feature
+
+markdown## 📝 GESTIONE TODO.md - OBBLIGATORIO
+
+### PRIMA di iniziare qualsiasi lavoro:
+1. **SEMPRE leggere TODO.md** per capire:
+   - Cosa è già stato fatto ✅
+   - Cosa è in progress 🔄
+   - Cosa deve essere fatto 📋
+   - Cosa NON fare ⛔
+
+2. **Controlla duplicazioni:**
+   - Cerca nel codice se esiste già una funzione simile
+   - Verifica se c'è codice riutilizzabile
+   - Non reinventare la ruota
+
+### DURANTE il lavoro:
+```markdown
+## TODO.md - Aggiorna SUBITO quando:
+- [ ] INIZI una task → 🔄 In progress: [task] - [timestamp]
+- [ ] CREI una funzione → 📝 Creata: functionName() in file.js
+- [ ] TROVI un bug → 🐛 Bug trovato: [descrizione] in [file]
+- [ ] COMPLETI una task → ✅ Completata: [task] - [timestamp]
+```
+
+### DOPO ogni modifica:
+```markdown
+## Aggiungi al TODO.md:
+
+### ✅ COMPLETATO [data]
+- Implementato [feature]: [file modificati]
+- Test aggiunti: [quali test]
+- Funzioni create: [lista funzioni e loro scopo]
+
+### 🔄 IN PROGRESS
+- [cosa stai facendo]
+- Bloccato da: [eventuale blocco]
+
+### 📋 DA FARE
+- [prossimi step]
+
+### 🚫 NON DUPLICARE
+- Funzione esistente: useAuth() in auth.js
+- Component esistente: FormValidator in components/
+- Query Supabase: getQuestions() già ottimizzata
+```
+
+## Anti-duplicazione - Regole ferree:
+
+### PRIMA di scrivere nuovo codice:
+1. **Cerca nel progetto** (Ctrl+Shift+F):
+```bash
+   # Cerca funzioni simili
+   grep -r "function.*[nome-simile]" .
+   # Cerca import/export
+   grep -r "export.*[functionality]" .
+```
+
+2. **Controlla utility esistenti:**
+   - C'è già una funzione helper?
+   - Esiste già un component simile?
+   - C'è già una query Supabase per questo?
+
+3. **Refactoring invece di duplicazione:**
+```javascript
+   // MALE ❌ - Duplicazione
+   function validateEmailAdmin() { /* ... */ }
+   function validateEmailUser() { /* ... */ }
+   
+   // BENE ✅ - Riuso
+   function validateEmail(email, userType) { /* ... */ }
+```
+
+### Struttura TODO.md ottimale:
+```markdown
+# TODO - ADMISSION_TEST
+
+## 🎯 OBIETTIVO ATTUALE
+[Cosa stiamo cercando di completare]
+
+## ✅ COMPLETATO (non rifare!)
+### Autenticazione
+- [x] Login multilingua - `auth.js` - NON TOCCARE
+- [x] Validazione email - `validators.js::validateEmail()`
+
+### Database
+- [x] Schema Supabase - `supabase/schema.sql` - STABILE
+- [x] Query questions - `api/questions.js::getQuestions()`
+
+## 🔄 IN CORSO (non duplicare!)
+- [ ] Fix punteggi - Giovanni sta lavorando - `scoring.js`
+
+## 📋 DA FARE
+- [ ] Test automatici per multilingua
+- [ ] Ottimizzazione performance query
+
+## ⚠️ CODICE DA RIUTILIZZARE
+- `utils/validation.js` - Tutte le validazioni
+- `api/supabase.js` - Tutte le query DB
+- `components/Form.js` - Base per tutti i form
+
+## 🚫 NON FARE / DEPRECATO
+- Non usare fetch diretto, usa `api/client.js`
+- Non creare nuovi validator, estendi `validators.js`
+```
