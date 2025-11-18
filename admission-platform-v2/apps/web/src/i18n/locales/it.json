@@ -358,7 +358,11 @@
     "Assessment Iniziale": "Assessment Iniziale",
     "Esercizi": "Esercizi",
     "Simulazione": "Simulazione",
-    "Ripasso": "Ripasso"
+    "Ripasso": "Ripasso",
+    "training": "Training",
+    "assessment_iniziale": "Assessment Iniziale",
+    "simulazione": "Simulazione",
+    "assessment_monotematico": "Assessment Monotematico"
   },
   "testStartMsg": {
     "welcome": "Benvenuto al {{testType}} {{trackType}}",
@@ -430,6 +434,35 @@
     "back": "Indietro",
     "total": "Totale",
     "filterBySection": "Filtra per Sezione:",
-    "accuracy": "precisione"
+    "accuracy": "precisione",
+    "noAnswer": "Nessuna risposta",
+    "noAnswerProvided": "Nessuna risposta fornita",
+    "resultsVisibleToStudent": "Risultati Visibili allo Studente",
+    "resultsHiddenFromStudent": "Risultati Nascosti allo Studente",
+    "studentCanViewResults": "Lo studente può visualizzare i risultati dettagliati e le risposte",
+    "studentCannotViewResults": "Lo studente non può visualizzare i risultati finché non abiliti la visibilità",
+    "visible": "Visibile",
+    "hidden": "Nascosto",
+    "noData": "nessun dato",
+    "noAnswersFoundForAssignment": "Nessuna risposta trovata per questo test.",
+    "noAnswersFoundForAttempt": "Nessuna risposta trovata per il tentativo {{attempt}}.",
+    "questionType": "Tipo di Domanda",
+    "answer": "Risposta:",
+    "yourAnswer": "La tua risposta:",
+    "correctAnswer": "Risposta corretta:",
+    "resultsVisibleMessage": "Gli studenti possono ora vedere le loro risposte, le risposte corrette e le statistiche di prestazione per questo test.",
+    "resultsHiddenMessage": "Abilita la visibilità dopo aver rivisto le correzioni con lo studente. Potrà vedere i risultati dettagliati una volta abilitati.",
+    "yourAnswerCorrect": "La tua risposta - Corretta!",
+    "yourAnswerLabel": "La tua risposta",
+    "correctAnswerLabel": "Risposta corretta",
+    "questionTypes": {
+      "multiple_choice": "Scelta Multipla",
+      "data_insights": "Data Insights",
+      "DS": "Sufficienza Dati",
+      "MSR": "Ragionamento Multi-Fonte",
+      "GI": "Interpretazione Grafica",
+      "TA": "Analisi Tabella",
+      "TPA": "Analisi a Due Parti"
+    }
   }
 }
