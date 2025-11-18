@@ -10,10 +10,22 @@ import {
   ScrollView,
   ActivityIndicator,
   Platform,
+  KeyboardAvoidingView,
+  TouchableWithoutFeedback,
+  Keyboard,
+  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTranslation } from 'react-i18next';
+import { signIn } from '../lib/auth';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 const LOGO = require('../../assets/logo.png');
+
+import type { RootStackParamList } from '../navigation/AppNavigator';
+
+type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 const BRAND_COLORS = {
   primary: '#1E40AF',
@@ -26,11 +38,13 @@ const BRAND_COLORS = {
   blue50: '#EFF6FF',
 };
 
-export default function LoginScreen() {
+export default function LoginScreen({ navigation }: Props) {
+  const { t, i18n } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [windowWidth, setWindowWidth] = useState(Dimensions.get('window').width);
+  const [currentLang, setCurrentLang] = useState(i18n.language);
 
   useEffect(() => {
     const subscription = Dimensions.addEventListener('change', ({ window }) => {
@@ -40,17 +54,72 @@ export default function LoginScreen() {
     return () => subscription?.remove();
   }, []);
 
+  const handleLanguageChange = async (lang: string) => {
+    await AsyncStorage.setItem('language', lang);
+    await i18n.changeLanguage(lang);
+    setCurrentLang(lang);
+  };
+
   const handleLogin = async () => {
+    // Validation
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter both email and password');
+      return;
+    }
+
     setLoading(true);
 
-    // TODO: Connect to Supabase auth
-    // Role will be determined automatically from user profile after login
-    console.log('Login:', { email, password });
+    try {
+      const result = await signIn(email, password);
 
-    setTimeout(() => {
+      if (result.success && result.profile) {
+        // Check if user must change password
+        if (result.mustChangePassword) {
+          navigation.replace('ChangePassword');
+          return;
+        }
+
+        // Parse roles array
+        const roles = result.profile.roles as string[];
+        const tests = result.profile.tests as string[];
+
+        // If only one role
+        if (roles.length === 1) {
+          const role = roles[0];
+
+          if (role === 'STUDENT') {
+            // Check tests
+            if (tests && tests.length === 1) {
+              // Navigate directly to home
+              navigation.replace('Home');
+            } else if (tests && tests.length > 1) {
+              // Navigate to test selection
+              navigation.replace('TestSelection');
+            } else {
+              // No tests assigned
+              Alert.alert('No Tests', 'No tests have been assigned to you yet.');
+            }
+          } else if (role === 'TUTOR') {
+            // Navigate to tutor dashboard (placeholder for now)
+            navigation.replace('Home');
+          } else if (role === 'ADMIN') {
+            // Navigate to admin dashboard (placeholder for now)
+            navigation.replace('Home');
+          }
+        } else if (roles.length > 1) {
+          // Multiple roles - navigate to role selection
+          navigation.replace('RoleSelection');
+        } else {
+          Alert.alert('Error', 'No roles assigned to your account');
+        }
+      } else {
+        Alert.alert('Login Failed', result.error || 'Invalid credentials');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'An unexpected error occurred');
+    } finally {
       setLoading(false);
-      alert('Login functionality coming soon! Role will be auto-detected from profile.');
-    }, 1000);
+    }
   };
 
   // Show mobile warning for phones (< 768px)
@@ -83,12 +152,19 @@ export default function LoginScreen() {
   }
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.scrollContainer}
-      keyboardShouldPersistTaps="handled"
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
-      <StatusBar style="dark" />
-      <View style={styles.container}>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <StatusBar style="dark" />
+          <View style={styles.container}>
         {/* Background decoration */}
         <View style={[styles.bgDecoration, styles.bgDecorationTop]} />
         <View style={[styles.bgDecoration, styles.bgDecorationBottom]} />
@@ -105,13 +181,12 @@ export default function LoginScreen() {
             {/* Title */}
             <View style={styles.titleContainer}>
               <Text style={styles.title}>
-                <Text style={styles.titleAdmission}>Admission</Text>{' '}
-                <Text style={styles.titleTest}>Test</Text>
+                {t('login.title')}
               </Text>
             </View>
 
             {/* Subtitle */}
-            <Text style={styles.subtitle}>Excellence in Test Preparation</Text>
+            <Text style={styles.subtitle}>{t('login.subtitle')}</Text>
           </View>
 
           {/* Login Card */}
@@ -120,12 +195,48 @@ export default function LoginScreen() {
             <View style={styles.cardDecoration} />
 
             <View style={styles.formContainer}>
+              {/* Language Selector */}
+              <View style={styles.languageSelector}>
+                <TouchableOpacity
+                  onPress={() => handleLanguageChange('en')}
+                  style={[
+                    styles.languageButton,
+                    currentLang === 'en' && styles.languageButtonActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.languageButtonText,
+                      currentLang === 'en' && styles.languageButtonTextActive,
+                    ]}
+                  >
+                    EN
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => handleLanguageChange('it')}
+                  style={[
+                    styles.languageButton,
+                    currentLang === 'it' && styles.languageButtonActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.languageButtonText,
+                      currentLang === 'it' && styles.languageButtonTextActive,
+                    ]}
+                  >
+                    IT
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
               {/* Email Input */}
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Email</Text>
+                <Text style={styles.label}>{t('login.email')}</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="your.email@example.com"
+                  placeholder={t('login.emailPlaceholder')}
                   placeholderTextColor={BRAND_COLORS.gray600}
                   value={email}
                   onChangeText={setEmail}
@@ -138,10 +249,10 @@ export default function LoginScreen() {
 
               {/* Password Input */}
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Password</Text>
+                <Text style={styles.label}>{t('login.password')}</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Enter your password"
+                  placeholder={t('login.passwordPlaceholder')}
                   placeholderTextColor={BRAND_COLORS.gray600}
                   value={password}
                   onChangeText={setPassword}
@@ -153,9 +264,9 @@ export default function LoginScreen() {
 
               {/* Remember me & Forgot password */}
               <View style={styles.optionsRow}>
-                <Text style={styles.rememberText}>Remember me</Text>
+                <Text style={styles.rememberText}>{t('login.rememberMe')}</Text>
                 <TouchableOpacity>
-                  <Text style={styles.forgotPassword}>Forgot password?</Text>
+                  <Text style={styles.forgotPassword}>{t('login.forgotPassword')}</Text>
                 </TouchableOpacity>
               </View>
 
@@ -168,15 +279,15 @@ export default function LoginScreen() {
                 {loading ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={styles.loginButtonText}>Login</Text>
+                  <Text style={styles.loginButtonText}>{t('login.loginButton')}</Text>
                 )}
               </TouchableOpacity>
 
               {/* Sign Up Link */}
               <View style={styles.signupContainer}>
-                <Text style={styles.signupText}>Don't have an account? </Text>
+                <Text style={styles.signupText}>{t('login.noAccount')} </Text>
                 <TouchableOpacity>
-                  <Text style={styles.signupLink}>Sign up</Text>
+                  <Text style={styles.signupLink}>{t('login.signUp')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -186,13 +297,16 @@ export default function LoginScreen() {
           <Text style={styles.footer}>© 2025 Up to Ten. All rights reserved.</Text>
         </View>
       </View>
-    </ScrollView>
+        </ScrollView>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
+    paddingBottom: 40,
   },
   container: {
     flex: 1,
@@ -397,5 +511,34 @@ const styles = StyleSheet.create({
   },
   bold: {
     fontWeight: 'bold',
+  },
+  // Language selector styles
+  languageSelector: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+    marginBottom: 24,
+  },
+  languageButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    backgroundColor: '#fff',
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  languageButtonActive: {
+    backgroundColor: BRAND_COLORS.primary,
+    borderColor: BRAND_COLORS.primary,
+  },
+  languageButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: BRAND_COLORS.gray700,
+  },
+  languageButtonTextActive: {
+    color: '#fff',
   },
 });
