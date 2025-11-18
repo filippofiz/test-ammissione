@@ -23,12 +23,13 @@
     "function-plot": "^1.25.1",
     "i18next": "^25.6.2",
     "katex": "^0.16.25",
-    "pdfjs-dist": "^4.0.269",
+    "pdfjs-dist": "^5.4.296",
     "react": "^18.3.1",
     "react-chartjs-2": "^5.3.1",
     "react-dom": "^18.3.1",
     "react-i18next": "^16.3.3",
     "react-katex": "^3.1.0",
+    "react-pdf": "^10.2.0",
     "react-router-dom": "^6.28.0"
   },
   "devDependencies": {
