@@ -78,7 +78,10 @@
       "Bash(cmd //c taskkill //PID 9692 //F)",
       "Bash(pnpm info:*)",
       "Bash(cmd //c \"if exist admission-platform-v2\\apps\\web\\node_modules\\.vite rmdir /s /q admission-platform-v2\\apps\\web\\node_modules\\.vite\")",
-      "Bash(cmd //c taskkill //PID 5340 //F)"
+      "Bash(cmd //c taskkill //PID 5340 //F)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm exec vite build:*)",
+      "Bash(git rebase:*)"
     ],
     "deny": [],
     "ask": []
