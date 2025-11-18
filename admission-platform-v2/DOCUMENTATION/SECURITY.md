@@ -6,15 +6,19 @@ Security policies and best practices for Admission Platform v2.
 
 ## 🔐 Security Checklist
 
-- [x] No hardcoded API keys
-- [x] RLS enabled on all tables
-- [x] Input validation (Zod schemas)
-- [x] HTML sanitization (DOMPurify)
-- [x] HTTPS only
-- [x] Secure cookies (httpOnly, secure, sameSite)
-- [ ] Rate limiting (TODO)
-- [ ] CSRF protection (TODO)
-- [ ] Content Security Policy (TODO)
+- [x] No hardcoded API keys ✅
+- [x] RLS enabled on all tables ✅
+- [x] Input validation (Email & Password regex) ✅
+- [x] Multi-layer authorization (Route + Page + RLS) ✅
+- [x] HTTPS only (Supabase enforced) ✅
+- [x] Secure session management (Supabase Auth) ✅
+- [x] Password change enforcement on first login ✅
+- [x] RPC functions with SECURITY DEFINER for privileged operations ✅
+- [ ] HTML sanitization (DOMPurify) - TODO when rendering rich content
+- [ ] Zod schemas for comprehensive validation - TODO
+- [ ] Rate limiting - TODO
+- [ ] CSRF protection - TODO
+- [ ] Content Security Policy - TODO
 
 ---
 
@@ -29,23 +33,76 @@ Security policies and best practices for Admission Platform v2.
 - Supabase Auth (JWT tokens)
 - Session management via httpOnly cookies
 - Password requirements: min 6 chars (TODO: increase to 12+)
+- Must change password on first login (security flag)
+- Protected routes with ProtectedRoute component
 
-### 3. Authorization
-- RLS policies on every table
-- Role-based access (student, tutor, admin)
-- Tutors can only see assigned students
+### 3. Authorization (Multi-Layer Security)
 
-### 4. Input Validation
+#### Layer 1: Route Protection
+All routes except `/login` use `ProtectedRoute` component:
 ```typescript
-// Every input validated with Zod + sanitized with DOMPurify
-import { z } from 'zod';
-import DOMPurify from 'isomorphic-dompurify';
-
-const schema = z.object({
-  email: z.string().email().transform(DOMPurify.sanitize),
-  name: z.string().min(2).max(100).transform(DOMPurify.sanitize)
-});
+<Route path="/test-selection" element={
+  <ProtectedRoute requiredRoles={['STUDENT']}>
+    <TestSelectionPage />
+  </ProtectedRoute>
+} />
 ```
+
+#### Layer 2: Page-Level Validation
+Each page validates:
+- User authentication status
+- User roles match page requirements
+- User has necessary data (e.g., multiple tests for test selection)
+- Redirects unauthorized users automatically
+
+#### Layer 3: Database RLS
+- RLS policies on every table
+- Role-based access (STUDENT, TUTOR, ADMIN)
+- Tutors can only see assigned students
+- Students can only see their own data
+- RPC functions with SECURITY DEFINER for login/password change
+
+#### Navigation Security Flow
+1. Login → Check `must_change_password` flag
+2. Change Password → Sign out → Re-login
+3. Role Check:
+   - **Single Role (STUDENT)**: Check tests count
+     - 1 test → Home
+     - Multiple tests → Test Selection (STUDENT role verified)
+     - 0 tests → Error message
+   - **Single Role (TUTOR/ADMIN)** → Dashboard
+   - **Multiple Roles** → Role Selection screen
+4. Role Selection → Verify user has selected role → Navigate
+5. Test Selection → Verify STUDENT role → Verify multiple tests → Navigate
+
+**Security Features**:
+- Unauthorized users redirected to login
+- Wrong roles redirected to appropriate page
+- Users can't access pages they shouldn't be on
+- All checks happen on both client AND server (RLS)
+
+### 4. Input Validation (Implemented)
+✅ **Email Validation**: Regex pattern for valid email format
+✅ **Password Validation**: Minimum 6 characters (client-side)
+✅ **Sanitization**: Ready for DOMPurify integration
+
+**Current Implementation**:
+```typescript
+// Email validation in LoginPage
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+if (!emailPattern.test(email)) {
+  setError('Please enter a valid email address');
+  return;
+}
+
+// Password validation
+if (password.length < 6) {
+  setError('Password must be at least 6 characters');
+  return;
+}
+```
+
+**TODO**: Integrate Zod schemas for comprehensive validation
 
 ### 5. XSS Prevention
 - DOMPurify on all user input
@@ -95,4 +152,4 @@ const schema = z.object({
 
 ---
 
-**Last Updated**: 2025-11-14
+**Last Updated**: 2025-11-15

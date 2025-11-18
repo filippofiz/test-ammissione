@@ -83,6 +83,54 @@ const { data, error } = await supabase
 
 ---
 
+## 🔧 RPC Functions
+
+### 1. Update Password Changed
+
+**Function**: `update_password_changed(user_auth_uid UUID)`
+
+**Purpose**: Updates user profile after password change, bypassing RLS policies.
+
+**Usage**:
+```typescript
+const { data, error } = await supabase
+  .rpc('update_password_changed', {
+    user_auth_uid: user.id
+  });
+```
+
+**Returns**: `boolean` (true if update successful)
+
+**Why RPC**: Direct table updates would trigger RLS policies that query the same table, causing infinite recursion. The `SECURITY DEFINER` function bypasses RLS safely.
+
+**Implementation**:
+```sql
+CREATE OR REPLACE FUNCTION public.update_password_changed(user_auth_uid UUID)
+RETURNS BOOLEAN
+SECURITY DEFINER
+SET search_path = public
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  UPDATE "2V_profiles"
+  SET
+    must_change_password = false,
+    last_password_change = now(),
+    updated_at = now()
+  WHERE auth_uid = user_auth_uid;
+
+  RETURN FOUND;
+END;
+$$;
+```
+
+**Security**:
+- Function has `SECURITY DEFINER` to bypass RLS
+- Only updates specific fields
+- Limited to authenticated users via `GRANT EXECUTE`
+
+---
+
 ## 💡 AI API Enhancement Ideas
 
 ### 💡 AI IDEA: Auto-generate API clients
@@ -99,4 +147,4 @@ const { data, error } = await supabase
 
 ---
 
-**Last Updated**: 2025-11-14
+**Last Updated**: 2025-11-15

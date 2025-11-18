@@ -209,6 +209,148 @@ admission-platform-v2/
 
 ---
 
+## 🔐 Authentication & Navigation Flow
+
+### Login Flow
+
+The application implements intelligent post-login navigation based on user roles and test assignments:
+
+```typescript
+// 1. User logs in
+// 2. Check must_change_password flag
+//    → If true: Redirect to /change-password
+// 3. After password change: Sign out and redirect to /login
+// 4. On successful login:
+//    → Check user roles:
+//      - Single role (STUDENT):
+//        - 1 test: Navigate to /home
+//        - Multiple tests: Navigate to /test-selection
+//        - 0 tests: Show error
+//      - Single role (TUTOR/ADMIN): Navigate to /home (dashboard)
+//      - Multiple roles: Navigate to /role-selection
+```
+
+### Authentication Components
+
+#### Web Application
+```typescript
+// apps/web/src/components/ProtectedRoute.tsx
+// Route-level authentication guard
+<Route path="/test-selection" element={
+  <ProtectedRoute requiredRoles={['STUDENT']}>
+    <TestSelectionPage />
+  </ProtectedRoute>
+} />
+
+// apps/web/src/components/Layout.tsx
+// Shared layout with header, user info, logout
+<Layout>
+  {/* Page content */}
+</Layout>
+```
+
+#### Mobile Application
+```typescript
+// apps/mobile/src/navigation/AppNavigator.tsx
+// Stack navigator with all routes
+<Stack.Screen name="RoleSelection" component={RoleSelectionScreen} />
+<Stack.Screen name="TestSelection" component={TestSelectionScreen} />
+
+// apps/mobile/src/components/Layout.tsx
+// Shared mobile layout with header
+<Layout>
+  {/* Screen content */}
+</Layout>
+```
+
+### Page-Level Security
+
+Each protected page implements security checks in `useEffect`:
+
+```typescript
+// Example: TestSelectionPage
+useEffect(() => {
+  loadProfile();
+}, []);
+
+const loadProfile = async () => {
+  const userProfile = await getCurrentProfile();
+
+  if (!userProfile) {
+    navigate('/login', { replace: true });
+    return;
+  }
+
+  const roles = userProfile.roles as string[] || [];
+  const tests = userProfile.tests as string[];
+
+  // Security: Only students should access this page
+  if (!roles.includes('STUDENT')) {
+    navigate('/', { replace: true });
+    return;
+  }
+
+  // Verify user has multiple tests (otherwise shouldn't be here)
+  if (!tests || tests.length <= 1) {
+    navigate('/', { replace: true });
+    return;
+  }
+
+  setProfile(userProfile);
+  setLoading(false);
+};
+```
+
+### Database RPC Functions
+
+For operations that require bypassing RLS (like password changes):
+
+```sql
+-- supabase/migrations/004_create_change_password_rpc.sql
+CREATE OR REPLACE FUNCTION public.update_password_changed(user_auth_uid UUID)
+RETURNS BOOLEAN
+SECURITY DEFINER
+SET search_path = public
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  UPDATE "2V_profiles"
+  SET
+    must_change_password = false,
+    last_password_change = now(),
+    updated_at = now()
+  WHERE auth_uid = user_auth_uid;
+
+  RETURN FOUND;
+END;
+$$;
+```
+
+Usage in client code:
+```typescript
+// Call RPC instead of direct table update
+const { data, error } = await supabase
+  .rpc('update_password_changed', { user_auth_uid: user.id });
+```
+
+### Navigation Screens
+
+#### Web Routes (Implemented)
+- `/login` - Login page (public) ✅
+- `/change-password` - Force password change (protected) ✅
+- `/role-selection` - Choose role (protected, multi-role users) ✅
+- `/test-selection` - Choose test (protected, STUDENT role, multiple tests) ✅
+- `/` - Home/Dashboard (protected, role-specific) 🚧 In Progress
+
+#### Mobile Screens (Implemented)
+- `Login` - Login screen (public) ✅
+- `ChangePassword` - Force password change (protected) ✅
+- `RoleSelection` - Choose role (protected, multi-role users) ✅
+- `TestSelection` - Choose test (protected, STUDENT role, multiple tests) ✅
+- `Home` - Home/Dashboard (protected, role-specific) 🚧 In Progress
+
+---
+
 ## 🎨 Coding Standards
 
 ### TypeScript
@@ -539,4 +681,4 @@ server: { port: 3000 }
 
 ---
 
-**Last Updated**: 2025-11-14
+**Last Updated**: 2025-11-15

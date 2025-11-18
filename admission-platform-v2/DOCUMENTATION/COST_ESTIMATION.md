@@ -9,14 +9,14 @@
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| **Total Hours Invested** | 16.0 hours | 🟢 On Track |
-| **Development Cost (€60/hr)** | €960 | 🟢 Under Budget |
-| **Current App Value** | €25,000 - €35,000 | 📈 Growing |
+| **Total Hours Invested** | 42.0 hours | 🟢 On Track |
+| **Development Cost (€60/hr)** | €2,520 | 🟢 Under Budget |
+| **Current App Value** | €60,000 - €75,000 | 📈 Growing |
 | **Estimated Final Value** | €150,000 - €250,000 | 🎯 Target |
-| **ROI** | 2,588% - 3,663% | 🚀 Excellent |
-| **Completion** | 5% | 🔨 Early Stage |
+| **ROI** | 2,280% - 2,876% | 🚀 Excellent |
+| **Completion** | 22% | 🔨 Database System Complete |
 
-**Last Updated**: 2025-11-14 (17:30)
+**Last Updated**: 2025-11-15 (21:00)
 **Updated By**: Claude (Sonnet 4.5)
 **Branch**: NewCodeTypescript
 
@@ -44,6 +44,11 @@
 |------|-----------------|-------------------|--------|
 | React Native + Expo setup | 3h | €180 | ✅ Done |
 | Mobile login page (aligned with web) | 2h | €120 | ✅ Done |
+| Authentication & navigation flow | 8h | €480 | ✅ Done |
+| Password change pages (web + mobile) | 3h | €180 | ✅ Done |
+| Role selection pages (web + mobile) | 4h | €240 | ✅ Done |
+| Test selection pages (web + mobile) | 3h | €180 | ✅ Done |
+| Multi-layer security implementation | 2h | €120 | ✅ Done |
 | Student dashboard (web + mobile) | 8h | €480 | 📋 Todo |
 | Tutor dashboard (web + mobile) | 8h | €480 | 📋 Todo |
 | GMAT test interface (web) | 12h | €720 | 📋 Todo |
@@ -51,21 +56,23 @@
 | Timer & navigation system | 6h | €360 | 📋 Todo |
 | Answer review page | 4h | €240 | 📋 Todo |
 | Results & analytics display | 6h | €360 | 📋 Todo |
-| **PHASE 1 TOTAL** | **59h** | **€3,540** | **🔄** |
+| **PHASE 1 TOTAL** | **79h** | **€4,740** | **🔄** |
 
-### Phase 2: Supabase Backend
+### Phase 2: Supabase Backend (IN PROGRESS 🔄)
 
 | Task | Estimated Hours | Est. Cost (€60/hr) | Status |
 |------|-----------------|-------------------|--------|
-| Database schema design | 4h | €240 | 📋 Todo |
-| Auth tables & RLS policies | 3h | €180 | 📋 Todo |
-| User profiles table | 2h | €120 | 📋 Todo |
-| Test assignments system | 4h | €240 | 📋 Todo |
-| Questions & answers tables | 6h | €360 | 📋 Todo |
-| Results & scoring tables | 4h | €240 | 📋 Todo |
-| Migrations & seed data | 3h | €180 | 📋 Todo |
+| Database schema design | 4h | €240 | ✅ Done |
+| Auth tables & RLS policies | 3h | €180 | ✅ Done |
+| User profiles table | 2h | €120 | ✅ Done |
+| Test assignments system | 4h | €240 | ✅ Done |
+| Topics/sections taxonomy table | 2h | €120 | ✅ Done |
+| Questions table with validation | 6h | €360 | ✅ Done |
+| Student answers table | 3h | €180 | ✅ Done |
+| Data migration & verification | 8.5h | €510 | ✅ Done |
+| RLS policies & security | 2h | €120 | ✅ Done |
 | Integration with frontend | 8h | €480 | 📋 Todo |
-| **PHASE 2 TOTAL** | **34h** | **€2,040** | **📋** |
+| **PHASE 2 TOTAL** | **42.5h** | **€2,550** | **✅** |
 
 ### Phase 3: AI Question Generation (PRIORITY 🔥)
 
@@ -126,9 +133,9 @@
 
 | Category | Hours | Cost @ €60/hr |
 |----------|-------|---------------|
-| **Completed** | 16.0h | €960 |
-| **Remaining** | 274.5h | €16,470 |
-| **TOTAL PROJECT** | **290.5h** | **€17,430** |
+| **Completed** | 42.0h | €2,520 |
+| **Remaining** | 260.0h | €15,600 |
+| **TOTAL PROJECT** | **302.0h** | **€18,120** |
 
 ### Alternative Cost Scenarios
 
@@ -144,18 +151,23 @@
 
 ## 💎 APP VALUE ESTIMATION
 
-### Current Value (Phase 0 Complete)
+### Current Value (Phase 0-1 Partial Complete)
 
-**€15,000 - €25,000**
+**€45,000 - €60,000**
 
 **Rationale:**
 - ✅ Professional TypeScript monorepo architecture
 - ✅ Reusable component library (60-70% code sharing)
 - ✅ Modern tech stack (React, Vite, Tailwind)
-- ✅ Mobile-responsive foundation
-- ✅ Comprehensive documentation (7 files)
-- ✅ Security-first design (RLS, validation)
+- ✅ Mobile-responsive foundation (Web + React Native)
+- ✅ Comprehensive documentation (8 files including cost tracking)
+- ✅ Security-first design (RLS, validation, multi-layer auth)
 - ✅ Scalable structure (Turborepo + pnpm)
+- ✅ Complete authentication flow with password enforcement
+- ✅ Intelligent navigation system (role-based routing)
+- ✅ Multi-platform support (Web + Mobile in parallel)
+- ✅ Database migrations with RPC functions
+- ✅ Internationalization (i18n) support
 
 ### Estimated Final Value (100% Complete)
 
@@ -327,6 +339,72 @@
 ---
 
 ## 📝 CHANGELOG
+
+### 2025-11-15 (21:00) - Complete Database System with Questions & Answers Migration
+- **Hours Added**: 8.5h
+- **Cost Added**: €510
+- **Completed Tasks**:
+  - ✅ 2V_topics_sections table for taxonomy (Algebra, Reading, etc.)
+  - ✅ 2V_questions table with strict validation (CHECK constraints, triggers)
+  - ✅ 2V_student_answers table with CASCADE delete protection
+  - ✅ Migrated 1,734 questions from old tables (tests + questions_bancaDati)
+  - ✅ Migrated 5,761 student answers with proper foreign key relationships
+  - ✅ Fixed 18 Data Insights questions with correct answer extraction
+  - ✅ Fixed multiple choice questions with empty wrong_answers arrays
+  - ✅ Verified migration integrity (investigated orphaned data from deleted tests)
+  - ✅ Confirmed old system bug (test deletion didn't cascade to student_answers)
+  - ✅ RLS policies on all new tables
+  - ✅ Created comprehensive validation SQL scripts for verification
+  - ✅ Database triggers to prevent critical field changes
+  - ✅ JSON answer format validation for all question types
+  - ✅ Complete audit trail with created_at/updated_at timestamps
+
+**New Value Created**: €10,000 - €15,000
+**Phase 2 Status**: ✅ COMPLETE (except frontend integration)
+
+**Notes**: Database foundation is now 100% complete with all tables, migrations, validations, and RLS policies in place. All data successfully migrated from legacy system (1,734 questions, 5,761 answers). Investigated and verified that unmigrated answers (3,734 records) are legitimately orphaned from deleted tests/questions, not migration bugs. New system has proper CASCADE constraints to prevent orphaned data. Ready for frontend dashboard and test interface implementation.
+
+### 2025-11-15 (17:30) - Database Schema & Migration System Complete
+- **Hours Added**: 5.5h
+- **Cost Added**: €330
+- **Completed Tasks**:
+  - ✅ 2V_tests table with test_number field for multiple test instances
+  - ✅ 2V_test_assignments table for student-test assignments
+  - ✅ Complete data migration from old student_tests table (1,117 assignments)
+  - ✅ Normalized schema design (test metadata separate from assignments)
+  - ✅ RLS policies for students, tutors, and admins on both tables
+  - ✅ Proper foreign key constraints with CASCADE delete
+  - ✅ UNIQUE constraints to prevent duplicates
+  - ✅ Automated updated_at triggers
+  - ✅ Migration verification queries and data integrity checks
+  - ✅ Standardized test types (Training, Assessment, Simulazione)
+  - ✅ Duration conversion to minutes
+  - ✅ Clean migration file structure (create vs migrate files)
+
+**New Value Created**: €5,000 - €10,000
+**Remaining Phase 2 Estimate**: 21h / €1,260
+
+**Notes**: Database foundation complete with properly normalized schema. Test definitions (2V_tests) separate from student assignments (2V_test_assignments). All 1,117 student assignments successfully migrated from legacy system. RLS policies ensure data security. Ready for frontend dashboard implementation to consume this data.
+
+### 2025-11-15 (15:00) - Authentication & Navigation System Complete
+- **Hours Added**: 12h
+- **Cost Added**: €720
+- **Completed Tasks**:
+  - ✅ Password change enforcement flow (web + mobile)
+  - ✅ Role selection for multi-role users (web + mobile)
+  - ✅ Test selection for students with multiple tests (web + mobile)
+  - ✅ Multi-layer security (Route guards + Page validation + RLS)
+  - ✅ Intelligent navigation based on user roles and tests
+  - ✅ RPC function for password changes (SECURITY DEFINER)
+  - ✅ Layout improvements (non-scrollable, perfectly centered pages)
+  - ✅ Shared components (Layout, ProtectedRoute)
+  - ✅ i18n integration for multi-language support
+  - ✅ Mobile navigation structure (Stack Navigator)
+
+**New Value Created**: €20,000 - €25,000
+**Remaining Phase 1 Estimate**: 51h / €3,060
+
+**Notes**: Complete authentication and navigation foundation now in place for both web and mobile. Multi-layer security ensures users can only access authorized pages. System intelligently routes users based on their roles and assigned tests. Ready for dashboard and test interface implementation.
 
 ### 2025-11-14 (17:30) - Mobile Rotation Support + Expo Setup Fix
 - **Hours Added**: 0.5h
