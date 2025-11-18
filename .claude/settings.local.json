@@ -81,7 +81,8 @@
       "Bash(cmd //c taskkill //PID 5340 //F)",
       "Bash(pnpm build:*)",
       "Bash(pnpm exec vite build:*)",
-      "Bash(git rebase:*)"
+      "Bash(git rebase:*)",
+      "Bash(admission-platform-v2/.gitignore)"
     ],
     "deny": [],
     "ask": []
