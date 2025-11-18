@@ -72,7 +72,8 @@
       "Bash(timeout /t 2)",
       "Bash(pnpm store prune:*)",
       "Bash(del:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(git rm:*)"
     ],
     "deny": [],
     "ask": []
