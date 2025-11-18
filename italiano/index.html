@@ -69,16 +69,19 @@
     <h1>Reindirizzamento alla nuova piattaforma...</h1>
     <p>Sarai reindirizzato automaticamente alla nuova versione della piattaforma Up to Ten.</p>
     <div class="spinner"></div>
+    <p style="margin-top: 2rem;">
+      <a href="https://portale-test.up2ten.it" style="color: #00a666; text-decoration: none; font-weight: 600;">
+        Se non vieni reindirizzato automaticamente, clicca qui
+      </a>
+    </p>
   </div>
 
   <script>
     // Set language preference
     localStorage.setItem('language', 'it');
 
-    // Redirect to new platform
-    setTimeout(() => {
-      window.location.href = 'https://portale-test.up2ten.it';
-    }, 1000);
+    // Immediate redirect
+    window.location.replace('https://portale-test.up2ten.it');
   </script>
 </body>
 </html>
