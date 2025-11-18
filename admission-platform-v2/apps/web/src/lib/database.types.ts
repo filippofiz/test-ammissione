@@ -7,6 +7,7 @@ export type Json =
   | Json[];
 
 export type UserRole = 'STUDENT' | 'TUTOR' | 'ADMIN';
+export type PlatformVersion = 'v1' | 'v2' | 'all';
 
 export interface Profile {
   id: string;
@@ -19,6 +20,7 @@ export interface Profile {
   esigenze_speciali: boolean;
   must_change_password: boolean;
   last_password_change: string | null;
+  platform_version: PlatformVersion;
   created_at: string;
   updated_at: string;
 }

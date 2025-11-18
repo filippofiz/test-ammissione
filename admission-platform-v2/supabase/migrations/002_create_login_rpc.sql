@@ -15,6 +15,7 @@ RETURNS TABLE (
   esigenze_speciali BOOLEAN,
   must_change_password BOOLEAN,
   last_password_change TIMESTAMP WITH TIME ZONE,
+  platform_version TEXT,
   created_at TIMESTAMP WITH TIME ZONE,
   updated_at TIMESTAMP WITH TIME ZONE
 )
@@ -35,6 +36,7 @@ BEGIN
     p.esigenze_speciali,
     p.must_change_password,
     p.last_password_change,
+    p.platform_version,
     p.created_at,
     p.updated_at
   FROM "2V_profiles" p

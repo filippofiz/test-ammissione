@@ -280,6 +280,7 @@ CRITICAL INSTRUCTIONS - READ CAREFULLY:
 GENIUS GRAPH RECREATION FEATURE:
 8. FOR QUESTIONS WITH GRAPHS: Analyze EVERY graph intelligently:
 
+   TYPE 1: GRAPH IN QUESTION, TEXT OPTIONS (identify which text matches):
    A. IDENTIFY THE GRAPH TYPE by visual characteristics:
       - Periodic functions (sine, cosine, tangent)
       - Absolute value functions
@@ -312,6 +313,26 @@ GENIUS GRAPH RECREATION FEATURE:
       "graph_features": ["periodic", "symmetric", "continuous", etc.]
       "domain": [-5, 5] // suggested viewing window
       "range": [-2, 2]
+
+   TYPE 2: GRAPH IMAGES IN OPTIONS (generate equations for ALL options):
+   If the question shows an equation and asks "Which graph represents f(x) = ...?":
+
+   A. IDENTIFY THE CORRECT GRAPH from the images
+
+   B. GENERATE SIMILAR WRONG ANSWER EQUATIONS:
+      For each wrong option, create a PLAUSIBLE but INCORRECT equation that:
+      - Uses similar notation/structure to the question
+      - Looks visually similar but has key differences
+      - Would produce a different graph
+
+      Examples of good wrong answers:
+      - If correct is (4/3)^(-x), wrong could be: (3/4)^(-x), (4/3)^x, -(4/3)^(-x), (4/3)^(-x) + 1
+      - If correct is |sin x|, wrong could be: sin|x|, |cos x|, sin x, -|sin x|
+      - If correct is x^2 + 1, wrong could be: x^2 - 1, -x^2 + 1, (x+1)^2, 2x^2 + 1
+
+   C. ADD "generated_options": true to indicate these are AI-generated
+
+   D. ENSURE ALL OPTIONS are valid LaTeX equations that can be graphed
 
    Example: If you see a V-shaped periodic wave and options include |sin x|, sin|x|, |cos x|:
    - Analyze: V-shapes indicate absolute value, periodic indicates trig
@@ -403,7 +424,7 @@ Example with option images:
   "graph_latex": null
 }
 
-Example with GENIUS GRAPH RECREATION:
+Example with GENIUS GRAPH RECREATION (Type 1 - Graph in question):
 {
   "question_number": 7,
   "question_text": "La seguente figura rappresenta il grafico di una funzione. Quale?",
@@ -425,6 +446,30 @@ Example with GENIUS GRAPH RECREATION:
   "graph_range": [0, 1],
   "graph_latex": "\\begin{tikzpicture}[scale=1.5]\n\\begin{axis}[\n  axis lines=middle,\n  xlabel=$x$,\n  ylabel=$y$,\n  xmin=-2π,\n  xmax=2π,\n  ymin=-0.5,\n  ymax=1.5,\n  xtick={-6.28,-3.14,0,3.14,6.28},\n  xticklabels={$-2\\pi$,$-\\pi$,$0$,$\\pi$,$2\\pi$},\n  ytick={0,0.5,1},\n  grid=major,\n  width=10cm,\n  height=6cm\n]\n\\addplot[domain=-6.28:6.28,samples=200,blue,thick] {abs(sin(deg(x)))};\n\\end{axis}\n\\end{tikzpicture}",
   "image_mapping": null
+}
+
+Example with GENERATED OPTIONS (Type 2 - Graph images in options):
+{
+  "question_number": 8,
+  "question_text": "Quale dei seguenti rappresenta il grafico di $f(x) = (\\frac{4}{3})^{-x}$?",
+  "options": {
+    "a": "$(\\frac{4}{3})^{-x}$",
+    "b": "$(\\frac{3}{4})^{-x}$",
+    "c": "$(\\frac{4}{3})^x$",
+    "d": "$-(\\frac{4}{3})^{-x}$",
+    "e": "$(\\frac{4}{3})^{-x} + 1$"
+  },
+  "has_image": true,
+  "page_number": 4,
+  "generated_options": true,
+  "recreate_all_options": true,
+  "image_mapping": {
+    "option_a": 1,
+    "option_b": 2,
+    "option_c": 3,
+    "option_d": 4,
+    "option_e": 5
+  }
 }
 
 FINAL VERIFICATION BEFORE RETURNING:

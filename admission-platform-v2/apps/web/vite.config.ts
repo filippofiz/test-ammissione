@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
+import fs from 'fs';
 
 export default defineConfig({
   plugins: [
@@ -11,6 +12,14 @@ export default defineConfig({
         {
           src: 'node_modules/pdfjs-dist/build/pdf.worker.min.mjs',
           dest: 'assets'
+        },
+        {
+          src: '../../../italiano',
+          dest: ''
+        },
+        {
+          src: '../../../inglese',
+          dest: ''
         }
       ]
     })
@@ -24,5 +33,21 @@ export default defineConfig({
   server: {
     port: 5173,
     open: true,
+    fs: {
+      // Allow serving files from the parent project root (for italiano/inglese folders)
+      allow: ['..', '../..', '../../..'],
+    },
+  },
+  configureServer(server) {
+    // Serve italiano and inglese folders from project root during dev
+    server.middlewares.use((req, res, next) => {
+      if (req.url?.startsWith('/italiano/') || req.url?.startsWith('/inglese/')) {
+        const filePath = path.join(__dirname, '../../..', req.url);
+        if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+          return res.end(fs.readFileSync(filePath));
+        }
+      }
+      next();
+    });
   },
 });

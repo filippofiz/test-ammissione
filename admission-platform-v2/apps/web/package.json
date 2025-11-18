@@ -19,6 +19,7 @@
     "better-react-mathjax": "^2.3.0",
     "chart.js": "^4.5.1",
     "d3": "^7.9.0",
+    "desmos": "^1.5.4",
     "function-plot": "^1.25.1",
     "i18next": "^25.6.2",
     "katex": "^0.16.25",

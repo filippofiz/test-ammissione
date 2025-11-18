@@ -3,6 +3,7 @@ import { LoginPage } from './pages/LoginPage';
 import { HomePage } from './pages/HomePage';
 import ChangePasswordPage from './pages/ChangePasswordPage';
 import { RoleSelectionPage } from './pages/RoleSelectionPage';
+import { PlatformChoicePage } from './pages/PlatformChoicePage';
 import StudentHomePage from './pages/StudentHomePage';
 import TutorSelectionPage from './pages/TutorSelectionPage';
 import TutorStudentsPage from './pages/TutorStudentsPage';
@@ -39,6 +40,14 @@ function App() {
           element={
             <ProtectedRoute>
               <ChangePasswordPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/platform-choice"
+          element={
+            <ProtectedRoute>
+              <PlatformChoicePage />
             </ProtectedRoute>
           }
         />
