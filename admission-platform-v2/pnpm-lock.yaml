@@ -126,6 +126,9 @@ importers:
       d3:
         specifier: ^7.9.0
         version: 7.9.0
+      desmos:
+        specifier: ^1.5.4
+        version: 1.5.4
       function-plot:
         specifier: ^1.25.1
         version: 1.25.1
@@ -3803,6 +3806,10 @@ packages:
   /depd@2.0.0:
     resolution: {integrity: sha512-g7nH6P6dyDioJogAAGprGpCtVImJhpPk/roCzdb3fIh61/s/nPsfR6onyMwkCAR/OlC3yBC0lESvUoQEAssIrw==}
     engines: {node: '>= 0.8'}
+
+  /desmos@1.5.4:
+    resolution: {integrity: sha512-8BxQqU/7n6J9cxAiSDm6sNCqSu29z5VaYKcfOx0N4MY2oT75NE5oo6MRgtulVHibMBxCuH+6fpXr0WP4IoL0Dg==}
+    dev: false
 
   /destroy@1.2.0:
     resolution: {integrity: sha512-2sJGJTaXIIaR1w4iJSNoN0hnMY7Gpc/n8D4qSCJw8QqFWXf7cuAgnEHxBpweaVcPevC2l3KpjYCx3NypQQgaJg==}

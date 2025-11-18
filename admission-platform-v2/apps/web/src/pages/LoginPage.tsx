@@ -32,8 +32,39 @@ export function LoginPage() {
           return;
         }
 
-        // Parse roles array
+        // Check platform version and redirect accordingly
+        const platformVersion = result.profile.platform_version;
         const roles = result.profile.roles as string[];
+
+        if (platformVersion === 'all') {
+          // User can choose which platform to use
+          navigate('/platform-choice');
+          return;
+        }
+
+        if (platformVersion === 'v1') {
+          // Redirect to old platform - matches old login flow exactly
+          const role = roles[0]; // Take first role for simplicity
+          const lang = localStorage.getItem('language') || 'en';
+          const langFolder = lang === 'it' ? 'italiano' : 'inglese';
+
+          // Get auth user ID to set in sessionStorage (required by old platform)
+          const authUid = result.profile.auth_uid;
+
+          if (role === 'STUDENT') {
+            sessionStorage.setItem("studentId", authUid);
+            window.location.href = `${window.location.origin}/${langFolder}/choose_test.html`;
+          } else if (role === 'TUTOR' || role === 'ADMIN') {
+            sessionStorage.setItem("tutorId", authUid);
+            window.location.href = `${window.location.origin}/${langFolder}/tutor_dashboard.html`;
+          } else {
+            window.location.href = `${window.location.origin}/${langFolder}/index.html`;
+          }
+          return;
+        }
+
+        // Platform version is 'v2' - use new platform
+        // Parse roles array
         const tests = result.profile.tests as string[];
 
         // If only one role
