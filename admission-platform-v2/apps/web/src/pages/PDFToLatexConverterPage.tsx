@@ -22,9 +22,18 @@ import { MathJaxProvider, MathJaxRenderer, TikZGraph } from '../components/MathJ
 import { AdvancedGraphRenderer } from '../components/GraphRenderer';
 import { supabase } from '../lib/supabase';
 import * as pdfjsLib from 'pdfjs-dist';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
 
 // Configure pdfjs worker - use local copy
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url
+).toString();
+
+// Configure react-pdf worker
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
   import.meta.url
 ).toString();
@@ -422,6 +431,11 @@ export default function PDFToLatexConverterPage() {
   const [pdfTests, setPdfTests] = useState<PDFTest[]>([]);
   const [loadingTests, setLoadingTests] = useState(true);
   const [selectedTest, setSelectedTest] = useState<PDFTest | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [duplicateTests, setDuplicateTests] = useState<PDFTest[]>([]);
+  const [selectedDuplicates, setSelectedDuplicates] = useState<Set<string>>(new Set());
+  const [showPdfComparison, setShowPdfComparison] = useState(false);
+  const [pdfNumPages, setPdfNumPages] = useState<Record<string, number>>({});
 
   // Questions from old system
   const [oldQuestions, setOldQuestions] = useState<OldQuestion[]>([]);
@@ -537,6 +551,47 @@ export default function PDFToLatexConverterPage() {
     setConvertedQuestions([]);
     setOldQuestions([]);
     setError(null);
+
+    // Find duplicate tests with the same PDF URL or same test characteristics
+    const duplicates = pdfTests.filter(t =>
+      t.test_id !== test.test_id && (
+        t.pdf_url === test.pdf_url ||
+        (t.test_type === test.test_type &&
+         t.section === test.section &&
+         t.test_number === test.test_number)
+      )
+    );
+
+    setDuplicateTests(duplicates);
+
+    // Auto-select all duplicates with same PDF URL
+    const autoSelectedDuplicates = new Set(
+      duplicates
+        .filter(d => d.pdf_url === test.pdf_url)
+        .map(d => d.test_id)
+    );
+    setSelectedDuplicates(autoSelectedDuplicates);
+
+    if (duplicates.length > 0) {
+      console.log(`Found ${duplicates.length} duplicate tests for ${test.test_type} - ${test.section} #${test.test_number}`);
+    }
+  };
+
+  const toggleDuplicateSelection = (testId: string) => {
+    setSelectedDuplicates(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(testId)) {
+        newSet.delete(testId);
+      } else {
+        newSet.add(testId);
+      }
+      return newSet;
+    });
+  };
+
+  const openAllPDFsSideBySide = () => {
+    if (!selectedTest) return;
+    setShowPdfComparison(true);
   };
 
   const handleExtractAndConvert = async () => {
@@ -688,8 +743,32 @@ export default function PDFToLatexConverterPage() {
     setSaveSuccess(false);
 
     try {
+      // Get current user for audit trail
+      const { data: { user } } = await supabase.auth.getUser();
+
       // Use the existing test_id
       const testId = selectedTest.test_id;
+
+      // Prepare conversion info for audit trail
+      const conversionInfo = {
+        converted_from: 'pdf',
+        converted_to: 'multiple_choice',
+        converted_at: new Date().toISOString(),
+        converted_by: user?.id || null,
+        ai_model: 'claude-sonnet-4-5',
+        ai_cost_usd: apiUsage?.cost_usd || 0,
+        ai_tokens: apiUsage ? {
+          input: apiUsage.input_tokens,
+          output: apiUsage.output_tokens,
+          total: apiUsage.total_tokens
+        } : null,
+        pdf_url: selectedTest.pdf_url,
+        questions_converted: convertedQuestions.length,
+        // Track special features
+        has_image_extraction: convertedQuestions.some((q: any) => q.has_image && q.image_url),
+        has_graph_recreation: convertedQuestions.some((q: any) => q.has_graph_latex || q.recreate_graph),
+        has_generated_options: convertedQuestions.some((q: any) => q.generated_options)
+      };
 
       // Images already extracted during conversion phase
       // Transform to new format and UPDATE existing questions
@@ -708,7 +787,7 @@ export default function PDFToLatexConverterPage() {
           page_number: q.page_number,
           has_image: q.has_image || false,
           image_url: q.image_url || null,
-          image_options: null,
+          image_options: q.image_options || null,
           // New fields for graph recreation
           has_graph_latex: q.has_graph_latex || false,
           graph_latex: q.graph_latex || null,
@@ -718,24 +797,130 @@ export default function PDFToLatexConverterPage() {
           graph_features: q.graph_features || null,
           graph_domain: q.graph_domain || null,
           graph_range: q.graph_range || null,
+          // Generated options for graph questions
+          generated_options: q.generated_options || false,
+          recreate_all_options: q.recreate_all_options || false,
         },
         answers: {
           correct_answer: q.correct_answer,
           wrong_answers: Object.keys(q.options).filter((key) => key !== q.correct_answer),
         },
+        conversion_info: conversionInfo,
         is_active: true,
       }));
 
-      // Update questions (upsert based on test_id + question_number)
+      // Prepare questions for all selected tests (main + duplicates)
+      const allTestIds = [testId, ...Array.from(selectedDuplicates)];
+
+      console.log(`Preparing questions for ${allTestIds.length} test(s)`);
+
+      // Fetch existing question IDs (if questions already exist, we'll reuse their IDs)
+      const { data: existingQuestions } = await supabase
+        .from('2V_questions')
+        .select('id, test_id, question_number')
+        .in('test_id', allTestIds);
+
+      const existingIdMap = new Map<string, string>(); // "test_id:question_number" -> id
+      (existingQuestions || []).forEach((q: any) => {
+        existingIdMap.set(`${q.test_id}:${q.question_number}`, q.id);
+      });
+
+      console.log(`Found ${existingIdMap.size} existing questions to reuse IDs from`);
+
+      // Generate or reuse UUIDs for all questions across all tests
+      // This allows us to set duplicate_question_ids BEFORE insertion
+      const questionIdMap = new Map<string, string[]>(); // question_number -> [id1, id2, ...]
+
+      convertedQuestions.forEach((q: any) => {
+        const ids: string[] = [];
+        allTestIds.forEach((tId) => {
+          // Reuse existing ID if question exists, otherwise generate new one
+          const key = `${tId}:${q.question_number}`;
+          const existingId = existingIdMap.get(key);
+          ids.push(existingId || crypto.randomUUID());
+        });
+        questionIdMap.set(q.question_number.toString(), ids);
+      });
+
+      // Create questions for each test WITH duplicate_question_ids already set
+      const allQuestionsToUpdate: any[] = [];
+
+      allTestIds.forEach((currentTestId, testIndex) => {
+        const testQuestions = convertedQuestions.map((q: any) => {
+          const questionIds = questionIdMap.get(q.question_number.toString())!;
+          const currentQuestionId = questionIds[testIndex];
+
+          // Get all OTHER question IDs (duplicates in other tests)
+          const duplicateIds = questionIds.filter((_, idx) => idx !== testIndex);
+
+          return {
+            id: currentQuestionId, // Pre-generated UUID
+            test_id: currentTestId,
+            test_type: selectedTest.test_type,
+            question_number: q.question_number,
+            question_type: 'multiple_choice',
+            section: q.section,
+            question_data: {
+              question_text: q.question_text,
+              question_text_eng: q.question_text_eng,
+              options: q.options,
+              options_eng: q.options_eng,
+              pdf_url: selectedTest.pdf_url,
+              page_number: q.page_number,
+              has_image: q.has_image || false,
+              image_url: q.image_url || null,
+              image_options: q.image_options || null,
+              has_graph_latex: q.has_graph_latex || false,
+              graph_latex: q.graph_latex || null,
+              graph_function: q.graph_function || null,
+              graph_analysis: q.graph_analysis || null,
+              graph_type: q.graph_type || null,
+              graph_features: q.graph_features || null,
+              graph_domain: q.graph_domain || null,
+              graph_range: q.graph_range || null,
+              generated_options: q.generated_options || false,
+              recreate_all_options: q.recreate_all_options || false,
+            },
+            answers: {
+              correct_answer: q.correct_answer,
+              wrong_answers: Object.keys(q.options).filter((key) => key !== q.correct_answer),
+            },
+            conversion_info: conversionInfo,
+            is_active: true,
+            // Set duplicate links immediately (only if there are duplicates)
+            duplicate_question_ids: duplicateIds.length > 0 ? duplicateIds : [],
+          };
+        });
+        allQuestionsToUpdate.push(...testQuestions);
+      });
+
+      console.log(`Inserting ${allQuestionsToUpdate.length} questions in ONE batch with duplicate links already set`);
+
+      // Insert ALL questions in ONE operation with duplicate_question_ids already set
       const { error: updateError } = await supabase
         .from('2V_questions')
-        .upsert(questionsToUpdate, {
+        .upsert(allQuestionsToUpdate, {
           onConflict: 'test_id,question_number',
         });
 
       if (updateError) {
         throw updateError;
       }
+
+      console.log(`✓ Successfully inserted ${allQuestionsToUpdate.length} questions with duplicate links`);
+
+      // Update test format from 'pdf' to 'interactive' for all tests
+      const { error: testUpdateError } = await supabase
+        .from('2V_tests')
+        .update({ format: 'interactive' })
+        .in('id', allTestIds);
+
+      if (testUpdateError) {
+        console.warn('Error updating test format:', testUpdateError);
+        // Don't throw - questions are saved, format update is secondary
+      }
+
+      console.log(`✓ Successfully updated ${allTestIds.length} test(s) with ${convertedQuestions.length} questions each`);
 
       setSaveSuccess(true);
       setTimeout(() => navigate('/admin'), 2000);
@@ -1135,8 +1320,40 @@ export default function PDFToLatexConverterPage() {
                   </div>
                 ) : (
                   <>
+                    {/* Search Input */}
+                    <div className="mb-6">
+                      <input
+                        type="text"
+                        placeholder="Search by test type, section, test number, or exercise type..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-brand-green focus:outline-none text-base"
+                      />
+                      {searchTerm && (
+                        <p className="text-sm text-gray-600 mt-2">
+                          Found {pdfTests.filter(test =>
+                            test.test_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            test.section.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            test.test_number.toString().includes(searchTerm) ||
+                            test.exercise_type.toLowerCase().includes(searchTerm.toLowerCase())
+                          ).length} tests
+                        </p>
+                      )}
+                    </div>
+
                     <div className="space-y-3 max-h-[500px] overflow-y-auto mb-6">
-                      {pdfTests.map((test, idx) => (
+                      {pdfTests
+                        .filter(test => {
+                          if (!searchTerm) return true;
+                          const search = searchTerm.toLowerCase();
+                          return (
+                            test.test_type.toLowerCase().includes(search) ||
+                            test.section.toLowerCase().includes(search) ||
+                            test.test_number.toString().includes(search) ||
+                            test.exercise_type.toLowerCase().includes(search)
+                          );
+                        })
+                        .map((test, idx) => (
                         <button
                           key={idx}
                           onClick={() => handleSelectTest(test)}
@@ -1206,6 +1423,73 @@ export default function PDFToLatexConverterPage() {
                             </a>
                           </div>
                         </div>
+
+                        {/* Duplicate Tests Warning */}
+                        {duplicateTests.length > 0 && (
+                          <div className="bg-yellow-50 border-2 border-yellow-300 p-6 rounded-xl mb-6">
+                            <h3 className="text-lg font-bold text-yellow-800 mb-3 flex items-center gap-2">
+                              <FontAwesomeIcon icon={faTimesCircle} className="text-yellow-600" />
+                              ⚠️ Duplicate Tests Found!
+                            </h3>
+                            <p className="text-sm text-yellow-700 mb-4">
+                              Found {duplicateTests.length} other test(s) with the same content.
+                              Select which ones should be updated with the converted questions:
+                            </p>
+
+                            {/* Open All PDFs Button */}
+                            <button
+                              onClick={openAllPDFsSideBySide}
+                              className="w-full mb-4 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+                            >
+                              <FontAwesomeIcon icon={faCheckCircle} />
+                              📄 Open All PDFs Side by Side ({duplicateTests.length + 1} tests)
+                            </button>
+
+                            <div className="space-y-3">
+                              {duplicateTests.map((dupTest) => (
+                                <div key={dupTest.test_id} className="bg-white p-4 rounded-lg border-2 border-yellow-200">
+                                  <div className="flex items-start gap-3">
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedDuplicates.has(dupTest.test_id)}
+                                      onChange={() => toggleDuplicateSelection(dupTest.test_id)}
+                                      className="mt-1 w-5 h-5 text-brand-green"
+                                    />
+                                    <div className="flex-1">
+                                      <div className="font-semibold text-brand-dark">
+                                        {dupTest.test_type} - {dupTest.section}
+                                      </div>
+                                      <div className="text-sm text-gray-600">
+                                        {dupTest.exercise_type} #{dupTest.test_number}
+                                      </div>
+                                      <div className="text-xs text-gray-500 mt-1">
+                                        {dupTest.pdf_url === selectedTest.pdf_url ? (
+                                          <span className="text-green-600 font-semibold">✓ Same PDF</span>
+                                        ) : (
+                                          <span className="text-orange-600">⚠ Different PDF - verify manually</span>
+                                        )}
+                                      </div>
+                                      <a
+                                        href={dupTest.pdf_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs text-blue-600 hover:underline mt-1 inline-block"
+                                      >
+                                        View PDF →
+                                      </a>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="mt-4 p-3 bg-yellow-100 rounded-lg">
+                              <p className="text-xs text-yellow-800">
+                                💡 <strong>Tip:</strong> Tests with the same PDF are auto-selected.
+                                Review PDFs before converting to ensure they're identical.
+                              </p>
+                            </div>
+                          </div>
+                        )}
 
                         <button
                           onClick={handleExtractAndConvert}
@@ -1639,6 +1923,105 @@ export default function PDFToLatexConverterPage() {
         </div>
       </div>
       </Layout>
+
+      {/* PDF Comparison Modal */}
+      {showPdfComparison && selectedTest && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-90 flex flex-col">
+          {/* Modal Header */}
+          <div className="bg-white p-4 flex justify-between items-center shadow-lg">
+            <h2 className="text-xl font-bold text-brand-dark">
+              Compare PDFs - {selectedTest.test_type} {selectedTest.section} #{selectedTest.test_number}
+            </h2>
+            <button
+              onClick={() => setShowPdfComparison(false)}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors"
+            >
+              ✕ Close
+            </button>
+          </div>
+
+          {/* PDF Viewers Side by Side with Single Scroll */}
+          <div className="flex-1 overflow-auto p-2 bg-gray-100">
+            {(() => {
+              const allTests = [
+                { test: selectedTest, isMain: true },
+                ...duplicateTests.map(d => ({ test: d, isMain: false }))
+              ];
+              const maxPages = Math.max(...Object.values(pdfNumPages), 10);
+
+              return (
+                <div className="space-y-4">
+                  {Array.from({ length: maxPages }, (_, pageIndex) => (
+                    <div key={pageIndex} className="flex gap-2">
+                      {allTests.map(({ test, isMain }, testIndex) => (
+                        <div key={testIndex} className="flex-1 flex flex-col bg-white rounded-lg shadow-xl overflow-hidden">
+                          {/* Show header only on first page */}
+                          {pageIndex === 0 && (
+                            <div className={`p-3 ${
+                              isMain
+                                ? 'bg-blue-600'
+                                : test.pdf_url === selectedTest.pdf_url
+                                  ? 'bg-green-600'
+                                  : 'bg-orange-600'
+                            } text-white`}>
+                              <div className="font-bold">
+                                {isMain
+                                  ? '🎯 Selected Test'
+                                  : `${test.pdf_url === selectedTest.pdf_url ? '✓' : '⚠'} Duplicate ${testIndex}`
+                                }
+                              </div>
+                              <div className="text-sm">
+                                {test.test_type} - {test.section} #{test.test_number}
+                              </div>
+                              <div className="text-xs opacity-90 mt-1 truncate">
+                                {test.exercise_type}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* PDF Page */}
+                          <div className="p-2 bg-gray-50 flex justify-center">
+                            <Document
+                              file={test.pdf_url}
+                              onLoadSuccess={(pdf) => {
+                                setPdfNumPages(prev => ({
+                                  ...prev,
+                                  [test.test_id]: pdf.numPages
+                                }));
+                              }}
+                              loading={
+                                <div className="flex items-center justify-center h-96">
+                                  <FontAwesomeIcon icon={faSpinner} spin className="text-4xl text-gray-400" />
+                                </div>
+                              }
+                            >
+                              {(pdfNumPages[test.test_id] ?? 0) > pageIndex && (
+                                <Page
+                                  pageNumber={pageIndex + 1}
+                                  renderTextLayer={false}
+                                  renderAnnotationLayer={false}
+                                  width={Math.floor(window.innerWidth / allTests.length) - 60}
+                                />
+                              )}
+                            </Document>
+                          </div>
+
+                          {/* Page Number */}
+                          {(pdfNumPages[test.test_id] ?? 0) > pageIndex && (
+                            <div className="text-center text-xs text-gray-500 py-2 bg-white border-t">
+                              Page {pageIndex + 1} / {pdfNumPages[test.test_id] ?? '?'}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
     </MathJaxProvider>
   );
 }

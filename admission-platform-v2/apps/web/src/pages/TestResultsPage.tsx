@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -39,6 +39,7 @@ import { MultipleChoiceQuestion } from '../components/questions/MultipleChoiceQu
 interface Question {
   id: string;
   section: string;
+  materia?: string;
   question_text: string;
   question_type: string;
   correct_answer: any;
@@ -70,13 +71,21 @@ interface TestResult {
 export default function TestResultsPage() {
   const { assignmentId } = useParams();
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const location = useLocation();
+  const { t, i18n } = useTranslation();
+
+  // Determine if this is a student or tutor view based on URL
+  const isStudentView = location.pathname.includes('/student/');
+
+  // Get current language for question translations
+  const isEnglish = i18n.language === 'en';
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<TestResult[]>([]);
   const [assignment, setAssignment] = useState<any>(null);
-  const [selectedAttempt, setSelectedAttempt] = useState<number>(1);
+  const [selectedAttempt, setSelectedAttempt] = useState<number | null>(null);
+  const [attemptsWithAnswers, setAttemptsWithAnswers] = useState<Set<number>>(new Set());
   const [filterSection, setFilterSection] = useState<string>('all');
   const [filterCorrectness, setFilterCorrectness] = useState<'all' | 'correct' | 'wrong' | 'unanswered'>('all');
   const [attemptComparison, setAttemptComparison] = useState<any[]>([]);
@@ -136,36 +145,54 @@ export default function TestResultsPage() {
       setAssignment(fullAssignmentData);
       setResultsViewable(assignmentData.results_viewable_by_student || false);
 
-      // Set selected attempt to the latest completed attempt
-      if (assignmentData.current_attempt && !selectedAttempt) {
-        setSelectedAttempt(assignmentData.current_attempt);
-      }
-
-      // NEW APPROACH: Load questions directly from answers table ordered by created_at
-      // This is more reliable than JSONB order which has race conditions
-      console.log('📊 Loading questions from answers table (ordered by created_at)...');
-
-      const { data: answers, error: answersError } = await supabase
+      // Load ALL answers to determine which attempts have data
+      const { data: allAnswers, error: answersError } = await supabase
         .from('2V_student_answers')
-        .select('question_id, created_at')
+        .select('question_id, created_at, attempt_number')
         .eq('assignment_id', assignmentId)
-        .eq('attempt_number', selectedAttempt)
-        .order('created_at', { ascending: true }); // Order by when answer was FIRST created
+        .order('created_at', { ascending: true });
 
       if (answersError) throw answersError;
 
-      if (!answers || answers.length === 0) {
-        throw new Error('No answers found for this attempt.');
+      if (!allAnswers || allAnswers.length === 0) {
+        throw new Error(t('testResults.noAnswersFoundForAssignment'));
       }
 
-      console.log(`📊 Found ${answers.length} answers for this attempt`);
+      // Determine which attempts have answers
+      const attemptsSet = new Set(allAnswers.map(a => a.attempt_number));
+      setAttemptsWithAnswers(attemptsSet);
+
+      // Auto-select the most recent attempt that has answers (first time only)
+      let attemptToLoad = selectedAttempt;
+      if (selectedAttempt === null) {
+        // Find most recent attempt with answers (count down from current_attempt)
+        for (let i = assignmentData.current_attempt || 1; i >= 1; i--) {
+          if (attemptsSet.has(i)) {
+            attemptToLoad = i;
+            setSelectedAttempt(i);
+            break;
+          }
+        }
+      }
+
+      // If still no attempt, can't load results
+      if (attemptToLoad === null) {
+        setLoading(false);
+        return;
+      }
+
+      // Filter by attempt number in JavaScript
+      const answers = allAnswers.filter(a => a.attempt_number === attemptToLoad);
+
+      if (answers.length === 0) {
+        throw new Error(t('testResults.noAnswersFoundForAttempt', { attempt: attemptToLoad }));
+      }
 
       // Get question details maintaining the order from answers
       // Use a Set to track seen question_ids and filter out duplicates
       const seenQuestionIds = new Set<string>();
       const uniqueAnswers = answers.filter(a => {
         if (seenQuestionIds.has(a.question_id)) {
-          console.warn(`⚠️  Duplicate question_id found in answers: ${a.question_id}`);
           return false;
         }
         seenQuestionIds.add(a.question_id);
@@ -210,16 +237,18 @@ export default function TestResultsPage() {
       }
 
       // Load full student answers for this attempt (with all fields)
-      const { data: fullAnswers, error: fullAnswersError } = await supabase
+      const { data: allFullAnswers, error: fullAnswersError } = await supabase
         .from('2V_student_answers')
         .select('*')
-        .eq('assignment_id', assignmentId)
-        .eq('attempt_number', selectedAttempt);
+        .eq('assignment_id', assignmentId);
 
       if (fullAnswersError) throw fullAnswersError;
 
+      // Filter by attempt number in JavaScript
+      const fullAnswers = allFullAnswers?.filter(a => a.attempt_number === attemptToLoad) || [];
+
       // Create answer lookup
-      const answerMap = new Map(fullAnswers?.map(a => [a.question_id, a]) || []);
+      const answerMap = new Map(fullAnswers.map(a => [a.question_id, a]));
 
       // Build results array (questions already in correct order from answers.created_at)
       const resultsData: TestResult[] = (questions || []).map((question: any, index: number) => {
@@ -333,7 +362,6 @@ export default function TestResultsPage() {
       const studentMC = studentAns.answer || studentAns;
       const correctMC = typeof correctAns === 'string' ? correctAns : correctAns;
       const result = String(studentMC || '').toLowerCase() === String(correctMC || '').toLowerCase();
-      console.log('🔍 MC Check:', { student: studentMC, correct: correctMC, result });
       return result;
     }
 
@@ -361,20 +389,25 @@ export default function TestResultsPage() {
 
       const attempts = [];
 
-      // Load all answers for all attempts
+      // Load ALL answers for this assignment ONCE (more efficient than multiple queries)
+      const { data: allAnswersForAssignment, error: allAnswersError } = await supabase
+        .from('2V_student_answers')
+        .select('*')
+        .eq('assignment_id', assignmentId)
+        .order('created_at', { ascending: true });
+
+      if (allAnswersError) throw allAnswersError;
+
+      if (!allAnswersForAssignment || allAnswersForAssignment.length === 0) {
+        return;
+      }
+
+      // Process each attempt
       for (let attemptNum = 1; attemptNum <= assignment.total_attempts; attemptNum++) {
-        // NEW APPROACH: Load answers ordered by created_at (reliable ordering)
-        const { data: answersWithQuestionIds, error: answersListError } = await supabase
-          .from('2V_student_answers')
-          .select('question_id, created_at')
-          .eq('assignment_id', assignmentId)
-          .eq('attempt_number', attemptNum)
-          .order('created_at', { ascending: true });
+        // Filter answers for this specific attempt
+        const answersWithQuestionIds = allAnswersForAssignment.filter(a => a.attempt_number === attemptNum);
 
-        if (answersListError) throw answersListError;
-
-        if (!answersWithQuestionIds || answersWithQuestionIds.length === 0) {
-          console.warn(`No answers found for attempt ${attemptNum}, skipping`);
+        if (answersWithQuestionIds.length === 0) {
           continue;
         }
 
@@ -393,14 +426,8 @@ export default function TestResultsPage() {
           .map(id => questionMap.get(id))
           .filter((q: any) => q !== undefined);
 
-        // Load full answers for this attempt
-        const { data: answers, error: answersError } = await supabase
-          .from('2V_student_answers')
-          .select('*')
-          .eq('assignment_id', assignmentId)
-          .eq('attempt_number', attemptNum);
-
-        if (answersError) throw answersError;
+        // Use filtered answers for this attempt (already loaded above)
+        const answers = answersWithQuestionIds;
 
         // Calculate stats for this attempt
         const answerMap = new Map(answers?.map(a => [a.question_id, a]) || []);
@@ -481,7 +508,7 @@ export default function TestResultsPage() {
   }
 
   function formatAnswer(answer: any): string {
-    if (!answer) return 'No answer';
+    if (!answer) return t('testResults.noAnswer');
 
     if (answer.answer) return answer.answer;
     if (answer.answers) {
@@ -505,6 +532,15 @@ export default function TestResultsPage() {
     // Get question data (new JSON structure)
     const questionData = (question as any).question_data || {};
     const diType = questionData.di_type;
+
+    // Helper to get localized text (using isEnglish from parent scope)
+    const getLocalizedText = (italianKey: string, englishKey: string) => {
+      return isEnglish && questionData[englishKey] ? questionData[englishKey] : questionData[italianKey];
+    };
+
+    // Get localized question text and options
+    const localizedQuestionText = getLocalizedText('question_text', 'question_text_eng');
+    const localizedOptions = isEnglish && questionData.options_eng ? questionData.options_eng : questionData.options;
 
     // Dummy onChange - components are read-only
     const noOp = () => {};
@@ -674,9 +710,9 @@ export default function TestResultsPage() {
 
       component = (
         <MultipleChoiceQuestion
-          questionText={questionData.question_text || question.question_text || ''}
+          questionText={localizedQuestionText || question.question_text || ''}
           imageUrl={questionData.image_url || question.image_url}
-          options={questionData.options}
+          options={localizedOptions}
           selectedAnswer={studentMCAnswer}
           correctAnswer={correctMCAnswer}
           onAnswerChange={noOp}
@@ -690,13 +726,13 @@ export default function TestResultsPage() {
       component = (
           <div className="space-y-4">
             <div className="border-2 border-gray-200 rounded-xl p-6 bg-white">
-              {question.question_text ? (
+              {(localizedQuestionText || question.question_text) ? (
                 <div className="text-gray-800 text-lg whitespace-pre-wrap">
-                  {question.question_text}
+                  {localizedQuestionText || question.question_text}
                 </div>
               ) : (
                 <div className="text-gray-400 italic">
-                  {t('testResults.noQuestionText')} (Question Type: {question.question_type})
+                  {t('testResults.noQuestionText')} ({t('testResults.questionType')}: {t(`testResults.questionTypes.${question.question_type}`, question.question_type)})
                 </div>
               )}
               {question.image_url && (
@@ -706,7 +742,7 @@ export default function TestResultsPage() {
 
             {/* Answer Display with color coding */}
             <div className="mt-4">
-              <div className="text-sm font-semibold text-gray-700 mb-2">Answer:</div>
+              <div className="text-sm font-semibold text-gray-700 mb-2">{t('testResults.answer')}</div>
               <div className="p-4 rounded-lg bg-gray-50 border-2 border-gray-200 space-y-2">
                 {studentAnswer ? (
                   result.isCorrect ? (
@@ -718,20 +754,20 @@ export default function TestResultsPage() {
                     <>
                       <div className="flex items-center gap-2">
                         <FontAwesomeIcon icon={faTimesCircle} className="text-red-600" />
-                        <span className="text-sm text-gray-600">Your answer:</span>
+                        <span className="text-sm text-gray-600">{t('testResults.yourAnswer')}</span>
                         <span className="font-semibold text-red-700">{formatAnswer(studentAnswer.answer)}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <FontAwesomeIcon icon={faCheckCircle} className="text-green-600" />
-                        <span className="text-sm text-gray-600">Correct answer:</span>
+                        <span className="text-sm text-gray-600">{t('testResults.correctAnswer')}</span>
                         <span className="font-semibold text-green-700">
-                          {question.correct_answer ? formatAnswer(question.correct_answer) : 'No answer provided'}
+                          {question.correct_answer ? formatAnswer(question.correct_answer) : t('testResults.noAnswerProvided')}
                         </span>
                       </div>
                     </>
                   )
                 ) : (
-                  <div className="text-gray-500 italic">No answer provided</div>
+                  <div className="text-gray-500 italic">{t('testResults.noAnswerProvided')}</div>
                 )}
               </div>
             </div>
@@ -769,6 +805,7 @@ export default function TestResultsPage() {
 
   // Get unique sections
   const sections = ['all', ...Array.from(new Set(results.map(r => r.question.section)))];
+  const hasMultipleSections = sections.length > 2; // More than 'all' + one section
 
   // Filter results
   const filteredResults = results.filter(r => {
@@ -859,7 +896,8 @@ export default function TestResultsPage() {
           </div>
         </div>
 
-        {/* Results Visibility Control */}
+        {/* Results Visibility Control - Only shown for tutors */}
+        {!isStudentView && (
         <div className="bg-white rounded-xl shadow-md p-6 mb-6 border-2 border-blue-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -873,12 +911,12 @@ export default function TestResultsPage() {
               </div>
               <div>
                 <h3 className="text-lg font-bold text-brand-dark">
-                  {resultsViewable ? 'Results Visible to Student' : 'Results Hidden from Student'}
+                  {resultsViewable ? t('testResults.resultsVisibleToStudent') : t('testResults.resultsHiddenFromStudent')}
                 </h3>
                 <p className="text-sm text-gray-600">
                   {resultsViewable
-                    ? 'Student can view detailed test results and answers'
-                    : 'Student cannot view results until you enable visibility'}
+                    ? t('testResults.studentCanViewResults')
+                    : t('testResults.studentCannotViewResults')}
                 </p>
               </div>
             </div>
@@ -886,7 +924,7 @@ export default function TestResultsPage() {
             {/* Toggle Switch */}
             <div className="flex items-center gap-3">
               <span className="text-sm font-medium text-gray-700">
-                {resultsViewable ? 'Visible' : 'Hidden'}
+                {resultsViewable ? t('testResults.visible') : t('testResults.hidden')}
               </span>
               <button
                 onClick={toggleResultsViewability}
@@ -925,17 +963,18 @@ export default function TestResultsPage() {
               {resultsViewable ? (
                 <>
                   <FontAwesomeIcon icon={faCheckCircle} className="mr-2" />
-                  Students can now see their answers, correct answers, and performance statistics for this test.
+                  {t('testResults.resultsVisibleMessage')}
                 </>
               ) : (
                 <>
                   <FontAwesomeIcon icon={faLock} className="mr-2" />
-                  Enable visibility after reviewing corrections with the student. They will be able to see detailed results once enabled.
+                  {t('testResults.resultsHiddenMessage')}
                 </>
               )}
             </p>
           </div>
         </div>
+        )}
 
         {/* Attempt Comparison Section */}
         {assignment.total_attempts > 1 && attemptComparison.length > 0 && (
@@ -1218,12 +1257,19 @@ export default function TestResultsPage() {
               <div>
                 <label className="text-sm font-medium text-gray-700 mb-2 block">{t('testResults.attempt')}</label>
                 <select
-                  value={selectedAttempt}
+                  value={selectedAttempt || ''}
                   onChange={(e) => setSelectedAttempt(Number(e.target.value))}
                   className="px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-brand-green outline-none"
                 >
                   {Array.from({ length: assignment.total_attempts }, (_, i) => i + 1).map(num => (
-                    <option key={num} value={num}>{t('testResults.attempt')} {num}</option>
+                    <option
+                      key={num}
+                      value={num}
+                      disabled={!attemptsWithAnswers.has(num)}
+                      className={!attemptsWithAnswers.has(num) ? 'text-gray-400' : ''}
+                    >
+                      {t('testResults.attempt')} {num}{!attemptsWithAnswers.has(num) ? ` (${t('testResults.noData')})` : ''}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -1296,9 +1342,11 @@ export default function TestResultsPage() {
                           {result.order || index + 1}
                         </div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm text-gray-500">
-                            {result.question.question_type}
-                          </span>
+                          {result.question.materia && (
+                            <span className="text-sm text-gray-700 font-medium">
+                              {result.question.materia}
+                            </span>
+                          )}
                           {result.difficulty && result.difficulty !== 'unknown' && (
                             <span className={`text-xs px-2 py-1 rounded font-semibold ${
                               result.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
@@ -1316,7 +1364,7 @@ export default function TestResultsPage() {
                           )}
                           {result.studentAnswer?.is_flagged && (
                             <span className="text-xs text-yellow-600 bg-yellow-50 px-2 py-1 rounded">
-                              <FontAwesomeIcon icon={faFlag} /> Flagged
+                              <FontAwesomeIcon icon={faFlag} /> {t('testResults.flagged')}
                             </span>
                           )}
                         </div>
@@ -1354,20 +1402,34 @@ export default function TestResultsPage() {
                     </div>
 
                     {/* Question Component - renders the actual question as it appeared in the test */}
-                    <div className="p-6">
+                    <div className="p-6 relative pb-12">
                       {renderQuestionComponent(result)}
+                      <div className="absolute bottom-2 right-2 text-xs text-gray-400">
+                        {t(`testResults.questionTypes.${result.question.question_type}`, result.question.question_type)}
+                      </div>
                     </div>
 
-                    {/* Tutor Feedback Section */}
-                    <div className="px-6 pb-6 pt-4 border-t border-gray-200">
-                      <div className="text-sm font-semibold text-gray-600 mb-2">{t('testResults.tutorNotes')}</div>
-                      <textarea
-                        placeholder={t('testResults.addFeedback')}
-                        className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-brand-green outline-none resize-none"
-                        rows={2}
-                        defaultValue={result.studentAnswer?.tutor_feedback || ''}
-                      />
-                    </div>
+                    {/* Tutor Feedback Section - Only editable for tutors */}
+                    {!isStudentView ? (
+                      <div className="px-6 pb-6 pt-4 border-t border-gray-200">
+                        <div className="text-sm font-semibold text-gray-600 mb-2">{t('testResults.tutorNotes')}</div>
+                        <textarea
+                          placeholder={t('testResults.addFeedback')}
+                          className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-brand-green outline-none resize-none"
+                          rows={2}
+                          defaultValue={result.studentAnswer?.tutor_feedback || ''}
+                        />
+                      </div>
+                    ) : (
+                      result.studentAnswer?.tutor_feedback && (
+                        <div className="px-6 pb-6 pt-4 border-t border-gray-200">
+                          <div className="text-sm font-semibold text-gray-600 mb-2">{t('testResults.tutorNotes')}</div>
+                          <div className="p-3 bg-gray-50 border-2 border-gray-200 rounded-lg text-gray-700">
+                            {result.studentAnswer.tutor_feedback}
+                          </div>
+                        </div>
+                      )
+                    )}
                   </div>
                 ))}
               </div>

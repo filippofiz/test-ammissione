@@ -174,6 +174,7 @@ interface TestAssignment {
   exercise_type: string;
   test_number: number;
   duration_minutes: number;
+  question_format: 'pdf' | 'interactive' | 'mixed';  // NEW: Track if test is PDF or interactive
 }
 
 interface StudentInfo {
@@ -197,6 +198,10 @@ export default function StudentTestsPage() {
   const [overlayFadingOut, setOverlayFadingOut] = useState(false);
   const [showConfirmLock, setShowConfirmLock] = useState(false);
   const [pendingLockId, setPendingLockId] = useState<string | null>(null);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [availableTests, setAvailableTests] = useState<any[]>([]);
+  const [loadingAvailable, setLoadingAvailable] = useState(false);
+  const [assigning, setAssigning] = useState(false);
 
   useEffect(() => {
     if (studentId && testType) {
@@ -326,8 +331,36 @@ export default function StudentTestsPage() {
 
       if (assignmentError) throw assignmentError;
 
+      // For each assignment, check the question_type distribution
+      const assignmentWithFormat = await Promise.all(
+        (assignmentData || []).map(async (assignment: any) => {
+          // Count question types for this test
+          const { data: questions } = await supabase
+            .from('2V_questions')
+            .select('question_type')
+            .eq('test_id', assignment.test_id);
+
+          // Determine format based on question types
+          let format: 'pdf' | 'interactive' | 'mixed' = 'pdf';
+          if (questions && questions.length > 0) {
+            const pdfCount = questions.filter(q => q.question_type === 'pdf').length;
+            const interactiveCount = questions.filter(q => q.question_type === 'multiple_choice').length;
+
+            if (pdfCount > 0 && interactiveCount > 0) {
+              format = 'mixed';
+            } else if (interactiveCount > 0) {
+              format = 'interactive';
+            } else {
+              format = 'pdf';
+            }
+          }
+
+          return { ...assignment, question_format: format };
+        })
+      );
+
       // Transform assignments
-      const transformedAssignments = assignmentData.map((row: any) => {
+      const transformedAssignments = assignmentWithFormat.map((row: any) => {
         const section = row['2V_tests'].section;
         const exerciseType = row['2V_tests'].exercise_type;
         const testNumber = row['2V_tests'].test_number;
@@ -357,6 +390,7 @@ export default function StudentTestsPage() {
           test_type: row['2V_tests'].test_type,
           section: displaySection,
           exercise_type: exerciseType,
+          question_format: row.question_format,
           test_number: testNumber,
           duration_minutes: row['2V_tests'].default_duration_mins,
         };
@@ -579,6 +613,94 @@ export default function StudentTestsPage() {
     }
   }
 
+  async function loadAvailableTests() {
+    setLoadingAvailable(true);
+    try {
+      // Get all tests of this test_type that are NOT already assigned to this student
+      const assignedTestIds = assignments.map(a => a.test_id);
+
+      let query = supabase
+        .from('2V_tests')
+        .select('*')
+        .eq('test_type', testType);
+
+      // Only add the NOT IN filter if there are assigned tests
+      if (assignedTestIds.length > 0) {
+        query = query.not('id', 'in', `(${assignedTestIds.join(',')})`);
+      }
+
+      const { data: tests, error } = await query
+        .order('section')
+        .order('test_number');
+
+      if (error) throw error;
+
+      // For each test, check question format
+      const testsWithFormat = await Promise.all(
+        (tests || []).map(async (test: any) => {
+          const { data: questions } = await supabase
+            .from('2V_questions')
+            .select('question_type')
+            .eq('test_id', test.id);
+
+          let format: 'pdf' | 'interactive' | 'mixed' = 'pdf';
+          if (questions && questions.length > 0) {
+            const pdfCount = questions.filter(q => q.question_type === 'pdf').length;
+            const interactiveCount = questions.filter(q => q.question_type === 'multiple_choice').length;
+
+            if (pdfCount > 0 && interactiveCount > 0) {
+              format = 'mixed';
+            } else if (interactiveCount > 0) {
+              format = 'interactive';
+            }
+          }
+
+          return { ...test, question_format: format };
+        })
+      );
+
+      setAvailableTests(testsWithFormat);
+    } catch (err) {
+      console.error('Error loading available tests:', err);
+      alert('Failed to load available tests');
+    } finally {
+      setLoadingAvailable(false);
+    }
+  }
+
+  async function handleAssignTest(testId: string) {
+    if (!studentId) return;
+
+    setAssigning(true);
+    try {
+      const { error } = await supabase
+        .from('2V_test_assignments')
+        .insert({
+          student_id: studentId,
+          test_id: testId,
+          status: 'locked',
+          current_attempt: 0,  // Start at 0, will increment to 1 when they start the test
+          total_attempts: 1,   // Allow 1 attempt by default
+        });
+
+      if (error) throw error;
+
+      setShowAssignModal(false);
+      await loadData();
+      alert('Test assigned successfully!');
+    } catch (err) {
+      console.error('Error assigning test:', err);
+      alert('Failed to assign test');
+    } finally {
+      setAssigning(false);
+    }
+  }
+
+  async function openAssignModal() {
+    setShowAssignModal(true);
+    await loadAvailableTests();
+  }
+
   function getStatusStyles(status: string) {
     switch (status) {
       case 'completed':
@@ -763,7 +885,7 @@ export default function StudentTestsPage() {
           {/* Action Buttons */}
           <div className="mb-6 flex justify-end">
             <button
-              onClick={() => alert('Assign new tests feature coming soon')}
+              onClick={openAssignModal}
               className="px-6 py-3 rounded-xl font-semibold text-base transition-all transform bg-gradient-to-r from-brand-green to-green-600 text-white shadow-lg hover:shadow-xl hover:scale-105"
             >
               <FontAwesomeIcon icon={faPlus} className="mr-2" />
@@ -800,10 +922,28 @@ export default function StudentTestsPage() {
                             icon={statusStyle.icon}
                             className={`text-2xl ${statusStyle.iconColor}`}
                           />
-                          <div>
-                            <h3 className="text-lg font-bold text-brand-dark">
-                              {assignment.test_name}
-                            </h3>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="text-lg font-bold text-brand-dark">
+                                {assignment.test_name}
+                              </h3>
+                              {/* PDF/Interactive Badge */}
+                              <span
+                                className={`px-2 py-1 rounded text-xs font-bold ${
+                                  assignment.question_format === 'interactive'
+                                    ? 'bg-green-100 text-green-700 border border-green-300'
+                                    : assignment.question_format === 'mixed'
+                                    ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                                    : 'bg-gray-100 text-gray-700 border border-gray-300'
+                                }`}
+                              >
+                                {assignment.question_format === 'interactive'
+                                  ? '🎮 Interactive'
+                                  : assignment.question_format === 'mixed'
+                                  ? '🔄 Mixed'
+                                  : '📄 PDF'}
+                              </span>
+                            </div>
                             <span className={`text-sm font-semibold ${statusStyle.text}`}>
                               {statusStyle.label}
                             </span>
@@ -907,6 +1047,114 @@ export default function StudentTestsPage() {
           )}
         </div>
       </div>
+
+      {/* Assign New Test Modal */}
+      {showAssignModal && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn"
+          onClick={() => setShowAssignModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden animate-slideUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-brand-green to-green-600 p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold">Assign New Tests</h2>
+                  <p className="text-white/90 text-sm mt-1">
+                    Select tests to assign to {student?.name || student?.email}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowAssignModal(false)}
+                  className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 transition-colors flex items-center justify-center"
+                >
+                  <span className="text-2xl font-bold">×</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto max-h-[calc(80vh-120px)]">
+              {loadingAvailable ? (
+                <div className="text-center py-12">
+                  <div className="inline-block w-12 h-12 border-4 border-brand-green border-t-transparent rounded-full animate-spin mb-4" />
+                  <p className="text-gray-600">Loading available tests...</p>
+                </div>
+              ) : availableTests.length === 0 ? (
+                <div className="text-center py-12">
+                  <FontAwesomeIcon icon={faClipboardList} className="text-6xl text-gray-300 mb-4" />
+                  <p className="text-gray-500 text-lg">No tests available to assign</p>
+                  <p className="text-gray-400 text-sm mt-2">All tests of this type have been assigned</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {availableTests.map((test) => (
+                    <div
+                      key={test.id}
+                      className="bg-gray-50 border-2 border-gray-200 rounded-xl p-4 hover:border-brand-green hover:shadow-lg transition-all"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h3 className="text-lg font-bold text-brand-dark">
+                              {test.section} - {test.exercise_type} {test.test_number}
+                            </h3>
+                            {/* PDF/Interactive Badge */}
+                            <span
+                              className={`px-2 py-1 rounded text-xs font-bold ${
+                                test.question_format === 'interactive'
+                                  ? 'bg-green-100 text-green-700 border border-green-300'
+                                  : test.question_format === 'mixed'
+                                  ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                                  : 'bg-gray-100 text-gray-700 border border-gray-300'
+                              }`}
+                            >
+                              {test.question_format === 'interactive'
+                                ? '🎮 Interactive'
+                                : test.question_format === 'mixed'
+                                ? '🔄 Mixed'
+                                : '📄 PDF'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-gray-600">
+                            <span>
+                              <FontAwesomeIcon icon={faClock} className="mr-1" />
+                              {test.default_duration_mins} min
+                            </span>
+                            <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-semibold">
+                              {test.test_type}
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleAssignTest(test.id)}
+                          disabled={assigning}
+                          className="px-6 py-3 bg-gradient-to-r from-brand-green to-green-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {assigning ? (
+                            <>
+                              <FontAwesomeIcon icon={faSpinner} className="animate-spin mr-2" />
+                              Assigning...
+                            </>
+                          ) : (
+                            <>
+                              <FontAwesomeIcon icon={faPlus} className="mr-2" />
+                              Assign
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

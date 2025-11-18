@@ -25,7 +25,7 @@ interface TestTrackConfig {
   id?: string;
   test_type: string;
   track_type: string;
-  section_order_mode: 'mandatory' | 'user_choice';
+  section_order_mode: 'mandatory' | 'user_choice' | 'no_sections';
   section_order: string[] | null; // The ordered list of sections for mandatory mode
   time_per_section: Record<string, number> | null;
   total_time_minutes: number | null;
@@ -44,6 +44,8 @@ interface TestTrackConfig {
   base_questions_scope?: 'entire_test' | 'per_section';
   base_questions_count?: number;
   algorithm_type?: 'simple' | 'complex';
+  questions_per_section?: Record<string, number>; // Number of questions per section (for multi-section tests)
+  total_questions?: number; // Total number of questions (for single-section tests)
   training_config: any;
   assessment_mono_config: any;
 }
@@ -96,6 +98,9 @@ export default function TestTrackConfigPage() {
   const [sectionTimes, setSectionTimes] = useState<Record<string, number>>({});
   const [adaptiveValidation, setAdaptiveValidation] = useState<AdaptiveValidation | null>(null);
   const [validatingAdaptive, setValidatingAdaptive] = useState(false);
+
+  // Track if test has sections
+  const [hasSections, setHasSections] = useState<boolean>(true);
 
   // Store all test variations and their times
   const [testVariations, setTestVariations] = useState<Array<{
@@ -164,22 +169,25 @@ export default function TestTrackConfigPage() {
 
     let message = `${tLang('testStartMsg.welcome', { testType, trackType: translatedTrack })}!\n\n`;
 
-    // Section order information
-    if (config.section_order_mode === 'mandatory' && sections.length > 0) {
-      message += `📋 ${tLang('testStartMsg.sectionsInOrder', { count: sections.length })}:\n`;
-      sections.forEach((section, index) => {
-        message += `   ${index + 1}. ${section}\n`;
-      });
-      message += '\n';
-    } else if (config.section_order_mode === 'user_choice') {
-      message += `📋 ${tLang('testStartMsg.chooseOrder')}\n\n`;
+    // Section order information - ONLY if test has sections
+    if (hasSections && config.section_order_mode !== 'no_sections') {
+      if (config.section_order_mode === 'mandatory' && sections.length > 0) {
+        message += `📋 ${tLang('testStartMsg.sectionsInOrder', { count: sections.length })}:\n`;
+        sections.forEach((section, index) => {
+          message += `   ${index + 1}. ${section}\n`;
+        });
+        message += '\n';
+      } else if (config.section_order_mode === 'user_choice') {
+        message += `📋 ${tLang('testStartMsg.chooseOrder')}\n\n`;
+      }
     }
 
     // Time information
     if (totalTimeMinutes) {
       message += `⏱️ ${tLang('testStartMsg.totalDuration', { minutes: totalTimeMinutes })}\n`;
 
-      if (sectionDurationMode === 'specific' && Object.keys(specificSectionDurations).length > 0) {
+      // Only show section-specific times if test has sections
+      if (hasSections && sectionDurationMode === 'specific' && Object.keys(specificSectionDurations).length > 0) {
         message += `\n${tLang('testStartMsg.timePerSection')}:\n`;
         sections.forEach(section => {
           const duration = specificSectionDurations[section];
@@ -187,7 +195,7 @@ export default function TestTrackConfigPage() {
             message += `   • ${section}: ${duration} ${tLang('common.minutes')}\n`;
           }
         });
-      } else if (sections.length > 0) {
+      } else if (hasSections && sections.length > 0) {
         const timePerSection = Math.round(totalTimeMinutes / sections.length);
         message += `   (${tLang('testStartMsg.approximately', { minutes: timePerSection })})\n`;
       }
@@ -201,11 +209,15 @@ export default function TestTrackConfigPage() {
       message += `↔️ ${tLang('testStartMsg.navBackForward')}\n`;
     }
 
-    if (config.navigation_between_sections === 'forward_only') {
-      message += `➡️ ${tLang('testStartMsg.betweenSectionsForward')}\n\n`;
-    } else {
-      message += `↔️ ${tLang('testStartMsg.betweenSectionsBack')}\n\n`;
+    // Navigation between sections - ONLY if test has sections
+    if (hasSections && config.navigation_between_sections) {
+      if (config.navigation_between_sections === 'forward_only') {
+        message += `➡️ ${tLang('testStartMsg.betweenSectionsForward')}\n`;
+      } else {
+        message += `↔️ ${tLang('testStartMsg.betweenSectionsBack')}\n`;
+      }
     }
+    message += '\n';
 
     // Blank answers
     if (config.can_leave_blank === false) {
@@ -441,10 +453,14 @@ export default function TestTrackConfigPage() {
       // Set default selected track to first available track
       if (formattedTrackTypes.length > 0 && !selectedTrack) {
         setSelectedTrack(formattedTrackTypes[0].value);
+      } else if (formattedTrackTypes.length === 0) {
+        // No tracks configured - stop loading
+        setLoading(false);
       }
     } catch (err) {
       console.error('Error loading track types:', err);
       setError('Failed to load track types');
+      setLoading(false);
     }
   }
 
@@ -464,6 +480,16 @@ export default function TestTrackConfigPage() {
 
       if (data) {
         setConfig(data);
+
+        // Auto-detect if test has sections based on section_order_mode
+        if (data.section_order_mode === 'no_sections') {
+          setHasSections(false);
+          console.log('📝 Auto-detected: Single section test (section_order_mode = no_sections)');
+        } else {
+          setHasSections(true);
+          console.log('📝 Auto-detected: Multi-section test (section_order_mode =', data.section_order_mode + ')');
+        }
+
         // If section_order exists in config, use it; otherwise use the loaded sections
         if (data.section_order && data.section_order.length > 0) {
           setSections(data.section_order);
@@ -518,27 +544,37 @@ export default function TestTrackConfigPage() {
     setSaveSuccess(false);
 
     try {
+      // AUTO-FIX: If single section test is selected, set section_order_mode to 'no_sections'
+      let finalSectionOrderMode = config.section_order_mode;
+      if (hasSections === false) {
+        finalSectionOrderMode = 'no_sections';
+        console.log('📝 Auto-setting section_order_mode to "no_sections" (single section test)');
+      }
+
       // Validation
       const errors: string[] = [];
 
-      // Check section order mode
-      if (!config.section_order_mode) {
-        errors.push('Section order mode is required');
+      // Only validate section-related config if test has sections
+      if (hasSections) {
+        // Check section order mode
+        if (!finalSectionOrderMode) {
+          errors.push('Section order mode is required');
+        }
+
+        // Check if mandatory mode has sections selected
+        if (finalSectionOrderMode === 'mandatory' && (!sections || sections.length === 0)) {
+          errors.push('Please configure section order');
+        }
+
+        // Check navigation between sections
+        if (!config.navigation_between_sections) {
+          errors.push('Navigation between sections is required');
+        }
       }
 
-      // Check if mandatory mode has sections selected
-      if (config.section_order_mode === 'mandatory' && (!sections || sections.length === 0)) {
-        errors.push('Please configure section order');
-      }
-
-      // Check navigation inside section
+      // Check navigation inside section (always required)
       if (!config.navigation_mode) {
         errors.push('Navigation inside section is required');
-      }
-
-      // Check navigation between sections
-      if (!config.navigation_between_sections) {
-        errors.push('Navigation between sections is required');
       }
 
       // Check pause mode
@@ -605,14 +641,28 @@ export default function TestTrackConfigPage() {
         ...config,
         test_type: testType,
         track_type: selectedTrack,
-        // Include section order if mandatory mode is selected
-        section_order: config.section_order_mode === 'mandatory' ? sections : null,
+        // Use the auto-corrected section_order_mode
+        section_order_mode: finalSectionOrderMode,
+        // Include section order if mandatory mode is selected AND has sections
+        section_order: (hasSections && finalSectionOrderMode === 'mandatory') ? sections : null,
+        // Set navigation_between_sections to null when no sections
+        navigation_between_sections: hasSections ? config.navigation_between_sections : null,
         // Include time configuration
         total_time_minutes: totalTimeMinutes,
         time_per_section: sectionDurationMode === 'specific' ? specificSectionDurations : null,
+        // Set pause_duration_minutes to null when no_pause is selected
+        pause_duration_minutes: config.pause_mode === 'no_pause' ? null : config.pause_duration_minutes,
+        // Set pause_sections to null when not 'between_sections'
+        pause_sections: config.pause_mode === 'between_sections' ? config.pause_sections : null,
+        // Set max_pauses to null when not 'user_choice'
+        max_pauses: config.pause_mode === 'user_choice' ? config.max_pauses : null,
+        // Set adaptive-related fields to null when non_adaptive
+        base_questions_scope: config.adaptivity_mode === 'adaptive' ? config.base_questions_scope : null,
+        base_questions_count: config.adaptivity_mode === 'adaptive' ? config.base_questions_count : null,
+        algorithm_type: config.adaptivity_mode === 'adaptive' ? config.algorithm_type : null,
       };
 
-      console.log('Saving configuration:', dataToSave);
+      console.log('💾 Saving configuration:', dataToSave);
 
       const { error } = await supabase
         .from('2V_test_track_config')
@@ -664,7 +714,7 @@ export default function TestTrackConfigPage() {
         <div className="max-w-7xl mx-auto">
           {/* Back Button */}
           <button
-            onClick={() => navigate('/tutor/students')}
+            onClick={() => navigate('/tutor')}
             className="mb-6 flex items-center gap-2 text-brand-dark hover:text-brand-green transition-colors group"
           >
             <FontAwesomeIcon icon={faArrowLeft} className="group-hover:-translate-x-1 transition-transform" />
@@ -679,23 +729,167 @@ export default function TestTrackConfigPage() {
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {trackTypes.length === 0 ? (
-                <p className="col-span-full text-center text-gray-500 py-4">
-                  No track types configured for {testType}
-                </p>
+                <div className="col-span-full">
+                  <p className="text-center text-gray-500 py-4 mb-6">
+                    No track types configured for {testType}. Create your first track configuration:
+                  </p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {[
+                      { value: 'assessment_iniziale', label: 'Assessment Iniziale' },
+                      { value: 'simulazione', label: 'Simulazione' },
+                      { value: 'training', label: 'Training' },
+                      { value: 'assessment_monotematico', label: 'Assessment Monotematico' }
+                    ].map(track => (
+                      <button
+                        key={track.value}
+                        onClick={async () => {
+                          // Create default config for this track
+                          const { error } = await supabase
+                            .from('2V_test_track_config')
+                            .insert({
+                              test_type: testType,
+                              track_type: track.value,
+                              section_order_mode: 'mandatory',
+                              navigation_mode: 'forward_only',
+                              navigation_between_sections: 'forward_only',
+                              can_leave_blank: false,
+                              pause_mode: 'between_sections',
+                              pause_duration_minutes: 5,
+                              max_pauses: 3,
+                              question_order: 'sequential',
+                              adaptivity_mode: 'non_adaptive',
+                              use_base_questions: false,
+                              base_questions_scope: 'entire_test',
+                              base_questions_count: 5,
+                              algorithm_type: 'simple',
+                              training_config: {},
+                              assessment_mono_config: {},
+                            });
+
+                          if (error) {
+                            console.error('Error creating track config:', error);
+                            setError('Failed to create track configuration');
+                          } else {
+                            // Reload track types
+                            await loadTrackTypes();
+                            setSelectedTrack(track.value);
+                          }
+                        }}
+                        className="p-4 rounded-xl font-semibold transition-all bg-blue-50 text-blue-700 hover:bg-blue-100 border-2 border-blue-200 hover:border-blue-300"
+                      >
+                        + {track.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ) : (
-                trackTypes.map(track => (
-                  <button
-                    key={track.value}
-                    onClick={() => setSelectedTrack(track.value)}
-                    className={`p-4 rounded-xl font-semibold transition-all ${
-                      selectedTrack === track.value
-                        ? 'bg-gradient-to-r from-brand-green to-green-600 text-white shadow-lg'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {track.label}
-                  </button>
-                ))
+                <>
+                  {trackTypes.map(track => (
+                    <button
+                      key={track.value}
+                      onClick={() => setSelectedTrack(track.value)}
+                      className={`p-4 rounded-xl font-semibold transition-all relative ${
+                        selectedTrack === track.value
+                          ? 'bg-gradient-to-r from-brand-green to-green-600 text-white shadow-lg'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {track.label}
+                      {/* Configured badge */}
+                      <span className={`absolute top-2 right-2 w-3 h-3 rounded-full ${
+                        selectedTrack === track.value ? 'bg-white' : 'bg-green-500'
+                      }`} title="Configured" />
+                    </button>
+                  ))}
+                  {/* Show missing track type buttons */}
+                  {[
+                    { value: 'assessment_iniziale', label: 'Assessment Iniziale' },
+                    { value: 'simulazione', label: 'Simulazione' },
+                    { value: 'training', label: 'Training' },
+                    { value: 'assessment_monotematico', label: 'Assessment Monotematico' }
+                  ]
+                    .filter(track => !trackTypes.some(t => t.value === track.value))
+                    .map(track => (
+                      <div key={track.value} className="relative">
+                        <button
+                          onClick={async () => {
+                            // Check if there are existing configs to copy from
+                            if (trackTypes.length > 0) {
+                              // Show copy option
+                              const copyFrom = await new Promise<string | null>((resolve) => {
+                                const choice = confirm(`Copy configuration from "${trackTypes[0].label}"?\n\nClick OK to copy, or Cancel to create with defaults.`);
+                                resolve(choice ? trackTypes[0].value : null);
+                              });
+
+                              if (copyFrom) {
+                                // Copy configuration from selected track
+                                const { data: sourceConfig } = await supabase
+                                  .from('2V_test_track_config')
+                                  .select('*')
+                                  .eq('test_type', testType)
+                                  .eq('track_type', copyFrom)
+                                  .single();
+
+                                if (sourceConfig) {
+                                  const { id, created_at, updated_at, created_by, ...configToCopy } = sourceConfig;
+                                  const { error } = await supabase
+                                    .from('2V_test_track_config')
+                                    .insert({
+                                      ...configToCopy,
+                                      track_type: track.value,
+                                    });
+
+                                  if (error) {
+                                    console.error('Error creating track config:', error);
+                                    setError('Failed to create track configuration');
+                                  } else {
+                                    await loadTrackTypes();
+                                    setSelectedTrack(track.value);
+                                  }
+                                  return;
+                                }
+                              }
+                            }
+
+                            // Create default config for this track
+                            const { error } = await supabase
+                              .from('2V_test_track_config')
+                              .insert({
+                                test_type: testType,
+                                track_type: track.value,
+                                section_order_mode: 'mandatory',
+                                navigation_mode: 'forward_only',
+                                navigation_between_sections: 'forward_only',
+                                can_leave_blank: false,
+                                pause_mode: 'between_sections',
+                                pause_duration_minutes: 5,
+                                max_pauses: 3,
+                                question_order: 'sequential',
+                                adaptivity_mode: 'non_adaptive',
+                                use_base_questions: false,
+                                base_questions_scope: 'entire_test',
+                                base_questions_count: 5,
+                                algorithm_type: 'simple',
+                                training_config: {},
+                                assessment_mono_config: {},
+                              });
+
+                            if (error) {
+                              console.error('Error creating track config:', error);
+                              setError('Failed to create track configuration');
+                            } else {
+                              // Reload track types
+                              await loadTrackTypes();
+                              setSelectedTrack(track.value);
+                            }
+                          }}
+                          className="w-full p-4 rounded-xl font-semibold transition-all bg-blue-50 text-blue-700 hover:bg-blue-100 border-2 border-blue-200 hover:border-blue-300"
+                        >
+                          + {track.label}
+                        </button>
+                      </div>
+                    ))}
+                </>
               )}
             </div>
           </div>
@@ -745,7 +939,41 @@ export default function TestTrackConfigPage() {
             ) : (
               /* Configuration Form for Assessment Iniziale and Simulazione */
               <div className="space-y-8">
-                {/* Section Order */}
+                {/* Has Sections Toggle */}
+                <div className="border-b border-gray-200 pb-6 bg-yellow-50 p-4 rounded-xl">
+                  <h3 className="text-lg font-bold text-brand-dark mb-4">Test Structure</h3>
+                  <div className="space-y-3">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="has_sections"
+                        checked={hasSections === true}
+                        onChange={() => setHasSections(true)}
+                        className="w-5 h-5 text-brand-green"
+                      />
+                      <div>
+                        <div className="font-semibold text-gray-900">Test has sections</div>
+                        <div className="text-sm text-gray-600">Test is divided into multiple sections (e.g., Quant, Verbal, Reasoning)</div>
+                      </div>
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="has_sections"
+                        checked={hasSections === false}
+                        onChange={() => setHasSections(false)}
+                        className="w-5 h-5 text-brand-green"
+                      />
+                      <div>
+                        <div className="font-semibold text-gray-900">Single section test</div>
+                        <div className="text-sm text-gray-600">Test is a single continuous set of questions</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Section Order - Only show if has sections */}
+                {hasSections && (
                 <div className="border-b border-gray-200 pb-6">
                   <h3 className="text-lg font-bold text-brand-dark mb-4">Section Order</h3>
                   <div className="space-y-3">
@@ -814,12 +1042,13 @@ export default function TestTrackConfigPage() {
                     </div>
                   )}
                 </div>
+                )}
 
-                {/* Test Duration */}
+                {/* Test Duration - Always shown */}
                 <div className="border-b border-gray-200 pb-6">
                   <h3 className="text-lg font-bold text-brand-dark mb-4">Test Duration</h3>
 
-                  {testVariations.length > 0 && (() => {
+                  {testVariations.length > 0 ? (() => {
                     // Check if all tests have the same duration
                     const allDurations = testVariations.map(t => t.default_duration_mins);
                     const uniqueDurations = Array.from(new Set(allDurations));
@@ -1029,10 +1258,30 @@ export default function TestTrackConfigPage() {
                         )}
                       </div>
                     );
-                  })()}
+                  })() : (
+                    <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-semibold text-gray-800">Total Test Duration (minutes)</h4>
+                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                          ℹ️ No tests yet
+                        </span>
+                      </div>
+                      <input
+                        type="number"
+                        value={totalTimeMinutes || ''}
+                        onChange={(e) => setTotalTimeMinutes(parseInt(e.target.value) || 0)}
+                        className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-brand-green focus:outline-none text-lg font-bold"
+                        placeholder="Enter duration in minutes (e.g., 60)"
+                      />
+                      <p className="text-xs text-gray-600 mt-2">
+                        No tests found in database for {testType} {selectedTrack}. Set a default duration here.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
-                {/* Duration per Section */}
+                {/* Duration per Section - Only show if has sections */}
+                {hasSections && (
                 <div className="border-b border-gray-200 pb-6">
                   <h3 className="text-lg font-bold text-brand-dark mb-4">Duration per Section</h3>
 
@@ -1125,6 +1374,7 @@ export default function TestTrackConfigPage() {
                     </div>
                   )}
                 </div>
+                )}
 
                 {/* Navigation Inside Section */}
                 <div className="border-b border-gray-200 pb-6">
@@ -1159,7 +1409,8 @@ export default function TestTrackConfigPage() {
                   </div>
                 </div>
 
-                {/* Navigation Between Sections */}
+                {/* Navigation Between Sections - Only show if has sections */}
+                {hasSections && (
                 <div className={`border-b border-gray-200 pb-6 ${!config.navigation_between_sections ? 'border-red-300 bg-red-50 p-4 rounded-xl' : ''}`}>
                   <h3 className="text-lg font-bold text-brand-dark mb-4">Navigation Between Sections</h3>
                   <div className="space-y-3">
@@ -1191,6 +1442,7 @@ export default function TestTrackConfigPage() {
                     </label>
                   </div>
                 </div>
+                )}
 
                 {/* Blank Answers */}
                 <div className={`border-b border-gray-200 pb-6 ${config.can_leave_blank === null || config.can_leave_blank === undefined ? 'border-red-300 bg-red-50 p-4 rounded-xl' : ''}`}>

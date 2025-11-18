@@ -32,7 +32,7 @@ import { translateTestTrack } from '../lib/translateTestTrack';
 interface TestConfig {
   test_type: string;
   track_type: string;
-  section_order_mode: 'mandatory' | 'user_choice';
+  section_order_mode: 'mandatory' | 'user_choice' | 'no_sections';
   section_order: string[] | null;
   time_per_section: Record<string, number> | null;
   total_time_minutes: number | null;
@@ -48,15 +48,16 @@ interface TestConfig {
 
   // Algorithm configuration
   question_order?: 'random' | 'sequential';
-  adaptivity_mode?: 'adaptive' | 'static';
+  adaptivity_mode?: 'adaptive' | 'non_adaptive' | 'static'; // Allow both naming conventions
   use_base_questions?: boolean;
-  base_questions_scope?: 'per_section' | 'per_test';
+  base_questions_scope?: 'per_section' | 'per_test' | 'entire_test'; // Support both naming conventions
   base_questions_count?: number;
   algorithm_type?: 'simple' | 'complex';
   baseline_difficulty?: number | string; // Difficulty level for baseline questions (e.g., 1, 2, 3 or "easy", "medium", "hard"). If not set, uses average difficulty.
 
   // Question limits
-  questions_per_section?: Record<string, number>; // JSONB mapping section names to question counts
+  questions_per_section?: Record<string, number>; // JSONB mapping section names to question counts (for multi-section tests)
+  total_questions?: number; // Total number of questions (for single-section tests)
 }
 
 interface Question {
@@ -235,8 +236,8 @@ export default function TakeTestPage() {
 
   // Get current section and questions
   const currentSection = sections[currentSectionIndex];
-  // Use selectedQuestions if adaptive, otherwise use allQuestions
-  const questionsToUse = config?.adaptivity_mode === 'adaptive' && selectedQuestions.length > 0
+  // Use selectedQuestions if they've been prepared (for both adaptive and non-adaptive tests)
+  const questionsToUse = selectedQuestions.length > 0
     ? selectedQuestions
     : allQuestions;
   const sectionQuestions = questionsToUse.filter(q => q.section === currentSection);
@@ -541,14 +542,73 @@ export default function TakeTestPage() {
     config: TestConfig,
     algorithmConfig: any
   ): Question[] {
-    // If not adaptive mode, return all questions
-    if (config.adaptivity_mode !== 'adaptive') {
-      return allQuestions;
-    }
+    console.log('🔧 prepareInitialQuestions called with:', {
+      totalQuestions: allQuestions.length,
+      adaptivity_mode: config.adaptivity_mode,
+      question_order: config.question_order,
+      questions_per_section: config.questions_per_section,
+      use_base_questions: config.use_base_questions
+    });
 
     let processedQuestions = [...allQuestions];
 
-    // Handle question randomization
+    // NON-ADAPTIVE MODE: Static question selection
+    if (config.adaptivity_mode !== 'adaptive') {
+      // CASE 1: Single-section test with total_questions limit
+      if (config.section_order_mode === 'no_sections' && config.total_questions) {
+        // Apply randomization if configured
+        if (config.question_order === 'random') {
+          processedQuestions = [...processedQuestions].sort(() => Math.random() - 0.5);
+        }
+        // Take limited number
+        processedQuestions = processedQuestions.slice(0, config.total_questions);
+        console.log(`✅ Single-section test: selected ${processedQuestions.length}/${allQuestions.length} questions (limit: ${config.total_questions})`);
+        return processedQuestions;
+      }
+
+      // CASE 2: Multi-section test with questions_per_section limits
+      if (config.questions_per_section) {
+        const limitedQuestions: Question[] = [];
+        const sections = Array.from(new Set(processedQuestions.map(q => q.section)));
+
+        sections.forEach(section => {
+          let sectionQuestions = processedQuestions.filter(q => q.section === section);
+          const limit = config.questions_per_section![section];
+
+          if (limit !== undefined && limit > 0) {
+            // Apply randomization if configured
+            if (config.question_order === 'random') {
+              sectionQuestions = [...sectionQuestions].sort(() => Math.random() - 0.5);
+            }
+            // Take limited number
+            limitedQuestions.push(...sectionQuestions.slice(0, limit));
+          } else {
+            // No limit for this section, include all
+            limitedQuestions.push(...sectionQuestions);
+          }
+        });
+
+        processedQuestions = limitedQuestions;
+        console.log('✅ Applied questions_per_section limits:', processedQuestions.length, 'questions selected');
+        return processedQuestions;
+      }
+
+      // CASE 3: No limits configured - return all questions
+      if (config.question_order === 'random') {
+        console.log('🔀 Before randomization:', processedQuestions.slice(0, 5).map(q => `Q${q.question_number}`));
+        processedQuestions = [...processedQuestions].sort(() => Math.random() - 0.5);
+        console.log('🔀 After randomization:', processedQuestions.slice(0, 5).map(q => `Q${q.question_number}`));
+        console.log('✅ Randomized all questions (no limits)');
+      }
+
+      console.log('📊 Non-adaptive mode: returning', processedQuestions.length, 'questions');
+      return processedQuestions;
+    }
+
+    // ADAPTIVE MODE: Continue with adaptive logic below
+    console.log('🎯 Adaptive mode enabled, processing adaptive selection...');
+
+    // Handle question randomization for adaptive mode
     if (config.question_order === 'random') {
       if (config.base_questions_scope === 'per_section') {
         // Randomize within each section
@@ -695,7 +755,7 @@ export default function TakeTestPage() {
       const tableSuffix = isTestMode ? '_test' : '';
       const { data: assignment, error: assignmentError } = await db
         .from(`2V_test_assignments${tableSuffix}`)
-        .select(`*, 2V_tests${tableSuffix}(test_type, exercise_type)`)
+        .select(`*, 2V_tests${tableSuffix}(id, test_type, exercise_type)`)
         .eq('id', assignmentId)
         .single();
 
@@ -834,7 +894,11 @@ export default function TakeTestPage() {
       console.log(`📝 Loading test | Assignment: ${assignmentId} | Attempt: ${currentAttemptNum} | Status: ${assignment.status}`);
 
       const testType = assignment['2V_tests'].test_type;
-      const trackType = assignment['2V_tests'].exercise_type;
+      const exerciseType = assignment['2V_tests'].exercise_type;
+      // Normalize track type to lowercase for config lookup
+      const trackType = exerciseType.toLowerCase();
+
+      console.log(`🔍 Looking for config: test_type=${testType}, track_type=${trackType} (original exercise_type=${exerciseType})`);
 
       // Load test configuration (always from real tables - it's reference data)
       const { data: configData, error: configError } = await supabase
@@ -847,16 +911,21 @@ export default function TakeTestPage() {
       if (configError) throw configError;
 
       if (!configData) {
+        console.error(`❌ Config not found for test_type=${testType}, track_type=${trackType}`);
         alert('Test configuration not found. Please contact your instructor.');
         navigate(-1);
         return;
       }
+
+      console.log('✅ Config found:', configData);
+      console.log('🎯 Adaptivity mode:', configData.adaptivity_mode);
 
       setConfig(configData);
 
       // Load algorithm configuration if adaptive mode is enabled
       let algorithmConfigData = null;
       if (configData.adaptivity_mode === 'adaptive') {
+        console.log('⚠️ ADAPTIVE MODE DETECTED - Loading algorithm config...');
         const { data: algConfig, error: algError } = await supabase
           .from('2V_algorithm_config')
           .select('*')
@@ -876,11 +945,14 @@ export default function TakeTestPage() {
       }
 
       // Load test questions (always from real tables - questions are read-only reference data)
-      // Questions are linked by test_type, not by test_id
+      // Questions are linked by test_id
+      const testId = assignment['2V_tests'].id;
+      console.log(`📚 Loading questions for test_id: ${testId}`);
+
       const { data: questions, error: questionsError } = await supabase
         .from('2V_questions')
         .select('*')
-        .eq('test_type', testType)
+        .eq('test_id', testId)
         .order('section')
         .order('question_number');
 
@@ -1236,7 +1308,10 @@ export default function TakeTestPage() {
   function handleTimeUp() {
     if (timerRef.current) clearInterval(timerRef.current);
     alert(t('takeTest.timeUp'));
-    submitTest();
+
+    // Complete the section instead of submitting the entire test
+    // This will handle navigation to next section, pause screens, or final submission
+    completeSection();
   }
 
   function handleAnswerSelect(answer: string) {
@@ -2589,15 +2664,17 @@ export default function TakeTestPage() {
               </span>
             )}
           </div>
-          {/* Debug info for testing */}
-          <div className="flex gap-4 mt-1 text-xs">
-            <span className={`font-semibold ${currentQuestion?.is_base ? 'text-blue-600' : 'text-purple-600'}`}>
-              {currentQuestion?.is_base ? '🔵 BASELINE' : '🟣 ADAPTIVE'}
-            </span>
-            <span className="text-gray-700">
-              Difficulty: <span className="font-semibold">{currentQuestion?.difficulty || 'N/A'}</span>
-            </span>
-          </div>
+          {/* Debug info for testing - Only show in adaptive mode */}
+          {config?.adaptivity_mode === 'adaptive' && (
+            <div className="flex gap-4 mt-1 text-xs">
+              <span className={`font-semibold ${currentQuestion?.is_base ? 'text-blue-600' : 'text-purple-600'}`}>
+                {currentQuestion?.is_base ? '🔵 BASELINE' : '🟣 ADAPTIVE'}
+              </span>
+              <span className="text-gray-700">
+                Difficulty: <span className="font-semibold">{currentQuestion?.difficulty || 'N/A'}</span>
+              </span>
+            </div>
+          )}
         </div>
         {timeRemaining !== null && (
           <div className="flex items-center gap-2 text-lg">
