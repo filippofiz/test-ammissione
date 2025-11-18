@@ -27,7 +27,7 @@ export function getTestTableName(tableName: string): string {
 /**
  * Wrapper around supabase.from() that automatically uses test tables
  */
-export function fromTest(tableName: string) {
+export function fromTest(tableName: string): ReturnType<SupabaseClient['from']> {
   return supabaseTest.from(getTestTableName(tableName));
 }
 

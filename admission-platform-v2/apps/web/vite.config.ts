@@ -5,6 +5,11 @@ import { viteStaticCopy } from 'vite-plugin-static-copy';
 import fs from 'fs';
 
 export default defineConfig({
+  base: '/',
+  build: {
+    outDir: '../../../dist',
+    emptyOutDir: true,
+  },
   plugins: [
     react(),
     viteStaticCopy({
