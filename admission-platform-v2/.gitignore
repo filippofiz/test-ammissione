@@ -48,3 +48,14 @@ Thumbs.db
 # Misc
 .cache/
 *.tsbuildinfo
+
+# TypeScript build artifacts in src (shouldn't be there)
+apps/*/src/**/*.d.ts
+apps/*/src/**/*.d.ts.map
+apps/*/src/**/*.js.map
+apps/*/src/**/*.js
+!apps/*/src/**/*.config.js
+packages/*/src/**/*.d.ts
+packages/*/src/**/*.d.ts.map
+packages/*/src/**/*.js.map
+packages/*/src/**/*.js
