@@ -358,7 +358,11 @@
     "Assessment Iniziale": "Initial Assessment",
     "Esercizi": "Exercises",
     "Simulazione": "Simulation",
-    "Ripasso": "Review"
+    "Ripasso": "Review",
+    "training": "Training",
+    "assessment_iniziale": "Initial Assessment",
+    "simulazione": "Simulation",
+    "assessment_monotematico": "Monothematic Assessment"
   },
   "testStartMsg": {
     "welcome": "Welcome to the {{testType}} {{trackType}}",
@@ -430,6 +434,35 @@
     "back": "Back",
     "total": "Total",
     "filterBySection": "Filter by Section:",
-    "accuracy": "accuracy"
+    "accuracy": "accuracy",
+    "noAnswer": "No answer",
+    "noAnswerProvided": "No answer provided",
+    "resultsVisibleToStudent": "Results Visible to Student",
+    "resultsHiddenFromStudent": "Results Hidden from Student",
+    "studentCanViewResults": "Student can view detailed test results and answers",
+    "studentCannotViewResults": "Student cannot view results until you enable visibility",
+    "visible": "Visible",
+    "hidden": "Hidden",
+    "noData": "no data",
+    "noAnswersFoundForAssignment": "No answers found for this assignment.",
+    "noAnswersFoundForAttempt": "No answers found for attempt {{attempt}}.",
+    "questionType": "Question Type",
+    "answer": "Answer:",
+    "yourAnswer": "Your answer:",
+    "correctAnswer": "Correct answer:",
+    "resultsVisibleMessage": "Students can now see their answers, correct answers, and performance statistics for this test.",
+    "resultsHiddenMessage": "Enable visibility after reviewing corrections with the student. They will be able to see detailed results once enabled.",
+    "yourAnswerCorrect": "Your answer - Correct!",
+    "yourAnswerLabel": "Your answer",
+    "correctAnswerLabel": "Correct answer",
+    "questionTypes": {
+      "multiple_choice": "Multiple Choice",
+      "data_insights": "Data Insights",
+      "DS": "Data Sufficiency",
+      "MSR": "Multi-Source Reasoning",
+      "GI": "Graphical Interpretation",
+      "TA": "Table Analysis",
+      "TPA": "Two-Part Analysis"
+    }
   }
 }

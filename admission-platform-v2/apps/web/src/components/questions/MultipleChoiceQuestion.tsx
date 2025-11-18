@@ -5,6 +5,7 @@
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheckCircle, faTimesCircle } from '@fortawesome/free-solid-svg-icons';
+import { useTranslation } from 'react-i18next';
 import { LaTeX } from '../LaTeX';
 import { normalizeWhitespace, normalizeOptionText } from '../../lib/textUtils';
 
@@ -29,6 +30,7 @@ export function MultipleChoiceQuestion({
   correctAnswer,
   showResults = false,
 }: MultipleChoiceQuestionProps) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-6">
       {/* Question Text */}
@@ -104,13 +106,13 @@ export function MultipleChoiceQuestion({
                 <div className="flex-1">
                   <LaTeX>{normalizeOptionText(text)}</LaTeX>
                   {showResults && isSelected && isCorrectOption && (
-                    <div className="text-xs text-green-700 font-semibold mt-1">Your answer - Correct!</div>
+                    <div className="text-xs text-green-700 font-semibold mt-1">{t('testResults.yourAnswerCorrect')}</div>
                   )}
                   {isWrongSelection && (
-                    <div className="text-xs text-red-700 font-semibold mt-1">Your answer</div>
+                    <div className="text-xs text-red-700 font-semibold mt-1">{t('testResults.yourAnswerLabel')}</div>
                   )}
                   {isCorrectOption && !isSelected && (
-                    <div className="text-xs text-green-700 font-semibold mt-1">Correct answer</div>
+                    <div className="text-xs text-green-700 font-semibold mt-1">{t('testResults.correctAnswerLabel')}</div>
                   )}
                 </div>
                 {isWrongSelection && (
