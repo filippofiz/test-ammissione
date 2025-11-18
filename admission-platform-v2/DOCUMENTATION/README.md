@@ -106,10 +106,17 @@ pnpm dev
 4. 👨‍🏫 Tutor dashboard (assign tests, review AI questions)
 5. 📊 Student results analytics
 
+### Completed
+- ✅ React Native mobile app
+- ✅ Multi-platform authentication (Web + Mobile)
+- ✅ Role-based navigation system
+- ✅ Force password change on first login
+- ✅ Multi-language support (English + Italian)
+
 ### Future (Post-MVP)
 - SAT adaptive testing
 - Italian test support (TOLC, Bocconi)
-- React Native mobile app
+- Test-taking interface
 - Offline support
 - Advanced analytics (IRT-based difficulty)
 
@@ -153,11 +160,17 @@ pnpm test:coverage
 
 See **[TODO.md](../TODO.md)** for detailed progress tracking.
 
-### Current Status (2025-11-14)
-- Phase 0 (Setup): ████████░░ 80%
-- Phase 1 (Database): ░░░░░░░░░░ 0%
-- Phase 2 (Packages): ░░░░░░░░░░ 0%
-- Phase 3 (AI Gen): ░░░░░░░░░░ 0% 🔥 PRIORITY
+### Current Status (2025-11-15)
+- Phase 0 (Setup): ██████████ 100% ✅
+- Phase 1 (Database): ████████░░ 80% (Tables & Migrations created, RPC functions implemented)
+- Phase 2 (Authentication & Navigation): ██████████ 100% ✅
+  - ✅ Login flow with password change enforcement
+  - ✅ Role selection for multi-role users
+  - ✅ Test selection for students with multiple tests
+  - ✅ Multi-layer security (Route, Page, RLS)
+  - ✅ Web (React + Vite) fully functional
+  - ✅ Mobile (React Native + Expo) fully functional
+- Phase 3 (AI Gen): ░░░░░░░░░░ 0% 🔥 NEXT PRIORITY
 
 ---
 
@@ -183,5 +196,5 @@ Proprietary - Up to Ten © 2025
 
 ---
 
-**Last Updated**: 2025-11-14
-**Version**: 2.0.0-alpha.1
+**Last Updated**: 2025-11-15
+**Version**: 2.0.0-alpha.2
