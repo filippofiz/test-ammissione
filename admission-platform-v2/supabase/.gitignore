@@ -1,0 +1,6 @@
+# Supabase CLI temporary files
+.temp/
+.branches/
+
+# Config with sensitive data (use .env instead)
+config.toml
