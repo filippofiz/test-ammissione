@@ -260,6 +260,9 @@ const TEST_SCENARIOS: TestScenario[] = [
   },
 ];
 
+// Normalize function for case-insensitive track type matching
+const normalize = (str: string) => str.toLowerCase().replace(/[\s_]+/g, '_');
+
 export default function TestRunnerPage() {
   const [activeTab, setActiveTab] = useState<'visual' | 'api'>('visual');
   const [scenarios, setScenarios] = useState<TestScenario[]>(TEST_SCENARIOS);
@@ -1821,12 +1824,15 @@ export default function TestRunnerPage() {
       throw new Error(`No tests found for type: ${testType}`);
     }
 
-    // Get track configuration
-    const { data: trackConfig } = await fromTest('2V_test_track_config')
+    // Get track configuration with normalized matching
+    const { data: allConfigs } = await fromTest('2V_test_track_config')
       .select('*')
-      .eq('test_type', testType)
-      .eq('track_type', trackType)
-      .maybeSingle();
+      .eq('test_type', testType);
+
+    // Find matching config by normalized track_type (case and space/underscore insensitive)
+    const trackConfig = allConfigs?.find(config =>
+      normalize(config.track_type) === normalize(trackType)
+    );
 
     if (!trackConfig) {
       throw new Error(`Track config not found: ${testType} - ${trackType}`);
