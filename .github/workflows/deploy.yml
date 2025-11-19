@@ -45,9 +45,7 @@ jobs:
         run: |
           mkdir -p deploy
           # Copy entire repo content (excluding node_modules and git)
-          rsync -av --exclude='node_modules' --exclude='.git' --exclude='deploy' --exclude='admission-platform-v2/dist' . deploy/
-          # Copy built React app to deploy folder
-          cp -r admission-platform-v2/dist/* deploy/admission-platform-v2/dist/
+          rsync -av --exclude='node_modules' --exclude='.git' --exclude='deploy' . deploy/
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
