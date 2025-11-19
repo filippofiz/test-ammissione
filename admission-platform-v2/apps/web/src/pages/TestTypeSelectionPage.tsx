@@ -14,9 +14,15 @@ import {
 import { Layout } from '../components/Layout';
 import { supabase } from '../lib/supabase';
 
+interface TestTypeInfo {
+  name: string;
+  isPDF: boolean;
+  isAdaptive: boolean;
+}
+
 export default function TestTypeSelectionPage() {
   const navigate = useNavigate();
-  const [availableTestTypes, setAvailableTestTypes] = useState<string[]>([]);
+  const [availableTestTypes, setAvailableTestTypes] = useState<TestTypeInfo[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -26,19 +32,47 @@ export default function TestTypeSelectionPage() {
   async function loadTestTypes() {
     try {
       // Get unique test types from 2V_tests table
-      const { data, error } = await supabase
+      const { data: testsData, error: testsError } = await supabase
         .from('2V_tests')
         .select('test_type');
 
-      if (error) throw error;
+      if (testsError) throw testsError;
 
-      const testTypes = new Set<string>();
-      data?.forEach(test => {
+      const testTypeNames = new Set<string>();
+      testsData?.forEach(test => {
         if (test.test_type) {
-          testTypes.add(test.test_type);
+          testTypeNames.add(test.test_type);
         }
       });
-      setAvailableTestTypes(Array.from(testTypes).sort());
+
+      // For each test type, check if it has PDF questions and/or adaptive configs
+      const testTypesWithInfo = await Promise.all(
+        Array.from(testTypeNames).map(async (testType) => {
+          // Check if test has PDF questions
+          const { data: pdfQuestions } = await supabase
+            .from('2V_questions')
+            .select('id')
+            .eq('test_type', testType)
+            .eq('question_type', 'pdf')
+            .limit(1);
+
+          // Check if test has adaptive track configs
+          const { data: adaptiveConfigs } = await supabase
+            .from('2V_test_track_config')
+            .select('id')
+            .eq('test_type', testType)
+            .eq('adaptivity_mode', 'adaptive')
+            .limit(1);
+
+          return {
+            name: testType,
+            isPDF: (pdfQuestions?.length || 0) > 0,
+            isAdaptive: (adaptiveConfigs?.length || 0) > 0,
+          };
+        })
+      );
+
+      setAvailableTestTypes(testTypesWithInfo.sort((a, b) => a.name.localeCompare(b.name)));
     } catch (err) {
       console.error('Error loading test types:', err);
     } finally {
@@ -89,36 +123,72 @@ export default function TestTypeSelectionPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {availableTestTypes.map((testType, index) => (
-                <button
-                  key={testType}
-                  onClick={() => navigate(`/tutor/test-track-config/${testType}`)}
-                  className="group relative bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 border-2 border-gray-100 hover:border-brand-green transform hover:scale-105 animate-fadeInUp"
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                >
-                  {/* Icon */}
-                  <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-brand-green to-green-600 rounded-full flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
-                    <FontAwesomeIcon icon={faCog} className="text-4xl text-white" />
-                  </div>
+              {availableTestTypes.map((testType, index) => {
+                // Only 2 types: PDF or Adaptive/Interactive
+                const isPDF = testType.isPDF;
+                const isAdaptive = testType.isAdaptive;
 
-                  {/* Title */}
-                  <h2 className="text-2xl font-bold text-brand-dark mb-3">
-                    {testType}
-                  </h2>
+                // PDF tests get indigo/purple styling
+                // Adaptive tests get emerald/teal styling
+                const cardClasses = isPDF
+                  ? 'bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-300'
+                  : 'bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-300';
 
-                  {/* Description */}
-                  <p className="text-gray-600 mb-4">
-                    Configure test tracks and settings for {testType}
-                  </p>
+                const iconBgClasses = isPDF
+                  ? 'from-indigo-500 to-purple-600'
+                  : 'from-emerald-500 to-teal-600';
 
-                  {/* Arrow Indicator */}
-                  <div className="absolute bottom-4 right-4 text-brand-green opacity-0 group-hover:opacity-100 transition-opacity">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                </button>
-              ))}
+                const hoverBorderColor = isPDF
+                  ? 'hover:border-indigo-500'
+                  : 'hover:border-emerald-500';
+
+                const badgeBg = isPDF ? 'bg-indigo-600' : 'bg-emerald-600';
+                const badgeText = isPDF ? '📄 PDF' : '🎯 Adaptive';
+                const arrowColor = isPDF ? 'text-indigo-600' : 'text-emerald-600';
+
+                return (
+                  <button
+                    key={testType.name}
+                    onClick={() => navigate(`/tutor/test-track-config/${testType.name}`)}
+                    className={`group relative rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 border-2 ${cardClasses} ${hoverBorderColor} transform hover:scale-105 animate-fadeInUp`}
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    {/* Type Badge */}
+                    <div className="absolute top-4 right-4">
+                      <span className={`text-xs font-bold px-3 py-1 ${badgeBg} text-white rounded-full shadow-md`}>
+                        {badgeText}
+                      </span>
+                    </div>
+
+                    {/* Icon */}
+                    <div className={`w-20 h-20 mx-auto mb-6 bg-gradient-to-br ${iconBgClasses} rounded-full flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow`}>
+                      <FontAwesomeIcon icon={faCog} className="text-4xl text-white" />
+                    </div>
+
+                    {/* Title */}
+                    <h2 className="text-2xl font-bold text-brand-dark mb-3">
+                      {testType.name}
+                    </h2>
+
+                    {/* Description */}
+                    <p className="text-gray-700 mb-4 text-sm font-semibold">
+                      {isPDF ? 'PDF-based questions' : 'Interactive adaptive questions'}
+                    </p>
+                    <p className="text-gray-600 text-xs">
+                      {isPDF
+                        ? 'Questions are displayed from PDF documents with section-based difficulty'
+                        : 'Dynamic difficulty adjustment based on student performance'}
+                    </p>
+
+                    {/* Arrow Indicator */}
+                    <div className={`absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity ${arrowColor}`}>
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>

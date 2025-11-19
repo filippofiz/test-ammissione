@@ -17,6 +17,7 @@ import {
   faChartLine,
   faDatabase,
   faFileCode,
+  faListCheck,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import type { Profile } from '../lib/database.types';
@@ -240,6 +241,50 @@ export default function AdminDashboardPage() {
 
                 {/* Arrow Indicator */}
                 <div className="absolute bottom-4 right-4 text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </button>
+
+              {/* Review Questions Card */}
+              <button
+                onClick={() => navigate('/admin/review-questions')}
+                className="group relative bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 border-2 border-gray-100 hover:border-teal-500 transform hover:scale-105"
+              >
+                {/* Icon */}
+                <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-teal-500 to-teal-700 rounded-full flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
+                  <FontAwesomeIcon icon={faListCheck} className="text-4xl text-white" />
+                </div>
+
+                {/* Title */}
+                <h3 className="text-2xl font-bold text-brand-dark mb-3">
+                  Review Questions
+                </h3>
+
+                {/* Description */}
+                <p className="text-gray-600 mb-4">
+                  Review and edit questions uploaded to the database
+                </p>
+
+                {/* Features List */}
+                <ul className="text-left text-sm text-gray-500 space-y-2">
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-teal-500 rounded-full"></span>
+                    View test questions
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-teal-500 rounded-full"></span>
+                    Compare with PDF
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-teal-500 rounded-full"></span>
+                    Edit and validate
+                  </li>
+                </ul>
+
+                {/* Arrow Indicator */}
+                <div className="absolute bottom-4 right-4 text-teal-500 opacity-0 group-hover:opacity-100 transition-opacity">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>

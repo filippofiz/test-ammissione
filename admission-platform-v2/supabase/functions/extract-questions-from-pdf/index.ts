@@ -3,6 +3,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
+import { PDFDocument } from 'https://esm.sh/pdf-lib@1.17.1';
 
 const CLAUDE_API_KEY = Deno.env.get('CLAUDE_API_KEY');
 const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
@@ -17,6 +18,9 @@ interface ExtractQuestionsRequest {
   testNumber: number;
   extractFromPdf?: boolean;
   databaseAnswers?: { question_number: number; correct_answer: string; wrong_answers?: string[] }[];
+  // Chunking parameters for large PDFs (by pages, not questions)
+  pageStart?: number;  // First page number in this chunk (1-indexed)
+  pageEnd?: number;    // Last page number in this chunk (1-indexed)
 }
 
 interface ExtractedQuestion {
@@ -193,7 +197,7 @@ serve(async (req) => {
     console.log('✓ Auth check passed for user:', user.email);
 
     // Parse request body
-    const { pdfUrl, pdfText, testType, section, testNumber, extractFromPdf, databaseAnswers }: ExtractQuestionsRequest = await req.json();
+    const { pdfUrl, pdfText, testType, section, testNumber, extractFromPdf, databaseAnswers, pageStart, pageEnd }: ExtractQuestionsRequest = await req.json();
 
     if ((!pdfText && !pdfUrl) || !testType || !section) {
       return new Response(
@@ -209,8 +213,34 @@ serve(async (req) => {
       );
     }
 
+    // Helper function to call Claude API
+    const callClaudeAPI = async (messages: any[], maxTokens: number = 64000) => {
+      const response = await fetch(CLAUDE_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': CLAUDE_API_KEY,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-5',
+          max_tokens: maxTokens,
+          temperature: 0,
+          messages,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Claude API error: ${errorText}`);
+      }
+
+      return await response.json();
+    };
+
     // Prepare Claude API request
     let claudeMessages: any[] = [];
+    let pdfBase64: string = '';
 
     // If we have a PDF URL, fetch and send the PDF to Claude
     if (pdfUrl) {
@@ -223,20 +253,50 @@ serve(async (req) => {
           throw new Error(`Failed to fetch PDF: ${pdfResponse.statusText}`);
         }
 
-        // Get PDF as base64 (process in chunks to avoid stack overflow)
+        // Get PDF as array buffer
         const pdfBuffer = await pdfResponse.arrayBuffer();
-        const uint8Array = new Uint8Array(pdfBuffer);
+        console.log(`PDF fetched successfully, size: ${pdfBuffer.byteLength} bytes`);
 
-        // Convert to base64 in chunks
+        // If pageStart and pageEnd are specified, extract only those pages
+        let finalPdfBuffer = pdfBuffer;
+        if (pageStart && pageEnd) {
+          console.log(`📄 Extracting pages ${pageStart}-${pageEnd} from PDF...`);
+
+          // Load the PDF document
+          const pdfDoc = await PDFDocument.load(pdfBuffer);
+          const totalPages = pdfDoc.getPageCount();
+          console.log(`PDF has ${totalPages} total pages`);
+
+          // Create a new PDF with only the requested pages
+          const newPdfDoc = await PDFDocument.create();
+
+          // Copy pages (pageStart and pageEnd are 1-indexed, but copyPages uses 0-indexed)
+          const pagesToCopy = [];
+          for (let i = pageStart - 1; i < pageEnd && i < totalPages; i++) {
+            pagesToCopy.push(i);
+          }
+
+          const copiedPages = await newPdfDoc.copyPages(pdfDoc, pagesToCopy);
+          copiedPages.forEach(page => {
+            newPdfDoc.addPage(page);
+          });
+
+          // Save the new PDF
+          const newPdfBytes = await newPdfDoc.save();
+          finalPdfBuffer = newPdfBytes.buffer;
+
+          console.log(`✓ Extracted ${pagesToCopy.length} pages, new PDF size: ${finalPdfBuffer.byteLength} bytes`);
+        }
+
+        // Convert to base64 (process in chunks to avoid stack overflow)
+        const uint8Array = new Uint8Array(finalPdfBuffer);
         let binary = '';
         const chunkSize = 8192;
         for (let i = 0; i < uint8Array.length; i += chunkSize) {
           const chunk = uint8Array.slice(i, i + chunkSize);
           binary += String.fromCharCode.apply(null, Array.from(chunk));
         }
-        const pdfBase64 = btoa(binary);
-
-        console.log(`PDF fetched successfully, size: ${pdfBuffer.byteLength} bytes`);
+        pdfBase64 = btoa(binary);
 
         // Send PDF to Claude with vision
         claudeMessages.push({
@@ -252,7 +312,7 @@ serve(async (req) => {
             },
             {
               type: 'text',
-              text: `Extract all questions from this ${testType} test PDF (${section} section).
+              text: `Extract all questions from this ${testType} test PDF (${section} section).${pageStart && pageEnd ? `\n\n🎯 CRITICAL: Process ONLY pages ${pageStart} through ${pageEnd} of this PDF. Ignore all other pages.\n` : ''}
 
 ${pdfText ? `\nAdditional context from database:\n${pdfText}\n` : ''}
 
@@ -514,49 +574,8 @@ Return ONLY valid JSON with the questions array.`,
       );
     }
 
-    // Call Claude API
-    const claudeResponse = await fetch(CLAUDE_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': CLAUDE_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
-        max_tokens: 16000, // Increased for PDF processing
-        temperature: 0,
-        messages: claudeMessages,
-      }),
-    });
-
-    if (!claudeResponse.ok) {
-      const errorText = await claudeResponse.text();
-      console.error('Claude API error:', errorText);
-      return new Response(
-        JSON.stringify({ error: 'Claude API error', details: errorText }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const claudeData = await claudeResponse.json();
-    const content = claudeData.content?.[0]?.text;
-    const usage = claudeData.usage; // Get token usage from Claude API
-
-    if (!content) {
-      return new Response(
-        JSON.stringify({ error: 'No content returned from Claude API' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Log usage for debugging
-    console.log('Claude API usage:', JSON.stringify(usage));
-
-    // Parse Claude's response as JSON
-    let extractedQuestions: { questions: ExtractedQuestion[] };
-    try {
-      // Extract JSON from response (handle markdown code blocks and extra text)
+    // Helper function to parse Claude's JSON response
+    const parseClaudeJSON = (content: string) => {
       let jsonContent = content;
 
       // If response contains markdown code blocks, extract the JSON
@@ -577,26 +596,45 @@ Return ONLY valid JSON with the questions array.`,
         .replace(/```\n?/g, '')
         .trim();
 
-      console.log('Cleaned JSON content (first 200 chars):', jsonContent.substring(0, 200));
+      const parsed = JSON.parse(jsonContent);
 
-      extractedQuestions = JSON.parse(jsonContent);
-
-      if (!extractedQuestions.questions || !Array.isArray(extractedQuestions.questions)) {
+      if (!parsed.questions || !Array.isArray(parsed.questions)) {
         throw new Error('Invalid response structure: missing questions array');
       }
 
-      console.log(`Successfully parsed ${extractedQuestions.questions.length} questions`);
+      return parsed;
+    };
+
+    // STEP 1: Extract questions (support chunking for large PDFs by pages)
+    const isPageChunked = pageStart !== undefined && pageEnd !== undefined;
+    const totalQuestions = databaseAnswers?.length || 0;
+
+    if (isPageChunked) {
+      console.log(`📊 Processing page chunk: Pages ${pageStart}-${pageEnd}`);
+    } else {
+      console.log(`📊 Processing all pages (${totalQuestions} total questions in database)`);
+    }
+
+    // Build final messages
+    const finalMessages = claudeMessages;
+
+    // Call Claude API
+    console.log(`🔄 Calling Claude API...`);
+    const apiData = await callClaudeAPI(finalMessages, 64000);
+    const apiContent = apiData.content?.[0]?.text;
+    const usage = apiData.usage;
+
+    console.log(`✓ API complete. Tokens: ${usage?.input_tokens || 0} input, ${usage?.output_tokens || 0} output`);
+
+    // Parse the response
+    let extractedQuestions;
+    try {
+      extractedQuestions = parseClaudeJSON(apiContent);
+      console.log(`✅ Successfully extracted ${extractedQuestions.questions.length} questions`);
     } catch (parseError) {
-      console.error('Failed to parse Claude response:', parseError);
-      console.error('Content (first 500 chars):', content.substring(0, 500));
-      return new Response(
-        JSON.stringify({
-          error: 'Failed to parse AI response',
-          details: parseError instanceof Error ? parseError.message : 'Parse error',
-          contentPreview: content.substring(0, 200)
-        }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.error(`❌ Failed to parse Claude response:`, parseError);
+      console.error('Content (first 500 chars):', apiContent.substring(0, 500));
+      throw new Error(`Parsing failed: ${parseError instanceof Error ? parseError.message : 'Parse error'}`);
     }
 
     // Merge with database answers
@@ -628,7 +666,7 @@ Return ONLY valid JSON with the questions array.`,
     // Frontend will extract and upload images when saving questions.
 
     // Translate using Google Translate API (auto-detect language)
-    if (GOOGLE_TRANSLATE_API_KEY) {
+    if (GOOGLE_TRANSLATE_API_KEY && extractedQuestions.questions && extractedQuestions.questions.length > 0) {
       console.log('Detecting language and translating questions...');
 
       try {
@@ -656,75 +694,83 @@ Return ONLY valid JSON with the questions array.`,
 
         console.log(`Translating from ${sourceLang} to ${targetLang}...`);
 
-        for (const question of extractedQuestions.questions) {
-          // Translate question text
-          const questionTextResponse = await fetch(
-            `${GOOGLE_TRANSLATE_URL}?key=${GOOGLE_TRANSLATE_API_KEY}`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                q: question.question_text,
-                source: sourceLang,
-                target: targetLang,
-                format: 'text',
-              }),
-            }
-          );
+        // Batch all translations into a single API call for better performance
+        const allTextsToTranslate: string[] = [];
+        const questionTextIndexes: number[] = [];
+        const questionOptionsIndexes: { questionIdx: number; optionKeys: string[] }[] = [];
 
-          if (questionTextResponse.ok) {
-            const questionTextData = await questionTextResponse.json();
-            const translatedText = questionTextData.data.translations[0].translatedText;
+        // Collect all texts
+        extractedQuestions.questions.forEach((question, qIdx) => {
+          // Add question text
+          questionTextIndexes.push(allTextsToTranslate.length);
+          allTextsToTranslate.push(question.question_text);
+
+          // Add all options
+          const optionKeys = Object.keys(question.options);
+          questionOptionsIndexes.push({
+            questionIdx: qIdx,
+            optionKeys: optionKeys
+          });
+          optionKeys.forEach(key => {
+            allTextsToTranslate.push(question.options[key]);
+          });
+        });
+
+        console.log(`Batching ${allTextsToTranslate.length} strings for translation...`);
+
+        // Single batched translation call
+        const batchResponse = await fetch(
+          `${GOOGLE_TRANSLATE_URL}?key=${GOOGLE_TRANSLATE_API_KEY}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              q: allTextsToTranslate,
+              source: sourceLang,
+              target: targetLang,
+              format: 'text',
+            }),
+          }
+        );
+
+        if (batchResponse.ok) {
+          const batchData = await batchResponse.json();
+          const allTranslations = batchData.data.translations.map((t: any) => t.translatedText);
+
+          // Distribute translations back to questions
+          extractedQuestions.questions.forEach((question, qIdx) => {
+            // Get question text translation
+            const questionTextTranslation = allTranslations[questionTextIndexes[qIdx]];
 
             if (isEnglish) {
-              // Source is English, save as _eng and translate to Italian
               question.question_text_eng = question.question_text;
-              question.question_text = translatedText;
+              question.question_text = questionTextTranslation;
             } else {
-              // Source is Italian, keep as-is and save English translation
-              question.question_text_eng = translatedText;
+              question.question_text_eng = questionTextTranslation;
             }
-          } else {
-            console.warn(`Failed to translate question ${question.question_number} text`);
-          }
 
-          // Translate options
-          const optionsToTranslate = Object.values(question.options);
-          const optionsResponse = await fetch(
-            `${GOOGLE_TRANSLATE_URL}?key=${GOOGLE_TRANSLATE_API_KEY}`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                q: optionsToTranslate,
-                source: sourceLang,
-                target: targetLang,
-                format: 'text',
-              }),
-            }
-          );
-
-          if (optionsResponse.ok) {
-            const optionsData = await optionsResponse.json();
+            // Get options translations
+            const optionsInfo = questionOptionsIndexes[qIdx];
+            const baseIndex = questionTextIndexes[qIdx] + 1; // Options start after question text
             const translatedOptions: any = {};
-            Object.keys(question.options).forEach((key, index) => {
-              translatedOptions[key] = optionsData.data.translations[index].translatedText;
+
+            optionsInfo.optionKeys.forEach((key, idx) => {
+              const translationIndex = baseIndex + idx;
+              translatedOptions[key] = allTranslations[translationIndex];
             });
 
             if (isEnglish) {
-              // Source is English, save as _eng and translate to Italian
               question.options_eng = question.options;
               question.options = translatedOptions;
             } else {
-              // Source is Italian, keep as-is and save English translation
               question.options_eng = translatedOptions;
             }
-          } else {
-            console.warn(`Failed to translate question ${question.question_number} options`);
-          }
-        }
+          });
 
-        console.log(`✓ Translated ${extractedQuestions.questions.length} questions (${sourceLang} → ${targetLang})`);
+          console.log(`✓ Translated ${extractedQuestions.questions.length} questions (${sourceLang} → ${targetLang}) in single batch`);
+        } else {
+          console.warn('Batch translation failed, skipping translations');
+        }
       } catch (translateError) {
         console.error('Translation error:', translateError);
         // Continue without translations if error

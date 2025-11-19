@@ -25,7 +25,7 @@ interface TestTrackConfig {
   id?: string;
   test_type: string;
   track_type: string;
-  section_order_mode: 'mandatory' | 'user_choice' | 'no_sections';
+  section_order_mode: 'mandatory' | 'user_choice' | 'no_sections' | 'macro_sections_mandatory' | 'macro_sections_user_choice';
   section_order: string[] | null; // The ordered list of sections for mandatory mode
   time_per_section: Record<string, number> | null;
   total_time_minutes: number | null;
@@ -46,6 +46,8 @@ interface TestTrackConfig {
   algorithm_type?: 'simple' | 'complex';
   questions_per_section?: Record<string, number>; // Number of questions per section (for multi-section tests)
   total_questions?: number; // Total number of questions (for single-section tests)
+  section_adaptivity_config?: Record<string, { type: 'base' | 'adaptive'; difficulty?: string }> | null; // Section adaptivity configuration
+  difficulty_levels_count?: number; // Number of difficulty levels (2, 3, or 4)
   training_config: any;
   assessment_mono_config: any;
 }
@@ -102,6 +104,21 @@ export default function TestTrackConfigPage() {
   // Track if test has sections
   const [hasSections, setHasSections] = useState<boolean>(true);
 
+  // Track if using macro sections instead of standard sections
+  const [useMacroSections, setUseMacroSections] = useState<boolean>(false);
+
+  // Track section adaptivity (for PDF tests with difficulty-based sections)
+  const [useSectionAdaptivity, setUseSectionAdaptivity] = useState<boolean>(false);
+
+  // Track number of difficulty levels (2, 3, or 4)
+  const [difficultyLevelsCount, setDifficultyLevelsCount] = useState<number>(3);
+
+  // Track section adaptivity configuration: which sections are base vs adaptive and their difficulty level
+  const [sectionAdaptivityConfig, setSectionAdaptivityConfig] = useState<Record<string, {
+    type: 'base' | 'adaptive';
+    difficulty?: string; // e.g., 'easy', 'medium', 'hard'
+  }>>({});
+
   // Store all test variations and their times
   const [testVariations, setTestVariations] = useState<Array<{
     id: string;
@@ -141,10 +158,15 @@ export default function TestTrackConfigPage() {
 
   useEffect(() => {
     if (testType && selectedTrack) {
-      loadSections();
       loadConfig();
     }
   }, [testType, selectedTrack]);
+
+  useEffect(() => {
+    if (testType && selectedTrack) {
+      loadSections();
+    }
+  }, [testType, selectedTrack, useMacroSections]);
 
   // Initialize specific section durations when sections or duration mode changes
   useEffect(() => {
@@ -319,6 +341,14 @@ export default function TestTrackConfigPage() {
     }
   }, [config.adaptivity_mode, testType]);
 
+  // Auto-set adaptivity_mode to non_adaptive when section adaptivity is enabled
+  useEffect(() => {
+    if (useSectionAdaptivity && config.adaptivity_mode === 'adaptive') {
+      setConfig({ ...config, adaptivity_mode: 'non_adaptive' });
+      console.log('📝 Auto-setting adaptivity_mode to non_adaptive (section adaptivity enabled)');
+    }
+  }, [useSectionAdaptivity]);
+
   // Auto-generate messages when config changes
   useEffect(() => {
     if (!config.messaggio_iniziale_test || config.messaggio_iniziale_test === '') {
@@ -336,23 +366,85 @@ export default function TestTrackConfigPage() {
 
   async function loadSections() {
     try {
-      // Get unique sections from 2V_questions for section ordering
+      // Load sections from database based on current mode
       const { data: questionsData, error: questionsError } = await supabase
         .from('2V_questions')
-        .select('section')
+        .select('section, macro_section')
         .eq('test_type', testType);
 
       if (questionsError) throw questionsError;
 
-      const uniqueSections = Array.from(new Set(questionsData?.map(q => q.section) || []));
-      setSections(uniqueSections.sort());
+      const uniqueSections = Array.from(new Set(
+        questionsData?.map(q => useMacroSections ? q.macro_section : q.section).filter(Boolean) || []
+      ));
+
+      // Check if we have a saved section_order in config - use it to preserve custom ordering
+      // but only if the sections match (user hasn't switched between standard/macro)
+      if (config.section_order && config.section_order.length > 0) {
+        const savedSectionsSet = new Set(config.section_order);
+        const dbSectionsSet = new Set(uniqueSections);
+        const sectionsMatch = config.section_order.every(s => dbSectionsSet.has(s)) &&
+                             config.section_order.length === uniqueSections.length;
+
+        if (sectionsMatch) {
+          // Use saved order to preserve user's custom ordering
+          setSections(config.section_order);
+        } else {
+          // Sections don't match (user switched modes), load fresh from DB
+          setSections(uniqueSections.sort());
+        }
+      } else {
+        // No saved order, use fresh sections from DB
+        setSections(uniqueSections.sort());
+      }
 
       // Get tests for this test type and exercise type for time information
-      const { data: testsData, error: testsError } = await supabase
-        .from('2V_tests')
-        .select('id, test_type, section, exercise_type, test_number, default_duration_mins')
-        .eq('test_type', testType)
-        .eq('exercise_type', selectedTrack);
+      // Normalize track name: convert snake_case to Title Case (e.g., assessment_iniziale -> Assessment Iniziale)
+      const normalizedTrackName = selectedTrack
+        .split('_')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+
+      // For Assessment Iniziale, try to filter for Multi-topic section first
+      let testsData = null;
+      let testsError = null;
+
+      if (normalizedTrackName === 'Assessment Iniziale') {
+        // First try with Multi-topic filter
+        const { data: multiTopicData, error: multiTopicError } = await supabase
+          .from('2V_tests')
+          .select('id, test_type, section, exercise_type, test_number, default_duration_mins')
+          .eq('test_type', testType)
+          .eq('exercise_type', normalizedTrackName)
+          .eq('section', 'Multi-topic');
+
+        if (multiTopicError) {
+          testsError = multiTopicError;
+        } else if (multiTopicData && multiTopicData.length > 0) {
+          // Found Multi-topic tests, use them
+          testsData = multiTopicData;
+        } else {
+          // No Multi-topic tests found, fall back to all tests for this exercise type
+          const { data: allData, error: allError } = await supabase
+            .from('2V_tests')
+            .select('id, test_type, section, exercise_type, test_number, default_duration_mins')
+            .eq('test_type', testType)
+            .eq('exercise_type', normalizedTrackName);
+
+          testsData = allData;
+          testsError = allError;
+        }
+      } else {
+        // For other exercise types, query normally
+        const { data, error } = await supabase
+          .from('2V_tests')
+          .select('id, test_type, section, exercise_type, test_number, default_duration_mins')
+          .eq('test_type', testType)
+          .eq('exercise_type', normalizedTrackName);
+
+        testsData = data;
+        testsError = error;
+      }
 
       if (testsError) throw testsError;
 
@@ -479,7 +571,37 @@ export default function TestTrackConfigPage() {
       if (error && error.code !== 'PGRST116') throw error;
 
       if (data) {
-        setConfig(data);
+        // Detect if using macro sections from section_order_mode and normalize the value
+        let detectedUseMacroSections = false;
+        let normalizedMode = data.section_order_mode;
+
+        if (data.section_order_mode === 'macro_sections_mandatory') {
+          detectedUseMacroSections = true;
+          normalizedMode = 'mandatory';
+          console.log('📝 Auto-detected: Macro sections with mandatory order');
+        } else if (data.section_order_mode === 'macro_sections_user_choice') {
+          detectedUseMacroSections = true;
+          normalizedMode = 'user_choice';
+          console.log('📝 Auto-detected: Macro sections with user choice');
+        }
+
+        setUseMacroSections(detectedUseMacroSections);
+
+        // Detect if using section adaptivity
+        if (data.section_adaptivity_config && Object.keys(data.section_adaptivity_config).length > 0) {
+          setUseSectionAdaptivity(true);
+          setSectionAdaptivityConfig(data.section_adaptivity_config);
+          if (data.difficulty_levels_count) {
+            setDifficultyLevelsCount(data.difficulty_levels_count);
+          }
+          console.log('📝 Auto-detected: Section adaptivity enabled');
+        }
+
+        // Normalize section_order_mode to base value for easier UI handling
+        setConfig({
+          ...data,
+          section_order_mode: normalizedMode
+        });
 
         // Auto-detect if test has sections based on section_order_mode
         if (data.section_order_mode === 'no_sections') {
@@ -490,10 +612,9 @@ export default function TestTrackConfigPage() {
           console.log('📝 Auto-detected: Multi-section test (section_order_mode =', data.section_order_mode + ')');
         }
 
-        // If section_order exists in config, use it; otherwise use the loaded sections
-        if (data.section_order && data.section_order.length > 0) {
-          setSections(data.section_order);
-        }
+        // Section order will be set by loadSections() which runs after useMacroSections is set
+        // loadSections() will use the saved section_order when saving, but load from DB when changing modes
+
         // Load time configuration
         if (data.total_time_minutes) {
           setTotalTimeMinutes(data.total_time_minutes);
@@ -549,6 +670,15 @@ export default function TestTrackConfigPage() {
       if (hasSections === false) {
         finalSectionOrderMode = 'no_sections';
         console.log('📝 Auto-setting section_order_mode to "no_sections" (single section test)');
+      } else if (useMacroSections) {
+        // If using macro sections, prepend 'macro_sections_' to the mode
+        if (config.section_order_mode === 'mandatory') {
+          finalSectionOrderMode = 'macro_sections_mandatory';
+          console.log('📝 Auto-setting section_order_mode to "macro_sections_mandatory" (macro sections with mandatory order)');
+        } else if (config.section_order_mode === 'user_choice') {
+          finalSectionOrderMode = 'macro_sections_user_choice';
+          console.log('📝 Auto-setting section_order_mode to "macro_sections_user_choice" (macro sections with user choice)');
+        }
       }
 
       // Validation
@@ -644,7 +774,7 @@ export default function TestTrackConfigPage() {
         // Use the auto-corrected section_order_mode
         section_order_mode: finalSectionOrderMode,
         // Include section order if mandatory mode is selected AND has sections
-        section_order: (hasSections && finalSectionOrderMode === 'mandatory') ? sections : null,
+        section_order: (hasSections && (finalSectionOrderMode === 'mandatory' || finalSectionOrderMode === 'macro_sections_mandatory')) ? sections : null,
         // Set navigation_between_sections to null when no sections
         navigation_between_sections: hasSections ? config.navigation_between_sections : null,
         // Include time configuration
@@ -660,6 +790,9 @@ export default function TestTrackConfigPage() {
         base_questions_scope: config.adaptivity_mode === 'adaptive' ? config.base_questions_scope : null,
         base_questions_count: config.adaptivity_mode === 'adaptive' ? config.base_questions_count : null,
         algorithm_type: config.adaptivity_mode === 'adaptive' ? config.algorithm_type : null,
+        // Include section adaptivity config
+        section_adaptivity_config: useSectionAdaptivity ? sectionAdaptivityConfig : null,
+        difficulty_levels_count: useSectionAdaptivity ? difficultyLevelsCount : null,
       };
 
       console.log('💾 Saving configuration:', dataToSave);
@@ -946,22 +1079,44 @@ export default function TestTrackConfigPage() {
                     <label className="flex items-center gap-3 cursor-pointer">
                       <input
                         type="radio"
-                        name="has_sections"
-                        checked={hasSections === true}
-                        onChange={() => setHasSections(true)}
+                        name="test_structure"
+                        checked={hasSections === true && useMacroSections === false}
+                        onChange={() => {
+                          setHasSections(true);
+                          setUseMacroSections(false);
+                        }}
                         className="w-5 h-5 text-brand-green"
                       />
                       <div>
-                        <div className="font-semibold text-gray-900">Test has sections</div>
-                        <div className="text-sm text-gray-600">Test is divided into multiple sections (e.g., Quant, Verbal, Reasoning)</div>
+                        <div className="font-semibold text-gray-900">Test has sections (Standard)</div>
+                        <div className="text-sm text-gray-600">Test is divided into standard sections from the section column</div>
                       </div>
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <input
                         type="radio"
-                        name="has_sections"
+                        name="test_structure"
+                        checked={hasSections === true && useMacroSections === true}
+                        onChange={() => {
+                          setHasSections(true);
+                          setUseMacroSections(true);
+                        }}
+                        className="w-5 h-5 text-brand-green"
+                      />
+                      <div>
+                        <div className="font-semibold text-gray-900">Test has sections (Macro Sections)</div>
+                        <div className="text-sm text-gray-600">Test is divided into macro sections (e.g., RW1, RW2, Math1, Math2)</div>
+                      </div>
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="test_structure"
                         checked={hasSections === false}
-                        onChange={() => setHasSections(false)}
+                        onChange={() => {
+                          setHasSections(false);
+                          setUseMacroSections(false);
+                        }}
                         className="w-5 h-5 text-brand-green"
                       />
                       <div>
@@ -1280,6 +1435,158 @@ export default function TestTrackConfigPage() {
                   )}
                 </div>
 
+                {/* Section Adaptivity - Only show if has sections */}
+                {hasSections && (
+                <div className="border-b border-gray-200 pb-6">
+                  <h3 className="text-lg font-bold text-brand-dark mb-4">Section Adaptivity</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Enable section-based adaptivity. Each section can have different difficulty levels based on student performance.
+                  </p>
+
+                  <div className="space-y-3 mb-6">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="section_adaptivity"
+                        checked={useSectionAdaptivity === false}
+                        onChange={() => setUseSectionAdaptivity(false)}
+                        className="w-5 h-5 text-brand-green"
+                      />
+                      <div>
+                        <div className="font-semibold text-gray-900">No Section Adaptivity</div>
+                        <div className="text-sm text-gray-600">Standard fixed difficulty sections</div>
+                      </div>
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="section_adaptivity"
+                        checked={useSectionAdaptivity === true}
+                        onChange={() => setUseSectionAdaptivity(true)}
+                        className="w-5 h-5 text-brand-green"
+                      />
+                      <div>
+                        <div className="font-semibold text-gray-900">Enable Section Adaptivity</div>
+                        <div className="text-sm text-gray-600">Sections adapt based on performance (base sections + easy/medium/hard)</div>
+                      </div>
+                    </label>
+                  </div>
+
+                  {/* Section Adaptivity Configuration */}
+                  {useSectionAdaptivity && sections.length > 0 && (
+                    <div className="p-4 bg-purple-50 border-2 border-purple-200 rounded-xl">
+                      <h4 className="font-semibold text-brand-dark mb-3">Configure Section Adaptivity</h4>
+
+                      {/* Number of difficulty levels */}
+                      <div className="mb-4 p-3 bg-white rounded-lg border border-purple-200">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Number of Difficulty Levels:
+                        </label>
+                        <select
+                          value={difficultyLevelsCount}
+                          onChange={(e) => setDifficultyLevelsCount(parseInt(e.target.value))}
+                          className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-brand-green focus:outline-none"
+                        >
+                          <option value={2}>2 Levels (Easy, Hard)</option>
+                          <option value={3}>3 Levels (Easy, Medium, Hard)</option>
+                          <option value={4}>4 Levels (Very Easy, Easy, Hard, Very Hard)</option>
+                        </select>
+                      </div>
+
+                      <p className="text-sm text-gray-700 mb-4">
+                        Mark sections as "Base" (to establish baseline) or "Adaptive" (adjusts difficulty based on performance)
+                      </p>
+                      <div className="space-y-3">
+                        {sections.map((section, index) => {
+                          // Generate difficulty level options based on count
+                          const difficultyLevels = (() => {
+                            if (difficultyLevelsCount === 2) return ['easy', 'hard'];
+                            if (difficultyLevelsCount === 3) return ['easy', 'medium', 'hard'];
+                            return ['very_easy', 'easy', 'hard', 'very_hard'];
+                          })();
+
+                          const difficultyLabels: Record<string, string> = {
+                            'very_easy': 'Very Easy',
+                            'easy': 'Easy',
+                            'medium': 'Medium',
+                            'hard': 'Hard',
+                            'very_hard': 'Very Hard'
+                          };
+
+                          return (
+                            <div key={section} className="p-4 bg-white rounded-lg border-2 border-purple-200">
+                              <div className="flex items-center justify-between mb-3">
+                                <span className="font-bold text-gray-800">{section}</span>
+                                <div className="flex gap-3">
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                      type="radio"
+                                      name={`section_adaptivity_${section}`}
+                                      checked={sectionAdaptivityConfig[section]?.type === 'base'}
+                                      onChange={() => {
+                                        setSectionAdaptivityConfig({
+                                          ...sectionAdaptivityConfig,
+                                          [section]: { type: 'base' }
+                                        });
+                                      }}
+                                      className="w-4 h-4 text-brand-green"
+                                    />
+                                    <span className="text-sm font-semibold">Base Section</span>
+                                  </label>
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                      type="radio"
+                                      name={`section_adaptivity_${section}`}
+                                      checked={sectionAdaptivityConfig[section]?.type === 'adaptive'}
+                                      onChange={() => {
+                                        setSectionAdaptivityConfig({
+                                          ...sectionAdaptivityConfig,
+                                          [section]: { type: 'adaptive', difficulty: difficultyLevels[0] }
+                                        });
+                                      }}
+                                      className="w-4 h-4 text-brand-green"
+                                    />
+                                    <span className="text-sm font-semibold">Adaptive Section</span>
+                                  </label>
+                                </div>
+                              </div>
+
+                              {/* Difficulty level dropdown for adaptive sections */}
+                              {sectionAdaptivityConfig[section]?.type === 'adaptive' && (
+                                <div className="mt-3 p-3 bg-purple-100 rounded-lg">
+                                  <label className="block text-xs font-semibold text-gray-700 mb-2">
+                                    Difficulty Level:
+                                  </label>
+                                  <select
+                                    value={sectionAdaptivityConfig[section]?.difficulty || difficultyLevels[0]}
+                                    onChange={(e) => {
+                                      setSectionAdaptivityConfig({
+                                        ...sectionAdaptivityConfig,
+                                        [section]: { type: 'adaptive', difficulty: e.target.value }
+                                      });
+                                    }}
+                                    className="w-full px-3 py-2 border-2 border-purple-300 rounded-lg focus:border-brand-green focus:outline-none bg-white"
+                                  >
+                                    {difficultyLevels.map(level => (
+                                      <option key={level} value={level}>
+                                        {difficultyLabels[level]}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <p className="text-xs text-gray-600 mt-3 italic">
+                        💡 Base sections establish student baseline. Adaptive sections adjust difficulty based on performance.
+                      </p>
+                    </div>
+                  )}
+                </div>
+                )}
+
                 {/* Duration per Section - Only show if has sections */}
                 {hasSections && (
                 <div className="border-b border-gray-200 pb-6">
@@ -1324,9 +1631,14 @@ export default function TestTrackConfigPage() {
                         {sections.map(section => {
                           const totalDuration = testVariations[0]?.default_duration_mins || 0;
                           const durationPerSection = Math.round(totalDuration / sections.length);
+                          const isAdaptive = sectionAdaptivityConfig[section]?.type === 'adaptive';
+
                           return (
                             <div key={section} className="flex items-center justify-between p-3 bg-white rounded-lg border border-blue-200">
-                              <span className="font-medium text-gray-700 text-sm">{section}</span>
+                              <span className="font-medium text-gray-700 text-sm">
+                                {section}
+                                {isAdaptive && <span className="ml-2 text-xs text-purple-600">(adaptive)</span>}
+                              </span>
                               <span className="text-blue-600 font-bold">{durationPerSection} min</span>
                             </div>
                           );
@@ -1344,9 +1656,14 @@ export default function TestTrackConfigPage() {
                       <div className="space-y-3">
                         {sections.map(section => {
                           const defaultValue = specificSectionDurations[section] || Math.round((testVariations[0]?.default_duration_mins || 0) / sections.length);
+                          const isAdaptive = sectionAdaptivityConfig[section]?.type === 'adaptive';
+
                           return (
                             <div key={section} className="flex items-center justify-between p-3 bg-white rounded-lg border border-purple-200">
-                              <label className="font-medium text-gray-700 text-sm flex-1">{section}</label>
+                              <label className="font-medium text-gray-700 text-sm flex-1">
+                                {section}
+                                {isAdaptive && <span className="ml-2 text-xs text-purple-600">(adaptive)</span>}
+                              </label>
                               <div className="flex items-center gap-2">
                                 <input
                                   type="number"
@@ -1651,7 +1968,8 @@ export default function TestTrackConfigPage() {
                   </div>
                 </div>
 
-                {/* Test Adaptivity */}
+                {/* Test Adaptivity - Hide when section adaptivity is enabled */}
+                {!useSectionAdaptivity && (
                 <div className="border-b border-gray-200 pb-6">
                   <h3 className="text-lg font-bold text-brand-dark mb-4">Test Adaptivity</h3>
 
@@ -1853,6 +2171,7 @@ export default function TestTrackConfigPage() {
                     )}
                   </div>
                 </div>
+                )}
 
                 {/* Test Start Message - Bilingual */}
                 <div className="border-b border-gray-200 pb-6">
