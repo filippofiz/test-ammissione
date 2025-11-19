@@ -43,9 +43,9 @@ jobs:
 
       - name: Prepare deployment folder
         run: |
-          mkdir -p deploy
-          # Copy entire repo content (excluding node_modules and git)
-          rsync -av --exclude='node_modules' --exclude='.git' --exclude='deploy' . deploy/
+          # The dist folder already contains italiano/inglese via vite-plugin-static-copy
+          # Just use dist as the deploy folder
+          mv dist deploy
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
