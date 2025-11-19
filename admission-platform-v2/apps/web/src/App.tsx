@@ -20,6 +20,7 @@ import TakeTestPage from './pages/TakeTestPage';
 import TestRunnerPage from './pages/TestRunnerPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import PDFToLatexConverterPage from './pages/PDFToLatexConverterPage';
+import ReviewQuestionsPage from './pages/ReviewQuestionsPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 function App() {
@@ -184,6 +185,14 @@ function App() {
           element={
             <ProtectedRoute requiredRoles={['ADMIN']}>
               <PDFToLatexConverterPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/review-questions"
+          element={
+            <ProtectedRoute requiredRoles={['ADMIN']}>
+              <ReviewQuestionsPage />
             </ProtectedRoute>
           }
         />

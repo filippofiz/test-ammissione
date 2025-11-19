@@ -26,6 +26,7 @@ import { GIQuestion } from '../components/questions/GIQuestion';
 import { TAQuestion } from '../components/questions/TAQuestion';
 import { TPAQuestion } from '../components/questions/TPAQuestion';
 import { MultipleChoiceQuestion } from '../components/questions/MultipleChoiceQuestion';
+import { PDFTestView } from '../components/PDFTestView';
 import { createAdaptiveAlgorithm, SimpleAdaptiveAlgorithm, ComplexAdaptiveAlgorithm } from '../lib/algorithms/adaptiveAlgorithm';
 import { translateTestTrack } from '../lib/translateTestTrack';
 
@@ -58,12 +59,16 @@ interface TestConfig {
   // Question limits
   questions_per_section?: Record<string, number>; // JSONB mapping section names to question counts (for multi-section tests)
   total_questions?: number; // Total number of questions (for single-section tests)
+
+  // Section adaptivity
+  section_adaptivity_config?: Record<string, { type: 'base' | 'adaptive'; difficulty?: string }>;
 }
 
 interface Question {
   id: string;
   test_type: string;
   section: string;
+  macro_section?: string; // Used when section_order_mode includes 'macro_sections'
   question_number: number;
   question_type: string;
   difficulty: string;
@@ -159,6 +164,65 @@ interface StudentAnswer {
   column2?: string;
 }
 
+/**
+ * Filters sections based on section adaptivity configuration.
+ * - Base sections are always included
+ * - For adaptive sections, randomly picks one from each group
+ * - Maintains the original order from section_order
+ *
+ * Example:
+ * Input: ["RW1", "RW2-Easy", "RW2-Hard", "Math1", "Math2-Easy", "Math2-Hard"]
+ * Config: { RW1: base, RW2-Easy: adaptive, RW2-Hard: adaptive, Math1: base, Math2-Easy: adaptive, Math2-Hard: adaptive }
+ * Output: ["RW1", "RW2-Hard", "Math1", "Math2-Easy"] (randomly picked RW2-Hard and Math2-Easy)
+ */
+function filterSectionsWithAdaptivity(
+  sections: string[],
+  adaptivityConfig: Record<string, { type: 'base' | 'adaptive'; difficulty?: string }>
+): string[] {
+  const result: string[] = [];
+  const processedGroups = new Set<string>();
+
+  for (const section of sections) {
+    const config = adaptivityConfig[section];
+
+    if (!config) {
+      // No config for this section, include it by default
+      result.push(section);
+      continue;
+    }
+
+    if (config.type === 'base') {
+      // Always include base sections
+      result.push(section);
+    } else if (config.type === 'adaptive') {
+      // Extract group prefix (e.g., "RW2" from "RW2-Easy")
+      const groupPrefix = section.replace(/-Easy|-Hard$/i, '');
+
+      if (processedGroups.has(groupPrefix)) {
+        // Already picked a section from this group, skip
+        continue;
+      }
+
+      // Find all sections in this group
+      const groupSections = sections.filter(s => {
+        const sectionConfig = adaptivityConfig[s];
+        return sectionConfig?.type === 'adaptive' && s.startsWith(groupPrefix);
+      });
+
+      // Randomly pick one from the group
+      const randomIndex = Math.floor(Math.random() * groupSections.length);
+      const pickedSection = groupSections[randomIndex];
+
+      result.push(pickedSection);
+      processedGroups.add(groupPrefix);
+
+      console.log(`🎲 Adaptive group "${groupPrefix}": picked "${pickedSection}" from [${groupSections.join(', ')}]`);
+    }
+  }
+
+  return result;
+}
+
 export default function TakeTestPage() {
   const { assignmentId } = useParams<{ assignmentId: string }>();
   const navigate = useNavigate();
@@ -186,6 +250,8 @@ export default function TakeTestPage() {
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, StudentAnswer>>({});
+  const [isPDFTest, setIsPDFTest] = useState(false); // PDF test format
+  const [currentPageGroup, setCurrentPageGroup] = useState(0); // For PDF tests: current page group
   const [showStartScreen, setShowStartScreen] = useState(true);
   const [showSectionSelectionScreen, setShowSectionSelectionScreen] = useState(false);
   const [showPauseScreen, setShowPauseScreen] = useState(false);
@@ -215,6 +281,8 @@ export default function TakeTestPage() {
   const [isPartialAnswer, setIsPartialAnswer] = useState(false);
   const [showSectionTransition, setShowSectionTransition] = useState(false);
   const [sectionTransitionCountdown, setSectionTransitionCountdown] = useState(5);
+  const [isTransitioning, setIsTransitioning] = useState(false); // Prevent race conditions
+  const [isCompletingSection, setIsCompletingSection] = useState(false); // Prevent double section completion
 
   // Adaptive testing state
   const [questionPool, setQuestionPool] = useState<Question[]>([]); // Available questions
@@ -234,13 +302,34 @@ export default function TakeTestPage() {
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Helper function to get the correct section field based on config
+  const getSectionField = (question: Question): string => {
+    if (config?.section_order_mode?.includes('macro_sections') && question.macro_section) {
+      return question.macro_section;
+    }
+    return question.section;
+  };
+
   // Get current section and questions
   const currentSection = sections[currentSectionIndex];
+
+  // Helper to format section names for display
+  const formatSectionName = (name: string): string => {
+    if (!name) return '';
+    // Replace RW with "Reading and Writing"
+    let formatted = name.replace(/^RW(\d*)/, 'Reading and Writing $1').trim();
+    // Replace Math1, Math2 with "Math 1", "Math 2"
+    formatted = formatted.replace(/^Math(\d+)/, 'Math $1');
+    // Remove -Hard or -Easy suffixes
+    formatted = formatted.replace(/-(Hard|Easy)$/i, '');
+    return formatted;
+  };
+
   // Use selectedQuestions if they've been prepared (for both adaptive and non-adaptive tests)
   const questionsToUse = selectedQuestions.length > 0
     ? selectedQuestions
     : allQuestions;
-  const sectionQuestions = questionsToUse.filter(q => q.section === currentSection);
+  const sectionQuestions = questionsToUse.filter(q => getSectionField(q) === currentSection);
   const currentQuestion = sectionQuestions[currentQuestionIndex];
   const totalQuestionsInSection = sectionQuestions.length;
 
@@ -519,7 +608,7 @@ export default function TakeTestPage() {
       return () => clearTimeout(timer);
     } else if (showSectionTransition && sectionTransitionCountdown === 0) {
       // Time's up - proceed to next section or pause
-      handleSectionTransitionComplete();
+      handleSectionTransitionComplete(true); // true = auto-transition
     }
   }, [showSectionTransition, sectionTransitionCountdown]);
 
@@ -550,6 +639,24 @@ export default function TakeTestPage() {
       use_base_questions: config.use_base_questions
     });
 
+    // Helper to get correct section field
+    const getSection = (q: Question) =>
+      config.section_order_mode?.includes('macro_sections') && q.macro_section
+        ? q.macro_section
+        : q.section;
+
+    // Check if this is a PDF test
+    const isPDFTest = allQuestions.length > 0 && allQuestions[0].question_type === 'pdf';
+
+    // PDF TEST SPECIAL HANDLING: NO randomization - keep original order
+    if (isPDFTest) {
+      console.log('📄 PDF test detected - keeping original order (no randomization)');
+      // Sort by question_number to ensure correct order
+      const sortedQuestions = [...allQuestions].sort((a, b) => a.question_number - b.question_number);
+      console.log('✅ PDF test questions kept in original order');
+      return sortedQuestions;
+    }
+
     let processedQuestions = [...allQuestions];
 
     // NON-ADAPTIVE MODE: Static question selection
@@ -569,10 +676,10 @@ export default function TakeTestPage() {
       // CASE 2: Multi-section test with questions_per_section limits
       if (config.questions_per_section) {
         const limitedQuestions: Question[] = [];
-        const sections = Array.from(new Set(processedQuestions.map(q => q.section)));
+        const sections = Array.from(new Set(processedQuestions.map(q => getSection(q))));
 
         sections.forEach(section => {
-          let sectionQuestions = processedQuestions.filter(q => q.section === section);
+          let sectionQuestions = processedQuestions.filter(q => getSection(q) === section);
           const limit = config.questions_per_section![section];
 
           if (limit !== undefined && limit > 0) {
@@ -612,11 +719,11 @@ export default function TakeTestPage() {
     if (config.question_order === 'random') {
       if (config.base_questions_scope === 'per_section') {
         // Randomize within each section
-        const sections = Array.from(new Set(processedQuestions.map(q => q.section)));
+        const sections = Array.from(new Set(processedQuestions.map(q => getSection(q))));
         const randomizedQuestions: Question[] = [];
 
         sections.forEach(section => {
-          const sectionQuestions = processedQuestions.filter(q => q.section === section);
+          const sectionQuestions = processedQuestions.filter(q => getSection(q) === section);
           // Shuffle section questions
           const shuffled = [...sectionQuestions].sort(() => Math.random() - 0.5);
           randomizedQuestions.push(...shuffled);
@@ -681,7 +788,7 @@ export default function TakeTestPage() {
       ): Question[] => {
         // Try to get questions with target difficulty
         let candidates = questions.filter(
-          q => q.section === targetSection && matchesDifficulty(q, targetDifficulty)
+          q => getSection(q) === targetSection && matchesDifficulty(q, targetDifficulty)
         );
 
         // FALLBACK: If not enough questions with target difficulty, try other difficulties
@@ -689,7 +796,7 @@ export default function TakeTestPage() {
           console.warn(`⚠️ Not enough baseline questions with difficulty ${targetDifficulty} in section ${targetSection}. Found ${candidates.length}, need ${count}. Using fallback.`);
 
           // Get all questions from this section
-          const allSectionQuestions = questions.filter(q => q.section === targetSection);
+          const allSectionQuestions = questions.filter(q => getSection(q) === targetSection);
           candidates = allSectionQuestions;
         }
 
@@ -711,7 +818,7 @@ export default function TakeTestPage() {
       if (config.base_questions_scope === 'per_section') {
         // For per_section: Only select base questions for FIRST section
         // Other sections will get their base questions when we move to them
-        const sections = Array.from(new Set(processedQuestions.map(q => q.section)));
+        const sections = Array.from(new Set(processedQuestions.map(q => getSection(q))));
         const firstSection = sections[0];
         const baseCount = config.base_questions_count || 0;
 
@@ -755,7 +862,7 @@ export default function TakeTestPage() {
       const tableSuffix = isTestMode ? '_test' : '';
       const { data: assignment, error: assignmentError } = await db
         .from(`2V_test_assignments${tableSuffix}`)
-        .select(`*, 2V_tests${tableSuffix}(id, test_type, exercise_type)`)
+        .select(`*, 2V_tests${tableSuffix}(id, test_type, exercise_type, format)`)
         .eq('id', assignmentId)
         .single();
 
@@ -895,23 +1002,40 @@ export default function TakeTestPage() {
 
       const testType = assignment['2V_tests'].test_type;
       const exerciseType = assignment['2V_tests'].exercise_type;
-      // Normalize track type to lowercase for config lookup
-      const trackType = exerciseType.toLowerCase();
+      const testFormat = assignment['2V_tests'].format;
 
-      console.log(`🔍 Looking for config: test_type=${testType}, track_type=${trackType} (original exercise_type=${exerciseType})`);
+      console.log(`📋 Test format: ${testFormat}`);
 
-      // Load test configuration (always from real tables - it's reference data)
-      const { data: configData, error: configError } = await supabase
+      // Check if this is a PDF test
+      if (testFormat === 'pdf') {
+        console.log('📄 PDF test detected - will use PDF layout');
+        setIsPDFTest(true);
+      } else {
+        console.log('📝 Regular test - will use standard layout');
+        setIsPDFTest(false);
+      }
+
+      // Normalize function: lowercase, replace spaces/underscores consistently
+      const normalize = (str: string) => str.toLowerCase().replace(/[\s_]+/g, '_');
+      const trackTypeNormalized = normalize(exerciseType);
+
+      console.log(`🔍 Looking for config: test_type=${testType}, track_type=${trackTypeNormalized} (original exercise_type=${exerciseType})`);
+
+      // Load all configs for this test type, then find by normalized track_type
+      const { data: configsData, error: configsError } = await supabase
         .from('2V_test_track_config')
         .select('*')
-        .eq('test_type', testType)
-        .eq('track_type', trackType)
-        .maybeSingle();
+        .eq('test_type', testType);
 
-      if (configError) throw configError;
+      if (configsError) throw configsError;
+
+      // Find matching config by normalized track_type (case and space/underscore insensitive)
+      const configData = configsData?.find(config =>
+        normalize(config.track_type) === trackTypeNormalized
+      );
 
       if (!configData) {
-        console.error(`❌ Config not found for test_type=${testType}, track_type=${trackType}`);
+        console.error(`❌ Config not found for test_type=${testType}, track_type=${trackTypeNormalized}`);
         alert('Test configuration not found. Please contact your instructor.');
         navigate(-1);
         return;
@@ -962,13 +1086,31 @@ export default function TakeTestPage() {
       setQuestionPool(questions || []); // Store full pool
 
       // Set up sections based on config
+      let sectionsToUse: string[] = [];
+
       if (configData.section_order_mode === 'mandatory' && configData.section_order) {
-        setSections(configData.section_order);
+        sectionsToUse = configData.section_order;
+      } else if (configData.section_order_mode?.includes('macro_sections') && configData.section_order) {
+        // Use section_order from config when using macro_sections mode
+        sectionsToUse = configData.section_order;
       } else {
         // Get unique sections from questions
-        const uniqueSections = Array.from(new Set(questions?.map(q => q.section) || []));
-        setSections(uniqueSections);
+        const sectionField = configData.section_order_mode?.includes('macro_sections')
+          ? 'macro_section'
+          : 'section';
+        sectionsToUse = Array.from(new Set(
+          questions?.map(q => (q as any)[sectionField]).filter(Boolean) || []
+        ));
       }
+
+      // Apply section adaptivity filtering if configured
+      if (configData.section_adaptivity_config && Object.keys(configData.section_adaptivity_config).length > 0) {
+        console.log('🎯 Applying section adaptivity config:', configData.section_adaptivity_config);
+        sectionsToUse = filterSectionsWithAdaptivity(sectionsToUse, configData.section_adaptivity_config);
+        console.log('✅ Filtered sections:', sectionsToUse);
+      }
+
+      setSections(sectionsToUse);
 
       // Initialize question selection based on config
       const initialQuestions = prepareInitialQuestions(
@@ -1174,6 +1316,12 @@ export default function TakeTestPage() {
       const firstSection = userSelectedSections[0];
       const baselineDifficulty = config.baseline_difficulty || 2;
 
+      // Helper to get correct section field
+      const getSection = (q: Question) =>
+        config?.section_order_mode?.includes('macro_sections') && q.macro_section
+          ? q.macro_section
+          : q.section;
+
       // Helper function to match difficulty
       const matchesDifficulty = (question: Question, targetDifficulty: number | string): boolean => {
         const qDiff = question.difficulty;
@@ -1192,7 +1340,7 @@ export default function TakeTestPage() {
 
       // Get baseline questions for the first section with randomization and fallback
       let baseQuestionsCandidates = questionPool.filter(
-        q => q.section === firstSection && matchesDifficulty(q, baselineDifficulty)
+        q => getSection(q) === firstSection && matchesDifficulty(q, baselineDifficulty)
       );
 
       const baseCount = config.base_questions_count || 0;
@@ -1202,7 +1350,7 @@ export default function TakeTestPage() {
         console.warn(`⚠️ Not enough baseline questions with difficulty ${baselineDifficulty} in section ${firstSection}. Found ${baseQuestionsCandidates.length}, need ${baseCount}. Using fallback.`);
 
         // Get all questions from this section
-        const allSectionQuestions = questionPool.filter(q => q.section === firstSection);
+        const allSectionQuestions = questionPool.filter(q => getSection(q) === firstSection);
 
         // Apply randomization if question_order is 'random'
         if (config.question_order === 'random') {
@@ -1307,7 +1455,6 @@ export default function TakeTestPage() {
 
   function handleTimeUp() {
     if (timerRef.current) clearInterval(timerRef.current);
-    alert(t('takeTest.timeUp'));
 
     // Complete the section instead of submitting the entire test
     // This will handle navigation to next section, pause screens, or final submission
@@ -1377,6 +1524,12 @@ export default function TakeTestPage() {
   }
 
   async function goToPreviousQuestion() {
+    // Extra safety: reject if time has expired
+    if (timeRemaining !== null && timeRemaining <= 0) {
+      console.log('⚠️ Time expired, ignoring click');
+      return;
+    }
+
     if (!canGoBack()) return;
 
     // Save current answer before navigating back
@@ -1395,7 +1548,7 @@ export default function TakeTestPage() {
       // Move to previous section's last question
       setCurrentSectionIndex(currentSectionIndex - 1);
       const prevSectionQuestions = allQuestions.filter(
-        q => q.section === sections[currentSectionIndex - 1]
+        q => getSectionField(q) === sections[currentSectionIndex - 1]
       );
       setCurrentQuestionIndex(prevSectionQuestions.length - 1);
     }
@@ -1520,6 +1673,12 @@ export default function TakeTestPage() {
   }
 
   async function goToNextQuestion() {
+    // Extra safety: reject if time has expired
+    if (timeRemaining !== null && timeRemaining <= 0) {
+      console.log('⚠️ Time expired, ignoring click');
+      return;
+    }
+
     // Save current answer immediately before navigating
     if (currentQuestion?.id && answers[currentQuestion.id]) {
       console.log(`💾 Saving answer before navigation | Assignment: ${assignmentId} | Question: ${currentQuestion.id}`);
@@ -1612,7 +1771,7 @@ export default function TakeTestPage() {
       if (config.base_questions_scope === 'per_section') {
         // Check if we've ANSWERED (not just prepared) base questions for the current section
         // We need to check currentQuestionIndex, not selectedQuestions.length
-        const currentSectionQuestions = selectedQuestions.filter(q => q.section === currentSection);
+        const currentSectionQuestions = selectedQuestions.filter(q => getSectionField(q) === currentSection);
         const baselineQuestionsInSection = currentSectionQuestions.filter(q => q.is_base);
 
         // Baseline questions are completed if we're ABOUT TO ANSWER or have already answered all baseline questions
@@ -1640,7 +1799,7 @@ export default function TakeTestPage() {
       // Check if we need to select next question
       if (baseQuestionsCompletedForSection) {
         // Get questions already shown in THIS section
-        const sectionSelectedQuestions = selectedQuestions.filter(q => q.section === currentSection);
+        const sectionSelectedQuestions = selectedQuestions.filter(q => getSectionField(q) === currentSection);
 
         // Check if we've reached the question limit for this section
         let questionLimitForSection = 20; // default
@@ -1657,7 +1816,7 @@ export default function TakeTestPage() {
 
         // Get available questions from pool (not yet shown in this section)
         const availableQuestions = questionPool.filter(
-          q => !answeredQuestionIds.has(q.id) && q.section === currentSection
+          q => !answeredQuestionIds.has(q.id) && getSectionField(q) === currentSection
         );
 
         console.log(`📊 Available questions: ${availableQuestions.length}, Already shown: ${sectionSelectedQuestions.length}, Target: ${questionLimitForSection}`);
@@ -1725,6 +1884,15 @@ export default function TakeTestPage() {
   }
 
   function completeSection() {
+    // Prevent race condition: if already completing section, ignore this call
+    if (isCompletingSection) {
+      console.log('⚠️ Already completing section, ignoring duplicate call');
+      return;
+    }
+
+    console.log('✅ Completing section:', currentSection);
+    setIsCompletingSection(true);
+
     // Check for mandatory pause
     if (config?.pause_mode === 'between_sections' &&
         config.pause_sections?.includes(currentSection)) {
@@ -1734,6 +1902,7 @@ export default function TakeTestPage() {
       setTimeout(() => {
         setShowPauseScreen(false);
         setPauseTimeRemaining(null);
+        setIsCompletingSection(false);
         moveToNextSection();
       }, pauseDuration * 1000);
       return;
@@ -1746,22 +1915,43 @@ export default function TakeTestPage() {
       // IMPORTANT: Reset countdown BEFORE showing the screen to avoid race condition
       setPauseChoiceCountdown(5);
       setShowPauseChoiceScreen(true);
+      // Reset flag when user makes choice
+      setTimeout(() => setIsCompletingSection(false), 500);
       return;
     }
 
     // No pause - show transition message (if not the last section)
     if (currentSectionIndex < sections.length - 1) {
       setShowSectionTransition(true);
+      // Reset flag when transition completes
+      setTimeout(() => setIsCompletingSection(false), 500);
       return;
     }
 
     // Last section - move to completion
+    setIsCompletingSection(false);
     moveToNextSection();
   }
 
-  function handleSectionTransitionComplete() {
+  function handleSectionTransitionComplete(isAuto = false) {
+    // Extra safety: reject manual clicks if countdown has expired (allow auto-transition)
+    if (!isAuto && sectionTransitionCountdown <= 0) {
+      console.log('⚠️ Countdown expired, ignoring click');
+      return;
+    }
+
+    // Prevent race condition: if already transitioning, ignore this call
+    if (isTransitioning) {
+      console.log('⚠️ Already transitioning, ignoring duplicate call');
+      return;
+    }
+
+    console.log('✅ Section transition complete, moving to next section');
+    setIsTransitioning(true);
     setShowSectionTransition(false);
     moveToNextSection();
+    // Reset flag after a short delay to allow state updates
+    setTimeout(() => setIsTransitioning(false), 500);
   }
 
   async function savePauseEventToDatabase(action: 'pause_taken' | 'pause_skipped' | 'pause_auto_skipped') {
@@ -1830,6 +2020,12 @@ export default function TakeTestPage() {
   }
 
   function handleTakePause() {
+    // Extra safety: reject if countdown has expired
+    if (pauseChoiceCountdown <= 0) {
+      console.log('⚠️ Countdown expired, ignoring click');
+      return;
+    }
+
     setPausesUsed(prev => prev + 1);
     // Record pause event in state
     const pauseEvent = {
@@ -1854,6 +2050,12 @@ export default function TakeTestPage() {
   }
 
   function handleSkipPause(isAutoSkip = false) {
+    // Extra safety: reject manual clicks if countdown has expired (allow auto-skip)
+    if (!isAutoSkip && pauseChoiceCountdown <= 0) {
+      console.log('⚠️ Countdown expired, ignoring click');
+      return;
+    }
+
     const action = isAutoSkip ? 'pause_auto_skipped' : 'pause_skipped';
 
     // Record pause skip event in state
@@ -1891,6 +2093,12 @@ export default function TakeTestPage() {
         // Determine baseline difficulty
         let baselineDifficulty = config.baseline_difficulty || 2;
 
+        // Helper to get correct section field
+        const getSection = (q: Question) =>
+          config?.section_order_mode?.includes('macro_sections') && q.macro_section
+            ? q.macro_section
+            : q.section;
+
         // Helper function to match difficulty (handles both string and numeric)
         const matchesDifficulty = (question: Question, targetDifficulty: number | string): boolean => {
           const qDiff = question.difficulty;
@@ -1923,7 +2131,7 @@ export default function TakeTestPage() {
 
         // Get questions with baseline difficulty for the next section from pool with randomization and fallback
         let nextSectionBaseQuestionsCandidates = questionPool.filter(
-          q => q.section === nextSection && matchesDifficulty(q, baselineDifficulty)
+          q => getSection(q) === nextSection && matchesDifficulty(q, baselineDifficulty)
         );
 
         const baseCount = config.base_questions_count || 0;
@@ -1933,7 +2141,7 @@ export default function TakeTestPage() {
           console.warn(`⚠️ Not enough baseline questions with difficulty ${baselineDifficulty} in section ${nextSection}. Found ${nextSectionBaseQuestionsCandidates.length}, need ${baseCount}. Using fallback.`);
 
           // Get all questions from this section
-          const allSectionQuestions = questionPool.filter(q => q.section === nextSection);
+          const allSectionQuestions = questionPool.filter(q => getSection(q) === nextSection);
 
           // Apply randomization if question_order is 'random'
           if (config.question_order === 'random') {
@@ -2133,7 +2341,7 @@ export default function TakeTestPage() {
       newAttempt.pause_events = pauseEvents;
 
       // Section completion tracking (for UI purposes)
-      newAttempt.sections_completed = Array.from(new Set(selectedQuestions.map(q => q.section)));
+      newAttempt.sections_completed = Array.from(new Set(selectedQuestions.map(q => getSectionField(q))));
 
       console.log('📝 New attempt record created:', newAttempt);
 
@@ -2214,12 +2422,24 @@ export default function TakeTestPage() {
 
   // Handle exit warning countdown
   function handleStayInTest() {
+    // Extra safety: reject if countdown has expired
+    if (exitCountdown <= 0) {
+      console.log('⚠️ Countdown expired, ignoring click');
+      return;
+    }
+
     setShowExitWarning(false);
     setExitCountdown(5);
     enterFullscreen();
   }
 
   function handleConfirmExit() {
+    // Extra safety: reject if countdown has expired
+    if (exitCountdown <= 0) {
+      console.log('⚠️ Countdown expired, ignoring click');
+      return;
+    }
+
     annulTest();
   }
 
@@ -2327,13 +2547,15 @@ export default function TakeTestPage() {
             <div className="flex gap-4">
               <button
                 onClick={handleConfirmExit}
-                className="flex-1 px-6 py-3 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition-all"
+                disabled={exitCountdown <= 1}
+                className="flex-1 px-6 py-3 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {t('takeTest.exitTest')}
               </button>
               <button
                 onClick={handleStayInTest}
-                className="flex-1 px-6 py-3 bg-gradient-to-r from-brand-green to-green-600 text-white rounded-xl font-semibold hover:shadow-xl transition-all"
+                disabled={exitCountdown <= 1}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-brand-green to-green-600 text-white rounded-xl font-semibold hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {t('takeTest.stayInTest')}
               </button>
@@ -2431,7 +2653,7 @@ export default function TakeTestPage() {
                   <div className="flex-1">
                     <div className="font-semibold text-gray-800">{section}</div>
                     <div className="text-sm text-gray-500">
-                      {allQuestions.filter(q => q.section === section).length} {t('takeTest.questions')}
+                      {allQuestions.filter(q => getSectionField(q) === section).length} {t('takeTest.questions')}
                       {config.time_per_section?.[section] && (
                         <> • {config.time_per_section[section]} {t('common.minutes')}</>
                       )}
@@ -2478,7 +2700,7 @@ export default function TakeTestPage() {
             {t('takeTest.sectionCompleted')}
           </h2>
           <p className="text-xl text-gray-700 mb-2">
-            {currentSection}
+            {formatSectionName(currentSection)}
           </p>
           <p className="text-gray-600 mb-8">
             {t('takeTest.wellDone')}
@@ -2495,14 +2717,15 @@ export default function TakeTestPage() {
 
           <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6 mb-6">
             <p className="text-sm text-gray-600 mb-2">{t('takeTest.upNext')}</p>
-            <p className="text-xl font-bold text-brand-dark">{nextSection}</p>
+            <p className="text-xl font-bold text-brand-dark">{formatSectionName(nextSection)}</p>
           </div>
 
           <button
             onClick={handleSectionTransitionComplete}
-            className="w-full px-8 py-3 bg-gradient-to-r from-brand-green to-green-600 text-white rounded-xl font-semibold hover:shadow-xl transition-all"
+            disabled={isTransitioning || sectionTransitionCountdown <= 1}
+            className="w-full px-8 py-3 bg-gradient-to-r from-brand-green to-green-600 text-white rounded-xl font-semibold hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {t('takeTest.continueNow')}
+            {isTransitioning ? 'Loading...' : t('takeTest.continueNow')}
           </button>
         </div>
       </div>
@@ -2520,7 +2743,7 @@ export default function TakeTestPage() {
               {t('takeTest.sectionComplete')}
             </h2>
             <p className="text-gray-600 mb-6">
-              {t('takeTest.completedSection')} <span className="font-semibold">{currentSection}</span>
+              {t('takeTest.completedSection')} <span className="font-semibold">{formatSectionName(currentSection)}</span>
             </p>
 
             {/* Countdown Timer */}
@@ -2546,13 +2769,15 @@ export default function TakeTestPage() {
             <div className="flex gap-4">
               <button
                 onClick={handleSkipPause}
-                className="flex-1 px-6 py-3 bg-gray-200 text-gray-800 rounded-xl font-semibold hover:bg-gray-300 transition-all"
+                disabled={pauseChoiceCountdown <= 1}
+                className="flex-1 px-6 py-3 bg-gray-200 text-gray-800 rounded-xl font-semibold hover:bg-gray-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {t('takeTest.continueWithoutPause')}
               </button>
               <button
                 onClick={handleTakePause}
-                className="flex-1 px-6 py-3 bg-gradient-to-r from-brand-green to-green-600 text-white rounded-xl font-semibold hover:shadow-xl transition-all"
+                disabled={pauseChoiceCountdown <= 1}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-brand-green to-green-600 text-white rounded-xl font-semibold hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {t('takeTest.takePause')}
               </button>
@@ -2573,7 +2798,7 @@ export default function TakeTestPage() {
               {isUserChoice ? t('takeTest.pauseBreak') : t('takeTest.mandatoryBreak')}
             </h2>
             <p className="text-gray-600 mb-6">
-              {t('takeTest.completedSection')} <span className="font-semibold">{currentSection}</span>
+              {t('takeTest.completedSection')} <span className="font-semibold">{formatSectionName(currentSection)}</span>
             </p>
 
             {/* Countdown Timer */}
@@ -2638,13 +2863,97 @@ export default function TakeTestPage() {
     );
   }
 
+  // PDF Test Interface
+  if (isPDFTest && !showStartScreen && !showCompletionScreen) {
+    return (
+      <div className="flex flex-col h-screen bg-gray-50">
+        {/* Header with Timer and Section Info */}
+        <div className="bg-white border-b-2 border-gray-200 px-6 py-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-brand-dark">{formatSectionName(currentSection)}</h2>
+            <p className="text-sm text-gray-600">
+              Section {currentSectionIndex + 1} of {sections.length}
+            </p>
+          </div>
+          {timeRemaining !== null && (
+            <div className="flex items-center gap-2 text-lg">
+              <FontAwesomeIcon icon={faClock} className="text-brand-green" />
+              <span className={`font-mono font-bold ${timeRemaining < 300 ? 'text-red-600' : 'text-gray-800'}`}>
+                {formatTime(timeRemaining)}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* PDF Test View */}
+        <div className="flex-1 overflow-hidden">
+          <PDFTestView
+            questions={sectionQuestions}
+            currentPageGroup={currentPageGroup}
+            answers={answers}
+            onAnswer={(questionId, answer) => {
+              setAnswers(prev => ({
+                ...prev,
+                [questionId]: {
+                  questionId,
+                  answer,
+                  timeSpent: 0,
+                  flagged: prev[questionId]?.flagged || false,
+                }
+              }));
+            }}
+            onNext={async () => {
+              // Save all answers on current page before moving
+              for (const question of sectionQuestions) {
+                if (answers[question.id]) {
+                  await saveAnswer(question.id, answers[question.id], answers[question.id].flagged);
+                }
+              }
+
+              // Check if we need to move to next section
+              const pageGroups: Record<number, any[]> = {};
+              sectionQuestions.forEach(q => {
+                const pageNum = q.question_data.page_number;
+                if (!pageGroups[pageNum]) pageGroups[pageNum] = [];
+                pageGroups[pageNum].push(q);
+              });
+              const totalPageGroups = Object.keys(pageGroups).length;
+
+              if (currentPageGroup < totalPageGroups - 1) {
+                // Move to next page group
+                setCurrentPageGroup(currentPageGroup + 1);
+              } else {
+                // Last page of section - complete section (with transition)
+                setCurrentPageGroup(0); // Reset for next section
+                if (currentSectionIndex < sections.length - 1) {
+                  completeSection(); // This will show transition screen
+                } else {
+                  // Test complete
+                  await submitTest();
+                }
+              }
+            }}
+            onPrevious={() => {
+              if (currentPageGroup > 0) {
+                setCurrentPageGroup(currentPageGroup - 1);
+              }
+            }}
+            canGoNext={true}
+            canGoPrevious={currentPageGroup > 0}
+            timeRemaining={timeRemaining}
+          />
+        </div>
+      </div>
+    );
+  }
+
   // Main Test Interface
   return (
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Header with Timer */}
       <div className="bg-white border-b-2 border-gray-200 px-6 py-4 flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-brand-dark">{currentSection}</h2>
+          <h2 className="text-xl font-bold text-brand-dark">{formatSectionName(currentSection)}</h2>
           <div className="flex items-center gap-3">
             <p className="text-sm text-gray-600">
               {t('takeTest.question')} {currentQuestionIndex + 1} {t('takeTest.of')} {sectionQuestionLimit}
@@ -2849,6 +3158,23 @@ export default function TakeTestPage() {
               onAnswerChange={handleAnswerSelect}
             />
           )}
+
+          {/* Open-Ended Questions */}
+          {currentQuestion?.question_type === 'open_ended' && (
+            <div className="space-y-4">
+              {currentQuestion.question_data?.question_text && (
+                <div className="text-lg text-gray-800 mb-4">
+                  {currentQuestion.question_data.question_text}
+                </div>
+              )}
+              <textarea
+                value={answers[currentQuestion.id]?.answer || ''}
+                onChange={(e) => handleAnswerSelect(e.target.value)}
+                placeholder={t('takeTest.enterYourAnswer', 'Enter your answer here...')}
+                className="w-full h-48 p-4 border-2 border-gray-200 rounded-xl focus:border-brand-green focus:ring-2 focus:ring-brand-green focus:ring-opacity-20 outline-none resize-y text-gray-800"
+              />
+            </div>
+          )}
         </div>
 
         {/* Standard Multiple Choice Answer Options */}
@@ -2930,7 +3256,7 @@ export default function TakeTestPage() {
       <div className="bg-white border-t-2 border-gray-200 px-6 py-4 flex items-center justify-between">
         <button
           onClick={goToPreviousQuestion}
-          disabled={!canGoBack()}
+          disabled={!canGoBack() || (timeRemaining !== null && timeRemaining <= 1)}
           className="px-6 py-3 rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-gray-200 text-gray-700 hover:bg-gray-300 disabled:hover:bg-gray-200"
         >
           <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
@@ -2943,7 +3269,7 @@ export default function TakeTestPage() {
 
         <button
           onClick={goToNextQuestion}
-          disabled={submitting}
+          disabled={submitting || (timeRemaining !== null && timeRemaining <= 1)}
           className="px-6 py-3 rounded-xl font-semibold transition-all bg-brand-green text-white hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {submitting ? (
