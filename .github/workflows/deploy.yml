@@ -36,10 +36,18 @@ jobs:
           cd admission-platform-v2
           pnpm install
 
-      - name: Build
+      - name: Build React app
         run: |
           cd admission-platform-v2/apps/web
           npx vite build
+
+      - name: Prepare deployment folder
+        run: |
+          mkdir -p deploy
+          # Copy entire repo content (excluding node_modules and git)
+          rsync -av --exclude='node_modules' --exclude='.git' --exclude='deploy' --exclude='admission-platform-v2/dist' . deploy/
+          # Copy built React app to deploy folder
+          cp -r admission-platform-v2/dist/* deploy/admission-platform-v2/dist/
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -47,7 +55,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './admission-platform-v2/dist'
+          path: './deploy'
 
   deploy:
     environment:
