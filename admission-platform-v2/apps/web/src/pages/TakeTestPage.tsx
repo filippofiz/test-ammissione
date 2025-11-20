@@ -1050,21 +1050,28 @@ export default function TakeTestPage() {
       let algorithmConfigData = null;
       if (configData.adaptivity_mode === 'adaptive') {
         console.log('⚠️ ADAPTIVE MODE DETECTED - Loading algorithm config...');
-        const { data: algConfig, error: algError } = await supabase
+        // Fetch all algorithm configs for this test type and find by normalized track_type
+        const { data: algConfigs, error: algError } = await supabase
           .from('2V_algorithm_config')
           .select('*')
           .eq('test_type', testType)
-          .eq('track_type', trackTypeNormalized)
-          .eq('algorithm_category', 'adaptive')
-          .maybeSingle();
+          .eq('algorithm_category', 'adaptive');
 
         if (algError) {
           console.error('Error loading algorithm config:', algError);
-        } else if (algConfig) {
-          algorithmConfigData = algConfig;
-          setAlgorithmConfig(algConfig);
         } else {
-          console.warn('Adaptive mode enabled but no algorithm config found');
+          // Find matching config by normalized track_type
+          const algConfig = algConfigs?.find(config =>
+            normalize(config.track_type) === trackTypeNormalized
+          );
+
+          if (algConfig) {
+            algorithmConfigData = algConfig;
+            setAlgorithmConfig(algConfig);
+            console.log('✅ Algorithm config found:', algConfig);
+          } else {
+            console.warn(`Adaptive mode enabled but no algorithm config found for track_type=${trackTypeNormalized}`);
+          }
         }
       }
 
