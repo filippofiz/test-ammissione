@@ -291,8 +291,9 @@ export default function TestRunnerPage() {
 
   async function loadTestTypes() {
     try {
-      // Get unique test types from 2V_tests_test table
-      const { data, error } = await fromTest('2V_tests')
+      // Get unique test types from production 2V_tests table
+      const { data, error } = await supabase
+        .from('2V_tests')
         .select('test_type');
 
       if (error) throw error;
@@ -305,6 +306,7 @@ export default function TestRunnerPage() {
       });
 
       const sortedTestTypes = Array.from(testTypes).sort();
+      console.log(`📋 Available test types:`, sortedTestTypes);
       setAvailableTestTypes(sortedTestTypes);
 
       // Set default test type to first available
@@ -318,26 +320,39 @@ export default function TestRunnerPage() {
 
   async function loadTrackTypes(selectedTestType: string) {
     try {
-      // Get unique track types from 2V_test_track_config_test for the selected test type
-      const { data, error } = await fromTest('2V_test_track_config')
+      console.log(`🔍 Loading track types for test_type: ${selectedTestType}`);
+
+      // Get unique track types from production 2V_test_track_config table
+      const { data, error } = await supabase
+        .from('2V_test_track_config')
         .select('track_type')
         .eq('test_type', selectedTestType);
 
-      if (error) throw error;
+      console.log(`📊 Track configs found:`, data);
+
+      if (error) {
+        console.error('❌ Error fetching track types:', error);
+        throw error;
+      }
 
       const trackTypes = new Set<string>();
       data?.forEach(config => {
         if (config.track_type) {
           trackTypes.add(config.track_type);
+          console.log(`  ✅ Added track_type: "${config.track_type}"`);
         }
       });
 
       const sortedTrackTypes = Array.from(trackTypes).sort();
+      console.log(`📋 Available track types:`, sortedTrackTypes);
       setAvailableTrackTypes(sortedTrackTypes);
 
       // Set default track type to first available
       if (sortedTrackTypes.length > 0) {
         setTrackType(sortedTrackTypes[0]);
+        console.log(`🎯 Default track type set to: "${sortedTrackTypes[0]}"`);
+      } else {
+        console.warn(`⚠️ No track types found for ${selectedTestType}`);
       }
     } catch (err) {
       console.error('Error loading track types:', err);
@@ -1813,8 +1828,9 @@ export default function TestRunnerPage() {
     testType: string,
     trackType: string
   ): Promise<string> {
-    // Get any test of the specified type (tests are generic, track config determines behavior)
-    const { data: test } = await fromTest('2V_tests')
+    // Get any test of the specified type from production (tests are generic, track config determines behavior)
+    const { data: test } = await supabase
+      .from('2V_tests')
       .select('id')
       .eq('test_type', testType)
       .limit(1)
@@ -1824,8 +1840,9 @@ export default function TestRunnerPage() {
       throw new Error(`No tests found for type: ${testType}`);
     }
 
-    // Get track configuration with normalized matching
-    const { data: allConfigs } = await fromTest('2V_test_track_config')
+    // Get track configuration with normalized matching from production table
+    const { data: allConfigs } = await supabase
+      .from('2V_test_track_config')
       .select('*')
       .eq('test_type', testType);
 
@@ -1891,7 +1908,9 @@ export default function TestRunnerPage() {
   }
 
   async function getTestQuestions(testType: string): Promise<any[]> {
-    const { data, error } = await fromTest('2V_questions')
+    // Get questions from production table
+    const { data, error } = await supabase
+      .from('2V_questions')
       .select('*')
       .eq('test_type', testType)
       .limit(20);

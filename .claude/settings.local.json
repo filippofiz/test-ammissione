@@ -82,7 +82,15 @@
       "Bash(pnpm build:*)",
       "Bash(pnpm exec vite build:*)",
       "Bash(git rebase:*)",
-      "Bash(admission-platform-v2/.gitignore)"
+      "Bash(admission-platform-v2/.gitignore)",
+      "Bash(ping:*)",
+      "Bash(if exist node_modules.vite rmdir /s /q node_modules.vite)",
+      "Bash(pnpm --filter web add react-select)",
+      "Bash(npx vite:*)",
+      "Bash(npx gh-pages:*)",
+      "Bash(gh run list:*)",
+      "Bash(timeout /t 3)",
+      "Bash(if exist dist rmdir /s /q dist)"
     ],
     "deny": [],
     "ask": []
