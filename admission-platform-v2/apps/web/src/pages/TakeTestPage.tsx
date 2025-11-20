@@ -1054,7 +1054,7 @@ export default function TakeTestPage() {
           .from('2V_algorithm_config')
           .select('*')
           .eq('test_type', testType)
-          .eq('track_type', trackType)
+          .eq('track_type', trackTypeNormalized)
           .eq('algorithm_category', 'adaptive')
           .maybeSingle();
 
@@ -1124,7 +1124,7 @@ export default function TakeTestPage() {
       if (configData.adaptivity_mode === 'adaptive' && algorithmConfigData) {
         const algorithm = createAdaptiveAlgorithm({
           test_type: testType,
-          track_type: trackType,
+          track_type: trackTypeNormalized,
           algorithm_type: algorithmConfigData.algorithm_type || 'complex',
           simple_difficulty_increment: algorithmConfigData.simple_difficulty_increment,
           irt_model: algorithmConfigData.irt_model,
@@ -1464,6 +1464,12 @@ export default function TakeTestPage() {
   function handleAnswerSelect(answer: string) {
     if (!currentQuestion) return;
 
+    // Extra safety: reject if time has expired
+    if (timeRemaining !== null && timeRemaining <= 0) {
+      console.log('⚠️ Time expired, ignoring answer selection');
+      return;
+    }
+
     setAnswers(prev => ({
       ...prev,
       [currentQuestion.id]: {
@@ -1488,6 +1494,12 @@ export default function TakeTestPage() {
 
   function toggleFlag() {
     if (!currentQuestion) return;
+
+    // Extra safety: reject if time has expired
+    if (timeRemaining !== null && timeRemaining <= 0) {
+      console.log('⚠️ Time expired, ignoring flag toggle');
+      return;
+    }
 
     setAnswers(prev => ({
       ...prev,
@@ -2892,6 +2904,11 @@ export default function TakeTestPage() {
             currentPageGroup={currentPageGroup}
             answers={answers}
             onAnswer={(questionId, answer) => {
+              // Extra safety: reject if time has expired
+              if (timeRemaining !== null && timeRemaining <= 0) {
+                console.log('⚠️ Time expired, ignoring PDF answer selection');
+                return;
+              }
               setAnswers(prev => ({
                 ...prev,
                 [questionId]: {
