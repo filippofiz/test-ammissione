@@ -95,6 +95,7 @@ export default function StudentHomePage() {
   const [tests, setTests] = useState<TestAssignment[]>([]);
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const [sectionOrder, setSectionOrder] = useState<string[]>([]);
   const [selectedTestForDetails, setSelectedTestForDetails] = useState<TestAssignment | null>(null);
   const [showAttemptHistory, setShowAttemptHistory] = useState(false);
   const [attemptStats, setAttemptStats] = useState<Record<number, {
@@ -118,8 +119,6 @@ export default function StudentHomePage() {
   // Load attempt statistics from answers table when showing attempt history
   async function loadAttemptStatistics(assignmentId: string, attemptNumbers: number[]) {
     try {
-      console.log('🔍 Loading attempt statistics:', { assignmentId, attemptNumbers });
-
       const stats: Record<number, { questionsAnswered: number; sectionTimes: Record<string, number>; totalTime: number }> = {};
 
       // Fetch answers for all attempts with question details (to get section)
@@ -134,23 +133,12 @@ export default function StudentHomePage() {
         .in('attempt_number', attemptNumbers);
 
       if (error) {
-        console.error('❌ Error loading attempt statistics:', error);
         return;
       }
-
-      console.log('📊 Answers from DB:', {
-        totalAnswers: answers?.length || 0,
-        answers
-      });
 
       // Calculate statistics per attempt
       attemptNumbers.forEach(attemptNum => {
         const attemptAnswers = answers?.filter(a => a.attempt_number === attemptNum) || [];
-
-        console.log(`📝 Attempt ${attemptNum}:`, {
-          answersCount: attemptAnswers.length,
-          answers: attemptAnswers
-        });
 
         const sectionTimes: Record<string, number> = {};
         let totalTime = 0;
@@ -170,10 +158,9 @@ export default function StudentHomePage() {
         };
       });
 
-      console.log('✅ Calculated stats:', stats);
       setAttemptStats(stats);
     } catch (err) {
-      console.error('❌ Error calculating attempt statistics:', err);
+      // Error calculating attempt statistics
     }
   }
 
@@ -195,9 +182,7 @@ export default function StudentHomePage() {
         .eq('id', profile.id)
         .single();
 
-      if (profileError) {
-        console.error('Error fetching profile data:', profileError);
-      } else {
+      if (!profileError) {
         setRealTestDate(profileData?.real_test_date || null);
       }
 
@@ -248,7 +233,6 @@ export default function StudentHomePage() {
         await loadTests(singleType);
       }
     } catch (err) {
-      console.error('Error loading data:', err);
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
       setLoading(false);
@@ -263,12 +247,6 @@ export default function StudentHomePage() {
       const profile = await getCurrentProfile();
       if (!profile) throw new Error('Profile not found');
 
-      console.log('[StudentHomePage] Loading tests for:', {
-        studentId: profile.id,
-        testType,
-        studentEmail: profile.email,
-      });
-
       // Fetch section order for this test type
       const { data: sectionOrderData, error: orderError } = await supabase
         .from('2V_section_order')
@@ -276,12 +254,8 @@ export default function StudentHomePage() {
         .eq('test_type', testType)
         .maybeSingle();
 
-      if (orderError) {
-        console.error('[StudentHomePage] Error fetching section order:', orderError);
-      }
-
-      const sectionOrder = sectionOrderData?.section_order || [];
-      console.log('[StudentHomePage] Section order for', testType, ':', sectionOrder);
+      const sectionOrderArray = sectionOrderData?.section_order || [];
+      setSectionOrder(sectionOrderArray);
 
       const { data, error: testError } = await supabase
         .from('2V_test_assignments')
@@ -308,12 +282,6 @@ export default function StudentHomePage() {
         .eq('2V_tests.test_type', testType);
 
       if (testError) throw testError;
-
-      console.log('[StudentHomePage] Raw test assignments from DB:', {
-        count: data?.length || 0,
-        testType,
-        data,
-      });
 
       const transformedTests = data.map((row: any) => {
         const section = row['2V_tests'].section;
@@ -373,8 +341,8 @@ export default function StudentHomePage() {
 
         // For everything else, use section ordering
         if (a.section !== b.section) {
-          const aIndex = sectionOrder.indexOf(a.section);
-          const bIndex = sectionOrder.indexOf(b.section);
+          const aIndex = sectionOrderArray.indexOf(a.section);
+          const bIndex = sectionOrderArray.indexOf(b.section);
 
           // If both sections are in the order array, use that order
           if (aIndex !== -1 && bIndex !== -1) {
@@ -398,24 +366,11 @@ export default function StudentHomePage() {
         return a.test_number - b.test_number;
       });
 
-      console.log('[StudentHomePage] Transformed and sorted tests:', {
-        count: transformedTests.length,
-        sections: [...new Set(transformedTests.map(t => t.section))],
-        tests: transformedTests,
-      });
-
       setTests(transformedTests);
 
-      // Auto-expand all sections on load
-      const sections = new Set(transformedTests.map(t => t.section));
-      setExpandedSections(sections);
-
-      console.log('[StudentHomePage] Final state:', {
-        testsCount: transformedTests.length,
-        expandedSections: [...sections],
-      });
+      // Sections start collapsed by default
+      // User can click to expand individual sections
     } catch (err) {
-      console.error('[StudentHomePage] Error loading tests:', err);
       setError(err instanceof Error ? err.message : 'Failed to load tests');
     } finally {
       setLoading(false);
@@ -452,9 +407,6 @@ export default function StudentHomePage() {
       }
       grouped[test.section][test.exercise_type].push(test);
     });
-
-    console.log('[StudentHomePage] Grouped tests:', grouped);
-    console.log('[StudentHomePage] Sections:', Object.keys(grouped));
 
     return grouped;
   }
@@ -620,7 +572,20 @@ export default function StudentHomePage() {
 
   // Test Track Screen
   const grouped = groupTests(tests);
-  const sections = Object.keys(grouped).sort();
+  // Sort sections using sectionOrder from database, with alphabetical fallback
+  const sections = Object.keys(grouped).sort((a, b) => {
+    if (sectionOrder.length > 0) {
+      const aIndex = sectionOrder.indexOf(a);
+      const bIndex = sectionOrder.indexOf(b);
+      // If both in order array, use that order
+      if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+      // If only one in order, prioritize it
+      if (aIndex !== -1) return -1;
+      if (bIndex !== -1) return 1;
+    }
+    // Fallback to alphabetical
+    return a.localeCompare(b);
+  });
   const progress = calculateProgress();
   const completedCount = tests.filter(t => t.status === 'completed').length;
   const unlockedCount = tests.filter(t => t.status === 'unlocked' || t.status === 'in_progress' || t.status === 'incomplete' || t.status === 'annulled').length;

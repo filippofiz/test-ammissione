@@ -475,16 +475,34 @@ export default function PDFToLatexConverterPage() {
   const loadPDFTests = async () => {
     setLoadingTests(true);
     try {
-      // Fetch ALL questions with PDF URLs (question_type = 'pdf')
-      const { data: pdfQuestions, error: questionsError } = await supabase
-        .from('2V_questions')
-        .select('test_id, test_type, section, question_data')
-        .eq('question_type', 'pdf')
-        .not('question_data->>pdf_url', 'is', null);
+      // Fetch ALL questions with PDF URLs (question_type = 'pdf') in batches
+      // Supabase has a default limit of 1000, so we need to paginate
+      const BATCH_SIZE = 1000;
+      let allPdfQuestions: any[] = [];
+      let offset = 0;
+      let hasMore = true;
 
-      if (questionsError) throw questionsError;
+      while (hasMore) {
+        const { data: batch, error: questionsError } = await supabase
+          .from('2V_questions')
+          .select('test_id, test_type, section, question_data')
+          .eq('question_type', 'pdf')
+          .not('question_data->>pdf_url', 'is', null)
+          .range(offset, offset + BATCH_SIZE - 1);
 
-      console.log(`Found ${pdfQuestions?.length || 0} PDF questions`);
+        if (questionsError) throw questionsError;
+
+        if (batch && batch.length > 0) {
+          allPdfQuestions = [...allPdfQuestions, ...batch];
+          offset += BATCH_SIZE;
+          hasMore = batch.length === BATCH_SIZE;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      const pdfQuestions = allPdfQuestions;
+      console.log(`Found ${pdfQuestions?.length || 0} PDF questions (fetched in batches)`);
 
       if (!pdfQuestions || pdfQuestions.length === 0) {
         setPdfTests([]);

@@ -184,22 +184,34 @@ export default function TestResultsPage() {
       // Filter by attempt number in JavaScript
       const answers = allAnswers.filter(a => a.attempt_number === attemptToLoad);
 
-      if (answers.length === 0) {
+      // Get completion_details for metadata (difficulty, etc.) if available
+      const completionDetails = assignmentData.completion_details || { attempts: [] };
+      const attemptRecord = completionDetails.attempts?.find(
+        (a: any) => a.attempt_number === attemptToLoad
+      );
+
+      // Get question IDs - prefer test_questions from completion_details (includes unanswered)
+      // Fall back to answers if test_questions not available
+      let questionIds: string[] = [];
+
+      if (attemptRecord?.test_questions && attemptRecord.test_questions.length > 0) {
+        // Use all questions from the attempt (includes unanswered)
+        questionIds = attemptRecord.test_questions.map((tq: any) => tq.question_id);
+      } else if (answers.length > 0) {
+        // Fall back to answers-based loading
+        const seenQuestionIds = new Set<string>();
+        const uniqueAnswers = answers.filter(a => {
+          if (seenQuestionIds.has(a.question_id)) {
+            return false;
+          }
+          seenQuestionIds.add(a.question_id);
+          return true;
+        });
+        questionIds = uniqueAnswers.map(a => a.question_id);
+      } else {
         throw new Error(t('testResults.noAnswersFoundForAttempt', { attempt: attemptToLoad }));
       }
 
-      // Get question details maintaining the order from answers
-      // Use a Set to track seen question_ids and filter out duplicates
-      const seenQuestionIds = new Set<string>();
-      const uniqueAnswers = answers.filter(a => {
-        if (seenQuestionIds.has(a.question_id)) {
-          return false;
-        }
-        seenQuestionIds.add(a.question_id);
-        return true;
-      });
-
-      const questionIds = uniqueAnswers.map(a => a.question_id);
       const { data: questionsData, error: questionsError } = await supabase
         .from('2V_questions')
         .select('*')
@@ -207,23 +219,13 @@ export default function TestResultsPage() {
 
       if (questionsError) throw questionsError;
 
-      console.log(`📊 Loaded ${questionsData?.length || 0} questions from database`);
-
       // Create a map for quick lookup
       const questionMap = new Map(questionsData?.map(q => [q.id, q]) || []);
 
-      // Order questions according to answer creation time (= order presented/answered)
+      // Order questions according to test_questions order or answer creation time
       const questions: Question[] = questionIds
         .map(id => questionMap.get(id))
         .filter((q: any) => q !== undefined);
-
-      console.log(`📊 Final questions list: ${questions.length} questions in correct order`);
-
-      // Get completion_details for metadata (difficulty, etc.) if available
-      const completionDetails = assignmentData.completion_details || { attempts: [] };
-      const attemptRecord = completionDetails.attempts?.find(
-        (a: any) => a.attempt_number === selectedAttempt
-      );
 
       // Create metadata map from completion_details (for difficulty info)
       const metadataMap = new Map<string, any>();

@@ -90,7 +90,11 @@
       "Bash(npx gh-pages:*)",
       "Bash(gh run list:*)",
       "Bash(timeout /t 3)",
-      "Bash(if exist dist rmdir /s /q dist)"
+      "Bash(if exist dist rmdir /s /q dist)",
+      "Bash(pnpm --filter web build:*)",
+      "Bash(temp_check.txt)",
+      "Bash(git -C \"C:\\App UpToTen\\admission-test\" branch -a)",
+      "Bash(cd C:App UpToTenadmission-testadmission-platform-v2)"
     ],
     "deny": [],
     "ask": []

@@ -99,8 +99,8 @@ export const LaTeX: React.FC<LaTeXProps> = ({ children, className = '' }) => {
         }
 
         // Check if this looks like actual LaTeX math
-        // Math contains: letters, backslashes, ^, _, {, }, or comparison operators (<, >, =)
-        const isLikelyMath = /[a-zA-Z\\^_{}<=>\+\-\*\/]/.test(content);
+        // Math contains: letters, backslashes, ^, _, {, }, comparison operators (<, >, =), or coordinate notation (parentheses, commas)
+        const isLikelyMath = /[a-zA-Z\\^_{}<=>\+\-\*\/(),]/.test(content);
 
         if (isLikelyMath) {
           // This is LaTeX math - render it
