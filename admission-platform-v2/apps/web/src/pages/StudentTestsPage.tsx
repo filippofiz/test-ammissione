@@ -222,12 +222,21 @@ export default function StudentTestsPage() {
     const translateSections = async () => {
       const sections = [...new Set(assignments.map(a => a.section))];
       const currentLang = i18n.language || 'it';
-      const targetLang = currentLang === 'it' ? 'it' : 'en';
 
       const translations: Record<string, string> = {};
 
+      // If language is Italian, no translation needed (DB values are in Italian)
+      if (currentLang === 'it') {
+        for (const section of sections) {
+          translations[section] = section;
+        }
+        setTranslatedSections(translations);
+        return;
+      }
+
+      // Translate to English
       for (const section of sections) {
-        const translated = await translateTestTrackAsync(section, t, targetLang);
+        const translated = await translateTestTrackAsync(section, t, 'en');
         translations[section] = translated;
       }
 
