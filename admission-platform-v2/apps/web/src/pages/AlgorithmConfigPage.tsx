@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faArrowLeft,
@@ -20,10 +20,9 @@ import { supabase } from '../lib/supabase';
 
 interface AlgorithmConfig {
   id?: string;
-  test_type: string;
-  track_type: string;
-  algorithm_category: 'adaptive' | 'scoring' | 'results';
-  algorithm_type: string;
+  algorithm_type: string; // Primary identifier (e.g., "simple", "gmat_cat_3pl")
+  display_name?: string; // Human-readable name
+  description?: string; // Description of the algorithm
 
   // Simple Adaptive Algorithm Config
   simple_difficulty_increment?: number;
@@ -44,6 +43,13 @@ interface AlgorithmConfig {
   penalty_for_blank?: number;
   section_weights?: Record<string, number>;
 
+  // IRT-Based Scoring Scale Config
+  section_score_min?: number;
+  section_score_max?: number;
+  total_score_min?: number;
+  total_score_max?: number;
+  score_increment?: number;
+
   // Results Algorithm Config
   percentile_calculation?: 'historical' | 'normative';
   pass_threshold?: number;
@@ -53,23 +59,18 @@ interface AlgorithmConfig {
   updated_at?: string;
 }
 
-const TEST_TYPES = ['GMAT', 'SAT', 'TOLC'];
-const TRACK_TYPES = ['Assessment Iniziale', 'Simulazione', 'Training'];
-
 export default function AlgorithmConfigPage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const preselectedTestType = searchParams.get('testType');
 
-  const [selectedTestType, setSelectedTestType] = useState<string>(preselectedTestType || 'GMAT');
-  const [selectedTrackType, setSelectedTrackType] = useState<string>('Assessment Iniziale');
-  const [selectedCategory, setSelectedCategory] = useState<'adaptive' | 'scoring' | 'results'>('adaptive');
+  // List of all algorithms
+  const [algorithms, setAlgorithms] = useState<AlgorithmConfig[]>([]);
+  const [selectedAlgorithmType, setSelectedAlgorithmType] = useState<string | null>(null);
+  const [isCreatingNew, setIsCreatingNew] = useState(false);
 
   const [config, setConfig] = useState<AlgorithmConfig>({
-    test_type: selectedTestType,
-    track_type: selectedTrackType,
-    algorithm_category: 'adaptive',
-    algorithm_type: 'simple',
+    algorithm_type: '',
+    display_name: '',
+    description: '',
 
     // Adaptive defaults
     simple_difficulty_increment: 1,
@@ -97,51 +98,87 @@ export default function AlgorithmConfigPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadConfig();
-  }, [selectedTestType, selectedTrackType, selectedCategory]);
+    loadAlgorithms();
+  }, []);
 
-  async function loadConfig() {
+  useEffect(() => {
+    if (selectedAlgorithmType) {
+      const selected = algorithms.find(a => a.algorithm_type === selectedAlgorithmType);
+      if (selected) {
+        setConfig(selected);
+        setIsCreatingNew(false);
+      }
+    }
+  }, [selectedAlgorithmType, algorithms]);
+
+  async function loadAlgorithms() {
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from('2V_algorithm_config')
         .select('*')
-        .eq('test_type', selectedTestType)
-        .eq('track_type', selectedTrackType)
-        .eq('algorithm_category', selectedCategory)
-        .maybeSingle();
+        .order('algorithm_type');
 
-      if (error && error.code !== 'PGRST116') throw error;
+      if (error) throw error;
 
-      if (data) {
-        setConfig(data);
-      } else {
-        // Reset to defaults for this category
-        setConfig({
-          test_type: selectedTestType,
-          track_type: selectedTrackType,
-          algorithm_category: selectedCategory,
-          algorithm_type: selectedCategory === 'adaptive' ? 'simple' : selectedCategory === 'scoring' ? 'raw_score' : 'historical',
-          simple_difficulty_increment: 1,
-          irt_model: '2PL',
-          initial_theta: 0.0,
-          theta_min: -3.0,
-          theta_max: 3.0,
-          se_threshold: 0.3,
-          max_information_weight: 1.0,
-          exposure_control: true,
-          scoring_method: 'raw_score',
-          penalty_for_wrong: 0,
-          penalty_for_blank: 0,
-          percentile_calculation: 'historical',
-          pass_threshold: 60,
-        });
+      setAlgorithms(data || []);
+
+      // Select first algorithm if available
+      if (data && data.length > 0 && !selectedAlgorithmType) {
+        setSelectedAlgorithmType(data[0].algorithm_type);
       }
     } catch (err) {
-      console.error('Error loading config:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load configuration');
+      console.error('Error loading algorithms:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load algorithms');
     } finally {
       setLoading(false);
+    }
+  }
+
+  function handleNewAlgorithm() {
+    setIsCreatingNew(true);
+    setSelectedAlgorithmType(null);
+    setConfig({
+      algorithm_type: '',
+      display_name: '',
+      description: '',
+      simple_difficulty_increment: 1,
+      irt_model: '2PL',
+      initial_theta: 0.0,
+      theta_min: -3.0,
+      theta_max: 3.0,
+      se_threshold: 0.3,
+      max_information_weight: 1.0,
+      exposure_control: true,
+      scoring_method: 'raw_score',
+      penalty_for_wrong: 0,
+      penalty_for_blank: 0,
+      percentile_calculation: 'historical',
+      pass_threshold: 60,
+    });
+  }
+
+  async function handleDelete() {
+    if (!selectedAlgorithmType) return;
+
+    if (!confirm(`Are you sure you want to delete the algorithm "${selectedAlgorithmType}"?`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('2V_algorithm_config')
+        .delete()
+        .eq('algorithm_type', selectedAlgorithmType);
+
+      if (error) throw error;
+
+      await loadAlgorithms();
+      setSelectedAlgorithmType(null);
+      setIsCreatingNew(false);
+    } catch (err) {
+      console.error('Error deleting algorithm:', err);
+      setError(err instanceof Error ? err.message : 'Failed to delete algorithm');
     }
   }
 
@@ -151,17 +188,22 @@ export default function AlgorithmConfigPage() {
     setSaveSuccess(false);
 
     try {
+      if (!config.algorithm_type || config.algorithm_type.trim() === '') {
+        throw new Error('Algorithm type is required');
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { id, created_at, updated_at, ...configWithoutId } = config;
+
       const dataToSave = {
-        ...config,
-        test_type: selectedTestType,
-        track_type: selectedTrackType,
-        algorithm_category: selectedCategory,
+        ...configWithoutId,
+        algorithm_type: config.algorithm_type.trim().toLowerCase().replace(/\s+/g, '_'),
       };
 
       const { error } = await supabase
         .from('2V_algorithm_config')
         .upsert(dataToSave, {
-          onConflict: 'test_type,track_type,algorithm_category'
+          onConflict: 'algorithm_type'
         });
 
       if (error) {
@@ -170,6 +212,9 @@ export default function AlgorithmConfigPage() {
       }
 
       setSaveSuccess(true);
+      await loadAlgorithms();
+      setSelectedAlgorithmType(dataToSave.algorithm_type);
+      setIsCreatingNew(false);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
@@ -194,9 +239,9 @@ export default function AlgorithmConfigPage() {
   }
 
   return (
-    <Layout pageTitle="Algorithm Configuration" pageSubtitle="Configure Adaptive, Scoring & Results Algorithms">
+    <Layout pageTitle="Algorithm Library" pageSubtitle="Create and manage reusable algorithm configurations">
       <div className="flex-1 p-4 md:p-8">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           {/* Back Button */}
           <button
             onClick={() => navigate('/tutor/test-management')}
@@ -211,7 +256,7 @@ export default function AlgorithmConfigPage() {
             <div className="mb-6 p-4 bg-green-50 border-2 border-green-500 rounded-xl flex items-center gap-3">
               <FontAwesomeIcon icon={faCheckCircle} className="text-2xl text-green-600" />
               <div>
-                <div className="font-semibold text-green-800">Configuration saved successfully!</div>
+                <div className="font-semibold text-green-800">Algorithm saved successfully!</div>
                 <div className="text-sm text-green-700">Algorithm settings have been updated.</div>
               </div>
             </div>
@@ -228,57 +273,99 @@ export default function AlgorithmConfigPage() {
             </div>
           )}
 
-          <div className="bg-white rounded-2xl shadow-xl p-8">
-            {/* Test Type and Track Selection */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 pb-8 border-b border-gray-200">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Test Type
-                </label>
-                <select
-                  value={selectedTestType}
-                  onChange={(e) => setSelectedTestType(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-brand-green focus:outline-none font-medium"
-                >
-                  {TEST_TYPES.map(type => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
-              </div>
+          <div className="flex gap-6">
+            {/* Algorithm List Sidebar */}
+            <div className="w-72 flex-shrink-0">
+              <div className="bg-white rounded-2xl shadow-xl p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold text-gray-900">Algorithms</h3>
+                  <button
+                    onClick={handleNewAlgorithm}
+                    className="px-3 py-1 bg-brand-green text-white rounded-lg text-sm font-medium hover:bg-green-600 transition-colors"
+                  >
+                    + New
+                  </button>
+                </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Track Type
-                </label>
-                <select
-                  value={selectedTrackType}
-                  onChange={(e) => setSelectedTrackType(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-brand-green focus:outline-none font-medium"
-                >
-                  {TRACK_TYPES.map(type => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Algorithm Category
-                </label>
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value as 'adaptive' | 'scoring' | 'results')}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-brand-green focus:outline-none font-medium"
-                >
-                  <option value="adaptive">Adaptive Testing</option>
-                  <option value="scoring">Scoring</option>
-                  <option value="results">Results Calculation</option>
-                </select>
+                <div className="space-y-2">
+                  {algorithms.length === 0 ? (
+                    <p className="text-sm text-gray-500 text-center py-4">No algorithms yet</p>
+                  ) : (
+                    algorithms.map((algo) => (
+                      <button
+                        key={algo.algorithm_type}
+                        onClick={() => setSelectedAlgorithmType(algo.algorithm_type)}
+                        className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                          selectedAlgorithmType === algo.algorithm_type
+                            ? 'bg-brand-green text-white'
+                            : 'hover:bg-gray-100'
+                        }`}
+                      >
+                        <div className="font-medium text-sm">{algo.display_name || algo.algorithm_type}</div>
+                        <div className={`text-xs ${selectedAlgorithmType === algo.algorithm_type ? 'text-green-100' : 'text-gray-500'}`}>
+                          {algo.irt_model ? `IRT ${algo.irt_model}` : 'Simple'}
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
 
+            {/* Main Configuration Panel */}
+            <div className="flex-1 bg-white rounded-2xl shadow-xl p-8">
+              {!selectedAlgorithmType && !isCreatingNew ? (
+                <div className="text-center py-12">
+                  <FontAwesomeIcon icon={faBrain} className="text-5xl text-gray-300 mb-4" />
+                  <p className="text-gray-500">Select an algorithm or create a new one</p>
+                </div>
+              ) : (
+                <>
+                  {/* Algorithm Identity */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 pb-8 border-b border-gray-200">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Algorithm Type (ID)
+                      </label>
+                      <input
+                        type="text"
+                        value={config.algorithm_type}
+                        onChange={(e) => setConfig({ ...config, algorithm_type: e.target.value })}
+                        placeholder="e.g., gmat_cat_3pl"
+                        disabled={!isCreatingNew}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-brand-green focus:outline-none font-medium disabled:bg-gray-100"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Unique identifier (lowercase, underscores)</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Display Name
+                      </label>
+                      <input
+                        type="text"
+                        value={config.display_name || ''}
+                        onChange={(e) => setConfig({ ...config, display_name: e.target.value })}
+                        placeholder="e.g., GMAT CAT 3PL"
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-brand-green focus:outline-none font-medium"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Description
+                      </label>
+                      <input
+                        type="text"
+                        value={config.description || ''}
+                        onChange={(e) => setConfig({ ...config, description: e.target.value })}
+                        placeholder="Brief description of this algorithm"
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-brand-green focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
             {/* Adaptive Algorithm Configuration */}
-            {selectedCategory === 'adaptive' && (
               <div className="space-y-6">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl flex items-center justify-center">
@@ -462,11 +549,9 @@ export default function AlgorithmConfigPage() {
                   </div>
                 )}
               </div>
-            )}
 
             {/* Scoring Algorithm Configuration */}
-            {selectedCategory === 'scoring' && (
-              <div className="space-y-6">
+              <div className="space-y-6 mt-8 pt-8 border-t border-gray-200">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center">
                     <FontAwesomeIcon icon={faCalculator} className="text-2xl text-white" />
@@ -530,55 +615,130 @@ export default function AlgorithmConfigPage() {
                   </div>
                 </div>
 
-                {/* Penalty Settings */}
-                <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6 space-y-4">
-                  <h4 className="font-semibold text-gray-900">Penalty Settings</h4>
+                {/* Penalty Settings - for Raw Score and Weighted */}
+                {(config.scoring_method === 'raw_score' || config.scoring_method === 'weighted') && (
+                  <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6 space-y-4">
+                    <h4 className="font-semibold text-gray-900">Penalty Settings</h4>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Penalty for Wrong Answer
-                      </label>
-                      <input
-                        type="number"
-                        value={config.penalty_for_wrong || 0}
-                        onChange={(e) => setConfig({ ...config, penalty_for_wrong: parseFloat(e.target.value) })}
-                        step="0.25"
-                        min="0"
-                        className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-brand-green focus:outline-none"
-                      />
-                      <p className="text-xs text-gray-600 mt-1">Points deducted for incorrect answers (0 = no penalty)</p>
-                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Penalty for Wrong Answer
+                        </label>
+                        <input
+                          type="number"
+                          value={config.penalty_for_wrong || 0}
+                          onChange={(e) => setConfig({ ...config, penalty_for_wrong: parseFloat(e.target.value) })}
+                          step="0.25"
+                          min="0"
+                          className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-brand-green focus:outline-none"
+                        />
+                        <p className="text-xs text-gray-600 mt-1">Points deducted for incorrect answers (0 = no penalty)</p>
+                      </div>
 
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Penalty for Blank Answer
-                      </label>
-                      <input
-                        type="number"
-                        value={config.penalty_for_blank || 0}
-                        onChange={(e) => setConfig({ ...config, penalty_for_blank: parseFloat(e.target.value) })}
-                        step="0.25"
-                        min="0"
-                        className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-brand-green focus:outline-none"
-                      />
-                      <p className="text-xs text-gray-600 mt-1">Points deducted for unanswered questions (0 = no penalty)</p>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Penalty for Blank Answer
+                        </label>
+                        <input
+                          type="number"
+                          value={config.penalty_for_blank || 0}
+                          onChange={(e) => setConfig({ ...config, penalty_for_blank: parseFloat(e.target.value) })}
+                          step="0.25"
+                          min="0"
+                          className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-brand-green focus:outline-none"
+                        />
+                        <p className="text-xs text-gray-600 mt-1">Points deducted for unanswered questions (0 = no penalty)</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            )}
+                )}
 
-            {/* Results Algorithm Configuration */}
-            {selectedCategory === 'results' && (
-              <div className="space-y-6">
+                {/* IRT Scale Settings - for IRT-Based Score */}
+                {config.scoring_method === 'irt_based' && (
+                  <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6 space-y-4">
+                    <h4 className="font-semibold text-gray-900">IRT Score Scale Settings</h4>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Section Score Min
+                        </label>
+                        <input
+                          type="number"
+                          value={config.section_score_min || 60}
+                          onChange={(e) => setConfig({ ...config, section_score_min: parseInt(e.target.value) })}
+                          className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-brand-green focus:outline-none"
+                        />
+                        <p className="text-xs text-gray-600 mt-1">Minimum score per section (e.g., 60 for GMAT)</p>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Section Score Max
+                        </label>
+                        <input
+                          type="number"
+                          value={config.section_score_max || 90}
+                          onChange={(e) => setConfig({ ...config, section_score_max: parseInt(e.target.value) })}
+                          className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-brand-green focus:outline-none"
+                        />
+                        <p className="text-xs text-gray-600 mt-1">Maximum score per section (e.g., 90 for GMAT)</p>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Total Score Min
+                        </label>
+                        <input
+                          type="number"
+                          value={config.total_score_min || 205}
+                          onChange={(e) => setConfig({ ...config, total_score_min: parseInt(e.target.value) })}
+                          className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-brand-green focus:outline-none"
+                        />
+                        <p className="text-xs text-gray-600 mt-1">Minimum total score (e.g., 205 for GMAT)</p>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Total Score Max
+                        </label>
+                        <input
+                          type="number"
+                          value={config.total_score_max || 805}
+                          onChange={(e) => setConfig({ ...config, total_score_max: parseInt(e.target.value) })}
+                          className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-brand-green focus:outline-none"
+                        />
+                        <p className="text-xs text-gray-600 mt-1">Maximum total score (e.g., 805 for GMAT)</p>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Score Increment
+                        </label>
+                        <input
+                          type="number"
+                          value={config.score_increment || 10}
+                          onChange={(e) => setConfig({ ...config, score_increment: parseInt(e.target.value) })}
+                          className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-brand-green focus:outline-none"
+                        />
+                        <p className="text-xs text-gray-600 mt-1">Total score rounds to this increment (e.g., 10 for GMAT)</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+            {/* Results Algorithm Configuration - Coming Soon */}
+              <div className="space-y-6 mt-8 pt-8 border-t border-gray-200 opacity-50 pointer-events-none">
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-700 rounded-xl flex items-center justify-center">
+                  <div className="w-12 h-12 bg-gradient-to-br from-gray-400 to-gray-500 rounded-xl flex items-center justify-center">
                     <FontAwesomeIcon icon={faCheckCircle} className="text-2xl text-white" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-brand-dark">Results Calculation</h3>
-                    <p className="text-sm text-gray-600">Configure how results, percentiles, and grades are calculated</p>
+                    <h3 className="text-xl font-bold text-gray-500">Results Calculation</h3>
+                    <p className="text-sm text-gray-400">Configure how results, percentiles, and grades are calculated</p>
+                    <span className="inline-block mt-1 px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs font-medium rounded">Coming Soon</span>
                   </div>
                 </div>
 
@@ -640,10 +800,18 @@ export default function AlgorithmConfigPage() {
                   </div>
                 </div>
               </div>
-            )}
 
-            {/* Save Button */}
-            <div className="mt-8 pt-6 border-t border-gray-200 flex justify-end">
+            {/* Save and Delete Buttons */}
+            <div className="mt-8 pt-6 border-t border-gray-200 flex justify-between">
+              {!isCreatingNew && selectedAlgorithmType && (
+                <button
+                  onClick={handleDelete}
+                  className="px-6 py-3 border-2 border-red-500 text-red-600 rounded-xl font-semibold hover:bg-red-50 transition-colors"
+                >
+                  Delete Algorithm
+                </button>
+              )}
+              <div className="flex-1" />
               <button
                 onClick={handleSave}
                 disabled={saving}
@@ -657,10 +825,13 @@ export default function AlgorithmConfigPage() {
                 ) : (
                   <>
                     <FontAwesomeIcon icon={faSave} />
-                    Save Configuration
+                    {isCreatingNew ? 'Create Algorithm' : 'Save Changes'}
                   </>
                 )}
               </button>
+            </div>
+                </>
+              )}
             </div>
           </div>
         </div>

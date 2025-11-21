@@ -13,7 +13,7 @@ import { supabase } from '../supabase';
 
 interface Question {
   id: string;
-  difficulty?: number;
+  difficulty?: number | string; // Can be numeric (1-5) or string ('easy', 'medium', 'hard')
   section_id?: string;
   discrimination?: number; // IRT parameter 'a'
   guessing?: number; // IRT parameter 'c'
@@ -26,6 +26,39 @@ interface ResponsePattern {
   difficulty?: number;
   discrimination?: number;
   guessing?: number;
+}
+
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
+/**
+ * Convert difficulty from string or number to numeric scale (1-5)
+ * Supports: 'easy', 'medium', 'hard' strings or numeric 1-5 values
+ */
+function normalizeDifficulty(difficulty?: number | string): number {
+  if (difficulty === undefined || difficulty === null) {
+    return 3; // Default to medium
+  }
+
+  if (typeof difficulty === 'number') {
+    return difficulty;
+  }
+
+  // Convert string to number
+  const difficultyMap: Record<string, number> = {
+    'very_easy': 1,
+    'easy': 2,
+    'medium': 3,
+    'hard': 4,
+    'very_hard': 5,
+    // Also support lowercase variants
+    'veryeasy': 1,
+    'veryhard': 5,
+  };
+
+  const normalized = difficulty.toLowerCase().replace(/[\s-]/g, '_');
+  return difficultyMap[normalized] || 3; // Default to medium if unknown
 }
 
 /**
@@ -125,15 +158,16 @@ export class SimpleAdaptiveAlgorithm {
     // Find questions within acceptable difficulty range (±increment)
     const suitableQuestions = availableQuestions.filter((q) => {
       if (!q.difficulty) return false;
-      const diff = Math.abs(q.difficulty - targetDifficulty);
+      const numericDiff = normalizeDifficulty(q.difficulty);
+      const diff = Math.abs(numericDiff - targetDifficulty);
       return diff <= increment;
     });
 
     if (suitableQuestions.length > 0) {
       // Sort by closeness to target difficulty
       suitableQuestions.sort((a, b) => {
-        const diffA = Math.abs((a.difficulty || 0) - targetDifficulty);
-        const diffB = Math.abs((b.difficulty || 0) - targetDifficulty);
+        const diffA = Math.abs(normalizeDifficulty(a.difficulty) - targetDifficulty);
+        const diffB = Math.abs(normalizeDifficulty(b.difficulty) - targetDifficulty);
         return diffA - diffB;
       });
 
@@ -166,7 +200,7 @@ export class SimpleAdaptiveAlgorithm {
     sectionId?: string
   ): Question {
     // Prefer medium difficulty questions (3 on 1-5 scale)
-    const mediumQuestions = availableQuestions.filter((q) => q.difficulty === 3);
+    const mediumQuestions = availableQuestions.filter((q) => normalizeDifficulty(q.difficulty) === 3);
 
     if (mediumQuestions.length > 0) {
       // Random selection
@@ -212,7 +246,7 @@ export class SimpleAdaptiveAlgorithm {
     this.state.response_pattern.push({
       question_id: question.id,
       is_correct: isCorrect,
-      difficulty: question.difficulty,
+      difficulty: normalizeDifficulty(question.difficulty),
     });
 
     this.state.questions_answered++;
@@ -258,6 +292,17 @@ export class SimpleAdaptiveAlgorithm {
     // Use external criteria (e.g., max questions, time limit)
     return false;
   }
+
+  /**
+   * Reset state for a new section (for per_section base questions scope)
+   * Keeps current_difficulty but resets base questions phase and questions answered counter
+   */
+  resetForNewSection(): void {
+    console.log('🎯 [ADAPTIVE SIMPLE] Resetting for new section, keeping difficulty:', this.state.current_difficulty);
+    this.state.base_questions_completed = false;
+    this.state.questions_answered = 0;
+    // Note: We keep response_pattern and current_difficulty to maintain overall performance tracking
+  }
 }
 
 // ============================================================================
@@ -290,7 +335,25 @@ export class ComplexAdaptiveAlgorithm {
     availableQuestions: Question[],
     sectionId?: string
   ): Promise<Question | null> {
+    // Count questions by difficulty
+    const difficultyCount: Record<number, number> = {};
+    availableQuestions.forEach(q => {
+      const d = normalizeDifficulty(q.difficulty);
+      difficultyCount[d] = (difficultyCount[d] || 0) + 1;
+    });
+
+    console.log('🎯 [ADAPTIVE] selectNextQuestion called:', {
+      availableCount: availableQuestions.length,
+      difficulties: `easy:${difficultyCount[2] || 0}, med:${difficultyCount[3] || 0}, hard:${difficultyCount[4] || 0}`,
+      sectionId,
+      questionsAnswered: this.state.questions_answered,
+      baseQuestionsCompleted: this.state.base_questions_completed,
+      currentTheta: this.state.theta,
+      standardError: this.state.se?.toFixed(3)
+    });
+
     if (availableQuestions.length === 0) {
+      console.log('🎯 [ADAPTIVE] No available questions');
       return null;
     }
 
@@ -300,6 +363,7 @@ export class ComplexAdaptiveAlgorithm {
       !this.state.base_questions_completed &&
       this.state.questions_answered < (this.config.base_questions_count || 5)
     ) {
+      console.log('🎯 [ADAPTIVE] Selecting BASE question (phase 1)');
       return this.selectBaseQuestion(availableQuestions, sectionId);
     }
 
@@ -311,6 +375,7 @@ export class ComplexAdaptiveAlgorithm {
     ) {
       this.state.base_questions_completed = true;
       this.estimateTheta(); // Calculate theta from base questions
+      console.log('🎯 [ADAPTIVE] Base questions completed, estimated theta:', this.state.theta);
     }
 
     // Select question with maximum information at current theta
@@ -341,6 +406,15 @@ export class ComplexAdaptiveAlgorithm {
     const topN = Math.min(5, questionsWithInfo.length);
     const topQuestions = questionsWithInfo.slice(0, topN);
 
+    console.log('🎯 [ADAPTIVE] Selecting ADAPTIVE question:', {
+      currentTheta,
+      topQuestions: topQuestions.map(q => ({
+        id: q.question.id.substring(0, 8),
+        difficulty: normalizeDifficulty(q.question.difficulty),
+        information: q.information.toFixed(4)
+      }))
+    });
+
     // Weight by information and select randomly
     const totalInfo = topQuestions.reduce((sum, q) => sum + q.information, 0);
     let random = Math.random() * totalInfo;
@@ -348,12 +422,19 @@ export class ComplexAdaptiveAlgorithm {
     for (const item of topQuestions) {
       random -= item.information;
       if (random <= 0) {
+        console.log('🎯 [ADAPTIVE] Selected question:', {
+          id: item.question.id.substring(0, 8),
+          difficulty: normalizeDifficulty(item.question.difficulty),
+          information: item.information.toFixed(4)
+        });
         return item.question;
       }
     }
 
     // Fallback: return highest information question
-    return questionsWithInfo[0]?.question || availableQuestions[0];
+    const selected = questionsWithInfo[0]?.question || availableQuestions[0];
+    console.log('🎯 [ADAPTIVE] Fallback selection:', selected?.id?.substring(0, 8));
+    return selected;
   }
 
   /**
@@ -365,7 +446,10 @@ export class ComplexAdaptiveAlgorithm {
   ): Question {
     // For IRT, select questions near theta = 0 (average difficulty)
     const mediumDifficultyQuestions = availableQuestions.filter(
-      (q) => q.difficulty && q.difficulty >= 2 && q.difficulty <= 4
+      (q) => {
+        const numDiff = normalizeDifficulty(q.difficulty);
+        return numDiff >= 2 && numDiff <= 4;
+      }
     );
 
     if (mediumDifficultyQuestions.length > 0) {
@@ -385,7 +469,7 @@ export class ComplexAdaptiveAlgorithm {
    */
   private calculateInformation(question: Question, theta: number): number {
     const model = this.config.irt_model || '2PL';
-    const b = this.difficultyToB(question.difficulty || 3); // Difficulty (b parameter)
+    const b = this.difficultyToB(normalizeDifficulty(question.difficulty)); // Difficulty (b parameter)
     const a = question.discrimination || 1.0; // Discrimination
     const c = model === '3PL' ? question.guessing || 0.25 : 0; // Guessing
 
@@ -531,11 +615,14 @@ export class ComplexAdaptiveAlgorithm {
    * Record student response and update theta
    */
   recordResponse(question: Question, isCorrect: boolean): void {
+    const previousTheta = this.state.theta;
+    const numericDifficulty = normalizeDifficulty(question.difficulty);
+
     // Add to response pattern
     this.state.response_pattern.push({
       question_id: question.id,
       is_correct: isCorrect,
-      difficulty: question.difficulty,
+      difficulty: numericDifficulty,
       discrimination: question.discrimination,
       guessing: question.guessing,
     });
@@ -547,11 +634,29 @@ export class ComplexAdaptiveAlgorithm {
       this.config.use_base_questions &&
       !this.state.base_questions_completed
     ) {
+      console.log('🎯 [ADAPTIVE] recordResponse (base phase):', {
+        questionId: question.id.substring(0, 8),
+        isCorrect,
+        difficulty: numericDifficulty,
+        questionsAnswered: this.state.questions_answered,
+        baseQuestionsCount: this.config.base_questions_count
+      });
       return;
     }
 
     // Re-estimate theta with new response
     this.estimateTheta();
+
+    console.log('🎯 [ADAPTIVE] recordResponse:', {
+      questionId: question.id.substring(0, 8),
+      isCorrect,
+      difficulty: numericDifficulty,
+      previousTheta: previousTheta?.toFixed(3),
+      newTheta: this.state.theta?.toFixed(3),
+      thetaChange: ((this.state.theta || 0) - (previousTheta || 0)).toFixed(3),
+      standardError: this.state.se?.toFixed(3),
+      questionsAnswered: this.state.questions_answered
+    });
   }
 
   /**
@@ -581,6 +686,18 @@ export class ComplexAdaptiveAlgorithm {
    */
   getFinalSE(): number {
     return this.state.se || 999;
+  }
+
+  /**
+   * Reset state for a new section (for per_section base questions scope)
+   * Keeps theta but resets base questions phase and questions answered counter
+   */
+  resetForNewSection(): void {
+    console.log('🎯 [ADAPTIVE] Resetting for new section, keeping theta:', this.state.theta?.toFixed(3));
+    this.state.base_questions_completed = false;
+    this.state.questions_answered = 0;
+    // Note: We keep response_pattern and theta to maintain overall ability estimate
+    // If you want fully independent sections, also reset: this.state.theta = this.config.initial_theta || 0;
   }
 }
 

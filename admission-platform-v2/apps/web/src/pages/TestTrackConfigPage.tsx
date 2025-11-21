@@ -43,9 +43,15 @@ interface TestTrackConfig {
   use_base_questions?: boolean;
   base_questions_scope?: 'entire_test' | 'per_section';
   base_questions_count?: number;
-  algorithm_type?: 'simple' | 'complex';
+  algorithm_id?: string;
   questions_per_section?: Record<string, number>; // Number of questions per section (for multi-section tests)
   total_questions?: number; // Total number of questions (for single-section tests)
+
+  // Review & Edit Feature (GMAT-style)
+  allow_review_at_end?: boolean; // Allow review screen at end of section
+  allow_bookmarks?: boolean; // Allow flagging questions during test
+  max_answer_changes?: number; // Max number of answer changes allowed (e.g., 3 for GMAT)
+  max_questions_to_review?: number | null; // Max questions viewable in review (null = unlimited)
   section_adaptivity_config?: Record<string, { type: 'base' | 'adaptive'; difficulty?: string }> | null; // Section adaptivity configuration
   difficulty_levels_count?: number; // Number of difficulty levels (2, 3, or 4)
   training_config: any;
@@ -86,7 +92,11 @@ export default function TestTrackConfigPage() {
     use_base_questions: false,
     base_questions_scope: 'entire_test',
     base_questions_count: 5,
-    algorithm_type: 'simple',
+    algorithm_id: '',
+    allow_review_at_end: false,
+    allow_bookmarks: false,
+    max_answer_changes: 0,
+    max_questions_to_review: null,
     training_config: {},
     assessment_mono_config: {},
   });
@@ -144,11 +154,17 @@ export default function TestTrackConfigPage() {
   // Track specific section durations
   const [specificSectionDurations, setSpecificSectionDurations] = useState<Record<string, number>>({});
 
+  // Track questions per section
+  const [questionsPerSection, setQuestionsPerSection] = useState<Record<string, number>>({});
+
   // Track total time minutes (separate from individual test durations)
   const [totalTimeMinutes, setTotalTimeMinutes] = useState<number | null>(null);
 
   // Track validation errors
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  // Algorithms from library
+  const [algorithms, setAlgorithms] = useState<Array<{ id: string; algorithm_type: string; display_name?: string; description?: string }>>([]);
 
   useEffect(() => {
     if (testType) {
@@ -513,8 +529,25 @@ export default function TestTrackConfigPage() {
     setDraggedIndex(null);
   }
 
+  async function loadAlgorithms() {
+    try {
+      const { data, error } = await supabase
+        .from('2V_algorithm_config')
+        .select('id, algorithm_type, display_name, description')
+        .order('algorithm_type');
+
+      if (error) throw error;
+      setAlgorithms(data || []);
+    } catch (err) {
+      console.error('Error loading algorithms:', err);
+    }
+  }
+
   async function loadTrackTypes() {
     try {
+      // Load algorithms first
+      await loadAlgorithms();
+
       // Load all track types available for this test type from the database
       const { data, error } = await supabase
         .from('2V_test_track_config')
@@ -539,6 +572,10 @@ export default function TestTrackConfigPage() {
         ).join(' '), // Convert snake_case to Title Case
         hasConfig: true // All tracks from DB have config
       })).sort((a, b) => a.label.localeCompare(b.label));
+
+      console.log('📋 Raw track types from DB:', data?.map(c => c.track_type));
+      console.log('📋 Unique track types:', Array.from(uniqueTrackTypes));
+      console.log('📋 Formatted track types:', formattedTrackTypes);
 
       setTrackTypes(formattedTrackTypes);
 
@@ -625,6 +662,11 @@ export default function TestTrackConfigPage() {
         } else {
           setSectionDurationMode('proportional');
         }
+
+        // Load questions per section
+        if (data.questions_per_section) {
+          setQuestionsPerSection(data.questions_per_section);
+        }
       } else {
         // Set defaults
         setConfig({
@@ -646,7 +688,7 @@ export default function TestTrackConfigPage() {
           use_base_questions: false,
           base_questions_scope: 'entire_test',
           base_questions_count: 5,
-          algorithm_type: 'simple',
+          algorithm_id: '',
           training_config: {},
           assessment_mono_config: {},
         });
@@ -749,8 +791,8 @@ export default function TestTrackConfigPage() {
             errors.push('Base questions scope is required');
           }
         }
-        if (!config.algorithm_type) {
-          errors.push('Algorithm type is required for adaptive mode');
+        if (!config.algorithm_id) {
+          errors.push('Algorithm is required for adaptive mode');
         }
       }
 
@@ -767,8 +809,11 @@ export default function TestTrackConfigPage() {
       setValidationErrors([]);
 
       // Prepare the data to save
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { algorithm_type, ...configWithoutOldField } = config as any;
+
       const dataToSave = {
-        ...config,
+        ...configWithoutOldField,
         test_type: testType,
         track_type: selectedTrack,
         // Use the auto-corrected section_order_mode
@@ -780,6 +825,8 @@ export default function TestTrackConfigPage() {
         // Include time configuration
         total_time_minutes: totalTimeMinutes,
         time_per_section: sectionDurationMode === 'specific' ? specificSectionDurations : null,
+        // Include questions per section (only if has sections and values are set)
+        questions_per_section: hasSections && Object.keys(questionsPerSection).length > 0 ? questionsPerSection : null,
         // Set pause_duration_minutes to null when no_pause is selected
         pause_duration_minutes: config.pause_mode === 'no_pause' ? null : config.pause_duration_minutes,
         // Set pause_sections to null when not 'between_sections'
@@ -789,7 +836,7 @@ export default function TestTrackConfigPage() {
         // Set adaptive-related fields to null when non_adaptive
         base_questions_scope: config.adaptivity_mode === 'adaptive' ? config.base_questions_scope : null,
         base_questions_count: config.adaptivity_mode === 'adaptive' ? config.base_questions_count : null,
-        algorithm_type: config.adaptivity_mode === 'adaptive' ? config.algorithm_type : null,
+        algorithm_id: config.adaptivity_mode === 'adaptive' ? config.algorithm_id : null,
         // Include section adaptivity config
         section_adaptivity_config: useSectionAdaptivity ? sectionAdaptivityConfig : null,
         difficulty_levels_count: useSectionAdaptivity ? difficultyLevelsCount : null,
@@ -894,7 +941,7 @@ export default function TestTrackConfigPage() {
                               use_base_questions: false,
                               base_questions_scope: 'entire_test',
                               base_questions_count: 5,
-                              algorithm_type: 'simple',
+                              algorithm_id: '',
                               training_config: {},
                               assessment_mono_config: {},
                             });
@@ -936,12 +983,12 @@ export default function TestTrackConfigPage() {
                   ))}
                   {/* Show missing track type buttons */}
                   {[
-                    { value: 'assessment_iniziale', label: 'Assessment Iniziale' },
-                    { value: 'simulazione', label: 'Simulazione' },
-                    { value: 'training', label: 'Training' },
-                    { value: 'assessment_monotematico', label: 'Assessment Monotematico' }
+                    { value: 'Assessment Iniziale', label: 'Assessment Iniziale' },
+                    { value: 'Simulazione', label: 'Simulazione' },
+                    { value: 'Training', label: 'Training' },
+                    { value: 'Assessment Monotematico', label: 'Assessment Monotematico' }
                   ]
-                    .filter(track => !trackTypes.some(t => t.value === track.value))
+                    .filter(track => !trackTypes.some(t => t.value.toLowerCase().replace(/\s+/g, '_') === track.value.toLowerCase().replace(/\s+/g, '_')))
                     .map(track => (
                       <div key={track.value} className="relative">
                         <button
@@ -1002,7 +1049,7 @@ export default function TestTrackConfigPage() {
                                 use_base_questions: false,
                                 base_questions_scope: 'entire_test',
                                 base_questions_count: 5,
-                                algorithm_type: 'simple',
+                                algorithm_id: '',
                                 training_config: {},
                                 assessment_mono_config: {},
                               });
@@ -1693,6 +1740,71 @@ export default function TestTrackConfigPage() {
                 </div>
                 )}
 
+                {/* Questions per Section */}
+                {hasSections && sections.length > 0 && (
+                <div className="border-b border-gray-200 pb-6">
+                  <h3 className="text-lg font-bold text-brand-dark mb-4">Questions per Section</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Set the number of questions to show for each section (for adaptive tests, this is the target number)
+                  </p>
+                  <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
+                    <div className="space-y-3">
+                      {sections.map(section => {
+                        const defaultValue = questionsPerSection[section] || 20;
+
+                        return (
+                          <div key={section} className="flex items-center justify-between p-3 bg-white rounded-lg border border-blue-200">
+                            <label className="font-medium text-gray-700 text-sm flex-1">
+                              {section}
+                            </label>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="number"
+                                value={questionsPerSection[section] ?? defaultValue}
+                                onChange={(e) => {
+                                  const rawValue = e.target.value;
+                                  if (rawValue === '') {
+                                    // Allow empty for typing
+                                    setQuestionsPerSection({
+                                      ...questionsPerSection,
+                                      [section]: 0
+                                    });
+                                  } else {
+                                    const value = parseInt(rawValue);
+                                    if (!isNaN(value) && value >= 0) {
+                                      setQuestionsPerSection({
+                                        ...questionsPerSection,
+                                        [section]: value
+                                      });
+                                    }
+                                  }
+                                }}
+                                onBlur={(e) => {
+                                  // Reset to default if empty or 0 on blur
+                                  const value = parseInt(e.target.value);
+                                  if (isNaN(value) || value <= 0) {
+                                    setQuestionsPerSection({
+                                      ...questionsPerSection,
+                                      [section]: defaultValue
+                                    });
+                                  }
+                                }}
+                                className="w-24 px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-brand-green focus:outline-none text-sm font-bold"
+                                min="1"
+                              />
+                              <span className="text-gray-600 text-xs">questions</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <p className="text-xs text-gray-600 mt-3 italic">
+                      💡 GMAT defaults: Data Insights (20), Quantitative (21), Verbal (23)
+                    </p>
+                  </div>
+                </div>
+                )}
+
                 {/* Navigation Inside Section */}
                 <div className="border-b border-gray-200 pb-6">
                   <h3 className="text-lg font-bold text-brand-dark mb-4">Navigation Inside Section</h3>
@@ -1791,6 +1903,89 @@ export default function TestTrackConfigPage() {
                         <div className="text-sm text-gray-600">Students must answer all questions</div>
                       </div>
                     </label>
+                  </div>
+                </div>
+
+                {/* Review & Edit Feature */}
+                <div className="border-b border-gray-200 pb-6">
+                  <h3 className="text-lg font-bold text-brand-dark mb-4">Review & Edit (End of Section)</h3>
+                  <p className="text-sm text-gray-600 mb-4">Allow students to review and change answers at the end of each section (GMAT-style)</p>
+
+                  <div className="space-y-4">
+                    {/* Enable Review */}
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={config.allow_review_at_end || false}
+                        onChange={(e) => setConfig({
+                          ...config,
+                          allow_review_at_end: e.target.checked,
+                          allow_bookmarks: e.target.checked ? config.allow_bookmarks : false,
+                          max_answer_changes: e.target.checked ? (config.max_answer_changes || 3) : 0
+                        })}
+                        className="w-5 h-5 text-brand-green rounded"
+                      />
+                      <div>
+                        <div className="font-semibold text-gray-900">Enable Review Screen</div>
+                        <div className="text-sm text-gray-600">Show review screen at end of section to revisit questions</div>
+                      </div>
+                    </label>
+
+                    {config.allow_review_at_end && (
+                      <div className="ml-8 space-y-4 p-4 bg-blue-50 rounded-xl">
+                        {/* Allow Bookmarks */}
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={config.allow_bookmarks || false}
+                            onChange={(e) => setConfig({ ...config, allow_bookmarks: e.target.checked })}
+                            className="w-5 h-5 text-brand-green rounded"
+                          />
+                          <div>
+                            <div className="font-semibold text-gray-900">Allow Bookmarks</div>
+                            <div className="text-sm text-gray-600">Let students flag questions to easily find them in review</div>
+                          </div>
+                        </label>
+
+                        {/* Max Answer Changes */}
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Max Answer Changes
+                          </label>
+                          <input
+                            type="number"
+                            value={config.max_answer_changes || 3}
+                            onChange={(e) => setConfig({ ...config, max_answer_changes: parseInt(e.target.value) || 0 })}
+                            min="0"
+                            max="99"
+                            className="w-32 px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-brand-green focus:outline-none"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">Number of answers that can be changed (GMAT uses 3). Set to 0 for view-only review.</p>
+                        </div>
+
+                        {/* Max Questions to Review */}
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Max Questions to Review
+                          </label>
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="number"
+                              value={config.max_questions_to_review || ''}
+                              onChange={(e) => setConfig({
+                                ...config,
+                                max_questions_to_review: e.target.value ? parseInt(e.target.value) : null
+                              })}
+                              min="1"
+                              placeholder="Unlimited"
+                              className="w-32 px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-brand-green focus:outline-none"
+                            />
+                            <span className="text-sm text-gray-500">Leave empty for unlimited</span>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">Maximum number of questions viewable in review screen</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -2128,42 +2323,41 @@ export default function TestTrackConfigPage() {
                               )}
                             </div>
 
-                            {/* Algorithm Type */}
+                            {/* Algorithm Selection */}
                             <div>
                               <label className="block text-sm font-semibold text-gray-700 mb-3">
-                                Algorithm Type
+                                Algorithm
                               </label>
-                              <div className="space-y-2">
-                                <label className="flex items-start gap-3 p-4 bg-white border-2 border-gray-200 rounded-lg cursor-pointer hover:border-brand-green transition-colors">
-                                  <input
-                                    type="radio"
-                                    name="algorithm_type"
-                                    value="simple"
-                                    checked={config.algorithm_type === 'simple'}
-                                    onChange={() => setConfig({ ...config, algorithm_type: 'simple' })}
-                                    className="mt-1 w-5 h-5 text-brand-green focus:ring-brand-green"
-                                  />
-                                  <div className="flex-1">
-                                    <div className="font-semibold text-gray-900">Simple</div>
-                                    <div className="text-sm text-gray-600">Correct → harder, Wrong → easier</div>
-                                  </div>
-                                </label>
-
-                                <label className="flex items-start gap-3 p-4 bg-white border-2 border-gray-200 rounded-lg cursor-pointer hover:border-brand-green transition-colors">
-                                  <input
-                                    type="radio"
-                                    name="algorithm_type"
-                                    value="complex"
-                                    checked={config.algorithm_type === 'complex'}
-                                    onChange={() => setConfig({ ...config, algorithm_type: 'complex' })}
-                                    className="mt-1 w-5 h-5 text-brand-green focus:ring-brand-green"
-                                  />
-                                  <div className="flex-1">
-                                    <div className="font-semibold text-gray-900">Complex (GMAT-style CAT)</div>
-                                    <div className="text-sm text-gray-600">Uses Item Response Theory (IRT)</div>
-                                  </div>
-                                </label>
-                              </div>
+                              {algorithms.length === 0 ? (
+                                <div className="p-4 bg-yellow-50 border-2 border-yellow-200 rounded-lg">
+                                  <p className="text-sm text-yellow-700">
+                                    No algorithms configured. <a href="/tutor/algorithm-config" className="text-brand-green underline font-semibold">Create one in the Algorithm Library</a>
+                                  </p>
+                                </div>
+                              ) : (
+                                <div className="space-y-2">
+                                  <select
+                                    value={config.algorithm_id || ''}
+                                    onChange={(e) => setConfig({ ...config, algorithm_id: e.target.value })}
+                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-brand-green focus:outline-none font-medium"
+                                  >
+                                    <option value="">Select an algorithm...</option>
+                                    {algorithms.map((algo) => (
+                                      <option key={algo.id} value={algo.id}>
+                                        {algo.display_name || algo.algorithm_type}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  {config.algorithm_id && (
+                                    <p className="text-xs text-gray-500">
+                                      {algorithms.find(a => a.id === config.algorithm_id)?.description || 'No description'}
+                                    </p>
+                                  )}
+                                  <p className="text-xs text-gray-400 mt-2">
+                                    <a href="/tutor/algorithm-config" className="text-brand-green underline">Manage algorithms</a>
+                                  </p>
+                                </div>
+                              )}
                             </div>
                           </>
                         )}

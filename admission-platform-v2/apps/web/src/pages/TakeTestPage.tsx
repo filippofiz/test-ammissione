@@ -13,8 +13,12 @@ import {
   faFlag,
   faClock,
   faCheckCircle,
+  faTimesCircle,
   faGripVertical,
   faLock,
+  faBookmark,
+  faList,
+  faUndo,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import { supabase } from '../lib/supabase';
@@ -62,6 +66,15 @@ interface TestConfig {
 
   // Section adaptivity
   section_adaptivity_config?: Record<string, { type: 'base' | 'adaptive'; difficulty?: string }>;
+
+  // Review & Edit feature (GMAT-style)
+  allow_review_at_end?: boolean;
+  allow_bookmarks?: boolean;
+  max_answer_changes?: number;
+  max_questions_to_review?: number | null;
+
+  // Algorithm reference
+  algorithm_id?: string;
 }
 
 interface Question {
@@ -230,6 +243,13 @@ export default function TakeTestPage() {
   const searchParams = new URLSearchParams(window.location.search);
   const isTestMode = searchParams.get('testMode') === 'true';
 
+  // Detect guided mode from URL parameters (?guided=true&timed=false)
+  const isGuidedMode = searchParams.get('guided') === 'true';
+  const guidedTimed = searchParams.get('timed') !== 'false'; // Default to timed
+
+  // Toggle for showing/hiding correct answers in guided mode
+  const [showCorrectAnswers, setShowCorrectAnswers] = useState(false);
+
   const db = isTestMode ? supabaseTest : supabase;
   const dbFrom = (table: string) => isTestMode ? fromTest(table) : supabase.from(table);
 
@@ -277,6 +297,7 @@ export default function TakeTestPage() {
   const [pauseChoiceTrigger, setPauseChoiceTrigger] = useState(0); // Trigger to force countdown useEffect to run
   const [showAnswerRequiredMessage, setShowAnswerRequiredMessage] = useState(false);
   const [isPartialAnswer, setIsPartialAnswer] = useState(false);
+  const [showChangeBlockedMessage, setShowChangeBlockedMessage] = useState(false);
   const [showSectionTransition, setShowSectionTransition] = useState(false);
   const [sectionTransitionCountdown, setSectionTransitionCountdown] = useState(5);
   const [isTransitioning, setIsTransitioning] = useState(false); // Prevent race conditions
@@ -289,6 +310,150 @@ export default function TakeTestPage() {
   const [algorithmConfig, setAlgorithmConfig] = useState<any>(null); // Algorithm configuration
   const [adaptiveAlgorithm, setAdaptiveAlgorithm] = useState<SimpleAdaptiveAlgorithm | ComplexAdaptiveAlgorithm | null>(null); // Algorithm instance
   const [baseQuestionsCompletedPerSection, setBaseQuestionsCompletedPerSection] = useState<Record<string, boolean>>({}); // Track base questions per section
+
+  // Review & Edit feature state (GMAT-style)
+  const [bookmarkedQuestions, setBookmarkedQuestions] = useState<Set<string>>(new Set()); // Question IDs that are bookmarked
+  const [showReviewScreen, setShowReviewScreen] = useState(false); // Show review screen at end of section
+  const [answerChangesUsed, setAnswerChangesUsed] = useState<number>(0); // Number of answer changes made in review
+  const [originalAnswers, setOriginalAnswers] = useState<Record<string, StudentAnswer>>({}); // Answers before review (to track changes)
+  const [isInReviewMode, setIsInReviewMode] = useState(false); // Currently in review mode
+
+  // Toggle bookmark for current question
+  const toggleBookmark = (questionId: string) => {
+    setBookmarkedQuestions(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(questionId)) {
+        newSet.delete(questionId);
+      } else {
+        newSet.add(questionId);
+      }
+      return newSet;
+    });
+  };
+
+  // Check if answer was changed during review
+  const checkAnswerChanged = (questionId: string, newAnswer: StudentAnswer): boolean => {
+    const original = originalAnswers[questionId];
+    if (!original) return false;
+    // Compare all answer fields
+    const originalValue = JSON.stringify({
+      answer: original.answer,
+      msrAnswers: original.msrAnswers,
+      blank1: original.blank1,
+      blank2: original.blank2,
+      taAnswers: original.taAnswers,
+      column1: original.column1,
+      column2: original.column2,
+    });
+    const newValue = JSON.stringify({
+      answer: newAnswer.answer,
+      msrAnswers: newAnswer.msrAnswers,
+      blank1: newAnswer.blank1,
+      blank2: newAnswer.blank2,
+      taAnswers: newAnswer.taAnswers,
+      column1: newAnswer.column1,
+      column2: newAnswer.column2,
+    });
+    return originalValue !== newValue;
+  };
+
+  // Handle answer update with review mode tracking
+  // GMAT rule: 3 CHANGES total (not 3 questions) - changing same question twice = 2 changes
+  const updateAnswer = (questionId: string, updater: (prev: StudentAnswer | undefined) => StudentAnswer) => {
+    // Check if we should block this change BEFORE updating
+    if (isInReviewMode && config?.max_answer_changes !== undefined && config.max_answer_changes > 0) {
+      const currentAnswer = answers[questionId];
+      const newAnswer = updater(currentAnswer);
+
+      // Check if the answer is actually different from current
+      const isDifferentFromCurrent = JSON.stringify(currentAnswer?.answer) !== JSON.stringify(newAnswer?.answer) ||
+        JSON.stringify(currentAnswer?.msrAnswers) !== JSON.stringify(newAnswer?.msrAnswers) ||
+        currentAnswer?.blank1 !== newAnswer?.blank1 ||
+        currentAnswer?.blank2 !== newAnswer?.blank2 ||
+        JSON.stringify(currentAnswer?.taAnswers) !== JSON.stringify(newAnswer?.taAnswers) ||
+        currentAnswer?.column1 !== newAnswer?.column1 ||
+        currentAnswer?.column2 !== newAnswer?.column2;
+
+      // If selecting the same answer, no change needed
+      if (!isDifferentFromCurrent) {
+        return;
+      }
+
+      // Each change counts toward the limit
+      if (answerChangesUsed >= config.max_answer_changes) {
+        // Max changes reached, block the change
+        setShowChangeBlockedMessage(true);
+        setTimeout(() => setShowChangeBlockedMessage(false), 3000);
+        return;
+      }
+
+      // Increment counter and update answer
+      setAnswerChangesUsed(prev => prev + 1);
+
+      // Update the answer
+      setAnswers(prev => ({
+        ...prev,
+        [questionId]: newAnswer
+      }));
+    } else {
+      // Not in review mode or no max_answer_changes set, just update normally
+      setAnswers(prev => ({
+        ...prev,
+        [questionId]: updater(prev[questionId])
+      }));
+    }
+  };
+
+  // Enter review mode - save original answers
+  const enterReviewMode = () => {
+    const currentSectionQuestions = currentSectionQuestionsList;
+    const originals: Record<string, StudentAnswer> = {};
+    currentSectionQuestions.forEach(q => {
+      if (answers[q.id]) {
+        originals[q.id] = { ...answers[q.id] };
+      }
+    });
+    setOriginalAnswers(originals);
+    setAnswerChangesUsed(0);
+    setIsInReviewMode(true);
+    isInReviewModeRef.current = true;
+    setShowReviewScreen(true);
+    showReviewScreenRef.current = true;
+  };
+
+  // Go to specific question from review screen
+  const goToQuestionFromReview = (questionIndex: number) => {
+    setShowReviewScreen(false);
+    showReviewScreenRef.current = false;
+    setCurrentQuestionIndex(questionIndex);
+  };
+
+  // Return to review screen
+  const returnToReviewScreen = () => {
+    setShowReviewScreen(true);
+    showReviewScreenRef.current = true;
+  };
+
+  // Complete review and move to next section
+  const completeReview = () => {
+    setShowReviewScreen(false);
+    showReviewScreenRef.current = false;
+    setIsInReviewMode(false);
+    isInReviewModeRef.current = false;
+    setOriginalAnswers({});
+    setAnswerChangesUsed(0);
+    // Clear bookmarks for this section
+    const currentSectionQuestions = currentSectionQuestionsList;
+    setBookmarkedQuestions(prev => {
+      const newSet = new Set(prev);
+      currentSectionQuestions.forEach(q => newSet.delete(q.id));
+      return newSet;
+    });
+    // Now actually complete the section
+    // This will call completeSection again, but isInReviewMode is now false
+    // so it will proceed with the actual section completion
+    completeSection();
+  };
 
   // Saving and timing state
   const [studentId, setStudentId] = useState<string | null>(null);
@@ -304,6 +469,8 @@ export default function TakeTestPage() {
   const showPauseChoiceRef = useRef(false); // Ref to track pause choice screen state for StrictMode
   const currentSectionIndexRef = useRef(currentSectionIndex); // Ref for current section to avoid stale closures in timer
   const pausesUsedRef = useRef(pausesUsed); // Ref for pauses used to avoid stale closures in timer
+  const isInReviewModeRef = useRef(false); // Ref for review mode to avoid stale closures in timer
+  const showReviewScreenRef = useRef(false); // Ref for review screen to avoid stale closures in timer
 
   // Helper function to get the correct section field based on config
   const getSectionField = (question: Question): string => {
@@ -353,6 +520,9 @@ export default function TakeTestPage() {
   const sectionQuestions = questionsToUse.filter(q => getSectionField(q) === currentSection);
   const currentQuestion = sectionQuestions[currentQuestionIndex];
   const totalQuestionsInSection = sectionQuestions.length;
+
+  // Alias for review functions (same as sectionQuestions)
+  const currentSectionQuestionsList = sectionQuestions;
 
   // Calculate total questions expected for THIS section
   const calculateSectionQuestionLimit = (): number => {
@@ -540,6 +710,11 @@ export default function TakeTestPage() {
       const isCurrentlyFullscreen = !!document.fullscreenElement;
       setIsFullscreen(isCurrentlyFullscreen);
 
+      // Skip fullscreen enforcement in guided mode
+      if (isGuidedMode) {
+        return;
+      }
+
       // Skip fullscreen enforcement on localhost for testing
       const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
       if (isLocalhost) {
@@ -562,7 +737,7 @@ export default function TakeTestPage() {
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-  }, [showStartScreen, showSectionSelectionScreen, showPauseScreen, showPauseChoiceScreen, showCompletionScreen, showExitWarning, testAnnulled]);
+  }, [showStartScreen, showSectionSelectionScreen, showPauseScreen, showPauseChoiceScreen, showCompletionScreen, showExitWarning, testAnnulled, isGuidedMode]);
 
   // Exit warning countdown
   useEffect(() => {
@@ -1020,24 +1195,19 @@ export default function TakeTestPage() {
 
       // Load algorithm configuration if adaptive mode is enabled
       let algorithmConfigData = null;
-      if (configData.adaptivity_mode === 'adaptive') {
-        // Fetch all algorithm configs for this test type and find by normalized track_type
-        const { data: algConfigs, error: algError } = await supabase
+      if (configData.adaptivity_mode === 'adaptive' && configData.algorithm_id) {
+        // Fetch algorithm config by ID from the algorithm library
+        const { data: algConfig, error: algError } = await supabase
           .from('2V_algorithm_config')
           .select('*')
-          .eq('test_type', testType)
-          .eq('algorithm_category', 'adaptive');
+          .eq('id', configData.algorithm_id)
+          .single();
 
-        if (!algError) {
-          // Find matching config by normalized track_type
-          const algConfig = algConfigs?.find(config =>
-            normalize(config.track_type) === trackTypeNormalized
-          );
-
-          if (algConfig) {
-            algorithmConfigData = algConfig;
-            setAlgorithmConfig(algConfig);
-          }
+        if (!algError && algConfig) {
+          algorithmConfigData = algConfig;
+          setAlgorithmConfig(algConfig);
+        } else {
+          console.warn('Algorithm not found for id:', configData.algorithm_id);
         }
       }
 
@@ -1111,8 +1281,8 @@ export default function TakeTestPage() {
         setAdaptiveAlgorithm(algorithm);
       }
 
-      // Initialize timer if needed
-      if (configData.total_time_minutes) {
+      // Initialize timer if needed (skip if guided mode with no time limit)
+      if (configData.total_time_minutes && (!isGuidedMode || guidedTimed)) {
         setTimeRemaining(configData.total_time_minutes * 60); // Convert to seconds
       }
 
@@ -1384,6 +1554,12 @@ export default function TakeTestPage() {
     // Clear any existing timer
     if (timerRef.current) clearInterval(timerRef.current);
 
+    // Skip timer in guided mode with no time limit
+    if (isGuidedMode && !guidedTimed) {
+      setTimeRemaining(null);
+      return;
+    }
+
     // Use override section if provided (to avoid stale closure issues), otherwise use current section
     const section = sectionOverride || currentSection;
 
@@ -1418,9 +1594,93 @@ export default function TakeTestPage() {
   function handleTimeUp() {
     if (timerRef.current) clearInterval(timerRef.current);
 
+    // If in review mode, close the review screen and complete the review
+    // Use refs to get actual values (avoids stale closure in timer callbacks)
+    if (isInReviewModeRef.current || showReviewScreenRef.current) {
+      setShowReviewScreen(false);
+      showReviewScreenRef.current = false;
+      setIsInReviewMode(false);
+      isInReviewModeRef.current = false;
+      setOriginalAnswers({});
+      setAnswerChangesUsed(0);
+      // Call completeSection with a flag to skip the review mode check
+      completeSectionAfterTimeUp();
+      return;
+    }
+
     // Complete the section instead of submitting the entire test
     // This will handle navigation to next section, pause screens, or final submission
     completeSection();
+  }
+
+  // Special version of completeSection that skips review mode check (called when time expires)
+  function completeSectionAfterTimeUp() {
+    // Prevent race condition: use ref for synchronous check
+    if (isCompletingSectionRef.current) {
+      return;
+    }
+
+    // Set ref immediately for synchronous guard
+    isCompletingSectionRef.current = true;
+
+    // Use refs to get actual values (avoids stale closure in timer callbacks)
+    const actualCurrentSection = sections[currentSectionIndexRef.current];
+    const actualCurrentSectionIndex = currentSectionIndexRef.current;
+    const actualPausesUsed = pausesUsedRef.current;
+
+    setIsCompletingSection(true);
+
+    // Clear the section timer to prevent it from running during pause
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+
+    // Check for mandatory pause
+    if (config?.pause_mode === 'between_sections' &&
+        config.pause_sections?.includes(actualCurrentSection)) {
+      const pauseDuration = (config.pause_duration_minutes || 5) * 60;
+      setPauseTimeRemaining(pauseDuration);
+      setShowPauseScreen(true);
+      setTimeout(() => {
+        setShowPauseScreen(false);
+        setPauseTimeRemaining(null);
+        setIsCompletingSection(false);
+        isCompletingSectionRef.current = false;
+        moveToNextSection(actualCurrentSectionIndex);
+      }, pauseDuration * 1000);
+      return;
+    }
+
+    // Check for user choice pause (only if not the last section and pauses remaining)
+    if (config?.pause_mode === 'user_choice' &&
+        actualCurrentSectionIndex < sections.length - 1 &&
+        actualPausesUsed < (config?.max_pauses || 0)) {
+      // IMPORTANT: Reset countdown and ref BEFORE showing the screen
+      pauseChoiceMadeRef.current = false;
+      showPauseChoiceRef.current = true;
+      setPauseChoiceCountdown(5);
+      setPauseChoiceTrigger(prev => prev + 1);
+      setShowPauseChoiceScreen(true);
+      setTimeout(() => {
+        setIsCompletingSection(false);
+        isCompletingSectionRef.current = false;
+      }, 500);
+      return;
+    }
+
+    // No pause - show transition message (if not the last section)
+    if (actualCurrentSectionIndex < sections.length - 1) {
+      setShowSectionTransition(true);
+      setTimeout(() => {
+        setIsCompletingSection(false);
+        isCompletingSectionRef.current = false;
+      }, 500);
+      return;
+    }
+
+    // Last section - move to completion
+    moveToNextSection(actualCurrentSectionIndex);
   }
 
   function handleAnswerSelect(answer: string) {
@@ -1431,19 +1691,29 @@ export default function TakeTestPage() {
       return;
     }
 
-    setAnswers(prev => ({
-      ...prev,
-      [currentQuestion.id]: {
-        questionId: currentQuestion.id,
-        answer,
-        timeSpent: prev[currentQuestion.id]?.timeSpent || 0,
-        flagged: prev[currentQuestion.id]?.flagged || false,
-      }
+    updateAnswer(currentQuestion.id, (prev) => ({
+      questionId: currentQuestion.id,
+      answer,
+      timeSpent: prev?.timeSpent || 0,
+      flagged: prev?.flagged || false,
     }));
 
     // Record response with adaptive algorithm if enabled
     if (adaptiveAlgorithm && config?.adaptivity_mode === 'adaptive') {
-      const isCorrect = answer === currentQuestion.correct_answer;
+      // Get correct answer from the right place (answers JSONB field for GMAT, correct_answer for others)
+      const answersData = typeof currentQuestion.answers === 'string'
+        ? JSON.parse(currentQuestion.answers)
+        : currentQuestion.answers;
+      const correctAnswerData = answersData?.correct_answer || currentQuestion.correct_answer;
+
+      // Normalize correct answer (may be array or string)
+      const correctAnswer = Array.isArray(correctAnswerData) ? correctAnswerData[0] : correctAnswerData;
+
+      // Compare (case-insensitive for letter answers)
+      const normalizedAnswer = typeof answer === 'string' ? answer.toUpperCase() : answer;
+      const normalizedCorrect = typeof correctAnswer === 'string' ? correctAnswer.toUpperCase() : correctAnswer;
+      const isCorrect = normalizedAnswer === normalizedCorrect;
+
       adaptiveAlgorithm.recordResponse(currentQuestion, isCorrect);
     }
   }
@@ -1589,6 +1859,11 @@ export default function TakeTestPage() {
           answer: jsonbAnswer,
           is_flagged: isFlagged,
           time_spent_seconds: timeSpentSeconds,
+          // Guided mode fields
+          is_guided: isGuidedMode,
+          guided_settings: isGuidedMode ? {
+            timed: guidedTimed
+          } : null,
         }, {
           onConflict: 'assignment_id,question_id,attempt_number'
         });
@@ -1838,6 +2113,12 @@ export default function TakeTestPage() {
       return;
     }
 
+    // Check if review mode is enabled and not already in review
+    if (config?.allow_review_at_end && !isInReviewMode) {
+      enterReviewMode();
+      return;
+    }
+
     // Set ref immediately for synchronous guard
     isCompletingSectionRef.current = true;
 
@@ -2060,10 +2341,15 @@ export default function TakeTestPage() {
       setSectionStartTime(new Date());
 
 
-      // For adaptive mode with per_section base questions, add base questions for new section
+      // For adaptive mode with per_section base questions, reset algorithm state and add base questions for new section
       if (config?.adaptivity_mode === 'adaptive' &&
           config?.use_base_questions &&
           config?.base_questions_scope === 'per_section') {
+
+        // Reset adaptive algorithm state for new section
+        if (adaptiveAlgorithm) {
+          adaptiveAlgorithm.resetForNewSection();
+        }
 
         // Determine baseline difficulty
         let baselineDifficulty = config.baseline_difficulty || 2;
@@ -2197,6 +2483,11 @@ export default function TakeTestPage() {
 
   // Check for multiple screens
   async function checkMultipleScreens(): Promise<boolean> {
+    // Disable multiple screen detection in guided mode
+    if (isGuidedMode) {
+      return false;
+    }
+
     // Disable multiple screen detection on localhost for development
     const isLocalhost = window.location.hostname === 'localhost' ||
                         window.location.hostname === '127.0.0.1' ||
@@ -2230,6 +2521,11 @@ export default function TakeTestPage() {
 
   // Enter fullscreen mode
   function enterFullscreen() {
+    // Skip fullscreen in guided mode
+    if (isGuidedMode) {
+      return;
+    }
+
     // Skip fullscreen on localhost for testing
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     if (isLocalhost) {
@@ -2598,7 +2894,7 @@ export default function TakeTestPage() {
                   <div className="flex-1">
                     <div className="font-semibold text-gray-800">{section}</div>
                     <div className="text-sm text-gray-500">
-                      {allQuestions.filter(q => getSectionField(q) === section).length} {t('takeTest.questions')}
+                      {config?.questions_per_section?.[section] || allQuestions.filter(q => getSectionField(q) === section).length} {t('takeTest.questions')}
                       {config.time_per_section?.[section] && (
                         <> • {config.time_per_section[section]} {t('common.minutes')}</>
                       )}
@@ -2830,6 +3126,27 @@ export default function TakeTestPage() {
               </span>
             </div>
           )}
+          {/* Guided Mode Indicator for PDF tests */}
+          {isGuidedMode && (
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 px-3 py-1 bg-purple-100 text-purple-700 rounded-lg text-sm font-semibold">
+                <span>🎓</span>
+                <span>Guided</span>
+                {!guidedTimed && <span className="text-purple-500">• No limit</span>}
+              </div>
+              {/* Toggle Show/Hide Answers */}
+              <button
+                onClick={() => setShowCorrectAnswers(!showCorrectAnswers)}
+                className={`px-3 py-1 rounded-lg text-sm font-semibold transition-all ${
+                  showCorrectAnswers
+                    ? 'bg-green-100 text-green-700 border-2 border-green-300'
+                    : 'bg-gray-100 text-gray-600 border-2 border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                {showCorrectAnswers ? '👁️ Hide' : '👁️ Show'}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* PDF Test View */}
@@ -2838,6 +3155,7 @@ export default function TakeTestPage() {
             questions={sectionQuestions}
             currentPageGroup={currentPageGroup}
             answers={answers}
+            showCorrectAnswers={isGuidedMode && showCorrectAnswers}
             onAnswer={(questionId, answer) => {
               // Extra safety: reject if time has expired
               if (timeRemaining !== null && timeRemaining <= 0) {
@@ -2928,18 +3246,27 @@ export default function TakeTestPage() {
                 ⚠️ {saveError}
               </span>
             )}
+            {/* Review Mode Indicator with Changes Counter */}
+            {isInReviewMode && config?.max_answer_changes !== undefined && (
+              <span className={`text-xs font-semibold px-2 py-1 rounded ${
+                answerChangesUsed >= config.max_answer_changes
+                  ? 'bg-red-100 text-red-700'
+                  : 'bg-yellow-100 text-yellow-700'
+              }`}>
+                📝 {t('takeTest.changesUsed')}: {answerChangesUsed}/{config.max_answer_changes}
+              </span>
+            )}
           </div>
           {/* Debug info for testing - Only show in adaptive mode */}
+          {/* Hidden for production - uncomment to debug adaptive algorithm
           {config?.adaptivity_mode === 'adaptive' && (
             <div className="flex gap-4 mt-1 text-xs">
               <span className={`font-semibold ${currentQuestion?.is_base ? 'text-blue-600' : 'text-purple-600'}`}>
                 {currentQuestion?.is_base ? '🔵 BASELINE' : '🟣 ADAPTIVE'}
               </span>
-              <span className="text-gray-700">
-                Difficulty: <span className="font-semibold">{currentQuestion?.difficulty || 'N/A'}</span>
-              </span>
             </div>
           )}
+          */}
         </div>
         {timeRemaining !== null && (
           <div className="flex items-center gap-2 text-lg">
@@ -2949,6 +3276,27 @@ export default function TakeTestPage() {
             </span>
           </div>
         )}
+        {/* Guided Mode Indicator */}
+        {isGuidedMode && (
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 px-3 py-1 bg-purple-100 text-purple-700 rounded-lg text-sm font-semibold">
+              <span>🎓</span>
+              <span>{t('takeTest.guidedMode', 'Guided Mode')}</span>
+              {!guidedTimed && <span className="text-purple-500">• {t('takeTest.noTimeLimit', 'No time limit')}</span>}
+            </div>
+            {/* Toggle Show/Hide Answers */}
+            <button
+              onClick={() => setShowCorrectAnswers(!showCorrectAnswers)}
+              className={`px-3 py-1 rounded-lg text-sm font-semibold transition-all ${
+                showCorrectAnswers
+                  ? 'bg-green-100 text-green-700 border-2 border-green-300'
+                  : 'bg-gray-100 text-gray-600 border-2 border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              {showCorrectAnswers ? '👁️ ' + t('takeTest.hideAnswers', 'Hide Answers') : '👁️ ' + t('takeTest.showAnswers', 'Show Answers')}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Question Content */}
@@ -2956,7 +3304,25 @@ export default function TakeTestPage() {
         <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-lg p-8">
           {/* Question Text */}
           <div className="mb-8">
-            <div className="flex items-start justify-end mb-4">
+            <div className="flex items-start justify-end gap-2 mb-4">
+              {/* Bookmark Button (GMAT-style) */}
+              {config?.allow_bookmarks && currentQuestion?.id && (
+                <button
+                  onClick={() => toggleBookmark(currentQuestion.id)}
+                  className={`px-3 py-1 rounded-lg text-sm font-semibold transition-colors ${
+                    bookmarkedQuestions.has(currentQuestion.id)
+                      ? 'bg-yellow-100 text-yellow-700 border-2 border-yellow-400'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  <FontAwesomeIcon icon={faBookmark} className="mr-2" />
+                  {bookmarkedQuestions.has(currentQuestion.id)
+                    ? (t('takeTest.bookmarked') || 'Bookmarked')
+                    : (t('takeTest.bookmark') || 'Bookmark')
+                  }
+                </button>
+              )}
+              {/* Flag Button */}
               <button
                 onClick={toggleFlag}
                 className={`px-3 py-1 rounded-lg text-sm font-semibold transition-colors ${
@@ -2984,133 +3350,217 @@ export default function TakeTestPage() {
             ) : null}
 
             {/* GMAT Data Insights Question Types */}
-            {currentQuestion?.question_data?.di_type === 'DS' && (
-            <DSQuestion
-              problem={currentQuestion.question_data.problem || ''}
-              statement1={currentQuestion.question_data.statement1 || ''}
-              statement2={currentQuestion.question_data.statement2 || ''}
-              selectedAnswer={answers[currentQuestion.id]?.answer}
-              onAnswerChange={handleAnswerSelect}
-            />
-          )}
+            {currentQuestion?.question_data?.di_type === 'DS' && (() => {
+              const answersData = typeof currentQuestion.answers === 'string'
+                ? JSON.parse(currentQuestion.answers)
+                : currentQuestion.answers;
+              const correctAnswerData = answersData?.correct_answer;
+              const correctDSAnswer = Array.isArray(correctAnswerData) ? correctAnswerData[0] : correctAnswerData;
 
-          {currentQuestion?.question_data?.di_type === 'MSR' && (
-            <MSRQuestion
-              sources={currentQuestion.question_data.sources || []}
-              questions={currentQuestion.question_data.questions || []}
-              selectedAnswers={answers[currentQuestion.id]?.msrAnswers || []}
-              onAnswerChange={(qIndex, answer) => {
-                const currentMSRAnswers = answers[currentQuestion.id]?.msrAnswers || [];
-                const newMSRAnswers = [...currentMSRAnswers];
-                newMSRAnswers[qIndex] = answer;
-                setAnswers(prev => ({
-                  ...prev,
-                  [currentQuestion.id]: {
-                    ...prev[currentQuestion.id],
+              return (
+                <DSQuestion
+                  problem={currentQuestion.question_data.problem || ''}
+                  statement1={currentQuestion.question_data.statement1 || ''}
+                  statement2={currentQuestion.question_data.statement2 || ''}
+                  selectedAnswer={answers[currentQuestion.id]?.answer}
+                  onAnswerChange={handleAnswerSelect}
+                  correctAnswer={correctDSAnswer}
+                  showResults={isGuidedMode && showCorrectAnswers}
+                />
+              );
+            })()}
+
+          {currentQuestion?.question_data?.di_type === 'MSR' && (() => {
+            const answersData = typeof currentQuestion.answers === 'string'
+              ? JSON.parse(currentQuestion.answers)
+              : currentQuestion.answers;
+            const correctAnswerData = answersData?.correct_answer;
+            const correctMSRAnswers = Array.isArray(correctAnswerData) ? correctAnswerData : [];
+
+            return (
+              <MSRQuestion
+                sources={currentQuestion.question_data.sources || []}
+                questions={currentQuestion.question_data.questions || []}
+                selectedAnswers={answers[currentQuestion.id]?.msrAnswers || []}
+                onAnswerChange={(qIndex, answer) => {
+                  const currentMSRAnswers = answers[currentQuestion.id]?.msrAnswers || [];
+                  const newMSRAnswers = [...currentMSRAnswers];
+                  newMSRAnswers[qIndex] = answer;
+                  updateAnswer(currentQuestion.id, (prev) => ({
+                    ...prev,
+                    questionId: currentQuestion.id,
                     msrAnswers: newMSRAnswers,
-                    answer: newMSRAnswers.join(','), // Store as comma-separated
-                  }
-                }));
-              }}
-            />
-          )}
+                    answer: newMSRAnswers.join(','),
+                    timeSpent: prev?.timeSpent || 0,
+                    flagged: prev?.flagged || false,
+                  }));
+                }}
+                correctAnswers={correctMSRAnswers}
+                showResults={isGuidedMode && showCorrectAnswers}
+              />
+            );
+          })()}
 
-          {currentQuestion?.question_data?.di_type === 'GI' && (
-            <GIQuestion
-              chartConfig={currentQuestion.question_data.chart_config}
-              contextText={currentQuestion.question_data.context_text}
-              statementText={currentQuestion.question_data.statement_text || ''}
-              blank1Options={currentQuestion.question_data.blank1_options || []}
-              blank2Options={currentQuestion.question_data.blank2_options || []}
-              imageUrl={currentQuestion.question_data.image_url || undefined}
-              selectedBlank1={answers[currentQuestion.id]?.blank1}
-              selectedBlank2={answers[currentQuestion.id]?.blank2}
-              onBlank1Change={(value) => {
-                setAnswers(prev => ({
-                  ...prev,
-                  [currentQuestion.id]: {
-                    ...prev[currentQuestion.id],
+          {currentQuestion?.question_data?.di_type === 'GI' && (() => {
+            const answersData = typeof currentQuestion.answers === 'string'
+              ? JSON.parse(currentQuestion.answers)
+              : currentQuestion.answers;
+            const correctAnswerData = answersData?.correct_answer;
+
+            return (
+              <GIQuestion
+                chartConfig={currentQuestion.question_data.chart_config}
+                contextText={currentQuestion.question_data.context_text}
+                statementText={currentQuestion.question_data.statement_text || ''}
+                blank1Options={currentQuestion.question_data.blank1_options || []}
+                blank2Options={currentQuestion.question_data.blank2_options || []}
+                imageUrl={currentQuestion.question_data.image_url || undefined}
+                selectedBlank1={answers[currentQuestion.id]?.blank1}
+                selectedBlank2={answers[currentQuestion.id]?.blank2}
+                onBlank1Change={(value) => {
+                  updateAnswer(currentQuestion.id, (prev) => ({
+                    ...prev,
+                    questionId: currentQuestion.id,
                     blank1: value,
-                    answer: `${value}|${prev[currentQuestion.id]?.blank2 || ''}`,
-                  }
-                }));
-              }}
-              onBlank2Change={(value) => {
-                setAnswers(prev => ({
-                  ...prev,
-                  [currentQuestion.id]: {
-                    ...prev[currentQuestion.id],
+                    blank2: prev?.blank2,
+                    answer: `${value}|${prev?.blank2 || ''}`,
+                    timeSpent: prev?.timeSpent || 0,
+                    flagged: prev?.flagged || false,
+                  }));
+                }}
+                onBlank2Change={(value) => {
+                  updateAnswer(currentQuestion.id, (prev) => ({
+                    ...prev,
+                    questionId: currentQuestion.id,
+                    blank1: prev?.blank1,
                     blank2: value,
-                    answer: `${prev[currentQuestion.id]?.blank1 || ''}|${value}`,
-                  }
-                }));
-              }}
-            />
-          )}
+                    answer: `${prev?.blank1 || ''}|${value}`,
+                    timeSpent: prev?.timeSpent || 0,
+                    flagged: prev?.flagged || false,
+                  }));
+                }}
+                correctBlank1={correctAnswerData}
+                correctBlank2={correctAnswerData}
+                showResults={isGuidedMode && showCorrectAnswers}
+              />
+            );
+          })()}
 
-          {currentQuestion?.question_data?.di_type === 'TA' && (
-            <TAQuestion
-              tableTitle={currentQuestion.question_data.table_title}
-              columnHeaders={currentQuestion.question_data.column_headers || []}
-              tableData={currentQuestion.question_data.table_data || []}
-              statements={currentQuestion.question_data.statements || []}
-              selectedAnswers={answers[currentQuestion.id]?.taAnswers || {}}
-              onAnswerChange={(statementIndex, value) => {
-                const currentTAAnswers = answers[currentQuestion.id]?.taAnswers || {};
-                const newTAAnswers = { ...currentTAAnswers, [statementIndex]: value };
-                setAnswers(prev => ({
-                  ...prev,
-                  [currentQuestion.id]: {
-                    ...prev[currentQuestion.id],
+          {currentQuestion?.question_data?.di_type === 'TA' && (() => {
+            const answersData = typeof currentQuestion.answers === 'string'
+              ? JSON.parse(currentQuestion.answers)
+              : currentQuestion.answers;
+            const correctAnswerData = answersData?.correct_answer;
+            const correctTAAnswers = Array.isArray(correctAnswerData) && correctAnswerData.length > 0
+              ? correctAnswerData[0]
+              : correctAnswerData || {};
+
+            return (
+              <TAQuestion
+                tableTitle={currentQuestion.question_data.table_title}
+                columnHeaders={currentQuestion.question_data.column_headers || []}
+                tableData={currentQuestion.question_data.table_data || []}
+                statements={currentQuestion.question_data.statements || []}
+                selectedAnswers={answers[currentQuestion.id]?.taAnswers || {}}
+                onAnswerChange={(statementIndex, value) => {
+                  const currentTAAnswers = answers[currentQuestion.id]?.taAnswers || {};
+                  const newTAAnswers = { ...currentTAAnswers, [statementIndex]: value };
+                  updateAnswer(currentQuestion.id, (prev) => ({
+                    ...prev,
+                    questionId: currentQuestion.id,
                     taAnswers: newTAAnswers,
                     answer: Object.values(newTAAnswers).join(','),
-                  }
-                }));
-              }}
-            />
-          )}
+                    timeSpent: prev?.timeSpent || 0,
+                    flagged: prev?.flagged || false,
+                  }));
+                }}
+                correctAnswers={correctTAAnswers}
+                showResults={isGuidedMode && showCorrectAnswers}
+              />
+            );
+          })()}
 
-          {currentQuestion?.question_data?.di_type === 'TPA' && (
-            <TPAQuestion
-              scenario={currentQuestion.question_data.scenario || ''}
-              column1Title={currentQuestion.question_data.column1_title || ''}
-              column2Title={currentQuestion.question_data.column2_title || ''}
-              sharedOptions={currentQuestion.question_data.shared_options || []}
-              selectedColumn1={answers[currentQuestion.id]?.column1}
-              selectedColumn2={answers[currentQuestion.id]?.column2}
-              onColumn1Change={(value) => {
-                setAnswers(prev => ({
-                  ...prev,
-                  [currentQuestion.id]: {
-                    ...prev[currentQuestion.id],
+          {currentQuestion?.question_data?.di_type === 'TPA' && (() => {
+            const answersData = typeof currentQuestion.answers === 'string'
+              ? JSON.parse(currentQuestion.answers)
+              : currentQuestion.answers;
+            const correctAnswerData = answersData?.correct_answer;
+            const correctTPAAnswers = Array.isArray(correctAnswerData) && correctAnswerData.length > 0
+              ? correctAnswerData[0]
+              : correctAnswerData || {};
+
+            return (
+              <TPAQuestion
+                scenario={currentQuestion.question_data.scenario || ''}
+                column1Title={currentQuestion.question_data.column1_title || ''}
+                column2Title={currentQuestion.question_data.column2_title || ''}
+                sharedOptions={currentQuestion.question_data.shared_options || []}
+                selectedColumn1={answers[currentQuestion.id]?.column1}
+                selectedColumn2={answers[currentQuestion.id]?.column2}
+                onColumn1Change={(value) => {
+                  updateAnswer(currentQuestion.id, (prev) => ({
+                    ...prev,
+                    questionId: currentQuestion.id,
                     column1: value,
-                    answer: `${value}|${prev[currentQuestion.id]?.column2 || ''}`,
-                  }
-                }));
-              }}
-              onColumn2Change={(value) => {
-                setAnswers(prev => ({
-                  ...prev,
-                  [currentQuestion.id]: {
-                    ...prev[currentQuestion.id],
+                    column2: prev?.column2,
+                    answer: `${value}|${prev?.column2 || ''}`,
+                    timeSpent: prev?.timeSpent || 0,
+                    flagged: prev?.flagged || false,
+                  }));
+                }}
+                onColumn2Change={(value) => {
+                  updateAnswer(currentQuestion.id, (prev) => ({
+                    ...prev,
+                    questionId: currentQuestion.id,
+                    column1: prev?.column1,
                     column2: value,
-                    answer: `${prev[currentQuestion.id]?.column1 || ''}|${value}`,
-                  }
-                }));
-              }}
-            />
-          )}
+                    answer: `${prev?.column1 || ''}|${value}`,
+                    timeSpent: prev?.timeSpent || 0,
+                    flagged: prev?.flagged || false,
+                  }));
+                }}
+                correctColumn1={correctTPAAnswers}
+                correctColumn2={correctTPAAnswers}
+                showResults={isGuidedMode && showCorrectAnswers}
+              />
+            );
+          })()}
 
           {/* Standard Multiple Choice Questions (Quantitative & Verbal Reasoning) */}
-          {currentQuestion?.question_type === 'multiple_choice' && currentQuestion?.question_data?.options && (
-            <MultipleChoiceQuestion
-              questionText={getLocalizedQuestionText(currentQuestion.question_data)}
-              imageUrl={currentQuestion.question_data.image_url || undefined}
-              options={getLocalizedOptions(currentQuestion.question_data)}
-              selectedAnswer={answers[currentQuestion.id]?.answer}
-              onAnswerChange={handleAnswerSelect}
-            />
-          )}
+          {currentQuestion?.question_type === 'multiple_choice' && currentQuestion?.question_data?.options && (() => {
+            // Parse answers field (might be string or object)
+            const answersData = typeof currentQuestion.answers === 'string'
+              ? JSON.parse(currentQuestion.answers)
+              : currentQuestion.answers;
+            const correctAnswerData = answersData?.correct_answer;
+            const correctAnswer = Array.isArray(correctAnswerData)
+              ? correctAnswerData[0]
+              : correctAnswerData;
+
+            // Debug logging
+            if (isGuidedMode) {
+              console.log('🎯 Guided Mode Debug:', {
+                showCorrectAnswers,
+                answersData,
+                correctAnswerData,
+                correctAnswer,
+                questionType: currentQuestion.question_type
+              });
+            }
+
+            return (
+              <MultipleChoiceQuestion
+                questionText={getLocalizedQuestionText(currentQuestion.question_data)}
+                imageUrl={currentQuestion.question_data.image_url || undefined}
+                options={getLocalizedOptions(currentQuestion.question_data)}
+                selectedAnswer={answers[currentQuestion.id]?.answer}
+                onAnswerChange={handleAnswerSelect}
+                showResults={isGuidedMode && showCorrectAnswers}
+                correctAnswer={correctAnswer}
+              />
+            );
+          })()}
+
 
           {/* Open-Ended Questions */}
           {currentQuestion?.question_type === 'open_ended' && (
@@ -3131,32 +3581,59 @@ export default function TakeTestPage() {
         </div>
 
         {/* Standard Multiple Choice Answer Options */}
-          {!currentQuestion?.question_data?.di_type && (
+          {!currentQuestion?.question_data?.di_type && (() => {
+            // Get correct answer for standard multiple choice
+            const answersData = currentQuestion?.answers ?
+              (typeof currentQuestion.answers === 'string' ? JSON.parse(currentQuestion.answers) : currentQuestion.answers)
+              : null;
+            const correctAnswerData = answersData?.correct_answer;
+            const stdCorrectAnswer = Array.isArray(correctAnswerData)
+              ? correctAnswerData[0]
+              : correctAnswerData;
+
+            return (
             <div className="space-y-3">
             {currentQuestion?.question_data?.choices ? (
               // Multiple choice with JSON choices
               currentQuestion.question_data.choices.map(choice => {
                 const isSelected = answers[currentQuestion?.id]?.answer === choice.label;
+                const isCorrect = isGuidedMode && showCorrectAnswers && stdCorrectAnswer === choice.label;
+                const isWrong = isGuidedMode && showCorrectAnswers && isSelected && stdCorrectAnswer !== choice.label;
+
                 return (
                   <button
                     key={choice.label}
                     onClick={() => handleAnswerSelect(choice.label)}
                     className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                      isSelected
+                      isCorrect
+                        ? 'border-green-500 bg-green-100'
+                        : isWrong
+                        ? 'border-red-500 bg-red-50'
+                        : isSelected
                         ? 'border-brand-green bg-green-50'
                         : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                     }`}
                   >
                     <div className="flex items-start gap-4">
                       <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold ${
-                        isSelected
+                        isCorrect
+                          ? 'bg-green-500 text-white'
+                          : isWrong
+                          ? 'bg-red-500 text-white'
+                          : isSelected
                           ? 'bg-brand-green text-white'
                           : 'bg-gray-200 text-gray-700'
                       }`}>
                         {choice.label}
                       </div>
                       <div className="flex-1 text-gray-800">{choice.text}</div>
-                      {isSelected && (
+                      {isCorrect && (
+                        <FontAwesomeIcon icon={faCheckCircle} className="text-green-500 text-xl" />
+                      )}
+                      {isWrong && (
+                        <FontAwesomeIcon icon={faTimesCircle} className="text-red-500 text-xl" />
+                      )}
+                      {isSelected && !isCorrect && !isWrong && (
                         <FontAwesomeIcon icon={faCheckCircle} className="text-brand-green text-xl" />
                       )}
                     </div>
@@ -3172,27 +3649,43 @@ export default function TakeTestPage() {
                 if (!answerText) return null;
 
                 const isSelected = answers[currentQuestion?.id]?.answer === option;
+                const isCorrect = isGuidedMode && showCorrectAnswers && stdCorrectAnswer === option;
+                const isWrong = isGuidedMode && showCorrectAnswers && isSelected && stdCorrectAnswer !== option;
 
                 return (
                   <button
                     key={option}
                     onClick={() => handleAnswerSelect(option)}
                     className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                      isSelected
+                      isCorrect
+                        ? 'border-green-500 bg-green-100'
+                        : isWrong
+                        ? 'border-red-500 bg-red-50'
+                        : isSelected
                         ? 'border-brand-green bg-green-50'
                         : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                     }`}
                   >
                     <div className="flex items-start gap-4">
                       <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold ${
-                        isSelected
+                        isCorrect
+                          ? 'bg-green-500 text-white'
+                          : isWrong
+                          ? 'bg-red-500 text-white'
+                          : isSelected
                           ? 'bg-brand-green text-white'
                           : 'bg-gray-200 text-gray-700'
                       }`}>
                         {option}
                       </div>
                       <div className="flex-1 text-gray-800">{answerText as string}</div>
-                      {isSelected && (
+                      {isCorrect && (
+                        <FontAwesomeIcon icon={faCheckCircle} className="text-green-500 text-xl" />
+                      )}
+                      {isWrong && (
+                        <FontAwesomeIcon icon={faTimesCircle} className="text-red-500 text-xl" />
+                      )}
+                      {isSelected && !isCorrect && !isWrong && (
                         <FontAwesomeIcon icon={faCheckCircle} className="text-brand-green text-xl" />
                       )}
                     </div>
@@ -3201,28 +3694,54 @@ export default function TakeTestPage() {
               })
             )}
             </div>
-          )}
+            );
+          })()}
         </div>
       </div>
 
       {/* Navigation Controls */}
       <div className="bg-white border-t-2 border-gray-200 px-6 py-4 flex items-center justify-between">
-        <button
-          onClick={goToPreviousQuestion}
-          disabled={!canGoBack() || (timeRemaining !== null && timeRemaining <= 1)}
-          className="px-6 py-3 rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-gray-200 text-gray-700 hover:bg-gray-300 disabled:hover:bg-gray-200"
-        >
-          <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
-          {t('takeTest.previous')}
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Previous button - disabled in review mode */}
+          {!isInReviewMode && (
+            <button
+              onClick={goToPreviousQuestion}
+              disabled={!canGoBack() || (timeRemaining !== null && timeRemaining <= 1)}
+              className="px-6 py-3 rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-gray-200 text-gray-700 hover:bg-gray-300 disabled:hover:bg-gray-200"
+            >
+              <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
+              {t('takeTest.previous')}
+            </button>
+          )}
+          {/* Return to Review button (when in review mode) */}
+          {isInReviewMode && (
+            <button
+              onClick={returnToReviewScreen}
+              className="px-4 py-3 rounded-xl font-semibold transition-all bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-2 border-yellow-400"
+            >
+              <FontAwesomeIcon icon={faList} className="mr-2" />
+              {t('takeTest.returnToReview') || 'Return to Review'}
+            </button>
+          )}
+        </div>
 
         <div className="text-sm text-gray-600">
           {t('takeTest.section')} {currentSectionIndex + 1} {t('takeTest.of')} {sections.length}
         </div>
 
-        <button
-          onClick={goToNextQuestion}
-          disabled={submitting || (timeRemaining !== null && timeRemaining <= 1)}
+        {/* Next button - show Return to Review in review mode */}
+        {isInReviewMode ? (
+          <button
+            onClick={returnToReviewScreen}
+            className="px-6 py-3 rounded-xl font-semibold transition-all bg-brand-green text-white hover:bg-green-600"
+          >
+            <FontAwesomeIcon icon={faList} className="mr-2" />
+            {t('takeTest.returnToReview') || 'Return to Review'}
+          </button>
+        ) : (
+          <button
+            onClick={goToNextQuestion}
+            disabled={submitting || (timeRemaining !== null && timeRemaining <= 1)}
           className="px-6 py-3 rounded-xl font-semibold transition-all bg-brand-green text-white hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {submitting ? (
@@ -3248,7 +3767,113 @@ export default function TakeTestPage() {
             </>
           )}
         </button>
+        )}
       </div>
+
+      {/* Review Screen Overlay (GMAT-style) */}
+      {showReviewScreen && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-brand-dark">
+                <FontAwesomeIcon icon={faList} className="mr-2" />
+                {t('takeTest.reviewSection') || 'Review Section'}
+              </h3>
+              <div className="text-sm text-gray-600">
+                {config?.max_answer_changes !== undefined && (
+                  <span className={answerChangesUsed >= (config.max_answer_changes || 0) ? 'text-red-600 font-bold' : ''}>
+                    {t('takeTest.changesUsed') || 'Changes used'}: {answerChangesUsed}/{config.max_answer_changes}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Question List */}
+            <div className="flex-1 overflow-y-auto mb-4">
+              <div className="grid gap-2">
+                {currentSectionQuestionsList.map((question, index) => {
+                  const answer = answers[question.id];
+                  const isAnswered = !!answer?.answer || !!answer?.msrAnswers || !!answer?.blank1 || !!answer?.taAnswers || !!answer?.column1;
+                  const isBookmarked = bookmarkedQuestions.has(question.id);
+
+                  return (
+                    <button
+                      key={question.id}
+                      onClick={() => goToQuestionFromReview(index)}
+                      className={`flex items-center justify-between p-3 rounded-lg border transition-all hover:shadow-md ${
+                        isBookmarked
+                          ? 'border-yellow-400 bg-yellow-50'
+                          : isAnswered
+                          ? 'border-green-400 bg-green-50'
+                          : 'border-gray-300 bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                          isAnswered ? 'bg-brand-green text-white' : 'bg-gray-300 text-gray-700'
+                        }`}>
+                          {index + 1}
+                        </span>
+                        <span className="text-sm text-gray-700">
+                          {t('takeTest.question')} {index + 1}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {isBookmarked && (
+                          <FontAwesomeIcon icon={faBookmark} className="text-yellow-500" />
+                        )}
+                        {isAnswered ? (
+                          <FontAwesomeIcon icon={faCheckCircle} className="text-brand-green" />
+                        ) : (
+                          <span className="text-xs text-red-500 font-semibold">
+                            {t('takeTest.notAnswered') || 'Not answered'}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-between pt-4 border-t">
+              <div className="text-sm text-gray-600">
+                {currentSectionQuestionsList.filter(q => {
+                  const answer = answers[q.id];
+                  return !!answer?.answer || !!answer?.msrAnswers || !!answer?.blank1 || !!answer?.taAnswers || !!answer?.column1;
+                }).length} / {currentSectionQuestionsList.length} {t('takeTest.answered') || 'answered'}
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={completeReview}
+                  className="px-6 py-2 rounded-lg bg-brand-green text-white font-semibold hover:bg-green-600 transition-all"
+                >
+                  {currentSectionIndex < sections.length - 1
+                    ? t('takeTest.completeSection')
+                    : t('takeTest.submitTest')
+                  }
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Change Blocked Toast (when max changes reached) */}
+      {showChangeBlockedMessage && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
+          <div className="bg-red-100 border-2 border-red-400 text-red-700 px-6 py-3 rounded-xl shadow-lg flex items-center gap-3">
+            <span className="text-xl">⚠️</span>
+            <div>
+              <p className="font-semibold">{t('takeTest.maxChangesReached') || 'Maximum changes reached'}</p>
+              <p className="text-sm">
+                {t('takeTest.cannotChangeMore') || 'You cannot change any more answers in this section'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Answer Required Modal Overlay */}
       {showAnswerRequiredMessage && (

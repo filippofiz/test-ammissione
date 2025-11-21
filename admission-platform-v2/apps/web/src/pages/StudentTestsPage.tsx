@@ -27,6 +27,11 @@ import {
   faPlus,
   faChevronDown,
   faChevronRight,
+  faPlay,
+  faUser,
+  faChalkboardTeacher,
+  faStopwatch,
+  faInfinity,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import { supabase } from '../lib/supabase';
@@ -208,6 +213,12 @@ export default function StudentTestsPage() {
   const [assigning, setAssigning] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [translatedSections, setTranslatedSections] = useState<Record<string, string>>({});
+
+  // Start Test Modal state
+  const [showStartTestModal, setShowStartTestModal] = useState(false);
+  const [selectedTestForStart, setSelectedTestForStart] = useState<TestAssignment | null>(null);
+  const [startTestMode, setStartTestMode] = useState<'student' | 'guided'>('student');
+  const [guidedTimed, setGuidedTimed] = useState(true);
 
   useEffect(() => {
     if (studentId && testType) {
@@ -766,6 +777,32 @@ export default function StudentTestsPage() {
     await loadAvailableTests();
   }
 
+  function openStartTestModal(assignment: TestAssignment) {
+    setSelectedTestForStart(assignment);
+    // For locked/completed tests, force guided mode
+    const isLocked = assignment.status === 'locked' || assignment.status === 'completed';
+    setStartTestMode(isLocked ? 'guided' : 'student');
+    setGuidedTimed(true);
+    setShowStartTestModal(true);
+  }
+
+  function handleStartTest() {
+    if (!selectedTestForStart) return;
+
+    // Build URL with query parameters for guided mode
+    let url = `/take-test/${selectedTestForStart.id}`;
+
+    if (startTestMode === 'guided') {
+      const params = new URLSearchParams();
+      params.set('guided', 'true');
+      params.set('timed', guidedTimed ? 'true' : 'false');
+      url += `?${params.toString()}`;
+    }
+
+    setShowStartTestModal(false);
+    navigate(url);
+  }
+
   function getStatusStyles(status: string) {
     switch (status) {
       case 'completed':
@@ -1169,6 +1206,14 @@ export default function StudentTestsPage() {
                                       <FontAwesomeIcon icon={faEye} className="mr-2" />
                                       {t('studentTests.viewResults')}
                                     </button>
+                                    {/* Start Test Button - show for all tests (guided mode available for locked/completed) */}
+                                    <button
+                                      onClick={() => openStartTestModal(assignment)}
+                                      className="px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
+                                    >
+                                      <FontAwesomeIcon icon={faPlay} className="mr-2" />
+                                      {t('studentTests.startTest', 'Start Test')}
+                                    </button>
                                   </div>
                                 </div>
                               </div>
@@ -1288,6 +1333,155 @@ export default function StudentTestsPage() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Start Test Configuration Modal */}
+      {showStartTestModal && selectedTestForStart && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn"
+          onClick={() => setShowStartTestModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden animate-slideUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold">{t('studentTests.startTestConfig', 'Start Test')}</h2>
+                  <p className="text-white/90 text-sm mt-1">
+                    {selectedTestForStart.exercise_type} {selectedTestForStart.test_number}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowStartTestModal(false)}
+                  className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 transition-colors flex items-center justify-center"
+                >
+                  <span className="text-2xl font-bold">×</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-6">
+              {/* Test Mode Selection */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                  {t('studentTests.whoTakesTest', 'Who is taking the test?')}
+                </label>
+                <div className="space-y-3">
+                  {/* Student mode - disabled for locked/completed tests */}
+                  {(() => {
+                    const isLocked = selectedTestForStart?.status === 'locked' || selectedTestForStart?.status === 'completed';
+                    return (
+                      <label className={`flex items-start gap-3 p-4 border-2 rounded-xl transition-colors ${
+                        isLocked
+                          ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
+                          : 'border-gray-200 cursor-pointer hover:border-purple-500'
+                      }`}>
+                        <input
+                          type="radio"
+                          name="test_mode"
+                          value="student"
+                          checked={startTestMode === 'student'}
+                          onChange={() => !isLocked && setStartTestMode('student')}
+                          disabled={isLocked}
+                          className="mt-1 w-5 h-5 text-purple-600 focus:ring-purple-500"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <FontAwesomeIcon icon={faUser} className="text-blue-600" />
+                            <span className="font-semibold text-gray-900">{t('studentTests.studentMode', 'Student')}</span>
+                          </div>
+                          <div className="text-sm text-gray-600 mt-1">
+                            {isLocked
+                              ? t('studentTests.studentModeDisabled', 'Test is locked - only guided mode available')
+                              : t('studentTests.studentModeDesc', 'Student takes the test independently (normal mode)')}
+                          </div>
+                        </div>
+                      </label>
+                    );
+                  })()}
+
+                  <label className="flex items-start gap-3 p-4 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-purple-500 transition-colors">
+                    <input
+                      type="radio"
+                      name="test_mode"
+                      value="guided"
+                      checked={startTestMode === 'guided'}
+                      onChange={() => setStartTestMode('guided')}
+                      className="mt-1 w-5 h-5 text-purple-600 focus:ring-purple-500"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <FontAwesomeIcon icon={faChalkboardTeacher} className="text-purple-600" />
+                        <span className="font-semibold text-gray-900">{t('studentTests.guidedMode', 'Guided')}</span>
+                      </div>
+                      <div className="text-sm text-gray-600 mt-1">
+                        {t('studentTests.guidedModeDesc', 'Tutor guides student through the test')}
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Guided Mode Options */}
+              {startTestMode === 'guided' && (
+                <div className="space-y-4 pt-4 border-t border-gray-200">
+                  {/* Timed Option */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                      {t('studentTests.timeOption', 'Time limit')}
+                    </label>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setGuidedTimed(true)}
+                        className={`flex-1 p-3 rounded-xl border-2 transition-all ${
+                          guidedTimed
+                            ? 'border-purple-500 bg-purple-50 text-purple-700'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <FontAwesomeIcon icon={faStopwatch} className="mr-2" />
+                        {t('studentTests.timed', 'Timed')}
+                      </button>
+                      <button
+                        onClick={() => setGuidedTimed(false)}
+                        className={`flex-1 p-3 rounded-xl border-2 transition-all ${
+                          !guidedTimed
+                            ? 'border-purple-500 bg-purple-50 text-purple-700'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <FontAwesomeIcon icon={faInfinity} className="mr-2" />
+                        {t('studentTests.noTimeLimit', 'No limit')}
+                      </button>
+                    </div>
+                  </div>
+
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => setShowStartTestModal(false)}
+                  className="flex-1 px-6 py-3 rounded-xl font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all"
+                >
+                  {t('studentTests.cancel')}
+                </button>
+                <button
+                  onClick={handleStartTest}
+                  className="flex-1 px-6 py-3 rounded-xl font-semibold bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:shadow-lg transition-all"
+                >
+                  <FontAwesomeIcon icon={faPlay} className="mr-2" />
+                  {t('studentTests.startNow', 'Start Now')}
+                </button>
+              </div>
             </div>
           </div>
         </div>
