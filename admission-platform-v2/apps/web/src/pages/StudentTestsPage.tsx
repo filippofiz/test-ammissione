@@ -30,6 +30,8 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import { supabase } from '../lib/supabase';
+import { translateTestTrackAsync } from '../lib/translateTestTrack';
+import i18n from 'i18next';
 
 // BIG DRAMATIC LOCK ANIMATION STYLES
 const lockAnimationStyles = `
@@ -205,12 +207,35 @@ export default function StudentTestsPage() {
   const [loadingAvailable, setLoadingAvailable] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const [translatedSections, setTranslatedSections] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (studentId && testType) {
       loadData();
     }
   }, [studentId, testType]);
+
+  // Translate section names when assignments change
+  useEffect(() => {
+    if (assignments.length === 0) return;
+
+    const translateSections = async () => {
+      const sections = [...new Set(assignments.map(a => a.section))];
+      const currentLang = i18n.language || 'it';
+      const targetLang = currentLang === 'it' ? 'it' : 'en';
+
+      const translations: Record<string, string> = {};
+
+      for (const section of sections) {
+        const translated = await translateTestTrackAsync(section, t, targetLang);
+        translations[section] = translated;
+      }
+
+      setTranslatedSections(translations);
+    };
+
+    translateSections();
+  }, [assignments, t]);
 
   // Group tests by section
   interface GroupedTests {
@@ -962,7 +987,7 @@ export default function StudentTestsPage() {
                             icon={isExpanded ? faChevronDown : faChevronRight}
                             className="text-brand-green"
                           />
-                          <h3 className="text-xl font-bold text-brand-dark">{section}</h3>
+                          <h3 className="text-xl font-bold text-brand-dark">{translatedSections[section] || section}</h3>
                         </div>
                         <div className="flex items-center gap-4">
                           <span className="text-sm text-gray-600">

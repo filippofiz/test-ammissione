@@ -32,7 +32,8 @@ import { Layout } from '../components/Layout';
 import { CountdownTimer } from '../components/CountdownTimer';
 import { supabase } from '../lib/supabase';
 import { getCurrentProfile } from '../lib/auth';
-import { translateTestTrack } from '../lib/translateTestTrack';
+import { translateTestTrack, translateTestTrackAsync } from '../lib/translateTestTrack';
+import i18n from 'i18next';
 
 interface TestType {
   test_type: string;
@@ -104,10 +105,34 @@ export default function StudentHomePage() {
     totalTime: number;
   }>>({});
   const [realTestDate, setRealTestDate] = useState<string | null>(null);
+  const [translatedSections, setTranslatedSections] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadData();
   }, []);
+
+  // Translate section names when tests change
+  useEffect(() => {
+    if (tests.length === 0) return;
+
+    const translateSections = async () => {
+      const sections = [...new Set(tests.map(test => test.section))];
+      const currentLang = i18n.language || 'it';
+      const targetLang = currentLang === 'it' ? 'it' : 'en';
+
+      const translations: Record<string, string> = {};
+
+      for (const section of sections) {
+        // Try i18n first, then fall back to Google Translate
+        const translated = await translateTestTrackAsync(section, t, targetLang);
+        translations[section] = translated;
+      }
+
+      setTranslatedSections(translations);
+    };
+
+    translateSections();
+  }, [tests, t]);
 
   useEffect(() => {
     if (selectedTestType && testTypes.length > 0) {
@@ -673,7 +698,7 @@ export default function StudentHomePage() {
                           icon={isExpanded ? faChevronDown : faChevronRight}
                           className="text-brand-green"
                         />
-                        <h3 className="text-xl font-bold text-brand-dark">{section}</h3>
+                        <h3 className="text-xl font-bold text-brand-dark">{translatedSections[section] || section}</h3>
                       </div>
                       <div className="flex items-center gap-4">
                         <span className="text-sm text-gray-600">
