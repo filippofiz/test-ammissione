@@ -312,6 +312,8 @@
     "of": "di",
     "flagged": "Contrassegnata",
     "flag": "Contrassegna",
+    "reportIssue": "Segnala problema con la domanda",
+    "issueReported": "Problema segnalato",
     "previous": "Precedente",
     "next": "Successiva",
     "completeSection": "Completa Sezione",
