@@ -49,7 +49,7 @@ jobs:
         run: |
           # The dist folder already contains italiano/inglese via vite-plugin-static-copy
           # Just use dist as the deploy folder
-          mv dist deploy
+          mv admission-platform-v2/dist deploy
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
