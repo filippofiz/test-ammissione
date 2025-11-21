@@ -331,7 +331,16 @@
     "exitWarningMessage": "You must stay in fullscreen mode during the test. If you exit, your test will be annulled.",
     "testWillBeAnnulledIn": "Test will be annulled in",
     "exitTest": "Exit Test",
-    "stayInTest": "Return to Fullscreen"
+    "stayInTest": "Return to Fullscreen",
+    "reviewSection": "Review Section",
+    "returnToReview": "Return to Review",
+    "changesUsed": "Changes used",
+    "answered": "answered",
+    "notAnswered": "Not answered",
+    "bookmark": "Bookmark",
+    "bookmarked": "Bookmarked",
+    "maxChangesReached": "Maximum changes reached",
+    "cannotChangeMore": "You cannot change any more answers in this section"
   },
   "common": {
     "loading": "Loading...",

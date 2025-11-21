@@ -43,6 +43,7 @@ interface PDFTestViewProps {
   canGoNext: boolean;
   canGoPrevious: boolean;
   timeRemaining?: number | null; // For disabling buttons before time expires
+  showCorrectAnswers?: boolean; // For guided mode - show correct answers
 }
 
 export function PDFTestView({
@@ -55,6 +56,7 @@ export function PDFTestView({
   canGoNext,
   canGoPrevious,
   timeRemaining,
+  showCorrectAnswers = false,
 }: PDFTestViewProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [pdfError, setPdfError] = useState<string | null>(null);
@@ -238,23 +240,48 @@ export function PDFTestView({
                     <div className="space-y-3">
                       {allOptions.map((option) => {
                         const isSelected = answer?.answer?.toLowerCase() === option.toLowerCase();
+                        const isCorrect = option.toLowerCase() === question.answers.correct_answer.toLowerCase();
+                        const showAsCorrect = showCorrectAnswers && isCorrect;
+                        const showAsWrong = showCorrectAnswers && isSelected && !isCorrect;
 
                         return (
                           <button
                             key={option}
                             onClick={() => onAnswer(question.id, option)}
                             className={`w-full text-left p-4 rounded-lg border-2 transition-all flex items-center gap-3 ${
-                              isSelected
-                                ? 'border-brand-green bg-green-50'
-                                : 'border-gray-200 bg-white hover:border-brand-green hover:bg-gray-50'
+                              showAsWrong
+                                ? 'border-red-500 bg-red-50'
+                                : showAsCorrect
+                                  ? 'border-green-500 bg-green-50'
+                                  : isSelected
+                                    ? 'border-brand-green bg-green-50'
+                                    : 'border-gray-200 bg-white hover:border-brand-green hover:bg-gray-50'
                             }`}
                           >
                             <FontAwesomeIcon
                               icon={isSelected ? faCircleDot : faCircle}
-                              className={isSelected ? 'text-brand-green' : 'text-gray-300'}
+                              className={
+                                showAsWrong
+                                  ? 'text-red-500'
+                                  : showAsCorrect
+                                    ? 'text-green-600'
+                                    : isSelected
+                                      ? 'text-brand-green'
+                                      : 'text-gray-300'
+                              }
                             />
-                            <span className={`font-medium ${isSelected ? 'text-brand-green' : 'text-gray-700'}`}>
+                            <span className={`font-medium ${
+                              showAsWrong
+                                ? 'text-red-600'
+                                : showAsCorrect
+                                  ? 'text-green-700'
+                                  : isSelected
+                                    ? 'text-brand-green'
+                                    : 'text-gray-700'
+                            }`}>
                               {option.toUpperCase()}
+                              {showAsCorrect && ' ✓'}
+                              {showAsWrong && ' ✗'}
                             </span>
                           </button>
                         );

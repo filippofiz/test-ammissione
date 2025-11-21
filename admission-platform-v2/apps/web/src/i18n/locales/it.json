@@ -331,7 +331,18 @@
     "exitWarningMessage": "Devi rimanere in modalità schermo intero durante il test. Se esci, il test sarà annullato.",
     "testWillBeAnnulledIn": "Il test sarà annullato tra",
     "exitTest": "Esci dal Test",
-    "stayInTest": "Torna a Schermo Intero"
+    "stayInTest": "Torna a Schermo Intero",
+    "reviewSection": "Rivedi Sezione",
+    "returnToReview": "Torna alla Revisione",
+    "changesUsed": "Modifiche usate",
+    "answered": "risposte",
+    "notAnswered": "Non risposta",
+    "bookmark": "Segnalibro",
+    "bookmarked": "Segnalato",
+    "maxChangesReached": "Modifiche massime raggiunte",
+    "cannotChangeMore": "Non puoi modificare altre risposte in questa sezione",
+    "answersSubmitted": "Le tue risposte sono state inviate con successo",
+    "thankYou": "Grazie per aver completato il test"
   },
   "common": {
     "loading": "Caricamento...",
