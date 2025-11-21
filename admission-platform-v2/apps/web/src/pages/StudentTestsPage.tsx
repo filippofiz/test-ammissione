@@ -25,6 +25,8 @@ import {
   faPercent,
   faEye,
   faPlus,
+  faChevronDown,
+  faChevronRight,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import { supabase } from '../lib/supabase';
@@ -202,12 +204,41 @@ export default function StudentTestsPage() {
   const [availableTests, setAvailableTests] = useState<any[]>([]);
   const [loadingAvailable, setLoadingAvailable] = useState(false);
   const [assigning, setAssigning] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (studentId && testType) {
       loadData();
     }
   }, [studentId, testType]);
+
+  // Group tests by section
+  interface GroupedTests {
+    [section: string]: TestAssignment[];
+  }
+
+  function groupTestsBySection(tests: TestAssignment[]): GroupedTests {
+    const grouped: GroupedTests = {};
+    tests.forEach(test => {
+      if (!grouped[test.section]) {
+        grouped[test.section] = [];
+      }
+      grouped[test.section].push(test);
+    });
+    return grouped;
+  }
+
+  function toggleSection(section: string) {
+    setExpandedSections(prev => {
+      const next = new Set(prev);
+      if (next.has(section)) {
+        next.delete(section);
+      } else {
+        next.add(section);
+      }
+      return next;
+    });
+  }
 
   // Bot Control: Listen for bot commands to automate Lock/Unlock/Annul
   useEffect(() => {
@@ -679,8 +710,8 @@ export default function StudentTestsPage() {
           student_id: studentId,
           test_id: testId,
           status: 'locked',
-          current_attempt: 0,  // Start at 0, will increment to 1 when they start the test
-          total_attempts: 1,   // Allow 1 attempt by default
+          current_attempt: 1,  // First attempt
+          total_attempts: 0,   // No completed attempts yet
         });
 
       if (error) throw error;
@@ -902,147 +933,219 @@ export default function StudentTestsPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4">
-              {assignments.map((assignment, index) => {
-                const statusStyle = getStatusStyles(assignment.status);
-                const isUnlocking = unlocking === assignment.id;
-                const isLocking = locking === assignment.id;
+            <div className="space-y-4">
+              {(() => {
+                const grouped = groupTestsBySection(assignments);
+                const sections = Object.keys(grouped);
 
-                return (
-                  <div
-                    key={assignment.id}
-                    className={`bg-white rounded-xl border-2 ${statusStyle.border} p-6 hover:shadow-xl transition-all duration-300 animate-fadeInUp relative ${isUnlocking || isLocking ? 'card-shake' : ''}`}
-                    style={{ animationDelay: `${index * 0.05}s` }}
-                  >
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                      {/* Left Section - Test Info */}
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-3">
+                return sections.map((section, sectionIndex) => {
+                  const sectionTests = grouped[section];
+                  const isExpanded = expandedSections.has(section);
+                  const sectionCompleted = sectionTests.filter(t => t.status === 'completed').length;
+                  const sectionProgress = sectionTests.length > 0
+                    ? Math.round((sectionCompleted / sectionTests.length) * 100)
+                    : 0;
+
+                  return (
+                    <div
+                      key={section}
+                      className="bg-white rounded-xl shadow-lg overflow-hidden border-t-4 border-brand-green animate-fadeInUp"
+                      style={{ animationDelay: `${sectionIndex * 0.05}s` }}
+                    >
+                      {/* Section Header */}
+                      <button
+                        onClick={() => toggleSection(section)}
+                        className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
                           <FontAwesomeIcon
-                            icon={statusStyle.icon}
-                            className={`text-2xl ${statusStyle.iconColor}`}
+                            icon={isExpanded ? faChevronDown : faChevronRight}
+                            className="text-brand-green"
                           />
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="text-lg font-bold text-brand-dark">
-                                {assignment.test_name}
-                              </h3>
-                              {/* PDF/Interactive Badge */}
-                              <span
-                                className={`px-2 py-1 rounded text-xs font-bold ${
-                                  assignment.question_format === 'interactive'
-                                    ? 'bg-green-100 text-green-700 border border-green-300'
-                                    : assignment.question_format === 'mixed'
-                                    ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                                    : 'bg-gray-100 text-gray-700 border border-gray-300'
-                                }`}
+                          <h3 className="text-xl font-bold text-brand-dark">{section}</h3>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <span className="text-sm text-gray-600">
+                            {sectionCompleted}/{sectionTests.length}
+                          </span>
+                          <div className="w-32 bg-gray-200 rounded-full h-2">
+                            <div
+                              className="bg-gradient-to-r from-brand-green to-green-600 h-2 rounded-full"
+                              style={{ width: `${sectionProgress}%` }}
+                            />
+                          </div>
+                        </div>
+                      </button>
+
+                      {/* Section Content */}
+                      {isExpanded && (
+                        <div className="p-4 pt-0 space-y-3">
+                          {sectionTests
+                            .sort((a, b) => {
+                              // Training first, then Assessment Monotematico
+                              const aIsTraining = a.exercise_type.toLowerCase().includes('training');
+                              const bIsTraining = b.exercise_type.toLowerCase().includes('training');
+
+                              if (aIsTraining && !bIsTraining) return -1;
+                              if (!aIsTraining && bIsTraining) return 1;
+
+                              // Within same exercise type, sort by test number
+                              if (a.exercise_type !== b.exercise_type) {
+                                return a.exercise_type.localeCompare(b.exercise_type);
+                              }
+
+                              return a.test_number - b.test_number;
+                            })
+                            .map((assignment, index) => {
+                            const statusStyle = getStatusStyles(assignment.status);
+                            const isUnlocking = unlocking === assignment.id;
+                            const isLocking = locking === assignment.id;
+
+                            return (
+                              <div
+                                key={assignment.id}
+                                className={`bg-gray-50 rounded-xl border-2 ${statusStyle.border} p-4 hover:shadow-lg transition-all duration-300 relative ${isUnlocking || isLocking ? 'card-shake' : ''}`}
                               >
-                                {assignment.question_format === 'interactive'
-                                  ? '🎮 Interactive'
-                                  : assignment.question_format === 'mixed'
-                                  ? '🔄 Mixed'
-                                  : '📄 PDF'}
-                              </span>
-                            </div>
-                            <span className={`text-sm font-semibold ${statusStyle.text}`}>
-                              {statusStyle.label}
-                            </span>
-                          </div>
-                        </div>
+                                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                                  {/* Left Section - Test Info */}
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-3 mb-3">
+                                      <FontAwesomeIcon
+                                        icon={statusStyle.icon}
+                                        className={`text-2xl ${statusStyle.iconColor}`}
+                                      />
+                                      <div className="flex-1">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <h3 className="text-lg font-bold text-brand-dark">
+                                            {assignment.exercise_type} {assignment.test_number}
+                                          </h3>
+                                          {/* PDF/Interactive Badge */}
+                                          <span
+                                            className={`px-2 py-1 rounded text-xs font-bold ${
+                                              assignment.question_format === 'interactive'
+                                                ? 'bg-green-100 text-green-700 border border-green-300'
+                                                : assignment.question_format === 'mixed'
+                                                ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                                                : 'bg-gray-100 text-gray-700 border border-gray-300'
+                                            }`}
+                                          >
+                                            {assignment.question_format === 'interactive'
+                                              ? '🎮 Interactive'
+                                              : assignment.question_format === 'mixed'
+                                              ? '🔄 Mixed'
+                                              : '📄 PDF'}
+                                          </span>
+                                        </div>
+                                        <span className={`text-sm font-semibold ${statusStyle.text}`}>
+                                          {statusStyle.label}
+                                        </span>
+                                      </div>
+                                    </div>
 
-                        {/* Test Details */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-600">
-                          <div className="flex items-center gap-2">
-                            <FontAwesomeIcon icon={faClock} className="text-gray-400" />
-                            <span>{t('studentTests.duration')}: {assignment.duration_minutes} {t('studentTests.min')}</span>
-                          </div>
-                          {assignment.assigned_at && (
-                            <div className="flex items-center gap-2">
-                              <FontAwesomeIcon icon={faCalendar} className="text-gray-400" />
-                              <span>{t('studentTests.assignedAt')}: {formatDate(assignment.assigned_at)}</span>
-                            </div>
-                          )}
-                          {assignment.start_time && (
-                            <div className="flex items-center gap-2">
-                              <FontAwesomeIcon icon={faCalendar} className="text-gray-400" />
-                              <span>{t('studentTests.started')}: {formatDate(assignment.start_time)}</span>
-                            </div>
-                          )}
-                          {assignment.completed_at && (
-                            <div className="flex items-center gap-2">
-                              <FontAwesomeIcon icon={faCalendar} className="text-gray-400" />
-                              <span>{t('studentTests.completedAt')}: {formatDate(assignment.completed_at)}</span>
-                            </div>
-                          )}
-                          {assignment.score !== null && (
-                            <div className="flex items-center gap-2 font-bold text-brand-green">
-                              <FontAwesomeIcon icon={faPercent} />
-                              <span>{t('studentTests.score')}: {assignment.score}%</span>
-                            </div>
-                          )}
-                          {assignment.status !== 'locked' && (
-                            <div className="flex items-center gap-2 font-semibold text-blue-600">
-                              <span>
-                                📝 {t('studentTests.attempt')} {assignment.current_attempt}
-                                {assignment.total_attempts > 0 && ` ${t('studentTests.of')} ${assignment.total_attempts + 1}`}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                                    {/* Test Details */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-600">
+                                      <div className="flex items-center gap-2">
+                                        <FontAwesomeIcon icon={faClock} className="text-gray-400" />
+                                        <span>{t('studentTests.duration')}: {assignment.duration_minutes} {t('studentTests.min')}</span>
+                                      </div>
+                                      {assignment.assigned_at && (
+                                        <div className="flex items-center gap-2">
+                                          <FontAwesomeIcon icon={faCalendar} className="text-gray-400" />
+                                          <span>{t('studentTests.assignedAt')}: {formatDate(assignment.assigned_at)}</span>
+                                        </div>
+                                      )}
+                                      {assignment.start_time && (
+                                        <div className="flex items-center gap-2">
+                                          <FontAwesomeIcon icon={faCalendar} className="text-gray-400" />
+                                          <span>{t('studentTests.started')}: {formatDate(assignment.start_time)}</span>
+                                        </div>
+                                      )}
+                                      {assignment.completed_at && (
+                                        <div className="flex items-center gap-2">
+                                          <FontAwesomeIcon icon={faCalendar} className="text-gray-400" />
+                                          <span>{t('studentTests.completedAt')}: {formatDate(assignment.completed_at)}</span>
+                                        </div>
+                                      )}
+                                      {assignment.score !== null && (
+                                        <div className="flex items-center gap-2 font-bold text-brand-green">
+                                          <FontAwesomeIcon icon={faPercent} />
+                                          <span>{t('studentTests.score')}: {assignment.score}%</span>
+                                        </div>
+                                      )}
+                                      {assignment.status !== 'locked' && (
+                                        <div className="flex items-center gap-2 font-semibold text-blue-600">
+                                          <span>
+                                            📝 {t('studentTests.attempt')} {assignment.current_attempt}
+                                            {assignment.total_attempts > 0 && ` ${t('studentTests.of')} ${assignment.total_attempts + 1}`}
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
 
-                      {/* Right Section - Actions */}
-                      <div className="flex flex-row md:flex-col gap-2 justify-end">
-                        {assignment.status === 'locked' && (
-                          <button
-                            onClick={() => handleUnlock(assignment.id)}
-                            disabled={isUnlocking}
-                            className="px-4 py-2 bg-gradient-to-r from-brand-green to-green-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {isUnlocking ? (
-                              <>
-                                <FontAwesomeIcon icon={faSpinner} className="animate-spin mr-2" />
-                                {t('studentTests.unlocking')}
-                              </>
-                            ) : (
-                              <>
-                                <FontAwesomeIcon icon={faLockOpen} className="mr-2" />
-                                {t('studentTests.unlock')}
-                              </>
-                            )}
-                          </button>
-                        )}
-                        {assignment.status !== 'locked' && (
-                          <button
-                            onClick={() => showLockConfirmation(assignment.id)}
-                            disabled={isLocking}
-                            className="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {isLocking ? (
-                              <>
-                                <FontAwesomeIcon icon={faSpinner} className="animate-spin mr-2" />
-                                {t('studentTests.locking')}
-                              </>
-                            ) : (
-                              <>
-                                <FontAwesomeIcon icon={faLock} className="mr-2" />
-                                {t('studentTests.lock')}
-                              </>
-                            )}
-                          </button>
-                        )}
-                        <button
-                          onClick={() => navigate(`/tutor/test-results/${assignment.id}`)}
-                          className="px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg font-semibold hover:bg-blue-100 transition-all"
-                        >
-                          <FontAwesomeIcon icon={faEye} className="mr-2" />
-                          {t('studentTests.viewResults')}
-                        </button>
-                      </div>
+                                  {/* Right Section - Actions */}
+                                  <div className="flex flex-row md:flex-col gap-2 justify-end">
+                                    {assignment.status === 'locked' && (
+                                      <button
+                                        onClick={() => handleUnlock(assignment.id)}
+                                        disabled={isUnlocking}
+                                        className="px-4 py-2 bg-gradient-to-r from-brand-green to-green-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                      >
+                                        {isUnlocking ? (
+                                          <>
+                                            <FontAwesomeIcon icon={faSpinner} className="animate-spin mr-2" />
+                                            {t('studentTests.unlocking')}
+                                          </>
+                                        ) : (
+                                          <>
+                                            <FontAwesomeIcon icon={faLockOpen} className="mr-2" />
+                                            {t('studentTests.unlock')}
+                                          </>
+                                        )}
+                                      </button>
+                                    )}
+                                    {assignment.status !== 'locked' && (
+                                      <button
+                                        onClick={() => showLockConfirmation(assignment.id)}
+                                        disabled={isLocking}
+                                        className="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                      >
+                                        {isLocking ? (
+                                          <>
+                                            <FontAwesomeIcon icon={faSpinner} className="animate-spin mr-2" />
+                                            {t('studentTests.locking')}
+                                          </>
+                                        ) : (
+                                          <>
+                                            <FontAwesomeIcon icon={faLock} className="mr-2" />
+                                            {t('studentTests.lock')}
+                                          </>
+                                        )}
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => navigate(`/tutor/test-results/${assignment.id}`)}
+                                      disabled={assignment.total_attempts === 0}
+                                      className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                                        assignment.total_attempts === 0
+                                          ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
+                                          : 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100'
+                                      }`}
+                                    >
+                                      <FontAwesomeIcon icon={faEye} className="mr-2" />
+                                      {t('studentTests.viewResults')}
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                });
+              })()}
             </div>
           )}
         </div>
