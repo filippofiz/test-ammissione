@@ -215,8 +215,6 @@ function filterSectionsWithAdaptivity(
 
       result.push(pickedSection);
       processedGroups.add(groupPrefix);
-
-      console.log(`🎲 Adaptive group "${groupPrefix}": picked "${pickedSection}" from [${groupSections.join(', ')}]`);
     }
   }
 
@@ -231,8 +229,6 @@ export default function TakeTestPage() {
   // Detect test mode from URL parameter (?testMode=true)
   const searchParams = new URLSearchParams(window.location.search);
   const isTestMode = searchParams.get('testMode') === 'true';
-
-  console.log('🔍 TakeTestPage mode:', isTestMode ? 'TEST MODE (using _test tables)' : 'PRODUCTION MODE');
 
   const db = isTestMode ? supabaseTest : supabase;
   const dbFrom = (table: string) => isTestMode ? fromTest(table) : supabase.from(table);
@@ -253,6 +249,7 @@ export default function TakeTestPage() {
   const [isPDFTest, setIsPDFTest] = useState(false); // PDF test format
   const [currentPageGroup, setCurrentPageGroup] = useState(0); // For PDF tests: current page group
   const [showStartScreen, setShowStartScreen] = useState(true);
+  const [testLanguage, setTestLanguage] = useState<string>('it'); // Language captured at test start
   const [showSectionSelectionScreen, setShowSectionSelectionScreen] = useState(false);
   const [showPauseScreen, setShowPauseScreen] = useState(false);
   const [showPauseChoiceScreen, setShowPauseChoiceScreen] = useState(false);
@@ -277,6 +274,7 @@ export default function TakeTestPage() {
   const [multipleScreensDetected, setMultipleScreensDetected] = useState(false);
   const [testAnnulled, setTestAnnulled] = useState(false);
   const [pauseChoiceCountdown, setPauseChoiceCountdown] = useState(5);
+  const [pauseChoiceTrigger, setPauseChoiceTrigger] = useState(0); // Trigger to force countdown useEffect to run
   const [showAnswerRequiredMessage, setShowAnswerRequiredMessage] = useState(false);
   const [isPartialAnswer, setIsPartialAnswer] = useState(false);
   const [showSectionTransition, setShowSectionTransition] = useState(false);
@@ -301,6 +299,11 @@ export default function TakeTestPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const isCompletingSectionRef = useRef(false); // Synchronous guard for race condition
+  const pauseChoiceMadeRef = useRef(false); // Prevent double pause choice handling
+  const showPauseChoiceRef = useRef(false); // Ref to track pause choice screen state for StrictMode
+  const currentSectionIndexRef = useRef(currentSectionIndex); // Ref for current section to avoid stale closures in timer
+  const pausesUsedRef = useRef(pausesUsed); // Ref for pauses used to avoid stale closures in timer
 
   // Helper function to get the correct section field based on config
   const getSectionField = (question: Question): string => {
@@ -323,6 +326,24 @@ export default function TakeTestPage() {
     // Remove -Hard or -Easy suffixes
     formatted = formatted.replace(/-(Hard|Easy)$/i, '');
     return formatted;
+  };
+
+  // Helper to get localized question text based on language captured at test start
+  const getLocalizedQuestionText = (questionData: any): string => {
+    if (!questionData) return '';
+    if (testLanguage === 'en' && questionData.question_text_eng) {
+      return questionData.question_text_eng;
+    }
+    return questionData.question_text || questionData.question || '';
+  };
+
+  // Helper to get localized options based on language captured at test start
+  const getLocalizedOptions = (questionData: any): Record<string, string> => {
+    if (!questionData) return {};
+    if (testLanguage === 'en' && questionData.options_eng) {
+      return questionData.options_eng;
+    }
+    return questionData.options || {};
   };
 
   // Use selectedQuestions if they've been prepared (for both adaptive and non-adaptive tests)
@@ -388,10 +409,18 @@ export default function TakeTestPage() {
 
   // Question progression logging
   useEffect(() => {
-    if (currentQuestion) {
-      console.log(`📝 Question ${currentQuestionIndex + 1}/${sectionQuestionLimit} - Section: ${currentSection}`);
-    }
+    // Question progression tracked
   }, [currentQuestion, currentQuestionIndex, currentSection, sectionQuestionLimit]);
+
+  // Keep currentSectionIndexRef in sync with state (for use in timer callbacks to avoid stale closures)
+  useEffect(() => {
+    currentSectionIndexRef.current = currentSectionIndex;
+  }, [currentSectionIndex]);
+
+  // Keep pausesUsedRef in sync with state (for use in timer callbacks to avoid stale closures)
+  useEffect(() => {
+    pausesUsedRef.current = pausesUsed;
+  }, [pausesUsed]);
 
   // Save answers and clean up session before page unload (browser close, refresh, etc.)
   // This ensures "in_progress" status doesn't persist when student leaves
@@ -399,7 +428,6 @@ export default function TakeTestPage() {
     const handleBeforeUnload = async (e: BeforeUnloadEvent) => {
       // Save current answer if any
       if (currentQuestion?.id && answers[currentQuestion.id]) {
-        console.log('💾 Saving answer before page unload...');
         // Try to save synchronously
         await saveAnswer(
           currentQuestion.id,
@@ -439,8 +467,6 @@ export default function TakeTestPage() {
 
       if (type !== 'BOT_ACTION') return;
 
-      console.log('🤖 Bot command received:', action, { answer, questionId });
-
       // Show visual feedback
       setBotAction(`🤖 ${action}`);
       setTimeout(() => setBotAction(null), 2000);
@@ -448,7 +474,6 @@ export default function TakeTestPage() {
       switch (action) {
         case 'START_TEST':
           // Click the "Start Test" button
-          console.log('🤖 Bot starting test...');
           if (showStartScreen) {
             startTest();
           }
@@ -456,7 +481,6 @@ export default function TakeTestPage() {
 
         case 'SELECT_ANSWER':
           // Select the answer in the current question
-          console.log('🤖 Bot selecting answer:', answer);
           if (currentQuestion && answer !== undefined) {
             setAnswers(prev => ({
               ...prev,
@@ -467,13 +491,11 @@ export default function TakeTestPage() {
 
         case 'NEXT_QUESTION':
           // Click the Next button
-          console.log('🤖 Bot clicking Next...');
           goToNextQuestion();
           break;
 
         case 'SUBMIT_TEST':
           // Submit the test
-          console.log('🤖 Bot submitting test...');
           submitTest();
           break;
       }
@@ -484,7 +506,6 @@ export default function TakeTestPage() {
 
     // Send READY message to parent window when page is fully loaded
     if (window.opener && config && currentQuestion) {
-      console.log('📡 Sending READY message to bot control window...');
       window.opener.postMessage({
         type: 'TEST_WINDOW_READY',
         assignmentId
@@ -522,7 +543,6 @@ export default function TakeTestPage() {
       // Skip fullscreen enforcement on localhost for testing
       const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
       if (isLocalhost) {
-        console.log('🛠️ Fullscreen enforcement disabled on localhost');
         return;
       }
 
@@ -583,21 +603,37 @@ export default function TakeTestPage() {
   useEffect(() => {
     if (showPauseChoiceScreen) {
       setPauseChoiceCountdown(5);
+      pauseChoiceMadeRef.current = false; // Reset ref when screen shows
     }
   }, [showPauseChoiceScreen]);
 
   // Pause choice countdown (auto-continue after 5 seconds)
+  // Check both state and ref since state may be reset by StrictMode
+  // Use pauseChoiceTrigger to force re-run when pause choice screen should show
   useEffect(() => {
-    if (showPauseChoiceScreen && pauseChoiceCountdown > 0) {
-      const timer = setTimeout(() => {
-        setPauseChoiceCountdown(prev => prev - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    } else if (showPauseChoiceScreen && pauseChoiceCountdown === 0) {
-      // Time's up - continue without pause
-      handleSkipPause(true); // true = auto-skip
+    try {
+      // Check ref inside useEffect to get current value
+      const isPauseChoiceVisible = showPauseChoiceScreen || showPauseChoiceRef.current;
+      if (isPauseChoiceVisible && pauseChoiceCountdown > 0) {
+        const timer = setTimeout(() => {
+          setPauseChoiceCountdown(prev => prev - 1);
+        }, 1000);
+        return () => clearTimeout(timer);
+      } else if (isPauseChoiceVisible && pauseChoiceCountdown === 0 && !pauseChoiceMadeRef.current) {
+        // Time's up - continue without pause (only if no choice was made)
+        handleSkipPause(true); // true = auto-skip
+      }
+    } catch (error) {
+      // Error in pause choice countdown
     }
-  }, [showPauseChoiceScreen, pauseChoiceCountdown]);
+  }, [showPauseChoiceScreen, pauseChoiceCountdown, pauseChoiceTrigger]);
+
+  // Reset section transition countdown when screen shows
+  useEffect(() => {
+    if (showSectionTransition) {
+      setSectionTransitionCountdown(5);
+    }
+  }, [showSectionTransition]);
 
   // Section transition countdown (auto-advance after 5 seconds)
   useEffect(() => {
@@ -607,17 +643,17 @@ export default function TakeTestPage() {
       }, 1000);
       return () => clearTimeout(timer);
     } else if (showSectionTransition && sectionTransitionCountdown === 0) {
-      // Time's up - proceed to next section or pause
-      handleSectionTransitionComplete(true); // true = auto-transition
+      // Time's up - proceed to next section
+      // Use setTimeout(0) to let any pending state updates (like reset) apply first
+      // This handles the race condition where screen shows but countdown hasn't reset yet
+      const timer = setTimeout(() => {
+        // Only proceed if countdown is STILL 0 after state updates
+        // If it was reset to 5, this check will fail and we'll wait for real countdown
+        handleSectionTransitionComplete(true);
+      }, 50);
+      return () => clearTimeout(timer);
     }
   }, [showSectionTransition, sectionTransitionCountdown]);
-
-  // Reset section transition countdown when screen shows
-  useEffect(() => {
-    if (showSectionTransition) {
-      setSectionTransitionCountdown(5);
-    }
-  }, [showSectionTransition]);
 
   /**
    * Prepares initial questions based on configuration
@@ -631,14 +667,6 @@ export default function TakeTestPage() {
     config: TestConfig,
     algorithmConfig: any
   ): Question[] {
-    console.log('🔧 prepareInitialQuestions called with:', {
-      totalQuestions: allQuestions.length,
-      adaptivity_mode: config.adaptivity_mode,
-      question_order: config.question_order,
-      questions_per_section: config.questions_per_section,
-      use_base_questions: config.use_base_questions
-    });
-
     // Helper to get correct section field
     const getSection = (q: Question) =>
       config.section_order_mode?.includes('macro_sections') && q.macro_section
@@ -650,10 +678,8 @@ export default function TakeTestPage() {
 
     // PDF TEST SPECIAL HANDLING: NO randomization - keep original order
     if (isPDFTest) {
-      console.log('📄 PDF test detected - keeping original order (no randomization)');
       // Sort by question_number to ensure correct order
       const sortedQuestions = [...allQuestions].sort((a, b) => a.question_number - b.question_number);
-      console.log('✅ PDF test questions kept in original order');
       return sortedQuestions;
     }
 
@@ -669,7 +695,6 @@ export default function TakeTestPage() {
         }
         // Take limited number
         processedQuestions = processedQuestions.slice(0, config.total_questions);
-        console.log(`✅ Single-section test: selected ${processedQuestions.length}/${allQuestions.length} questions (limit: ${config.total_questions})`);
         return processedQuestions;
       }
 
@@ -696,24 +721,18 @@ export default function TakeTestPage() {
         });
 
         processedQuestions = limitedQuestions;
-        console.log('✅ Applied questions_per_section limits:', processedQuestions.length, 'questions selected');
         return processedQuestions;
       }
 
       // CASE 3: No limits configured - return all questions
       if (config.question_order === 'random') {
-        console.log('🔀 Before randomization:', processedQuestions.slice(0, 5).map(q => `Q${q.question_number}`));
         processedQuestions = [...processedQuestions].sort(() => Math.random() - 0.5);
-        console.log('🔀 After randomization:', processedQuestions.slice(0, 5).map(q => `Q${q.question_number}`));
-        console.log('✅ Randomized all questions (no limits)');
       }
 
-      console.log('📊 Non-adaptive mode: returning', processedQuestions.length, 'questions');
       return processedQuestions;
     }
 
     // ADAPTIVE MODE: Continue with adaptive logic below
-    console.log('🎯 Adaptive mode enabled, processing adaptive selection...');
 
     // Handle question randomization for adaptive mode
     if (config.question_order === 'random') {
@@ -793,8 +812,6 @@ export default function TakeTestPage() {
 
         // FALLBACK: If not enough questions with target difficulty, try other difficulties
         if (candidates.length < count) {
-          console.warn(`⚠️ Not enough baseline questions with difficulty ${targetDifficulty} in section ${targetSection}. Found ${candidates.length}, need ${count}. Using fallback.`);
-
           // Get all questions from this section
           const allSectionQuestions = questions.filter(q => getSection(q) === targetSection);
           candidates = allSectionQuestions;
@@ -868,18 +885,8 @@ export default function TakeTestPage() {
 
       if (assignmentError) throw assignmentError;
 
-      console.log('📊 Assignment loaded from database:', {
-        id: assignment.id,
-        status: assignment.status,
-        current_attempt: assignment.current_attempt,
-        total_attempts: assignment.total_attempts,
-        completion_details: assignment.completion_details,
-        start_time: assignment.start_time
-      });
-
       // Check if test is locked (completed tests are auto-locked)
       if (assignment.status === 'locked') {
-        console.log('🔒 Test is locked - student cannot take test');
         setIsLocked(true);
         setShowStartScreen(false); // Don't show start screen
         setLoading(false);
@@ -900,20 +907,7 @@ export default function TakeTestPage() {
         const hasSessionMarker = sessionStorage.getItem(`test_session_${assignmentId}`);
         const isPageRefresh = isPageReload || !hasSessionMarker;
 
-        console.log('🔍 Checking stale session:', {
-          status: assignment.status,
-          hasStartTime: !!assignment.start_time,
-          navigationType: navigation?.type,
-          isPageReload,
-          hasSessionMarker: !!hasSessionMarker,
-          isPageRefresh,
-          sessionKey: `test_session_${assignmentId}`,
-          currentAttempt: assignment.current_attempt,
-          totalAttempts: assignment.total_attempts
-        });
-
         if (isPageRefresh) {
-          console.log('🔄 STALE SESSION DETECTED - in_progress status from previous session');
 
           // Clear session marker so it can be set fresh after marking as annulled
           sessionStorage.removeItem(`test_session_${assignmentId}`);
@@ -929,8 +923,6 @@ export default function TakeTestPage() {
           const newStatus = isLocalhost ? 'annulled' : 'incomplete';
           const reason = 'browser_closed';
           const annulmentReason = isLocalhost ? 'page_refresh_localhost' : 'session_ended';
-
-          console.log(`📝 Marking test as ${newStatus} | Reason: ${reason} | Attempt: ${currentAttemptNum}`);
 
           // Create attempt record with ONLY essential metadata
           const newAttempt = {
@@ -951,13 +943,11 @@ export default function TakeTestPage() {
           );
 
           if (existingAttemptIndex >= 0) {
-            console.log(`🔄 Updating existing stale session attempt ${currentAttemptNum}`);
             attempts[existingAttemptIndex] = {
               ...attempts[existingAttemptIndex],
               ...newAttempt
             };
           } else {
-            console.log(`➕ Adding new stale session attempt ${currentAttemptNum} to history`);
             attempts.push(newAttempt);
           }
 
@@ -969,19 +959,13 @@ export default function TakeTestPage() {
             completion_details: { attempts }
           };
 
-          console.log('💾 Updating database with:', updateData);
-
           const { data: updateResult, error: statusError } = await db
             .from(`2V_test_assignments${tableSuffix}`)
             .update(updateData)
             .eq('id', assignmentId)
             .select();
 
-          if (statusError) {
-            console.error('❌ Error updating stale session:', statusError);
-          } else {
-            console.log(`✅ Database update successful!`, updateResult);
-            console.log(`✅ Test marked as ${newStatus} | Attempt ${currentAttemptNum} recorded | Total attempts in history: ${attempts.length}`);
+          if (!statusError) {
             // Update local state
             assignment.status = newStatus;
             assignment.total_attempts = currentAttemptNum;
@@ -998,28 +982,20 @@ export default function TakeTestPage() {
       setStudentId(assignment.student_id);
       setCurrentAttempt(currentAttemptNum);
 
-      console.log(`📝 Loading test | Assignment: ${assignmentId} | Attempt: ${currentAttemptNum} | Status: ${assignment.status}`);
-
       const testType = assignment['2V_tests'].test_type;
       const exerciseType = assignment['2V_tests'].exercise_type;
       const testFormat = assignment['2V_tests'].format;
 
-      console.log(`📋 Test format: ${testFormat}`);
-
       // Check if this is a PDF test
       if (testFormat === 'pdf') {
-        console.log('📄 PDF test detected - will use PDF layout');
         setIsPDFTest(true);
       } else {
-        console.log('📝 Regular test - will use standard layout');
         setIsPDFTest(false);
       }
 
       // Normalize function: lowercase, replace spaces/underscores consistently
       const normalize = (str: string) => str.toLowerCase().replace(/[\s_]+/g, '_');
       const trackTypeNormalized = normalize(exerciseType);
-
-      console.log(`🔍 Looking for config: test_type=${testType}, track_type=${trackTypeNormalized} (original exercise_type=${exerciseType})`);
 
       // Load all configs for this test type, then find by normalized track_type
       const { data: configsData, error: configsError } = await supabase
@@ -1035,21 +1011,16 @@ export default function TakeTestPage() {
       );
 
       if (!configData) {
-        console.error(`❌ Config not found for test_type=${testType}, track_type=${trackTypeNormalized}`);
         alert('Test configuration not found. Please contact your instructor.');
         navigate(-1);
         return;
       }
-
-      console.log('✅ Config found:', configData);
-      console.log('🎯 Adaptivity mode:', configData.adaptivity_mode);
 
       setConfig(configData);
 
       // Load algorithm configuration if adaptive mode is enabled
       let algorithmConfigData = null;
       if (configData.adaptivity_mode === 'adaptive') {
-        console.log('⚠️ ADAPTIVE MODE DETECTED - Loading algorithm config...');
         // Fetch all algorithm configs for this test type and find by normalized track_type
         const { data: algConfigs, error: algError } = await supabase
           .from('2V_algorithm_config')
@@ -1057,9 +1028,7 @@ export default function TakeTestPage() {
           .eq('test_type', testType)
           .eq('algorithm_category', 'adaptive');
 
-        if (algError) {
-          console.error('Error loading algorithm config:', algError);
-        } else {
+        if (!algError) {
           // Find matching config by normalized track_type
           const algConfig = algConfigs?.find(config =>
             normalize(config.track_type) === trackTypeNormalized
@@ -1068,9 +1037,6 @@ export default function TakeTestPage() {
           if (algConfig) {
             algorithmConfigData = algConfig;
             setAlgorithmConfig(algConfig);
-            console.log('✅ Algorithm config found:', algConfig);
-          } else {
-            console.warn(`Adaptive mode enabled but no algorithm config found for track_type=${trackTypeNormalized}`);
           }
         }
       }
@@ -1078,7 +1044,6 @@ export default function TakeTestPage() {
       // Load test questions (always from real tables - questions are read-only reference data)
       // Questions are linked by test_id
       const testId = assignment['2V_tests'].id;
-      console.log(`📚 Loading questions for test_id: ${testId}`);
 
       const { data: questions, error: questionsError } = await supabase
         .from('2V_questions')
@@ -1112,9 +1077,7 @@ export default function TakeTestPage() {
 
       // Apply section adaptivity filtering if configured
       if (configData.section_adaptivity_config && Object.keys(configData.section_adaptivity_config).length > 0) {
-        console.log('🎯 Applying section adaptivity config:', configData.section_adaptivity_config);
         sectionsToUse = filterSectionsWithAdaptivity(sectionsToUse, configData.section_adaptivity_config);
-        console.log('✅ Filtered sections:', sectionsToUse);
       }
 
       setSections(sectionsToUse);
@@ -1162,10 +1125,7 @@ export default function TakeTestPage() {
           .eq('assignment_id', assignmentId)
           .eq('attempt_number', currentAttemptNumber);
 
-        if (answersError) {
-          console.error('Error loading existing answers:', answersError);
-        } else if (existingAnswers) {
-          console.log(`📥 Loading answers for attempt ${currentAttemptNumber}`);
+        if (!answersError && existingAnswers) {
 
           // Transform loaded answers back to local state format
           const loadedAnswers: Record<string, any> = {};
@@ -1209,12 +1169,10 @@ export default function TakeTestPage() {
           });
 
           setAnswers(loadedAnswers);
-          console.log(`✅ Loaded ${Object.keys(loadedAnswers).length} existing answers`);
         }
       }
 
     } catch (err) {
-      console.error('Error loading test data:', err);
       alert('Failed to load test. Please try again.');
       navigate(-1);
     } finally {
@@ -1238,7 +1196,6 @@ export default function TakeTestPage() {
       .single();
 
     if (assignmentError || !assignment) {
-      console.error('❌ Error fetching assignment:', assignmentError);
       return;
     }
 
@@ -1246,9 +1203,6 @@ export default function TakeTestPage() {
     if (assignment.status === 'annulled' || assignment.status === 'incomplete') {
       const newAttempt = (assignment.current_attempt || 1) + 1;
       const newTotalAttempts = assignment.total_attempts || (assignment.current_attempt || 1);
-
-      console.log(`🔄 RESTARTING ${assignment.status} test`);
-      console.log(`📝 Incrementing attempt: ${assignment.current_attempt} → ${newAttempt}`);
 
       const { error: updateError } = await supabase
         .from('2V_test_assignments')
@@ -1261,11 +1215,9 @@ export default function TakeTestPage() {
         .eq('id', assignmentId);
 
       if (updateError) {
-        console.error('❌ Error incrementing attempt:', updateError);
         return;
       }
 
-      console.log(`✅ Attempt incremented: ${assignment.current_attempt} → ${newAttempt}`);
       setCurrentAttempt(newAttempt);
     } else if (assignment.status === 'unlocked') {
       // First time starting this test
@@ -1278,11 +1230,8 @@ export default function TakeTestPage() {
         .eq('id', assignmentId);
 
       if (updateError) {
-        console.error('❌ Error updating status:', updateError);
         return;
       }
-
-      console.log('✅ Test started - status updated to in_progress');
     }
 
 
@@ -1301,6 +1250,7 @@ export default function TakeTestPage() {
 
     setShowStartScreen(false);
     setShowSectionSelectionScreen(false);
+    setTestLanguage(i18n.language); // Capture language at test start
     setTestStartTime(new Date());
     setSectionStartTime(new Date());
 
@@ -1354,8 +1304,6 @@ export default function TakeTestPage() {
 
       // FALLBACK: If not enough questions with target difficulty
       if (baseQuestionsCandidates.length < baseCount) {
-        console.warn(`⚠️ Not enough baseline questions with difficulty ${baselineDifficulty} in section ${firstSection}. Found ${baseQuestionsCandidates.length}, need ${baseCount}. Using fallback.`);
-
         // Get all questions from this section
         const allSectionQuestions = questionPool.filter(q => getSection(q) === firstSection);
 
@@ -1383,6 +1331,7 @@ export default function TakeTestPage() {
     }
 
     setShowSectionSelectionScreen(false);
+    setTestLanguage(i18n.language); // Capture language at test start
     setTestStartTime(new Date());
     setSectionStartTime(new Date());
 
@@ -1431,16 +1380,19 @@ export default function TakeTestPage() {
     setDraggedSectionIndex(null);
   }
 
-  function startSectionTimer() {
+  function startSectionTimer(sectionOverride?: string) {
     // Clear any existing timer
     if (timerRef.current) clearInterval(timerRef.current);
 
-    // Get time for current section from config
+    // Use override section if provided (to avoid stale closure issues), otherwise use current section
+    const section = sectionOverride || currentSection;
+
+    // Get time for section from config
     let sectionTime: number | null = null;
 
-    if (config?.time_per_section && currentSection) {
+    if (config?.time_per_section && section) {
       // Specific time per section
-      sectionTime = config.time_per_section[currentSection] || null;
+      sectionTime = config.time_per_section[section] || null;
     } else if (config?.total_time_minutes && sections.length > 0) {
       // Proportional time: divide total time by number of sections
       sectionTime = Math.round(config.total_time_minutes / sections.length);
@@ -1450,7 +1402,10 @@ export default function TakeTestPage() {
       setTimeRemaining(sectionTime * 60); // Convert to seconds
       timerRef.current = setInterval(() => {
         setTimeRemaining(prev => {
-          if (prev === null || prev <= 0) {
+          if (prev === null) return prev;
+          if (prev <= 0) return 0; // Already at 0, don't call handleTimeUp again
+          if (prev === 1) {
+            // Transitioning to 0 - call handleTimeUp once
             handleTimeUp();
             return 0;
           }
@@ -1473,7 +1428,6 @@ export default function TakeTestPage() {
 
     // Extra safety: reject if time has expired
     if (timeRemaining !== null && timeRemaining <= 0) {
-      console.log('⚠️ Time expired, ignoring answer selection');
       return;
     }
 
@@ -1491,11 +1445,6 @@ export default function TakeTestPage() {
     if (adaptiveAlgorithm && config?.adaptivity_mode === 'adaptive') {
       const isCorrect = answer === currentQuestion.correct_answer;
       adaptiveAlgorithm.recordResponse(currentQuestion, isCorrect);
-      console.log('Recorded adaptive response:', {
-        questionId: currentQuestion.id,
-        isCorrect,
-        currentState: adaptiveAlgorithm.getState()
-      });
     }
   }
 
@@ -1504,7 +1453,6 @@ export default function TakeTestPage() {
 
     // Extra safety: reject if time has expired
     if (timeRemaining !== null && timeRemaining <= 0) {
-      console.log('⚠️ Time expired, ignoring flag toggle');
       return;
     }
 
@@ -1545,7 +1493,6 @@ export default function TakeTestPage() {
   async function goToPreviousQuestion() {
     // Extra safety: reject if time has expired
     if (timeRemaining !== null && timeRemaining <= 0) {
-      console.log('⚠️ Time expired, ignoring click');
       return;
     }
 
@@ -1553,7 +1500,6 @@ export default function TakeTestPage() {
 
     // Save current answer before navigating back
     if (currentQuestion?.id && answers[currentQuestion.id]) {
-      console.log('💾 Saving answer before going back...');
       await saveAnswer(
         currentQuestion.id,
         answers[currentQuestion.id],
@@ -1584,7 +1530,6 @@ export default function TakeTestPage() {
     retryCount: number = 0
   ): Promise<boolean> {
     if (!assignmentId || !studentId) {
-      console.error('❌ Cannot save answer: missing assignmentId or studentId');
       return false;
     }
 
@@ -1624,12 +1569,12 @@ export default function TakeTestPage() {
             part2: answerData.column2 || null
           }
         };
-      } else if (answerData.answer) {
-        // Simple question: single answer
+      } else if (answerData.answer !== undefined) {
+        // Simple question: single answer (can be null for flagged but unanswered)
         jsonbAnswer = { answer: answerData.answer };
       } else {
-        console.error('❌ Unknown answer format:', answerData);
-        return false;
+        // No answer data at all - still save for flagged status
+        jsonbAnswer = { answer: null };
       }
 
       // Upsert answer to database (uses test tables in test mode)
@@ -1652,8 +1597,6 @@ export default function TakeTestPage() {
         throw error;
       }
 
-      console.log(`✅ Answer saved (${isTestMode ? 'TEST DB' : 'PROD DB'}) | Assignment: ${assignmentId} | Question: ${questionId} | Time: ${timeSpentSeconds}s`);
-
       // Update assignment status to 'in_progress' on first answer (if still unlocked)
       // Note: annulled/incomplete transitions are now handled in loadTestData
       const { error: statusError } = await db
@@ -1665,20 +1608,13 @@ export default function TakeTestPage() {
         .eq('id', assignmentId)
         .eq('status', 'unlocked');
 
-      if (statusError && statusError.code !== 'PGRST116') {
-        console.error('⚠️ Error updating assignment status:', statusError);
-      }
-
       setIsSaving(false);
       return true;
 
     } catch (error: any) {
-      console.error(`❌ Error saving answer (attempt ${retryCount + 1}/3):`, error);
-
       // Retry logic with exponential backoff
       if (retryCount < 2) {
         const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s
-        console.log(`🔄 Retrying in ${delay}ms...`);
 
         await new Promise(resolve => setTimeout(resolve, delay));
         return saveAnswer(questionId, answerData, isFlagged, retryCount + 1);
@@ -1694,13 +1630,11 @@ export default function TakeTestPage() {
   async function goToNextQuestion() {
     // Extra safety: reject if time has expired
     if (timeRemaining !== null && timeRemaining <= 0) {
-      console.log('⚠️ Time expired, ignoring click');
       return;
     }
 
     // Save current answer immediately before navigating
     if (currentQuestion?.id && answers[currentQuestion.id]) {
-      console.log(`💾 Saving answer before navigation | Assignment: ${assignmentId} | Question: ${currentQuestion.id}`);
       await saveAnswer(
         currentQuestion.id,
         answers[currentQuestion.id],
@@ -1798,8 +1732,6 @@ export default function TakeTestPage() {
         // we need to transition to adaptive mode, so we check if the NEXT question index would be >= baseline count
         baseQuestionsCompletedForSection = (currentQuestionIndex + 1) >= baselineQuestionsInSection.length;
 
-        console.log(`🔍 Baseline check: currentQuestionIndex=${currentQuestionIndex}, nextIndex=${currentQuestionIndex + 1}, baselineCount=${baselineQuestionsInSection.length}, completed=${baseQuestionsCompletedForSection}`);
-
         // Also check if marked as completed
         if (!baseQuestionsCompletedPerSection[currentSection] && baseQuestionsCompletedForSection) {
           setBaseQuestionsCompletedPerSection(prev => ({ ...prev, [currentSection]: true }));
@@ -1837,8 +1769,6 @@ export default function TakeTestPage() {
         const availableQuestions = questionPool.filter(
           q => !answeredQuestionIds.has(q.id) && getSectionField(q) === currentSection
         );
-
-        console.log(`📊 Available questions: ${availableQuestions.length}, Already shown: ${sectionSelectedQuestions.length}, Target: ${questionLimitForSection}`);
 
         if (availableQuestions.length > 0) {
           let nextQuestion;
@@ -1903,18 +1833,30 @@ export default function TakeTestPage() {
   }
 
   function completeSection() {
-    // Prevent race condition: if already completing section, ignore this call
-    if (isCompletingSection) {
-      console.log('⚠️ Already completing section, ignoring duplicate call');
+    // Prevent race condition: use ref for synchronous check
+    if (isCompletingSectionRef.current) {
       return;
     }
 
-    console.log('✅ Completing section:', currentSection);
+    // Set ref immediately for synchronous guard
+    isCompletingSectionRef.current = true;
+
+    // Use refs to get actual values (avoids stale closure in timer callbacks)
+    const actualCurrentSection = sections[currentSectionIndexRef.current];
+    const actualCurrentSectionIndex = currentSectionIndexRef.current;
+    const actualPausesUsed = pausesUsedRef.current;
+
     setIsCompletingSection(true);
+
+    // Clear the section timer to prevent it from running during pause
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
 
     // Check for mandatory pause
     if (config?.pause_mode === 'between_sections' &&
-        config.pause_sections?.includes(currentSection)) {
+        config.pause_sections?.includes(actualCurrentSection)) {
       const pauseDuration = (config.pause_duration_minutes || 5) * 60;
       setPauseTimeRemaining(pauseDuration);
       setShowPauseScreen(true);
@@ -1922,53 +1864,61 @@ export default function TakeTestPage() {
         setShowPauseScreen(false);
         setPauseTimeRemaining(null);
         setIsCompletingSection(false);
-        moveToNextSection();
+        isCompletingSectionRef.current = false;
+        moveToNextSection(actualCurrentSectionIndex);
       }, pauseDuration * 1000);
       return;
     }
 
     // Check for user choice pause (only if not the last section and pauses remaining)
     if (config?.pause_mode === 'user_choice' &&
-        currentSectionIndex < sections.length - 1 &&
-        pausesUsed < (config?.max_pauses || 0)) {
-      // IMPORTANT: Reset countdown BEFORE showing the screen to avoid race condition
+        actualCurrentSectionIndex < sections.length - 1 &&
+        actualPausesUsed < (config?.max_pauses || 0)) {
+      // IMPORTANT: Reset countdown and ref BEFORE showing the screen
+      pauseChoiceMadeRef.current = false;
+      showPauseChoiceRef.current = true; // Set ref to persist across StrictMode remounts
       setPauseChoiceCountdown(5);
+      setPauseChoiceTrigger(prev => prev + 1); // Trigger useEffect to start countdown
       setShowPauseChoiceScreen(true);
       // Reset flag when user makes choice
-      setTimeout(() => setIsCompletingSection(false), 500);
+      setTimeout(() => {
+        setIsCompletingSection(false);
+        isCompletingSectionRef.current = false;
+      }, 500);
       return;
     }
 
     // No pause - show transition message (if not the last section)
-    if (currentSectionIndex < sections.length - 1) {
+    if (actualCurrentSectionIndex < sections.length - 1) {
       setShowSectionTransition(true);
       // Reset flag when transition completes
-      setTimeout(() => setIsCompletingSection(false), 500);
+      setTimeout(() => {
+        setIsCompletingSection(false);
+        isCompletingSectionRef.current = false;
+      }, 500);
       return;
     }
 
     // Last section - move to completion
-    setIsCompletingSection(false);
-    moveToNextSection();
+    // Note: Don't reset refs here - let submitTest handle completion
+    // This prevents race conditions from multiple timer callbacks
+    moveToNextSection(actualCurrentSectionIndex);
   }
 
   function handleSectionTransitionComplete(isAuto = false) {
     // Extra safety: reject manual clicks if countdown has expired (allow auto-transition)
     if (!isAuto && sectionTransitionCountdown <= 0) {
-      console.log('⚠️ Countdown expired, ignoring click');
       return;
     }
 
     // Prevent race condition: if already transitioning, ignore this call
     if (isTransitioning) {
-      console.log('⚠️ Already transitioning, ignoring duplicate call');
       return;
     }
 
-    console.log('✅ Section transition complete, moving to next section');
     setIsTransitioning(true);
     setShowSectionTransition(false);
-    moveToNextSection();
+    moveToNextSection(currentSectionIndexRef.current);
     // Reset flag after a short delay to allow state updates
     setTimeout(() => setIsTransitioning(false), 500);
   }
@@ -1985,7 +1935,6 @@ export default function TakeTestPage() {
         .single();
 
       if (fetchError) {
-        console.error('Error fetching completion_details for pause save:', fetchError);
         return;
       }
 
@@ -2028,22 +1977,19 @@ export default function TakeTestPage() {
         .update({ completion_details: { attempts } })
         .eq('id', assignmentId);
 
-      if (updateError) {
-        console.error('Error saving pause event to database:', updateError);
-      } else {
-        console.log(`✅ Pause event saved to database: ${action} in ${currentSection}`);
-      }
     } catch (err) {
-      console.error('Error in savePauseEventToDatabase:', err);
+      // Error in savePauseEventToDatabase
     }
   }
 
   function handleTakePause() {
-    // Extra safety: reject if countdown has expired
-    if (pauseChoiceCountdown <= 0) {
-      console.log('⚠️ Countdown expired, ignoring click');
+    // Extra safety: reject if countdown has expired or choice already made
+    if (pauseChoiceCountdown <= 0 || pauseChoiceMadeRef.current) {
       return;
     }
+
+    // Mark choice as made immediately
+    pauseChoiceMadeRef.current = true;
 
     setPausesUsed(prev => prev + 1);
     // Record pause event in state
@@ -2057,6 +2003,7 @@ export default function TakeTestPage() {
     // Save to database immediately
     savePauseEventToDatabase('pause_taken');
 
+    showPauseChoiceRef.current = false; // Clear ref
     setShowPauseChoiceScreen(false);
     const pauseDuration = (config?.pause_duration_minutes || 5) * 60;
     setPauseTimeRemaining(pauseDuration);
@@ -2064,16 +2011,21 @@ export default function TakeTestPage() {
     setTimeout(() => {
       setShowPauseScreen(false);
       setPauseTimeRemaining(null);
-      moveToNextSection();
+      moveToNextSection(currentSectionIndexRef.current);
     }, pauseDuration * 1000);
   }
 
   function handleSkipPause(isAutoSkip = false) {
-    // Extra safety: reject manual clicks if countdown has expired (allow auto-skip)
-    if (!isAutoSkip && pauseChoiceCountdown <= 0) {
-      console.log('⚠️ Countdown expired, ignoring click');
+    // Extra safety: reject if choice already made or countdown expired (for manual clicks)
+    if (pauseChoiceMadeRef.current) {
       return;
     }
+    if (!isAutoSkip && pauseChoiceCountdown <= 0) {
+      return;
+    }
+
+    // Mark choice as made immediately
+    pauseChoiceMadeRef.current = true;
 
     const action = isAutoSkip ? 'pause_auto_skipped' : 'pause_skipped';
 
@@ -2090,13 +2042,17 @@ export default function TakeTestPage() {
 
     // Reset countdown for next time (defensive measure)
     setPauseChoiceCountdown(5);
+    showPauseChoiceRef.current = false; // Clear ref
     setShowPauseChoiceScreen(false);
-    moveToNextSection();
+    moveToNextSection(currentSectionIndexRef.current);
   }
 
-  function moveToNextSection() {
-    if (currentSectionIndex < sections.length - 1) {
-      const nextSectionIndex = currentSectionIndex + 1;
+  function moveToNextSection(sectionIndexOverride?: number) {
+    // Use override if provided (to avoid stale closure issues), otherwise use state
+    const currentIndex = sectionIndexOverride !== undefined ? sectionIndexOverride : currentSectionIndex;
+
+    if (currentIndex < sections.length - 1) {
+      const nextSectionIndex = currentIndex + 1;
       const nextSection = sections[nextSectionIndex];
 
       setCurrentSectionIndex(nextSectionIndex);
@@ -2157,7 +2113,6 @@ export default function TakeTestPage() {
 
         // FALLBACK: If not enough questions with target difficulty
         if (nextSectionBaseQuestionsCandidates.length < baseCount) {
-          console.warn(`⚠️ Not enough baseline questions with difficulty ${baselineDifficulty} in section ${nextSection}. Found ${nextSectionBaseQuestionsCandidates.length}, need ${baseCount}. Using fallback.`);
 
           // Get all questions from this section
           const allSectionQuestions = questionPool.filter(q => getSection(q) === nextSection);
@@ -2185,8 +2140,8 @@ export default function TakeTestPage() {
         setSelectedQuestions(prev => [...prev, ...baseQuestionsForSection]);
       }
 
-      // Restart timer for new section
-      startSectionTimer();
+      // Restart timer for new section (pass nextSection to avoid stale closure)
+      startSectionTimer(nextSection);
     } else {
       // Test complete
       submitTest();
@@ -2196,20 +2151,15 @@ export default function TakeTestPage() {
   async function submitTest() {
     // Prevent double submission
     if (submitting) {
-      console.log('⚠️ Test is already being submitted, ignoring duplicate call');
       return;
     }
 
     setSubmitting(true);
-    console.log('🏁 Submitting test - all answers already saved in database');
 
     if (timerRef.current) clearInterval(timerRef.current);
 
-    // ❌ REMOVED: test_questions tracking (no longer needed, using answers.created_at instead)
-
     // Save final answer if any
     if (currentQuestion?.id && answers[currentQuestion.id]) {
-      console.log('💾 Saving final answer...');
       await saveAnswer(
         currentQuestion.id,
         answers[currentQuestion.id],
@@ -2226,13 +2176,10 @@ export default function TakeTestPage() {
         throw new Error('Failed to save completion details');
       }
 
-      console.log('✅ Test submission completed successfully');
-
       // Show completion screen
       setShowCompletionScreen(true);
       setSubmitting(false);
     } catch (err) {
-      console.error('❌ Error submitting test:', err);
       setSubmitting(false);
       alert('Error submitting test. Please contact your instructor.');
     }
@@ -2256,7 +2203,6 @@ export default function TakeTestPage() {
                         window.location.hostname === '';
 
     if (isLocalhost) {
-      console.log('🛠️ Multiple screen detection disabled on localhost');
       return false;
     }
 
@@ -2278,7 +2224,6 @@ export default function TakeTestPage() {
       // Fallback: return false if API not available
       return false;
     } catch (err) {
-      console.error('Error checking screens:', err);
       return false;
     }
   }
@@ -2288,7 +2233,6 @@ export default function TakeTestPage() {
     // Skip fullscreen on localhost for testing
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     if (isLocalhost) {
-      console.log('🛠️ Fullscreen request skipped on localhost');
       return;
     }
 
@@ -2309,18 +2253,12 @@ export default function TakeTestPage() {
     annulmentReason?: string
   ) {
     try {
-      console.log('💾 saveCompletionDetails called:', { status, reason, annulmentReason, currentAttempt });
-
       // Get existing attempts history from database
       const { data: currentAssignment, error: fetchError } = await supabase
         .from('2V_test_assignments')
         .select('completion_details, start_time, current_attempt, total_attempts')
         .eq('id', assignmentId)
         .single();
-
-      if (fetchError) {
-        console.error('❌ Error fetching current assignment:', fetchError);
-      }
 
       const existingDetails = currentAssignment?.completion_details || {};
       const attempts = Array.isArray(existingDetails.attempts) ? existingDetails.attempts : [];
@@ -2362,21 +2300,17 @@ export default function TakeTestPage() {
       // Section completion tracking (for UI purposes)
       newAttempt.sections_completed = Array.from(new Set(selectedQuestions.map(q => getSectionField(q))));
 
-      console.log('📝 New attempt record created:', newAttempt);
-
       // Check if attempt already exists (update instead of duplicating)
       const existingAttemptIndex = attempts.findIndex(
         (a: any) => a.attempt_number === currentAttempt
       );
 
       if (existingAttemptIndex >= 0) {
-        console.log(`🔄 Updating existing attempt ${currentAttempt} at index ${existingAttemptIndex}`);
         attempts[existingAttemptIndex] = {
           ...attempts[existingAttemptIndex],
           ...newAttempt
         };
       } else {
-        console.log(`➕ Adding new attempt ${currentAttempt} to history`);
         attempts.push(newAttempt);
       }
 
@@ -2395,8 +2329,6 @@ export default function TakeTestPage() {
         results_viewable_by_student: false
       };
 
-      console.log('💾 Updating database with completion details:', updateData);
-
       const { data: updateResult, error } = await supabase
         .from('2V_test_assignments')
         .update(updateData)
@@ -2404,15 +2336,11 @@ export default function TakeTestPage() {
         .select();
 
       if (error) {
-        console.error('❌ Error saving completion details:', error);
         throw error;
       }
 
-      console.log('✅ Database update successful!', updateResult);
-      console.log(`✅ Test ${status} | Attempt ${currentAttempt} | Reason: ${reason} | Stats calculated from answers table`);
       return true;
     } catch (err) {
-      console.error('❌ Error in saveCompletionDetails:', err);
       return false;
     }
   }
@@ -2443,7 +2371,6 @@ export default function TakeTestPage() {
   function handleStayInTest() {
     // Extra safety: reject if countdown has expired
     if (exitCountdown <= 0) {
-      console.log('⚠️ Countdown expired, ignoring click');
       return;
     }
 
@@ -2455,7 +2382,6 @@ export default function TakeTestPage() {
   function handleConfirmExit() {
     // Extra safety: reject if countdown has expired
     if (exitCountdown <= 0) {
-      console.log('⚠️ Countdown expired, ignoring click');
       return;
     }
 
@@ -2752,7 +2678,9 @@ export default function TakeTestPage() {
   }
 
   // Pause Choice Screen (for user_choice mode)
-  if (showPauseChoiceScreen) {
+  // Use ref to persist across StrictMode remounts
+  const shouldShowPauseChoice = showPauseChoiceScreen || showPauseChoiceRef.current;
+  if (shouldShowPauseChoice) {
     const pausesRemaining = (config?.max_pauses || 0) - pausesUsed;
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -2913,7 +2841,6 @@ export default function TakeTestPage() {
             onAnswer={(questionId, answer) => {
               // Extra safety: reject if time has expired
               if (timeRemaining !== null && timeRemaining <= 0) {
-                console.log('⚠️ Time expired, ignoring PDF answer selection');
                 return;
               }
               setAnswers(prev => ({
@@ -2927,6 +2854,11 @@ export default function TakeTestPage() {
               }));
             }}
             onNext={async () => {
+              // Extra safety: reject if time has expired
+              if (timeRemaining !== null && timeRemaining <= 0) {
+                return;
+              }
+
               // Save all answers on current page before moving
               for (const question of sectionQuestions) {
                 if (answers[question.id]) {
@@ -3024,10 +2956,7 @@ export default function TakeTestPage() {
         <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-lg p-8">
           {/* Question Text */}
           <div className="mb-8">
-            <div className="flex items-start justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-700">
-                {t('takeTest.question')} {currentQuestion?.question_number}
-              </h3>
+            <div className="flex items-start justify-end mb-4">
               <button
                 onClick={toggleFlag}
                 className={`px-3 py-1 rounded-lg text-sm font-semibold transition-colors ${
@@ -3175,9 +3104,9 @@ export default function TakeTestPage() {
           {/* Standard Multiple Choice Questions (Quantitative & Verbal Reasoning) */}
           {currentQuestion?.question_type === 'multiple_choice' && currentQuestion?.question_data?.options && (
             <MultipleChoiceQuestion
-              questionText={currentQuestion.question_data.question_text || ''}
+              questionText={getLocalizedQuestionText(currentQuestion.question_data)}
               imageUrl={currentQuestion.question_data.image_url || undefined}
-              options={currentQuestion.question_data.options}
+              options={getLocalizedOptions(currentQuestion.question_data)}
               selectedAnswer={answers[currentQuestion.id]?.answer}
               onAnswerChange={handleAnswerSelect}
             />
@@ -3186,9 +3115,9 @@ export default function TakeTestPage() {
           {/* Open-Ended Questions */}
           {currentQuestion?.question_type === 'open_ended' && (
             <div className="space-y-4">
-              {currentQuestion.question_data?.question_text && (
+              {(currentQuestion.question_data?.question_text || currentQuestion.question_data?.question_text_eng) && (
                 <div className="text-lg text-gray-800 mb-4">
-                  {currentQuestion.question_data.question_text}
+                  {getLocalizedQuestionText(currentQuestion.question_data)}
                 </div>
               )}
               <textarea
