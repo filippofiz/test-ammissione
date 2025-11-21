@@ -3322,18 +3322,6 @@ export default function TakeTestPage() {
                   }
                 </button>
               )}
-              {/* Flag Button */}
-              <button
-                onClick={toggleFlag}
-                className={`px-3 py-1 rounded-lg text-sm font-semibold transition-colors ${
-                  answers[currentQuestion?.id]?.flagged
-                    ? 'bg-red-100 text-red-700'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                <FontAwesomeIcon icon={faFlag} className="mr-2" />
-                {answers[currentQuestion?.id]?.flagged ? t('takeTest.flagged') : t('takeTest.flag')}
-              </button>
             </div>
 
             {/* Render based on question type */}
@@ -3696,6 +3684,23 @@ export default function TakeTestPage() {
             </div>
             );
           })()}
+
+          {/* Report Issue Button - subtle link at bottom */}
+          <div className="mt-6 pt-4 border-t border-gray-100 text-center">
+            <button
+              onClick={toggleFlag}
+              className={`text-xs transition-colors ${
+                answers[currentQuestion?.id]?.flagged
+                  ? 'text-orange-600 font-medium'
+                  : 'text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              <FontAwesomeIcon icon={faFlag} className="mr-1" />
+              {answers[currentQuestion?.id]?.flagged
+                ? t('takeTest.issueReported')
+                : t('takeTest.reportIssue')}
+            </button>
+          </div>
         </div>
       </div>
 

@@ -312,6 +312,8 @@
     "of": "of",
     "flagged": "Flagged",
     "flag": "Flag",
+    "reportIssue": "Report issue with question",
+    "issueReported": "Issue reported",
     "previous": "Previous",
     "next": "Next",
     "completeSection": "Complete Section",
