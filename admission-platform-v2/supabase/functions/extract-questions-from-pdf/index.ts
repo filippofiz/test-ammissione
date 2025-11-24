@@ -21,12 +21,24 @@ interface ExtractQuestionsRequest {
   // Chunking parameters for large PDFs (by pages, not questions)
   pageStart?: number;  // First page number in this chunk (1-indexed)
   pageEnd?: number;    // Last page number in this chunk (1-indexed)
+  // Passage extraction mode
+  extractPassageOnly?: boolean;  // Extract only passage text, no questions
+  targetQuestions?: number[];     // Which questions this passage is for
+}
+
+interface Passage {
+  passage_id: string;
+  passage_text: string;
+  passage_text_eng?: string;
+  passage_title?: string;
+  question_numbers: number[];
 }
 
 interface ExtractedQuestion {
   question_number: number;
   question_text: string;
   question_text_eng?: string;
+  passage_id?: string | null;
   options: {
     a: string;
     b: string;
@@ -197,7 +209,7 @@ serve(async (req) => {
     console.log('✓ Auth check passed for user:', user.email);
 
     // Parse request body
-    const { pdfUrl, pdfText, testType, section, testNumber, extractFromPdf, databaseAnswers, pageStart, pageEnd }: ExtractQuestionsRequest = await req.json();
+    const { pdfUrl, pdfText, testType, section, testNumber, extractFromPdf, databaseAnswers, pageStart, pageEnd, extractPassageOnly, targetQuestions }: ExtractQuestionsRequest = await req.json();
 
     if ((!pdfText && !pdfUrl) || !testType || !section) {
       return new Response(
@@ -312,7 +324,37 @@ serve(async (req) => {
             },
             {
               type: 'text',
-              text: `Extract all questions from this ${testType} test PDF (${section} section).${pageStart && pageEnd ? `\n\n🎯 CRITICAL: Process ONLY pages ${pageStart} through ${pageEnd} of this PDF. Ignore all other pages.\n` : ''}
+              text: extractPassageOnly ?
+                // Passage-only extraction prompt
+                `Extract ONLY the shared passage/reading text from pages ${pageStart || 1} to ${pageEnd || 'end'} of this PDF.
+
+${targetQuestions && targetQuestions.length > 0 ? `This passage is for questions ${targetQuestions.join(', ')}.` : ''}
+
+INSTRUCTIONS:
+1. Find and extract the main passage text that questions refer to
+2. This could be a reading passage, table, data, or shared context
+3. Do NOT extract the questions themselves
+4. Return the passage text exactly as it appears
+5. If there's a title or heading for the passage, include it
+
+Return JSON in this format:
+{
+  "passages": [
+    {
+      "passage_id": "passage_1",
+      "passage_text": "The full text of the passage...",
+      "passage_title": "Title if present",
+      "question_numbers": [${targetQuestions?.join(', ') || ''}]
+    }
+  ],
+  "extractedText": "Raw text if no clear passage structure found"
+}` :
+                // Normal question extraction prompt
+                `Extract all questions from this ${testType} test PDF (${section} section).${pageStart && pageEnd ? `\n\n🎯 CRITICAL: Process ONLY pages ${pageStart} through ${pageEnd} of this PDF. Ignore all other pages.\n` : ''}
+
+🚨 IMPORTANT: This test contains exactly ${databaseAnswers?.length || 'UNKNOWN'} questions numbered 1 to ${databaseAnswers?.length || '?'}.
+ONLY extract questions with numbers 1-${databaseAnswers?.length || '?'}.
+IGNORE any content that appears to be answer keys, solutions, or questions with numbers higher than ${databaseAnswers?.length || '?'}.
 
 ${pdfText ? `\nAdditional context from database:\n${pdfText}\n` : ''}
 
@@ -405,12 +447,28 @@ MATHEMATICAL NOTATION EXAMPLES:
 - "e to the two x" → $e^{2x}$
 - "log base 2 of x" → $\\log_2{x}$
 
+SHARED PASSAGES / READING COMPREHENSION:
+If multiple questions refer to the SAME passage, text, or figure:
+- Extract the full passage text ONCE
+- Assign a unique "passage_id" (e.g., "passage_1", "passage_2")
+- Include the passage_id in ALL questions that refer to it
+- Store passages in a separate "passages" array
+
 Return JSON in this exact format:
 {
+  "passages": [
+    {
+      "passage_id": "passage_1",
+      "passage_text": "Full text of the reading passage or shared context...",
+      "passage_title": "Optional title if present",
+      "question_numbers": [15, 16, 17, 18, 19, 20]
+    }
+  ],
   "questions": [
     {
       "question_number": 1,
       "question_text": "Exact question text from PDF with $LaTeX$ math",
+      "passage_id": null,
       "options": {
         "a": "Exact option A from PDF",
         "b": "Exact option B from PDF",
@@ -428,6 +486,32 @@ Return JSON in this exact format:
       },
       "recreate_graph": false,
       "graph_latex": null
+    }
+  ]
+}
+
+Example with shared passage:
+{
+  "passages": [
+    {
+      "passage_id": "passage_1",
+      "passage_text": "The following table shows the population of City X from 1990 to 2020...",
+      "passage_title": "Population Data",
+      "question_numbers": [5, 6, 7]
+    }
+  ],
+  "questions": [
+    {
+      "question_number": 5,
+      "question_text": "According to the table, what was the population increase between 1990 and 2000?",
+      "passage_id": "passage_1",
+      ...
+    },
+    {
+      "question_number": 6,
+      "question_text": "Based on the data, what is the average annual growth rate?",
+      "passage_id": "passage_1",
+      ...
     }
   ]
 }
@@ -598,8 +682,9 @@ Return ONLY valid JSON with the questions array.`,
 
       const parsed = JSON.parse(jsonContent);
 
-      if (!parsed.questions || !Array.isArray(parsed.questions)) {
-        throw new Error('Invalid response structure: missing questions array');
+      // Allow either questions array OR passages array (for passage extraction mode)
+      if (!parsed.questions && !parsed.passages && !parsed.extractedText) {
+        throw new Error('Invalid response structure: missing questions/passages array');
       }
 
       return parsed;
@@ -630,11 +715,40 @@ Return ONLY valid JSON with the questions array.`,
     let extractedQuestions;
     try {
       extractedQuestions = parseClaudeJSON(apiContent);
-      console.log(`✅ Successfully extracted ${extractedQuestions.questions.length} questions`);
+      if (extractPassageOnly) {
+        console.log(`✅ Successfully extracted ${extractedQuestions.passages?.length || 0} passages`);
+      } else {
+        console.log(`✅ Successfully extracted ${extractedQuestions.questions?.length || 0} questions`);
+      }
     } catch (parseError) {
       console.error(`❌ Failed to parse Claude response:`, parseError);
       console.error('Content (first 500 chars):', apiContent.substring(0, 500));
       throw new Error(`Parsing failed: ${parseError instanceof Error ? parseError.message : 'Parse error'}`);
+    }
+
+    // If extracting passage only, return early
+    if (extractPassageOnly) {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          passages: extractedQuestions.passages || [],
+          extractedText: extractedQuestions.extractedText || null,
+          usage: {
+            input_tokens: usage?.input_tokens || 0,
+            output_tokens: usage?.output_tokens || 0,
+            total_tokens: (usage?.input_tokens || 0) + (usage?.output_tokens || 0),
+            cost_usd: 0,
+            cost_breakdown: {
+              input_cost_usd: 0,
+              output_cost_usd: 0,
+            },
+          },
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
     }
 
     // Merge with database answers
@@ -698,8 +812,17 @@ Return ONLY valid JSON with the questions array.`,
         const allTextsToTranslate: string[] = [];
         const questionTextIndexes: number[] = [];
         const questionOptionsIndexes: { questionIdx: number; optionKeys: string[] }[] = [];
+        const passageTextIndexes: number[] = [];
 
-        // Collect all texts
+        // Collect passage texts first
+        if (extractedQuestions.passages && extractedQuestions.passages.length > 0) {
+          extractedQuestions.passages.forEach((passage, pIdx) => {
+            passageTextIndexes.push(allTextsToTranslate.length);
+            allTextsToTranslate.push(passage.passage_text);
+          });
+        }
+
+        // Collect all question texts
         extractedQuestions.questions.forEach((question, qIdx) => {
           // Add question text
           questionTextIndexes.push(allTextsToTranslate.length);
@@ -716,7 +839,7 @@ Return ONLY valid JSON with the questions array.`,
           });
         });
 
-        console.log(`Batching ${allTextsToTranslate.length} strings for translation...`);
+        console.log(`Batching ${allTextsToTranslate.length} strings for translation (including ${passageTextIndexes.length} passages)...`);
 
         // Single batched translation call
         const batchResponse = await fetch(
@@ -736,6 +859,19 @@ Return ONLY valid JSON with the questions array.`,
         if (batchResponse.ok) {
           const batchData = await batchResponse.json();
           const allTranslations = batchData.data.translations.map((t: any) => t.translatedText);
+
+          // Distribute translations back to passages
+          if (extractedQuestions.passages && extractedQuestions.passages.length > 0) {
+            extractedQuestions.passages.forEach((passage, pIdx) => {
+              const passageTranslation = allTranslations[passageTextIndexes[pIdx]];
+              if (isEnglish) {
+                passage.passage_text_eng = passage.passage_text;
+                passage.passage_text = passageTranslation;
+              } else {
+                passage.passage_text_eng = passageTranslation;
+              }
+            });
+          }
 
           // Distribute translations back to questions
           extractedQuestions.questions.forEach((question, qIdx) => {
@@ -767,7 +903,7 @@ Return ONLY valid JSON with the questions array.`,
             }
           });
 
-          console.log(`✓ Translated ${extractedQuestions.questions.length} questions (${sourceLang} → ${targetLang}) in single batch`);
+          console.log(`✓ Translated ${extractedQuestions.questions.length} questions and ${passageTextIndexes.length} passages (${sourceLang} → ${targetLang}) in single batch`);
         } else {
           console.warn('Batch translation failed, skipping translations');
         }
@@ -790,11 +926,13 @@ Return ONLY valid JSON with the questions array.`,
       JSON.stringify({
         success: true,
         questions: extractedQuestions.questions,
+        passages: extractedQuestions.passages || [],
         metadata: {
           testType,
           section,
           testNumber,
           extractedCount: extractedQuestions.questions.length,
+          passageCount: extractedQuestions.passages?.length || 0,
         },
         usage: {
           input_tokens: usage?.input_tokens || 0,

@@ -116,6 +116,234 @@ const analyzeFunctionType = (func: string): { type: string; domain?: [number, nu
   return { type: features.join(','), domain, features };
 };
 
+// Check if string is a geometry JSON object
+const isGeometryJSON = (str: string): boolean => {
+  if (!str || typeof str !== 'string') return false;
+  const trimmed = str.trim();
+  if (!trimmed.startsWith('{')) return false;
+  try {
+    const parsed = JSON.parse(trimmed);
+    return parsed.type && (parsed.shapes || parsed.points || parsed.type === 'triangle' || parsed.type === 'geometry' || parsed.type === 'composite');
+  } catch {
+    return false;
+  }
+};
+
+// Geometry renderer component using SVG
+const GeometryRenderer: React.FC<{ geometryData: any; className?: string }> = ({ geometryData, className = '' }) => {
+  const svgRef = useRef<SVGSVGElement>(null);
+
+  useEffect(() => {
+    if (!svgRef.current || !geometryData) return;
+
+    // Clear previous content
+    while (svgRef.current.firstChild) {
+      svgRef.current.removeChild(svgRef.current.firstChild);
+    }
+
+    // Calculate bounds for viewBox
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+    const updateBounds = (x: number, y: number) => {
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+    };
+
+    // Process shapes to find bounds
+    const shapes = geometryData.shapes || [geometryData];
+    shapes.forEach((shape: any) => {
+      if (shape.points) {
+        if (Array.isArray(shape.points)) {
+          shape.points.forEach((p: number[]) => updateBounds(p[0], p[1]));
+        } else {
+          Object.values(shape.points).forEach((p: any) => updateBounds(p[0], p[1]));
+        }
+      }
+      if (shape.topLeft) {
+        updateBounds(shape.topLeft[0], shape.topLeft[1]);
+        if (shape.width && shape.height) {
+          updateBounds(shape.topLeft[0] + shape.width, shape.topLeft[1] - shape.height);
+        }
+      }
+    });
+
+    // Add padding
+    const padding = 3;
+    minX -= padding;
+    minY -= padding;
+    maxX += padding;
+    maxY += padding;
+
+    // Set viewBox (flip Y for SVG coordinate system)
+    const width = maxX - minX;
+    const height = maxY - minY;
+    svgRef.current.setAttribute('viewBox', `${minX} ${-maxY} ${width} ${height}`);
+
+    // Helper to draw right angle marker
+    const drawRightAngle = (svg: SVGSVGElement, position: number[], size: number = 0.8) => {
+      const [x, y] = position;
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', `M ${x + size} ${-y} L ${x + size} ${-y - size} L ${x} ${-y - size}`);
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', '#374151');
+      path.setAttribute('stroke-width', '0.15');
+      svg.appendChild(path);
+    };
+
+    // Create SVG elements for each shape
+    shapes.forEach((shape: any) => {
+      if (shape.type === 'triangle' || shape.type === 'polygon') {
+        const points = Array.isArray(shape.points)
+          ? shape.points
+          : Object.values(shape.points);
+
+        const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        polygon.setAttribute('points', points.map((p: number[]) => `${p[0]},${-p[1]}`).join(' '));
+        polygon.setAttribute('fill', 'none');
+        polygon.setAttribute('stroke', '#374151');
+        polygon.setAttribute('stroke-width', '0.2');
+        svgRef.current?.appendChild(polygon);
+
+        // Add point labels
+        if (!Array.isArray(shape.points)) {
+          Object.entries(shape.points).forEach(([label, point]: [string, any]) => {
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', String(point[0]));
+            text.setAttribute('y', String(-point[1] - 0.8));
+            text.setAttribute('text-anchor', 'middle');
+            text.setAttribute('font-size', '1.5');
+            text.setAttribute('font-family', 'serif');
+            text.setAttribute('font-style', 'italic');
+            text.setAttribute('fill', '#1f2937');
+            text.textContent = label;
+            svgRef.current?.appendChild(text);
+          });
+        }
+
+        // Add edge labels
+        if (shape.labels) {
+          Object.entries(shape.labels).forEach(([key, value]: [string, any]) => {
+            // Handle right angle marker
+            if (key === 'rightAngle' || key.includes('rightAngle')) {
+              if (typeof value === 'object' && value.position) {
+                drawRightAngle(svgRef.current!, value.position);
+              }
+              return;
+            }
+
+            if (typeof value === 'object' && value.position) {
+              const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+              text.setAttribute('x', String(value.position[0]));
+              text.setAttribute('y', String(-value.position[1]));
+              text.setAttribute('text-anchor', 'middle');
+              text.setAttribute('font-size', '1.2');
+              text.setAttribute('font-family', 'serif');
+              text.setAttribute('font-style', 'italic');
+              text.setAttribute('fill', '#374151');
+              text.textContent = value.text || key;
+              svgRef.current?.appendChild(text);
+            } else if (typeof value === 'string') {
+              // Simple label without position - skip for now
+            }
+          });
+        }
+      } else if (shape.type === 'rectangle') {
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rect.setAttribute('x', String(shape.topLeft[0]));
+        rect.setAttribute('y', String(-shape.topLeft[1]));
+        rect.setAttribute('width', String(shape.width));
+        rect.setAttribute('height', String(shape.height));
+        rect.setAttribute('fill', 'none');
+        rect.setAttribute('stroke', '#374151');
+        rect.setAttribute('stroke-width', '0.2');
+        svgRef.current?.appendChild(rect);
+
+        // Add label to the left of rectangle
+        if (shape.label) {
+          // Position label to the left of the rectangle, vertically centered
+          const labelX = shape.labelPosition ? shape.labelPosition[0] : shape.topLeft[0] - 1.5;
+          const labelY = shape.labelPosition ? shape.labelPosition[1] : shape.topLeft[1] - shape.height/2;
+
+          // Check if label is a fraction (contains /)
+          if (shape.label.includes('/')) {
+            const [num, denom] = shape.label.split('/');
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+
+            // Numerator
+            const numText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            numText.setAttribute('x', String(labelX));
+            numText.setAttribute('y', String(-labelY - 0.8));
+            numText.setAttribute('text-anchor', 'middle');
+            numText.setAttribute('font-size', '1.2');
+            numText.setAttribute('font-family', 'serif');
+            numText.setAttribute('font-style', 'italic');
+            numText.setAttribute('fill', '#374151');
+            numText.textContent = num.trim();
+            g.appendChild(numText);
+
+            // Fraction line
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', String(labelX - 0.8));
+            line.setAttribute('y1', String(-labelY));
+            line.setAttribute('x2', String(labelX + 0.8));
+            line.setAttribute('y2', String(-labelY));
+            line.setAttribute('stroke', '#374151');
+            line.setAttribute('stroke-width', '0.1');
+            g.appendChild(line);
+
+            // Denominator
+            const denomText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            denomText.setAttribute('x', String(labelX));
+            denomText.setAttribute('y', String(-labelY + 1.2));
+            denomText.setAttribute('text-anchor', 'middle');
+            denomText.setAttribute('font-size', '1.2');
+            denomText.setAttribute('font-family', 'serif');
+            denomText.setAttribute('font-style', 'italic');
+            denomText.setAttribute('fill', '#374151');
+            denomText.textContent = denom.trim();
+            g.appendChild(denomText);
+
+            svgRef.current?.appendChild(g);
+          } else {
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', String(labelX));
+            text.setAttribute('y', String(-labelY));
+            text.setAttribute('text-anchor', 'middle');
+            text.setAttribute('dominant-baseline', 'middle');
+            text.setAttribute('font-size', '1.2');
+            text.setAttribute('font-family', 'serif');
+            text.setAttribute('font-style', 'italic');
+            text.setAttribute('fill', '#374151');
+            text.textContent = shape.label;
+            svgRef.current?.appendChild(text);
+          }
+        }
+      } else if (shape.type === 'circle') {
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('cx', String(shape.center[0]));
+        circle.setAttribute('cy', String(-shape.center[1]));
+        circle.setAttribute('r', String(shape.radius));
+        circle.setAttribute('fill', 'none');
+        circle.setAttribute('stroke', '#374151');
+        circle.setAttribute('stroke-width', '0.2');
+        svgRef.current?.appendChild(circle);
+      }
+    });
+  }, [geometryData]);
+
+  return (
+    <div className={`geometry-renderer ${className}`}>
+      <svg
+        ref={svgRef}
+        className="w-full h-48 bg-white rounded"
+        preserveAspectRatio="xMidYMid meet"
+      />
+    </div>
+  );
+};
+
 export const GraphRenderer: React.FC<GraphRendererProps> = ({
   functionString,
   tikzCode,
@@ -126,6 +354,16 @@ export const GraphRenderer: React.FC<GraphRendererProps> = ({
   const graphRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedFunction, setSelectedFunction] = useState<string | null>(null);
+
+  // Check if this is geometry JSON
+  if (functionString && isGeometryJSON(functionString)) {
+    try {
+      const geometryData = JSON.parse(functionString);
+      return <GeometryRenderer geometryData={geometryData} className={className} />;
+    } catch (e) {
+      console.error('[GraphRenderer] Failed to parse geometry JSON:', e);
+    }
+  }
 
   useEffect(() => {
     if (!graphRef.current) return;
@@ -394,12 +632,17 @@ export const AdvancedGraphRenderer: React.FC<{
         : []
     ) : [];
 
+  // Use graph_function if graph_latex is not available
+  const effectiveFunctionString = question.graph_latex || question.graph_function;
+
   console.log('[AdvancedGraphRenderer]', {
     hasGraphLatex,
     hasGeneratedOptions,
     willPlotOptions: functionOptions.length,
     correctAnswer: question.correct_answer,
-    graph_latex: question.graph_latex?.substring(0, 100)
+    graph_latex: question.graph_latex?.substring(0, 100),
+    graph_function: question.graph_function,
+    effectiveFunctionString: effectiveFunctionString?.substring?.(0, 100) || effectiveFunctionString
   });
 
   return (
@@ -429,14 +672,14 @@ export const AdvancedGraphRenderer: React.FC<{
         <GraphRenderer
           options={functionOptions}
           correctAnswer={question.correct_answer}
-          functionString={question.graph_latex}
+          functionString={effectiveFunctionString}
           tikzCode={hasGraphLatex ? question.graph_latex : undefined}
           className={className}
         />
       ) : (
         <div className="p-4 bg-gray-50 rounded-lg border-2 border-gray-300">
           <pre className="text-xs overflow-x-auto">
-            {question.graph_latex || 'No LaTeX code available'}
+            {effectiveFunctionString || 'No function/LaTeX code available'}
           </pre>
         </div>
       )}

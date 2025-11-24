@@ -94,7 +94,11 @@
       "Bash(pnpm --filter web build:*)",
       "Bash(temp_check.txt)",
       "Bash(git -C \"C:\\App UpToTen\\admission-test\" branch -a)",
-      "Bash(cd C:App UpToTenadmission-testadmission-platform-v2)"
+      "Bash(cd C:App UpToTenadmission-testadmission-platform-v2)",
+      "WebFetch(domain:www.gmac.com)",
+      "mcp__ide__getDiagnostics",
+      "Bash(cd C:/App UpToTen/admission-test/admission-platform-v2)",
+      "WebFetch(domain:gmatclub.com)"
     ],
     "deny": [],
     "ask": []

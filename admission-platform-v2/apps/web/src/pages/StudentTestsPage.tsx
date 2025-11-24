@@ -32,6 +32,10 @@ import {
   faChalkboardTeacher,
   faStopwatch,
   faInfinity,
+  faSearch,
+  faFilter,
+  faCheckSquare,
+  faSquare,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import { supabase } from '../lib/supabase';
@@ -213,6 +217,11 @@ export default function StudentTestsPage() {
   const [assigning, setAssigning] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [translatedSections, setTranslatedSections] = useState<Record<string, string>>({});
+
+  // Assign Modal filters and multiselect state
+  const [assignSearchQuery, setAssignSearchQuery] = useState('');
+  const [assignFormatFilter, setAssignFormatFilter] = useState<'all' | 'pdf' | 'interactive' | 'mixed'>('all');
+  const [selectedTestIds, setSelectedTestIds] = useState<Set<string>>(new Set());
 
   // Start Test Modal state
   const [showStartTestModal, setShowStartTestModal] = useState(false);
@@ -566,8 +575,14 @@ export default function StudentTestsPage() {
         results_viewable_by_student: false
       };
 
-      // If unlocking a completed/locked test for retake, increment current_attempt
-      if (assignment?.status === 'completed' || assignment?.status === 'locked') {
+      // Only increment current_attempt when unlocking for a RETAKE
+      // - completed: student finished the test, now getting another attempt
+      // - locked with total_attempts > 0: test was completed and then locked again
+      // Do NOT increment for first-time unlock (locked with total_attempts === 0)
+      const isRetake = assignment?.status === 'completed' ||
+                       (assignment?.status === 'locked' && (assignment?.total_attempts || 0) > 0);
+
+      if (isRetake) {
         updateData.current_attempt = (assignment.current_attempt || 1) + 1;
 
         // Ensure total_attempts is at least current_attempt - 1 to satisfy constraint
@@ -578,9 +593,9 @@ export default function StudentTestsPage() {
           console.log(`📝 Adjusting total_attempts from ${assignment.total_attempts} to ${minTotalAttempts} to satisfy constraint`);
         }
 
-        console.log(`📝 Unlocking completed/locked test for retake | New attempt: ${updateData.current_attempt} | Hiding previous results`);
+        console.log(`📝 Unlocking for retake | New attempt: ${updateData.current_attempt} | Hiding previous results`);
       } else {
-        console.log(`⚠️ NOT incrementing attempt - status is: ${assignment?.status}`);
+        console.log(`📝 First-time unlock - keeping attempt at ${assignment?.current_attempt || 1}`);
       }
 
       const { error } = await supabase
@@ -774,7 +789,112 @@ export default function StudentTestsPage() {
 
   async function openAssignModal() {
     setShowAssignModal(true);
+    setAssignSearchQuery('');
+    setAssignFormatFilter('all');
+    setSelectedTestIds(new Set());
     await loadAvailableTests();
+  }
+
+  // Toggle test selection for multiselect
+  function toggleTestSelection(testId: string) {
+    setSelectedTestIds(prev => {
+      const next = new Set(prev);
+      if (next.has(testId)) {
+        next.delete(testId);
+      } else {
+        next.add(testId);
+      }
+      return next;
+    });
+  }
+
+  // Select/deselect all filtered tests
+  function toggleSelectAll(filteredTests: any[]) {
+    const allFilteredIds = filteredTests.map(t => t.id);
+    const allSelected = allFilteredIds.every(id => selectedTestIds.has(id));
+
+    if (allSelected) {
+      // Deselect all filtered
+      setSelectedTestIds(prev => {
+        const next = new Set(prev);
+        allFilteredIds.forEach(id => next.delete(id));
+        return next;
+      });
+    } else {
+      // Select all filtered
+      setSelectedTestIds(prev => {
+        const next = new Set(prev);
+        allFilteredIds.forEach(id => next.add(id));
+        return next;
+      });
+    }
+  }
+
+  // Assign multiple selected tests
+  async function handleAssignSelectedTests() {
+    if (!studentId || selectedTestIds.size === 0) return;
+
+    setAssigning(true);
+    try {
+      const testIds = Array.from(selectedTestIds);
+
+      // Insert all selected tests
+      const { error } = await supabase
+        .from('2V_test_assignments')
+        .insert(
+          testIds.map(testId => ({
+            student_id: studentId,
+            test_id: testId,
+            status: 'locked',
+            current_attempt: 1,
+            total_attempts: 0,
+          }))
+        );
+
+      if (error) throw error;
+
+      setShowAssignModal(false);
+      await loadData();
+      alert(`${testIds.length} test(s) assigned successfully!`);
+    } catch (err) {
+      console.error('Error assigning tests:', err);
+      alert('Failed to assign tests');
+    } finally {
+      setAssigning(false);
+    }
+  }
+
+  // Filter and sort available tests
+  function getFilteredAvailableTests() {
+    let filtered = [...availableTests];
+
+    // Apply search filter
+    if (assignSearchQuery.trim()) {
+      const query = assignSearchQuery.toLowerCase();
+      filtered = filtered.filter(test =>
+        test.section.toLowerCase().includes(query) ||
+        test.exercise_type.toLowerCase().includes(query) ||
+        `${test.test_number}`.includes(query)
+      );
+    }
+
+    // Apply format filter
+    if (assignFormatFilter !== 'all') {
+      filtered = filtered.filter(test => test.question_format === assignFormatFilter);
+    }
+
+    // Sort alphabetically by section, then exercise_type, then test_number
+    filtered.sort((a, b) => {
+      const sectionCompare = a.section.localeCompare(b.section);
+      if (sectionCompare !== 0) return sectionCompare;
+
+      const exerciseCompare = a.exercise_type.localeCompare(b.exercise_type);
+      if (exerciseCompare !== 0) return exerciseCompare;
+
+      return a.test_number - b.test_number;
+    });
+
+    return filtered;
   }
 
   function openStartTestModal(assignment: TestAssignment) {
@@ -1258,8 +1378,45 @@ export default function StudentTestsPage() {
               </div>
             </div>
 
+            {/* Search and Filter Bar */}
+            {!loadingAvailable && availableTests.length > 0 && (
+              <div className="p-4 border-b border-gray-200 bg-gray-50">
+                <div className="flex flex-col md:flex-row gap-3">
+                  {/* Search Input */}
+                  <div className="flex-1 relative">
+                    <FontAwesomeIcon
+                      icon={faSearch}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Search by section, exercise type, or number..."
+                      value={assignSearchQuery}
+                      onChange={(e) => setAssignSearchQuery(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Format Filter */}
+                  <div className="flex items-center gap-2">
+                    <FontAwesomeIcon icon={faFilter} className="text-gray-400" />
+                    <select
+                      value={assignFormatFilter}
+                      onChange={(e) => setAssignFormatFilter(e.target.value as any)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent bg-white"
+                    >
+                      <option value="all">All Formats</option>
+                      <option value="pdf">PDF Only</option>
+                      <option value="interactive">Interactive Only</option>
+                      <option value="mixed">Mixed Only</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Modal Content */}
-            <div className="p-6 overflow-y-auto max-h-[calc(80vh-120px)]">
+            <div className="p-6 overflow-y-auto max-h-[calc(80vh-280px)]">
               {loadingAvailable ? (
                 <div className="text-center py-12">
                   <div className="inline-block w-12 h-12 border-4 border-brand-green border-t-transparent rounded-full animate-spin mb-4" />
@@ -1272,68 +1429,135 @@ export default function StudentTestsPage() {
                   <p className="text-gray-400 text-sm mt-2">All tests of this type have been assigned</p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {availableTests.map((test) => (
-                    <div
-                      key={test.id}
-                      className="bg-gray-50 border-2 border-gray-200 rounded-xl p-4 hover:border-brand-green hover:shadow-lg transition-all"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <h3 className="text-lg font-bold text-brand-dark">
-                              {test.section} - {test.exercise_type} {test.test_number}
-                            </h3>
-                            {/* PDF/Interactive Badge */}
-                            <span
-                              className={`px-2 py-1 rounded text-xs font-bold ${
-                                test.question_format === 'interactive'
-                                  ? 'bg-green-100 text-green-700 border border-green-300'
-                                  : test.question_format === 'mixed'
-                                  ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                                  : 'bg-gray-100 text-gray-700 border border-gray-300'
-                              }`}
-                            >
-                              {test.question_format === 'interactive'
-                                ? '🎮 Interactive'
-                                : test.question_format === 'mixed'
-                                ? '🔄 Mixed'
-                                : '📄 PDF'}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-4 text-sm text-gray-600">
-                            <span>
-                              <FontAwesomeIcon icon={faClock} className="mr-1" />
-                              {test.default_duration_mins} min
-                            </span>
-                            <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-semibold">
-                              {test.test_type}
-                            </span>
-                          </div>
-                        </div>
+                (() => {
+                  const filteredTests = getFilteredAvailableTests();
+                  const allFilteredSelected = filteredTests.length > 0 && filteredTests.every(t => selectedTestIds.has(t.id));
+
+                  return (
+                    <>
+                      {/* Select All / Selection Info */}
+                      <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
                         <button
-                          onClick={() => handleAssignTest(test.id)}
-                          disabled={assigning}
-                          className="px-6 py-3 bg-gradient-to-r from-brand-green to-green-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          onClick={() => toggleSelectAll(filteredTests)}
+                          className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-brand-green transition-colors"
                         >
-                          {assigning ? (
-                            <>
-                              <FontAwesomeIcon icon={faSpinner} className="animate-spin mr-2" />
-                              Assigning...
-                            </>
-                          ) : (
-                            <>
-                              <FontAwesomeIcon icon={faPlus} className="mr-2" />
-                              Assign
-                            </>
-                          )}
+                          <FontAwesomeIcon
+                            icon={allFilteredSelected ? faCheckSquare : faSquare}
+                            className={allFilteredSelected ? 'text-brand-green' : 'text-gray-400'}
+                          />
+                          {allFilteredSelected ? 'Deselect All' : 'Select All'}
+                          {assignSearchQuery || assignFormatFilter !== 'all' ? ' (filtered)' : ''}
                         </button>
+                        <span className="text-sm text-gray-600">
+                          {selectedTestIds.size > 0 ? (
+                            <span className="font-semibold text-brand-green">
+                              {selectedTestIds.size} selected
+                            </span>
+                          ) : (
+                            `${filteredTests.length} test${filteredTests.length !== 1 ? 's' : ''} available`
+                          )}
+                        </span>
                       </div>
-                    </div>
-                  ))}
-                </div>
+
+                      {filteredTests.length === 0 ? (
+                        <div className="text-center py-8">
+                          <FontAwesomeIcon icon={faSearch} className="text-4xl text-gray-300 mb-3" />
+                          <p className="text-gray-500">No tests match your search criteria</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {filteredTests.map((test) => {
+                            const isSelected = selectedTestIds.has(test.id);
+
+                            return (
+                              <div
+                                key={test.id}
+                                onClick={() => toggleTestSelection(test.id)}
+                                className={`bg-gray-50 border-2 rounded-xl p-4 cursor-pointer transition-all ${
+                                  isSelected
+                                    ? 'border-brand-green bg-green-50 shadow-md'
+                                    : 'border-gray-200 hover:border-brand-green hover:shadow-lg'
+                                }`}
+                              >
+                                <div className="flex items-center gap-4">
+                                  {/* Checkbox */}
+                                  <FontAwesomeIcon
+                                    icon={isSelected ? faCheckSquare : faSquare}
+                                    className={`text-xl ${isSelected ? 'text-brand-green' : 'text-gray-400'}`}
+                                  />
+
+                                  {/* Test Info */}
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <h3 className="text-lg font-bold text-brand-dark">
+                                        {test.section} - {test.exercise_type} {test.test_number}
+                                      </h3>
+                                      {/* PDF/Interactive Badge */}
+                                      <span
+                                        className={`px-2 py-1 rounded text-xs font-bold ${
+                                          test.question_format === 'interactive'
+                                            ? 'bg-green-100 text-green-700 border border-green-300'
+                                            : test.question_format === 'mixed'
+                                            ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                                            : 'bg-gray-100 text-gray-700 border border-gray-300'
+                                        }`}
+                                      >
+                                        {test.question_format === 'interactive'
+                                          ? 'Interactive'
+                                          : test.question_format === 'mixed'
+                                          ? 'Mixed'
+                                          : 'PDF'}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-4 text-sm text-gray-600">
+                                      <span>
+                                        <FontAwesomeIcon icon={faClock} className="mr-1" />
+                                        {test.default_duration_mins} min
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()
               )}
             </div>
+
+            {/* Modal Footer with Assign Button */}
+            {!loadingAvailable && availableTests.length > 0 && (
+              <div className="p-4 border-t border-gray-200 bg-gray-50">
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => setShowAssignModal(false)}
+                    className="px-6 py-3 rounded-lg font-semibold bg-gray-200 text-gray-700 hover:bg-gray-300 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAssignSelectedTests}
+                    disabled={assigning || selectedTestIds.size === 0}
+                    className="px-6 py-3 bg-gradient-to-r from-brand-green to-green-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {assigning ? (
+                      <>
+                        <FontAwesomeIcon icon={faSpinner} className="animate-spin mr-2" />
+                        Assigning...
+                      </>
+                    ) : (
+                      <>
+                        <FontAwesomeIcon icon={faPlus} className="mr-2" />
+                        Assign {selectedTestIds.size > 0 ? `(${selectedTestIds.size})` : ''}
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -382,11 +382,22 @@ export default function TestTrackConfigPage() {
 
   async function loadSections() {
     try {
-      // Load sections from database based on current mode
+      // First get test IDs for this specific track type
+      const { data: trackTestsData, error: trackTestsError } = await supabase
+        .from('2V_tests')
+        .select('id')
+        .eq('test_type', testType)
+        .eq('exercise_type', selectedTrack);  // Filter by the specific track (e.g., 'Assessment Iniziale')
+
+      if (trackTestsError) throw trackTestsError;
+
+      const testIds = trackTestsData?.map(t => t.id) || [];
+
+      // Load sections from database based on current mode, filtered by specific tests
       const { data: questionsData, error: questionsError } = await supabase
         .from('2V_questions')
         .select('section, macro_section')
-        .eq('test_type', testType);
+        .in('test_id', testIds);  // Only get sections from tests of this specific track
 
       if (questionsError) throw questionsError;
 
