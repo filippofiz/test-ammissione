@@ -13,12 +13,8 @@ import {
   faFlag,
   faClock,
   faCheckCircle,
-  faTimesCircle,
   faGripVertical,
   faLock,
-  faBookmark,
-  faList,
-  faUndo,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import { supabase } from '../lib/supabase';
@@ -66,15 +62,6 @@ interface TestConfig {
 
   // Section adaptivity
   section_adaptivity_config?: Record<string, { type: 'base' | 'adaptive'; difficulty?: string }>;
-
-  // Review & Edit feature (GMAT-style)
-  allow_review_at_end?: boolean;
-  allow_bookmarks?: boolean;
-  max_answer_changes?: number;
-  max_questions_to_review?: number | null;
-
-  // Algorithm reference
-  algorithm_id?: string;
 }
 
 interface Question {
@@ -228,6 +215,8 @@ function filterSectionsWithAdaptivity(
 
       result.push(pickedSection);
       processedGroups.add(groupPrefix);
+
+      console.log(`🎲 Adaptive group "${groupPrefix}": picked "${pickedSection}" from [${groupSections.join(', ')}]`);
     }
   }
 
@@ -243,12 +232,7 @@ export default function TakeTestPage() {
   const searchParams = new URLSearchParams(window.location.search);
   const isTestMode = searchParams.get('testMode') === 'true';
 
-  // Detect guided mode from URL parameters (?guided=true&timed=false)
-  const isGuidedMode = searchParams.get('guided') === 'true';
-  const guidedTimed = searchParams.get('timed') !== 'false'; // Default to timed
-
-  // Toggle for showing/hiding correct answers in guided mode
-  const [showCorrectAnswers, setShowCorrectAnswers] = useState(false);
+  console.log('🔍 TakeTestPage mode:', isTestMode ? 'TEST MODE (using _test tables)' : 'PRODUCTION MODE');
 
   const db = isTestMode ? supabaseTest : supabase;
   const dbFrom = (table: string) => isTestMode ? fromTest(table) : supabase.from(table);
@@ -269,7 +253,6 @@ export default function TakeTestPage() {
   const [isPDFTest, setIsPDFTest] = useState(false); // PDF test format
   const [currentPageGroup, setCurrentPageGroup] = useState(0); // For PDF tests: current page group
   const [showStartScreen, setShowStartScreen] = useState(true);
-  const [testLanguage, setTestLanguage] = useState<string>('it'); // Language captured at test start
   const [showSectionSelectionScreen, setShowSectionSelectionScreen] = useState(false);
   const [showPauseScreen, setShowPauseScreen] = useState(false);
   const [showPauseChoiceScreen, setShowPauseChoiceScreen] = useState(false);
@@ -294,10 +277,8 @@ export default function TakeTestPage() {
   const [multipleScreensDetected, setMultipleScreensDetected] = useState(false);
   const [testAnnulled, setTestAnnulled] = useState(false);
   const [pauseChoiceCountdown, setPauseChoiceCountdown] = useState(5);
-  const [pauseChoiceTrigger, setPauseChoiceTrigger] = useState(0); // Trigger to force countdown useEffect to run
   const [showAnswerRequiredMessage, setShowAnswerRequiredMessage] = useState(false);
   const [isPartialAnswer, setIsPartialAnswer] = useState(false);
-  const [showChangeBlockedMessage, setShowChangeBlockedMessage] = useState(false);
   const [showSectionTransition, setShowSectionTransition] = useState(false);
   const [sectionTransitionCountdown, setSectionTransitionCountdown] = useState(5);
   const [isTransitioning, setIsTransitioning] = useState(false); // Prevent race conditions
@@ -311,150 +292,6 @@ export default function TakeTestPage() {
   const [adaptiveAlgorithm, setAdaptiveAlgorithm] = useState<SimpleAdaptiveAlgorithm | ComplexAdaptiveAlgorithm | null>(null); // Algorithm instance
   const [baseQuestionsCompletedPerSection, setBaseQuestionsCompletedPerSection] = useState<Record<string, boolean>>({}); // Track base questions per section
 
-  // Review & Edit feature state (GMAT-style)
-  const [bookmarkedQuestions, setBookmarkedQuestions] = useState<Set<string>>(new Set()); // Question IDs that are bookmarked
-  const [showReviewScreen, setShowReviewScreen] = useState(false); // Show review screen at end of section
-  const [answerChangesUsed, setAnswerChangesUsed] = useState<number>(0); // Number of answer changes made in review
-  const [originalAnswers, setOriginalAnswers] = useState<Record<string, StudentAnswer>>({}); // Answers before review (to track changes)
-  const [isInReviewMode, setIsInReviewMode] = useState(false); // Currently in review mode
-
-  // Toggle bookmark for current question
-  const toggleBookmark = (questionId: string) => {
-    setBookmarkedQuestions(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(questionId)) {
-        newSet.delete(questionId);
-      } else {
-        newSet.add(questionId);
-      }
-      return newSet;
-    });
-  };
-
-  // Check if answer was changed during review
-  const checkAnswerChanged = (questionId: string, newAnswer: StudentAnswer): boolean => {
-    const original = originalAnswers[questionId];
-    if (!original) return false;
-    // Compare all answer fields
-    const originalValue = JSON.stringify({
-      answer: original.answer,
-      msrAnswers: original.msrAnswers,
-      blank1: original.blank1,
-      blank2: original.blank2,
-      taAnswers: original.taAnswers,
-      column1: original.column1,
-      column2: original.column2,
-    });
-    const newValue = JSON.stringify({
-      answer: newAnswer.answer,
-      msrAnswers: newAnswer.msrAnswers,
-      blank1: newAnswer.blank1,
-      blank2: newAnswer.blank2,
-      taAnswers: newAnswer.taAnswers,
-      column1: newAnswer.column1,
-      column2: newAnswer.column2,
-    });
-    return originalValue !== newValue;
-  };
-
-  // Handle answer update with review mode tracking
-  // GMAT rule: 3 CHANGES total (not 3 questions) - changing same question twice = 2 changes
-  const updateAnswer = (questionId: string, updater: (prev: StudentAnswer | undefined) => StudentAnswer) => {
-    // Check if we should block this change BEFORE updating
-    if (isInReviewMode && config?.max_answer_changes !== undefined && config.max_answer_changes > 0) {
-      const currentAnswer = answers[questionId];
-      const newAnswer = updater(currentAnswer);
-
-      // Check if the answer is actually different from current
-      const isDifferentFromCurrent = JSON.stringify(currentAnswer?.answer) !== JSON.stringify(newAnswer?.answer) ||
-        JSON.stringify(currentAnswer?.msrAnswers) !== JSON.stringify(newAnswer?.msrAnswers) ||
-        currentAnswer?.blank1 !== newAnswer?.blank1 ||
-        currentAnswer?.blank2 !== newAnswer?.blank2 ||
-        JSON.stringify(currentAnswer?.taAnswers) !== JSON.stringify(newAnswer?.taAnswers) ||
-        currentAnswer?.column1 !== newAnswer?.column1 ||
-        currentAnswer?.column2 !== newAnswer?.column2;
-
-      // If selecting the same answer, no change needed
-      if (!isDifferentFromCurrent) {
-        return;
-      }
-
-      // Each change counts toward the limit
-      if (answerChangesUsed >= config.max_answer_changes) {
-        // Max changes reached, block the change
-        setShowChangeBlockedMessage(true);
-        setTimeout(() => setShowChangeBlockedMessage(false), 3000);
-        return;
-      }
-
-      // Increment counter and update answer
-      setAnswerChangesUsed(prev => prev + 1);
-
-      // Update the answer
-      setAnswers(prev => ({
-        ...prev,
-        [questionId]: newAnswer
-      }));
-    } else {
-      // Not in review mode or no max_answer_changes set, just update normally
-      setAnswers(prev => ({
-        ...prev,
-        [questionId]: updater(prev[questionId])
-      }));
-    }
-  };
-
-  // Enter review mode - save original answers
-  const enterReviewMode = () => {
-    const currentSectionQuestions = currentSectionQuestionsList;
-    const originals: Record<string, StudentAnswer> = {};
-    currentSectionQuestions.forEach(q => {
-      if (answers[q.id]) {
-        originals[q.id] = { ...answers[q.id] };
-      }
-    });
-    setOriginalAnswers(originals);
-    setAnswerChangesUsed(0);
-    setIsInReviewMode(true);
-    isInReviewModeRef.current = true;
-    setShowReviewScreen(true);
-    showReviewScreenRef.current = true;
-  };
-
-  // Go to specific question from review screen
-  const goToQuestionFromReview = (questionIndex: number) => {
-    setShowReviewScreen(false);
-    showReviewScreenRef.current = false;
-    setCurrentQuestionIndex(questionIndex);
-  };
-
-  // Return to review screen
-  const returnToReviewScreen = () => {
-    setShowReviewScreen(true);
-    showReviewScreenRef.current = true;
-  };
-
-  // Complete review and move to next section
-  const completeReview = () => {
-    setShowReviewScreen(false);
-    showReviewScreenRef.current = false;
-    setIsInReviewMode(false);
-    isInReviewModeRef.current = false;
-    setOriginalAnswers({});
-    setAnswerChangesUsed(0);
-    // Clear bookmarks for this section
-    const currentSectionQuestions = currentSectionQuestionsList;
-    setBookmarkedQuestions(prev => {
-      const newSet = new Set(prev);
-      currentSectionQuestions.forEach(q => newSet.delete(q.id));
-      return newSet;
-    });
-    // Now actually complete the section
-    // This will call completeSection again, but isInReviewMode is now false
-    // so it will proceed with the actual section completion
-    completeSection();
-  };
-
   // Saving and timing state
   const [studentId, setStudentId] = useState<string | null>(null);
   const [currentAttempt, setCurrentAttempt] = useState<number>(1);
@@ -464,13 +301,6 @@ export default function TakeTestPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const isCompletingSectionRef = useRef(false); // Synchronous guard for race condition
-  const pauseChoiceMadeRef = useRef(false); // Prevent double pause choice handling
-  const showPauseChoiceRef = useRef(false); // Ref to track pause choice screen state for StrictMode
-  const currentSectionIndexRef = useRef(currentSectionIndex); // Ref for current section to avoid stale closures in timer
-  const pausesUsedRef = useRef(pausesUsed); // Ref for pauses used to avoid stale closures in timer
-  const isInReviewModeRef = useRef(false); // Ref for review mode to avoid stale closures in timer
-  const showReviewScreenRef = useRef(false); // Ref for review screen to avoid stale closures in timer
 
   // Helper function to get the correct section field based on config
   const getSectionField = (question: Question): string => {
@@ -495,37 +325,13 @@ export default function TakeTestPage() {
     return formatted;
   };
 
-  // Helper to get localized question text based on language captured at test start
-  const getLocalizedQuestionText = (questionData: any): string => {
-    if (!questionData) return '';
-    if (testLanguage === 'en' && questionData.question_text_eng) {
-      return questionData.question_text_eng;
-    }
-    return questionData.question_text || questionData.question || '';
-  };
-
-  // Helper to get localized options based on language captured at test start
-  const getLocalizedOptions = (questionData: any): Record<string, string> => {
-    if (!questionData) return {};
-    if (testLanguage === 'en' && questionData.options_eng) {
-      return questionData.options_eng;
-    }
-    return questionData.options || {};
-  };
-
   // Use selectedQuestions if they've been prepared (for both adaptive and non-adaptive tests)
   const questionsToUse = selectedQuestions.length > 0
     ? selectedQuestions
     : allQuestions;
-  // In no_sections mode, use all questions; otherwise filter by section
-  const sectionQuestions = config?.section_order_mode === 'no_sections'
-    ? questionsToUse
-    : questionsToUse.filter(q => getSectionField(q) === currentSection);
+  const sectionQuestions = questionsToUse.filter(q => getSectionField(q) === currentSection);
   const currentQuestion = sectionQuestions[currentQuestionIndex];
   const totalQuestionsInSection = sectionQuestions.length;
-
-  // Alias for review functions (same as sectionQuestions)
-  const currentSectionQuestionsList = sectionQuestions;
 
   // Calculate total questions expected for THIS section
   const calculateSectionQuestionLimit = (): number => {
@@ -582,18 +388,10 @@ export default function TakeTestPage() {
 
   // Question progression logging
   useEffect(() => {
-    // Question progression tracked
+    if (currentQuestion) {
+      console.log(`📝 Question ${currentQuestionIndex + 1}/${sectionQuestionLimit} - Section: ${currentSection}`);
+    }
   }, [currentQuestion, currentQuestionIndex, currentSection, sectionQuestionLimit]);
-
-  // Keep currentSectionIndexRef in sync with state (for use in timer callbacks to avoid stale closures)
-  useEffect(() => {
-    currentSectionIndexRef.current = currentSectionIndex;
-  }, [currentSectionIndex]);
-
-  // Keep pausesUsedRef in sync with state (for use in timer callbacks to avoid stale closures)
-  useEffect(() => {
-    pausesUsedRef.current = pausesUsed;
-  }, [pausesUsed]);
 
   // Save answers and clean up session before page unload (browser close, refresh, etc.)
   // This ensures "in_progress" status doesn't persist when student leaves
@@ -601,6 +399,7 @@ export default function TakeTestPage() {
     const handleBeforeUnload = async (e: BeforeUnloadEvent) => {
       // Save current answer if any
       if (currentQuestion?.id && answers[currentQuestion.id]) {
+        console.log('💾 Saving answer before page unload...');
         // Try to save synchronously
         await saveAnswer(
           currentQuestion.id,
@@ -640,6 +439,8 @@ export default function TakeTestPage() {
 
       if (type !== 'BOT_ACTION') return;
 
+      console.log('🤖 Bot command received:', action, { answer, questionId });
+
       // Show visual feedback
       setBotAction(`🤖 ${action}`);
       setTimeout(() => setBotAction(null), 2000);
@@ -647,6 +448,7 @@ export default function TakeTestPage() {
       switch (action) {
         case 'START_TEST':
           // Click the "Start Test" button
+          console.log('🤖 Bot starting test...');
           if (showStartScreen) {
             startTest();
           }
@@ -654,6 +456,7 @@ export default function TakeTestPage() {
 
         case 'SELECT_ANSWER':
           // Select the answer in the current question
+          console.log('🤖 Bot selecting answer:', answer);
           if (currentQuestion && answer !== undefined) {
             setAnswers(prev => ({
               ...prev,
@@ -664,11 +467,13 @@ export default function TakeTestPage() {
 
         case 'NEXT_QUESTION':
           // Click the Next button
+          console.log('🤖 Bot clicking Next...');
           goToNextQuestion();
           break;
 
         case 'SUBMIT_TEST':
           // Submit the test
+          console.log('🤖 Bot submitting test...');
           submitTest();
           break;
       }
@@ -679,6 +484,7 @@ export default function TakeTestPage() {
 
     // Send READY message to parent window when page is fully loaded
     if (window.opener && config && currentQuestion) {
+      console.log('📡 Sending READY message to bot control window...');
       window.opener.postMessage({
         type: 'TEST_WINDOW_READY',
         assignmentId
@@ -713,14 +519,10 @@ export default function TakeTestPage() {
       const isCurrentlyFullscreen = !!document.fullscreenElement;
       setIsFullscreen(isCurrentlyFullscreen);
 
-      // Skip fullscreen enforcement in guided mode
-      if (isGuidedMode) {
-        return;
-      }
-
       // Skip fullscreen enforcement on localhost for testing
       const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
       if (isLocalhost) {
+        console.log('🛠️ Fullscreen enforcement disabled on localhost');
         return;
       }
 
@@ -740,7 +542,7 @@ export default function TakeTestPage() {
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-  }, [showStartScreen, showSectionSelectionScreen, showPauseScreen, showPauseChoiceScreen, showCompletionScreen, showExitWarning, testAnnulled, isGuidedMode]);
+  }, [showStartScreen, showSectionSelectionScreen, showPauseScreen, showPauseChoiceScreen, showCompletionScreen, showExitWarning, testAnnulled]);
 
   // Exit warning countdown
   useEffect(() => {
@@ -781,37 +583,21 @@ export default function TakeTestPage() {
   useEffect(() => {
     if (showPauseChoiceScreen) {
       setPauseChoiceCountdown(5);
-      pauseChoiceMadeRef.current = false; // Reset ref when screen shows
     }
   }, [showPauseChoiceScreen]);
 
   // Pause choice countdown (auto-continue after 5 seconds)
-  // Check both state and ref since state may be reset by StrictMode
-  // Use pauseChoiceTrigger to force re-run when pause choice screen should show
   useEffect(() => {
-    try {
-      // Check ref inside useEffect to get current value
-      const isPauseChoiceVisible = showPauseChoiceScreen || showPauseChoiceRef.current;
-      if (isPauseChoiceVisible && pauseChoiceCountdown > 0) {
-        const timer = setTimeout(() => {
-          setPauseChoiceCountdown(prev => prev - 1);
-        }, 1000);
-        return () => clearTimeout(timer);
-      } else if (isPauseChoiceVisible && pauseChoiceCountdown === 0 && !pauseChoiceMadeRef.current) {
-        // Time's up - continue without pause (only if no choice was made)
-        handleSkipPause(true); // true = auto-skip
-      }
-    } catch (error) {
-      // Error in pause choice countdown
+    if (showPauseChoiceScreen && pauseChoiceCountdown > 0) {
+      const timer = setTimeout(() => {
+        setPauseChoiceCountdown(prev => prev - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (showPauseChoiceScreen && pauseChoiceCountdown === 0) {
+      // Time's up - continue without pause
+      handleSkipPause(true); // true = auto-skip
     }
-  }, [showPauseChoiceScreen, pauseChoiceCountdown, pauseChoiceTrigger]);
-
-  // Reset section transition countdown when screen shows
-  useEffect(() => {
-    if (showSectionTransition) {
-      setSectionTransitionCountdown(5);
-    }
-  }, [showSectionTransition]);
+  }, [showPauseChoiceScreen, pauseChoiceCountdown]);
 
   // Section transition countdown (auto-advance after 5 seconds)
   useEffect(() => {
@@ -821,17 +607,17 @@ export default function TakeTestPage() {
       }, 1000);
       return () => clearTimeout(timer);
     } else if (showSectionTransition && sectionTransitionCountdown === 0) {
-      // Time's up - proceed to next section
-      // Use setTimeout(0) to let any pending state updates (like reset) apply first
-      // This handles the race condition where screen shows but countdown hasn't reset yet
-      const timer = setTimeout(() => {
-        // Only proceed if countdown is STILL 0 after state updates
-        // If it was reset to 5, this check will fail and we'll wait for real countdown
-        handleSectionTransitionComplete(true);
-      }, 50);
-      return () => clearTimeout(timer);
+      // Time's up - proceed to next section or pause
+      handleSectionTransitionComplete(true); // true = auto-transition
     }
   }, [showSectionTransition, sectionTransitionCountdown]);
+
+  // Reset section transition countdown when screen shows
+  useEffect(() => {
+    if (showSectionTransition) {
+      setSectionTransitionCountdown(5);
+    }
+  }, [showSectionTransition]);
 
   /**
    * Prepares initial questions based on configuration
@@ -845,6 +631,14 @@ export default function TakeTestPage() {
     config: TestConfig,
     algorithmConfig: any
   ): Question[] {
+    console.log('🔧 prepareInitialQuestions called with:', {
+      totalQuestions: allQuestions.length,
+      adaptivity_mode: config.adaptivity_mode,
+      question_order: config.question_order,
+      questions_per_section: config.questions_per_section,
+      use_base_questions: config.use_base_questions
+    });
+
     // Helper to get correct section field
     const getSection = (q: Question) =>
       config.section_order_mode?.includes('macro_sections') && q.macro_section
@@ -856,8 +650,10 @@ export default function TakeTestPage() {
 
     // PDF TEST SPECIAL HANDLING: NO randomization - keep original order
     if (isPDFTest) {
+      console.log('📄 PDF test detected - keeping original order (no randomization)');
       // Sort by question_number to ensure correct order
       const sortedQuestions = [...allQuestions].sort((a, b) => a.question_number - b.question_number);
+      console.log('✅ PDF test questions kept in original order');
       return sortedQuestions;
     }
 
@@ -873,6 +669,7 @@ export default function TakeTestPage() {
         }
         // Take limited number
         processedQuestions = processedQuestions.slice(0, config.total_questions);
+        console.log(`✅ Single-section test: selected ${processedQuestions.length}/${allQuestions.length} questions (limit: ${config.total_questions})`);
         return processedQuestions;
       }
 
@@ -899,18 +696,24 @@ export default function TakeTestPage() {
         });
 
         processedQuestions = limitedQuestions;
+        console.log('✅ Applied questions_per_section limits:', processedQuestions.length, 'questions selected');
         return processedQuestions;
       }
 
       // CASE 3: No limits configured - return all questions
       if (config.question_order === 'random') {
+        console.log('🔀 Before randomization:', processedQuestions.slice(0, 5).map(q => `Q${q.question_number}`));
         processedQuestions = [...processedQuestions].sort(() => Math.random() - 0.5);
+        console.log('🔀 After randomization:', processedQuestions.slice(0, 5).map(q => `Q${q.question_number}`));
+        console.log('✅ Randomized all questions (no limits)');
       }
 
+      console.log('📊 Non-adaptive mode: returning', processedQuestions.length, 'questions');
       return processedQuestions;
     }
 
     // ADAPTIVE MODE: Continue with adaptive logic below
+    console.log('🎯 Adaptive mode enabled, processing adaptive selection...');
 
     // Handle question randomization for adaptive mode
     if (config.question_order === 'random') {
@@ -990,6 +793,8 @@ export default function TakeTestPage() {
 
         // FALLBACK: If not enough questions with target difficulty, try other difficulties
         if (candidates.length < count) {
+          console.warn(`⚠️ Not enough baseline questions with difficulty ${targetDifficulty} in section ${targetSection}. Found ${candidates.length}, need ${count}. Using fallback.`);
+
           // Get all questions from this section
           const allSectionQuestions = questions.filter(q => getSection(q) === targetSection);
           candidates = allSectionQuestions;
@@ -1063,8 +868,18 @@ export default function TakeTestPage() {
 
       if (assignmentError) throw assignmentError;
 
+      console.log('📊 Assignment loaded from database:', {
+        id: assignment.id,
+        status: assignment.status,
+        current_attempt: assignment.current_attempt,
+        total_attempts: assignment.total_attempts,
+        completion_details: assignment.completion_details,
+        start_time: assignment.start_time
+      });
+
       // Check if test is locked (completed tests are auto-locked)
       if (assignment.status === 'locked') {
+        console.log('🔒 Test is locked - student cannot take test');
         setIsLocked(true);
         setShowStartScreen(false); // Don't show start screen
         setLoading(false);
@@ -1085,7 +900,20 @@ export default function TakeTestPage() {
         const hasSessionMarker = sessionStorage.getItem(`test_session_${assignmentId}`);
         const isPageRefresh = isPageReload || !hasSessionMarker;
 
+        console.log('🔍 Checking stale session:', {
+          status: assignment.status,
+          hasStartTime: !!assignment.start_time,
+          navigationType: navigation?.type,
+          isPageReload,
+          hasSessionMarker: !!hasSessionMarker,
+          isPageRefresh,
+          sessionKey: `test_session_${assignmentId}`,
+          currentAttempt: assignment.current_attempt,
+          totalAttempts: assignment.total_attempts
+        });
+
         if (isPageRefresh) {
+          console.log('🔄 STALE SESSION DETECTED - in_progress status from previous session');
 
           // Clear session marker so it can be set fresh after marking as annulled
           sessionStorage.removeItem(`test_session_${assignmentId}`);
@@ -1101,6 +929,8 @@ export default function TakeTestPage() {
           const newStatus = isLocalhost ? 'annulled' : 'incomplete';
           const reason = 'browser_closed';
           const annulmentReason = isLocalhost ? 'page_refresh_localhost' : 'session_ended';
+
+          console.log(`📝 Marking test as ${newStatus} | Reason: ${reason} | Attempt: ${currentAttemptNum}`);
 
           // Create attempt record with ONLY essential metadata
           const newAttempt = {
@@ -1121,11 +951,13 @@ export default function TakeTestPage() {
           );
 
           if (existingAttemptIndex >= 0) {
+            console.log(`🔄 Updating existing stale session attempt ${currentAttemptNum}`);
             attempts[existingAttemptIndex] = {
               ...attempts[existingAttemptIndex],
               ...newAttempt
             };
           } else {
+            console.log(`➕ Adding new stale session attempt ${currentAttemptNum} to history`);
             attempts.push(newAttempt);
           }
 
@@ -1137,13 +969,19 @@ export default function TakeTestPage() {
             completion_details: { attempts }
           };
 
+          console.log('💾 Updating database with:', updateData);
+
           const { data: updateResult, error: statusError } = await db
             .from(`2V_test_assignments${tableSuffix}`)
             .update(updateData)
             .eq('id', assignmentId)
             .select();
 
-          if (!statusError) {
+          if (statusError) {
+            console.error('❌ Error updating stale session:', statusError);
+          } else {
+            console.log(`✅ Database update successful!`, updateResult);
+            console.log(`✅ Test marked as ${newStatus} | Attempt ${currentAttemptNum} recorded | Total attempts in history: ${attempts.length}`);
             // Update local state
             assignment.status = newStatus;
             assignment.total_attempts = currentAttemptNum;
@@ -1160,14 +998,20 @@ export default function TakeTestPage() {
       setStudentId(assignment.student_id);
       setCurrentAttempt(currentAttemptNum);
 
+      console.log(`📝 Loading test | Assignment: ${assignmentId} | Attempt: ${currentAttemptNum} | Status: ${assignment.status}`);
+
       const testType = assignment['2V_tests'].test_type;
       const exerciseType = assignment['2V_tests'].exercise_type;
       const testFormat = assignment['2V_tests'].format;
 
+      console.log(`📋 Test format: ${testFormat}`);
+
       // Check if this is a PDF test
       if (testFormat === 'pdf') {
+        console.log('📄 PDF test detected - will use PDF layout');
         setIsPDFTest(true);
       } else {
+        console.log('📝 Regular test - will use standard layout');
         setIsPDFTest(false);
       }
 
@@ -1175,12 +1019,7 @@ export default function TakeTestPage() {
       const normalize = (str: string) => str.toLowerCase().replace(/[\s_]+/g, '_');
       const trackTypeNormalized = normalize(exerciseType);
 
-      console.log('🔍 [CONFIG LOADING] Starting config load:', {
-        testType,
-        exerciseType,
-        trackTypeNormalized,
-        testFormat
-      });
+      console.log(`🔍 Looking for config: test_type=${testType}, track_type=${trackTypeNormalized} (original exercise_type=${exerciseType})`);
 
       // Load all configs for this test type, then find by normalized track_type
       const { data: configsData, error: configsError } = await supabase
@@ -1188,136 +1027,90 @@ export default function TakeTestPage() {
         .select('*')
         .eq('test_type', testType);
 
-      if (configsError) {
-        console.error('❌ [CONFIG ERROR] Failed to load configs:', configsError);
-        throw configsError;
-      }
-
-      console.log('📋 [CONFIG DATA] All configs for test type:', configsData);
+      if (configsError) throw configsError;
 
       // Find matching config by normalized track_type (case and space/underscore insensitive)
       const configData = configsData?.find(config =>
         normalize(config.track_type) === trackTypeNormalized
       );
 
-      console.log('✅ [CONFIG MATCH] Found config:', {
-        configData,
-        section_order_mode: configData?.section_order_mode,
-        section_order: configData?.section_order,
-        navigation_mode: configData?.navigation_mode,
-        can_leave_blank: configData?.can_leave_blank
-      });
-
       if (!configData) {
-        console.error('❌ [CONFIG MISSING] No config found for:', {
-          testType,
-          exerciseType,
-          availableConfigs: configsData?.map(c => ({ track_type: c.track_type, normalized: normalize(c.track_type) }))
-        });
+        console.error(`❌ Config not found for test_type=${testType}, track_type=${trackTypeNormalized}`);
         alert('Test configuration not found. Please contact your instructor.');
         navigate(-1);
         return;
       }
 
+      console.log('✅ Config found:', configData);
+      console.log('🎯 Adaptivity mode:', configData.adaptivity_mode);
+
       setConfig(configData);
 
       // Load algorithm configuration if adaptive mode is enabled
       let algorithmConfigData = null;
-      if (configData.adaptivity_mode === 'adaptive' && configData.algorithm_id) {
-        // Fetch algorithm config by ID from the algorithm library
+      if (configData.adaptivity_mode === 'adaptive') {
+        console.log('⚠️ ADAPTIVE MODE DETECTED - Loading algorithm config...');
         const { data: algConfig, error: algError } = await supabase
           .from('2V_algorithm_config')
           .select('*')
-          .eq('id', configData.algorithm_id)
-          .single();
+          .eq('test_type', testType)
+          .eq('track_type', trackTypeNormalized)
+          .eq('algorithm_category', 'adaptive')
+          .maybeSingle();
 
-        if (!algError && algConfig) {
+        if (algError) {
+          console.error('Error loading algorithm config:', algError);
+        } else if (algConfig) {
           algorithmConfigData = algConfig;
           setAlgorithmConfig(algConfig);
         } else {
-          console.warn('Algorithm not found for id:', configData.algorithm_id);
+          console.warn('Adaptive mode enabled but no algorithm config found');
         }
       }
 
       // Load test questions (always from real tables - questions are read-only reference data)
       // Questions are linked by test_id
       const testId = assignment['2V_tests'].id;
+      console.log(`📚 Loading questions for test_id: ${testId}`);
 
-      // For no_sections mode, order only by question_number; otherwise by section then question_number
-      const questionsQuery = supabase
+      const { data: questions, error: questionsError } = await supabase
         .from('2V_questions')
         .select('*')
-        .eq('test_id', testId);
-
-      if (configData.section_order_mode === 'no_sections') {
-        questionsQuery.order('question_number');
-      } else {
-        questionsQuery.order('section').order('question_number');
-      }
-
-      const { data: questions, error: questionsError } = await questionsQuery;
+        .eq('test_id', testId)
+        .order('section')
+        .order('question_number');
 
       if (questionsError) throw questionsError;
 
-      // Parse question_data and answers fields if they are strings
-      const parsedQuestions = (questions || []).map(q => ({
-        ...q,
-        question_data: typeof q.question_data === 'string'
-          ? JSON.parse(q.question_data)
-          : q.question_data,
-        answers: typeof q.answers === 'string'
-          ? JSON.parse(q.answers)
-          : q.answers
-      }));
-
-      setAllQuestions(parsedQuestions);
-      setQuestionPool(parsedQuestions); // Store full pool
+      setAllQuestions(questions || []);
+      setQuestionPool(questions || []); // Store full pool
 
       // Set up sections based on config
       let sectionsToUse: string[] = [];
 
-      console.log('🎯 [SECTION SETUP] Starting section setup:', {
-        section_order_mode: configData.section_order_mode,
-        section_order: configData.section_order,
-        total_questions: questions?.length
-      });
-
-      // Check if this is a no-sections test first
-      if (configData.section_order_mode === 'no_sections') {
-        // For no_sections mode, create a single virtual section with all questions
-        sectionsToUse = ['All Questions'];
-        console.log('📝 [SECTION MODE] NO SECTIONS - treating as single continuous test');
-      } else if (configData.section_order_mode === 'mandatory' && configData.section_order) {
+      if (configData.section_order_mode === 'mandatory' && configData.section_order) {
         sectionsToUse = configData.section_order;
-        console.log('📝 [SECTION MODE] Using MANDATORY sections from config:', sectionsToUse);
       } else if (configData.section_order_mode?.includes('macro_sections') && configData.section_order) {
         // Use section_order from config when using macro_sections mode
         sectionsToUse = configData.section_order;
-        console.log('📝 [SECTION MODE] Using MACRO_SECTIONS from config:', sectionsToUse);
-      } else if (configData.section_order_mode !== 'no_sections') {
-        // Get unique sections from questions only if not in no_sections mode
+      } else {
+        // Get unique sections from questions
         const sectionField = configData.section_order_mode?.includes('macro_sections')
           ? 'macro_section'
           : 'section';
         sectionsToUse = Array.from(new Set(
           questions?.map(q => (q as any)[sectionField]).filter(Boolean) || []
         ));
-        console.log('📝 [SECTION MODE] Using sections from questions:', {
-          sectionField,
-          sectionsToUse,
-          section_order_mode: configData.section_order_mode
-        });
       }
 
       // Apply section adaptivity filtering if configured
       if (configData.section_adaptivity_config && Object.keys(configData.section_adaptivity_config).length > 0) {
-        console.log('🔧 [SECTION ADAPTIVITY] Applying adaptivity filter:', configData.section_adaptivity_config);
+        console.log('🎯 Applying section adaptivity config:', configData.section_adaptivity_config);
         sectionsToUse = filterSectionsWithAdaptivity(sectionsToUse, configData.section_adaptivity_config);
-        console.log('🔧 [SECTION ADAPTIVITY] Filtered sections:', sectionsToUse);
+        console.log('✅ Filtered sections:', sectionsToUse);
       }
 
       setSections(sectionsToUse);
-      console.log('✅ [SECTION SETUP] Final sections set:', sectionsToUse);
 
       // Initialize question selection based on config
       const initialQuestions = prepareInitialQuestions(
@@ -1348,8 +1141,8 @@ export default function TakeTestPage() {
         setAdaptiveAlgorithm(algorithm);
       }
 
-      // Initialize timer if needed (skip if guided mode with no time limit)
-      if (configData.total_time_minutes && (!isGuidedMode || guidedTimed)) {
+      // Initialize timer if needed
+      if (configData.total_time_minutes) {
         setTimeRemaining(configData.total_time_minutes * 60); // Convert to seconds
       }
 
@@ -1362,7 +1155,10 @@ export default function TakeTestPage() {
           .eq('assignment_id', assignmentId)
           .eq('attempt_number', currentAttemptNumber);
 
-        if (!answersError && existingAnswers) {
+        if (answersError) {
+          console.error('Error loading existing answers:', answersError);
+        } else if (existingAnswers) {
+          console.log(`📥 Loading answers for attempt ${currentAttemptNumber}`);
 
           // Transform loaded answers back to local state format
           const loadedAnswers: Record<string, any> = {};
@@ -1406,10 +1202,12 @@ export default function TakeTestPage() {
           });
 
           setAnswers(loadedAnswers);
+          console.log(`✅ Loaded ${Object.keys(loadedAnswers).length} existing answers`);
         }
       }
 
     } catch (err) {
+      console.error('Error loading test data:', err);
       alert('Failed to load test. Please try again.');
       navigate(-1);
     } finally {
@@ -1433,6 +1231,7 @@ export default function TakeTestPage() {
       .single();
 
     if (assignmentError || !assignment) {
+      console.error('❌ Error fetching assignment:', assignmentError);
       return;
     }
 
@@ -1440,6 +1239,9 @@ export default function TakeTestPage() {
     if (assignment.status === 'annulled' || assignment.status === 'incomplete') {
       const newAttempt = (assignment.current_attempt || 1) + 1;
       const newTotalAttempts = assignment.total_attempts || (assignment.current_attempt || 1);
+
+      console.log(`🔄 RESTARTING ${assignment.status} test`);
+      console.log(`📝 Incrementing attempt: ${assignment.current_attempt} → ${newAttempt}`);
 
       const { error: updateError } = await supabase
         .from('2V_test_assignments')
@@ -1452,9 +1254,11 @@ export default function TakeTestPage() {
         .eq('id', assignmentId);
 
       if (updateError) {
+        console.error('❌ Error incrementing attempt:', updateError);
         return;
       }
 
+      console.log(`✅ Attempt incremented: ${assignment.current_attempt} → ${newAttempt}`);
       setCurrentAttempt(newAttempt);
     } else if (assignment.status === 'unlocked') {
       // First time starting this test
@@ -1467,8 +1271,11 @@ export default function TakeTestPage() {
         .eq('id', assignmentId);
 
       if (updateError) {
+        console.error('❌ Error updating status:', updateError);
         return;
       }
+
+      console.log('✅ Test started - status updated to in_progress');
     }
 
 
@@ -1487,7 +1294,6 @@ export default function TakeTestPage() {
 
     setShowStartScreen(false);
     setShowSectionSelectionScreen(false);
-    setTestLanguage(i18n.language); // Capture language at test start
     setTestStartTime(new Date());
     setSectionStartTime(new Date());
 
@@ -1541,6 +1347,8 @@ export default function TakeTestPage() {
 
       // FALLBACK: If not enough questions with target difficulty
       if (baseQuestionsCandidates.length < baseCount) {
+        console.warn(`⚠️ Not enough baseline questions with difficulty ${baselineDifficulty} in section ${firstSection}. Found ${baseQuestionsCandidates.length}, need ${baseCount}. Using fallback.`);
+
         // Get all questions from this section
         const allSectionQuestions = questionPool.filter(q => getSection(q) === firstSection);
 
@@ -1568,7 +1376,6 @@ export default function TakeTestPage() {
     }
 
     setShowSectionSelectionScreen(false);
-    setTestLanguage(i18n.language); // Capture language at test start
     setTestStartTime(new Date());
     setSectionStartTime(new Date());
 
@@ -1617,25 +1424,16 @@ export default function TakeTestPage() {
     setDraggedSectionIndex(null);
   }
 
-  function startSectionTimer(sectionOverride?: string) {
+  function startSectionTimer() {
     // Clear any existing timer
     if (timerRef.current) clearInterval(timerRef.current);
 
-    // Skip timer in guided mode with no time limit
-    if (isGuidedMode && !guidedTimed) {
-      setTimeRemaining(null);
-      return;
-    }
-
-    // Use override section if provided (to avoid stale closure issues), otherwise use current section
-    const section = sectionOverride || currentSection;
-
-    // Get time for section from config
+    // Get time for current section from config
     let sectionTime: number | null = null;
 
-    if (config?.time_per_section && section) {
+    if (config?.time_per_section && currentSection) {
       // Specific time per section
-      sectionTime = config.time_per_section[section] || null;
+      sectionTime = config.time_per_section[currentSection] || null;
     } else if (config?.total_time_minutes && sections.length > 0) {
       // Proportional time: divide total time by number of sections
       sectionTime = Math.round(config.total_time_minutes / sections.length);
@@ -1645,10 +1443,7 @@ export default function TakeTestPage() {
       setTimeRemaining(sectionTime * 60); // Convert to seconds
       timerRef.current = setInterval(() => {
         setTimeRemaining(prev => {
-          if (prev === null) return prev;
-          if (prev <= 0) return 0; // Already at 0, don't call handleTimeUp again
-          if (prev === 1) {
-            // Transitioning to 0 - call handleTimeUp once
+          if (prev === null || prev <= 0) {
             handleTimeUp();
             return 0;
           }
@@ -1661,93 +1456,9 @@ export default function TakeTestPage() {
   function handleTimeUp() {
     if (timerRef.current) clearInterval(timerRef.current);
 
-    // If in review mode, close the review screen and complete the review
-    // Use refs to get actual values (avoids stale closure in timer callbacks)
-    if (isInReviewModeRef.current || showReviewScreenRef.current) {
-      setShowReviewScreen(false);
-      showReviewScreenRef.current = false;
-      setIsInReviewMode(false);
-      isInReviewModeRef.current = false;
-      setOriginalAnswers({});
-      setAnswerChangesUsed(0);
-      // Call completeSection with a flag to skip the review mode check
-      completeSectionAfterTimeUp();
-      return;
-    }
-
     // Complete the section instead of submitting the entire test
     // This will handle navigation to next section, pause screens, or final submission
     completeSection();
-  }
-
-  // Special version of completeSection that skips review mode check (called when time expires)
-  function completeSectionAfterTimeUp() {
-    // Prevent race condition: use ref for synchronous check
-    if (isCompletingSectionRef.current) {
-      return;
-    }
-
-    // Set ref immediately for synchronous guard
-    isCompletingSectionRef.current = true;
-
-    // Use refs to get actual values (avoids stale closure in timer callbacks)
-    const actualCurrentSection = sections[currentSectionIndexRef.current];
-    const actualCurrentSectionIndex = currentSectionIndexRef.current;
-    const actualPausesUsed = pausesUsedRef.current;
-
-    setIsCompletingSection(true);
-
-    // Clear the section timer to prevent it from running during pause
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-
-    // Check for mandatory pause
-    if (config?.pause_mode === 'between_sections' &&
-        config.pause_sections?.includes(actualCurrentSection)) {
-      const pauseDuration = (config.pause_duration_minutes || 5) * 60;
-      setPauseTimeRemaining(pauseDuration);
-      setShowPauseScreen(true);
-      setTimeout(() => {
-        setShowPauseScreen(false);
-        setPauseTimeRemaining(null);
-        setIsCompletingSection(false);
-        isCompletingSectionRef.current = false;
-        moveToNextSection(actualCurrentSectionIndex);
-      }, pauseDuration * 1000);
-      return;
-    }
-
-    // Check for user choice pause (only if not the last section and pauses remaining)
-    if (config?.pause_mode === 'user_choice' &&
-        actualCurrentSectionIndex < sections.length - 1 &&
-        actualPausesUsed < (config?.max_pauses || 0)) {
-      // IMPORTANT: Reset countdown and ref BEFORE showing the screen
-      pauseChoiceMadeRef.current = false;
-      showPauseChoiceRef.current = true;
-      setPauseChoiceCountdown(5);
-      setPauseChoiceTrigger(prev => prev + 1);
-      setShowPauseChoiceScreen(true);
-      setTimeout(() => {
-        setIsCompletingSection(false);
-        isCompletingSectionRef.current = false;
-      }, 500);
-      return;
-    }
-
-    // No pause - show transition message (if not the last section)
-    if (actualCurrentSectionIndex < sections.length - 1) {
-      setShowSectionTransition(true);
-      setTimeout(() => {
-        setIsCompletingSection(false);
-        isCompletingSectionRef.current = false;
-      }, 500);
-      return;
-    }
-
-    // Last section - move to completion
-    moveToNextSection(actualCurrentSectionIndex);
   }
 
   function handleAnswerSelect(answer: string) {
@@ -1755,33 +1466,29 @@ export default function TakeTestPage() {
 
     // Extra safety: reject if time has expired
     if (timeRemaining !== null && timeRemaining <= 0) {
+      console.log('⚠️ Time expired, ignoring answer selection');
       return;
     }
 
-    updateAnswer(currentQuestion.id, (prev) => ({
-      questionId: currentQuestion.id,
-      answer,
-      timeSpent: prev?.timeSpent || 0,
-      flagged: prev?.flagged || false,
+    setAnswers(prev => ({
+      ...prev,
+      [currentQuestion.id]: {
+        questionId: currentQuestion.id,
+        answer,
+        timeSpent: prev[currentQuestion.id]?.timeSpent || 0,
+        flagged: prev[currentQuestion.id]?.flagged || false,
+      }
     }));
 
     // Record response with adaptive algorithm if enabled
     if (adaptiveAlgorithm && config?.adaptivity_mode === 'adaptive') {
-      // Get correct answer from the right place (answers JSONB field for GMAT, correct_answer for others)
-      const answersData = typeof currentQuestion.answers === 'string'
-        ? JSON.parse(currentQuestion.answers)
-        : currentQuestion.answers;
-      const correctAnswerData = answersData?.correct_answer || currentQuestion.correct_answer;
-
-      // Normalize correct answer (may be array or string)
-      const correctAnswer = Array.isArray(correctAnswerData) ? correctAnswerData[0] : correctAnswerData;
-
-      // Compare (case-insensitive for letter answers)
-      const normalizedAnswer = typeof answer === 'string' ? answer.toUpperCase() : answer;
-      const normalizedCorrect = typeof correctAnswer === 'string' ? correctAnswer.toUpperCase() : correctAnswer;
-      const isCorrect = normalizedAnswer === normalizedCorrect;
-
+      const isCorrect = answer === currentQuestion.correct_answer;
       adaptiveAlgorithm.recordResponse(currentQuestion, isCorrect);
+      console.log('Recorded adaptive response:', {
+        questionId: currentQuestion.id,
+        isCorrect,
+        currentState: adaptiveAlgorithm.getState()
+      });
     }
   }
 
@@ -1790,6 +1497,7 @@ export default function TakeTestPage() {
 
     // Extra safety: reject if time has expired
     if (timeRemaining !== null && timeRemaining <= 0) {
+      console.log('⚠️ Time expired, ignoring flag toggle');
       return;
     }
 
@@ -1808,48 +1516,29 @@ export default function TakeTestPage() {
   }
 
   function canGoBack(): boolean {
-    if (!config) {
-      console.log('🚫 [NAV] No config, cannot go back');
-      return false;
-    }
+    if (!config) return false;
 
     // Can't go back if at first question of first section
-    if (currentSectionIndex === 0 && currentQuestionIndex === 0) {
-      console.log('🚫 [NAV] At first question, cannot go back');
-      return false;
-    }
+    if (currentSectionIndex === 0 && currentQuestionIndex === 0) return false;
 
     // Check navigation within section
     if (currentQuestionIndex > 0 && config.navigation_mode === 'back_forward') {
-      console.log('✅ [NAV] Can go back within section:', {
-        currentQuestionIndex,
-        navigation_mode: config.navigation_mode
-      });
       return true;
     }
 
     // Check navigation between sections
     if (currentQuestionIndex === 0 && currentSectionIndex > 0 &&
         config.navigation_between_sections === 'back_forward') {
-      console.log('✅ [NAV] Can go back between sections:', {
-        currentSectionIndex,
-        navigation_between_sections: config.navigation_between_sections
-      });
       return true;
     }
 
-    console.log('🚫 [NAV] Cannot go back:', {
-      currentQuestionIndex,
-      currentSectionIndex,
-      navigation_mode: config.navigation_mode,
-      navigation_between_sections: config.navigation_between_sections
-    });
     return false;
   }
 
   async function goToPreviousQuestion() {
     // Extra safety: reject if time has expired
     if (timeRemaining !== null && timeRemaining <= 0) {
+      console.log('⚠️ Time expired, ignoring click');
       return;
     }
 
@@ -1857,6 +1546,7 @@ export default function TakeTestPage() {
 
     // Save current answer before navigating back
     if (currentQuestion?.id && answers[currentQuestion.id]) {
+      console.log('💾 Saving answer before going back...');
       await saveAnswer(
         currentQuestion.id,
         answers[currentQuestion.id],
@@ -1887,6 +1577,7 @@ export default function TakeTestPage() {
     retryCount: number = 0
   ): Promise<boolean> {
     if (!assignmentId || !studentId) {
+      console.error('❌ Cannot save answer: missing assignmentId or studentId');
       return false;
     }
 
@@ -1926,12 +1617,12 @@ export default function TakeTestPage() {
             part2: answerData.column2 || null
           }
         };
-      } else if (answerData.answer !== undefined) {
-        // Simple question: single answer (can be null for flagged but unanswered)
+      } else if (answerData.answer) {
+        // Simple question: single answer
         jsonbAnswer = { answer: answerData.answer };
       } else {
-        // No answer data at all - still save for flagged status
-        jsonbAnswer = { answer: null };
+        console.error('❌ Unknown answer format:', answerData);
+        return false;
       }
 
       // Upsert answer to database (uses test tables in test mode)
@@ -1946,11 +1637,6 @@ export default function TakeTestPage() {
           answer: jsonbAnswer,
           is_flagged: isFlagged,
           time_spent_seconds: timeSpentSeconds,
-          // Guided mode fields
-          is_guided: isGuidedMode,
-          guided_settings: isGuidedMode ? {
-            timed: guidedTimed
-          } : null,
         }, {
           onConflict: 'assignment_id,question_id,attempt_number'
         });
@@ -1958,6 +1644,8 @@ export default function TakeTestPage() {
       if (error) {
         throw error;
       }
+
+      console.log(`✅ Answer saved (${isTestMode ? 'TEST DB' : 'PROD DB'}) | Assignment: ${assignmentId} | Question: ${questionId} | Time: ${timeSpentSeconds}s`);
 
       // Update assignment status to 'in_progress' on first answer (if still unlocked)
       // Note: annulled/incomplete transitions are now handled in loadTestData
@@ -1970,13 +1658,20 @@ export default function TakeTestPage() {
         .eq('id', assignmentId)
         .eq('status', 'unlocked');
 
+      if (statusError && statusError.code !== 'PGRST116') {
+        console.error('⚠️ Error updating assignment status:', statusError);
+      }
+
       setIsSaving(false);
       return true;
 
     } catch (error: any) {
+      console.error(`❌ Error saving answer (attempt ${retryCount + 1}/3):`, error);
+
       // Retry logic with exponential backoff
       if (retryCount < 2) {
         const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s
+        console.log(`🔄 Retrying in ${delay}ms...`);
 
         await new Promise(resolve => setTimeout(resolve, delay));
         return saveAnswer(questionId, answerData, isFlagged, retryCount + 1);
@@ -1992,11 +1687,13 @@ export default function TakeTestPage() {
   async function goToNextQuestion() {
     // Extra safety: reject if time has expired
     if (timeRemaining !== null && timeRemaining <= 0) {
+      console.log('⚠️ Time expired, ignoring click');
       return;
     }
 
     // Save current answer immediately before navigating
     if (currentQuestion?.id && answers[currentQuestion.id]) {
+      console.log(`💾 Saving answer before navigation | Assignment: ${assignmentId} | Question: ${currentQuestion.id}`);
       await saveAnswer(
         currentQuestion.id,
         answers[currentQuestion.id],
@@ -2094,6 +1791,8 @@ export default function TakeTestPage() {
         // we need to transition to adaptive mode, so we check if the NEXT question index would be >= baseline count
         baseQuestionsCompletedForSection = (currentQuestionIndex + 1) >= baselineQuestionsInSection.length;
 
+        console.log(`🔍 Baseline check: currentQuestionIndex=${currentQuestionIndex}, nextIndex=${currentQuestionIndex + 1}, baselineCount=${baselineQuestionsInSection.length}, completed=${baseQuestionsCompletedForSection}`);
+
         // Also check if marked as completed
         if (!baseQuestionsCompletedPerSection[currentSection] && baseQuestionsCompletedForSection) {
           setBaseQuestionsCompletedPerSection(prev => ({ ...prev, [currentSection]: true }));
@@ -2131,6 +1830,8 @@ export default function TakeTestPage() {
         const availableQuestions = questionPool.filter(
           q => !answeredQuestionIds.has(q.id) && getSectionField(q) === currentSection
         );
+
+        console.log(`📊 Available questions: ${availableQuestions.length}, Already shown: ${sectionSelectedQuestions.length}, Target: ${questionLimitForSection}`);
 
         if (availableQuestions.length > 0) {
           let nextQuestion;
@@ -2195,36 +1896,18 @@ export default function TakeTestPage() {
   }
 
   function completeSection() {
-    // Prevent race condition: use ref for synchronous check
-    if (isCompletingSectionRef.current) {
+    // Prevent race condition: if already completing section, ignore this call
+    if (isCompletingSection) {
+      console.log('⚠️ Already completing section, ignoring duplicate call');
       return;
     }
 
-    // Check if review mode is enabled and not already in review
-    if (config?.allow_review_at_end && !isInReviewMode) {
-      enterReviewMode();
-      return;
-    }
-
-    // Set ref immediately for synchronous guard
-    isCompletingSectionRef.current = true;
-
-    // Use refs to get actual values (avoids stale closure in timer callbacks)
-    const actualCurrentSection = sections[currentSectionIndexRef.current];
-    const actualCurrentSectionIndex = currentSectionIndexRef.current;
-    const actualPausesUsed = pausesUsedRef.current;
-
+    console.log('✅ Completing section:', currentSection);
     setIsCompletingSection(true);
-
-    // Clear the section timer to prevent it from running during pause
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
 
     // Check for mandatory pause
     if (config?.pause_mode === 'between_sections' &&
-        config.pause_sections?.includes(actualCurrentSection)) {
+        config.pause_sections?.includes(currentSection)) {
       const pauseDuration = (config.pause_duration_minutes || 5) * 60;
       setPauseTimeRemaining(pauseDuration);
       setShowPauseScreen(true);
@@ -2232,61 +1915,53 @@ export default function TakeTestPage() {
         setShowPauseScreen(false);
         setPauseTimeRemaining(null);
         setIsCompletingSection(false);
-        isCompletingSectionRef.current = false;
-        moveToNextSection(actualCurrentSectionIndex);
+        moveToNextSection();
       }, pauseDuration * 1000);
       return;
     }
 
     // Check for user choice pause (only if not the last section and pauses remaining)
     if (config?.pause_mode === 'user_choice' &&
-        actualCurrentSectionIndex < sections.length - 1 &&
-        actualPausesUsed < (config?.max_pauses || 0)) {
-      // IMPORTANT: Reset countdown and ref BEFORE showing the screen
-      pauseChoiceMadeRef.current = false;
-      showPauseChoiceRef.current = true; // Set ref to persist across StrictMode remounts
+        currentSectionIndex < sections.length - 1 &&
+        pausesUsed < (config?.max_pauses || 0)) {
+      // IMPORTANT: Reset countdown BEFORE showing the screen to avoid race condition
       setPauseChoiceCountdown(5);
-      setPauseChoiceTrigger(prev => prev + 1); // Trigger useEffect to start countdown
       setShowPauseChoiceScreen(true);
       // Reset flag when user makes choice
-      setTimeout(() => {
-        setIsCompletingSection(false);
-        isCompletingSectionRef.current = false;
-      }, 500);
+      setTimeout(() => setIsCompletingSection(false), 500);
       return;
     }
 
     // No pause - show transition message (if not the last section)
-    if (actualCurrentSectionIndex < sections.length - 1) {
+    if (currentSectionIndex < sections.length - 1) {
       setShowSectionTransition(true);
       // Reset flag when transition completes
-      setTimeout(() => {
-        setIsCompletingSection(false);
-        isCompletingSectionRef.current = false;
-      }, 500);
+      setTimeout(() => setIsCompletingSection(false), 500);
       return;
     }
 
     // Last section - move to completion
-    // Note: Don't reset refs here - let submitTest handle completion
-    // This prevents race conditions from multiple timer callbacks
-    moveToNextSection(actualCurrentSectionIndex);
+    setIsCompletingSection(false);
+    moveToNextSection();
   }
 
   function handleSectionTransitionComplete(isAuto = false) {
     // Extra safety: reject manual clicks if countdown has expired (allow auto-transition)
     if (!isAuto && sectionTransitionCountdown <= 0) {
+      console.log('⚠️ Countdown expired, ignoring click');
       return;
     }
 
     // Prevent race condition: if already transitioning, ignore this call
     if (isTransitioning) {
+      console.log('⚠️ Already transitioning, ignoring duplicate call');
       return;
     }
 
+    console.log('✅ Section transition complete, moving to next section');
     setIsTransitioning(true);
     setShowSectionTransition(false);
-    moveToNextSection(currentSectionIndexRef.current);
+    moveToNextSection();
     // Reset flag after a short delay to allow state updates
     setTimeout(() => setIsTransitioning(false), 500);
   }
@@ -2303,6 +1978,7 @@ export default function TakeTestPage() {
         .single();
 
       if (fetchError) {
+        console.error('Error fetching completion_details for pause save:', fetchError);
         return;
       }
 
@@ -2345,19 +2021,22 @@ export default function TakeTestPage() {
         .update({ completion_details: { attempts } })
         .eq('id', assignmentId);
 
+      if (updateError) {
+        console.error('Error saving pause event to database:', updateError);
+      } else {
+        console.log(`✅ Pause event saved to database: ${action} in ${currentSection}`);
+      }
     } catch (err) {
-      // Error in savePauseEventToDatabase
+      console.error('Error in savePauseEventToDatabase:', err);
     }
   }
 
   function handleTakePause() {
-    // Extra safety: reject if countdown has expired or choice already made
-    if (pauseChoiceCountdown <= 0 || pauseChoiceMadeRef.current) {
+    // Extra safety: reject if countdown has expired
+    if (pauseChoiceCountdown <= 0) {
+      console.log('⚠️ Countdown expired, ignoring click');
       return;
     }
-
-    // Mark choice as made immediately
-    pauseChoiceMadeRef.current = true;
 
     setPausesUsed(prev => prev + 1);
     // Record pause event in state
@@ -2371,7 +2050,6 @@ export default function TakeTestPage() {
     // Save to database immediately
     savePauseEventToDatabase('pause_taken');
 
-    showPauseChoiceRef.current = false; // Clear ref
     setShowPauseChoiceScreen(false);
     const pauseDuration = (config?.pause_duration_minutes || 5) * 60;
     setPauseTimeRemaining(pauseDuration);
@@ -2379,21 +2057,16 @@ export default function TakeTestPage() {
     setTimeout(() => {
       setShowPauseScreen(false);
       setPauseTimeRemaining(null);
-      moveToNextSection(currentSectionIndexRef.current);
+      moveToNextSection();
     }, pauseDuration * 1000);
   }
 
   function handleSkipPause(isAutoSkip = false) {
-    // Extra safety: reject if choice already made or countdown expired (for manual clicks)
-    if (pauseChoiceMadeRef.current) {
-      return;
-    }
+    // Extra safety: reject manual clicks if countdown has expired (allow auto-skip)
     if (!isAutoSkip && pauseChoiceCountdown <= 0) {
+      console.log('⚠️ Countdown expired, ignoring click');
       return;
     }
-
-    // Mark choice as made immediately
-    pauseChoiceMadeRef.current = true;
 
     const action = isAutoSkip ? 'pause_auto_skipped' : 'pause_skipped';
 
@@ -2410,17 +2083,13 @@ export default function TakeTestPage() {
 
     // Reset countdown for next time (defensive measure)
     setPauseChoiceCountdown(5);
-    showPauseChoiceRef.current = false; // Clear ref
     setShowPauseChoiceScreen(false);
-    moveToNextSection(currentSectionIndexRef.current);
+    moveToNextSection();
   }
 
-  function moveToNextSection(sectionIndexOverride?: number) {
-    // Use override if provided (to avoid stale closure issues), otherwise use state
-    const currentIndex = sectionIndexOverride !== undefined ? sectionIndexOverride : currentSectionIndex;
-
-    if (currentIndex < sections.length - 1) {
-      const nextSectionIndex = currentIndex + 1;
+  function moveToNextSection() {
+    if (currentSectionIndex < sections.length - 1) {
+      const nextSectionIndex = currentSectionIndex + 1;
       const nextSection = sections[nextSectionIndex];
 
       setCurrentSectionIndex(nextSectionIndex);
@@ -2428,15 +2097,10 @@ export default function TakeTestPage() {
       setSectionStartTime(new Date());
 
 
-      // For adaptive mode with per_section base questions, reset algorithm state and add base questions for new section
+      // For adaptive mode with per_section base questions, add base questions for new section
       if (config?.adaptivity_mode === 'adaptive' &&
           config?.use_base_questions &&
           config?.base_questions_scope === 'per_section') {
-
-        // Reset adaptive algorithm state for new section
-        if (adaptiveAlgorithm) {
-          adaptiveAlgorithm.resetForNewSection();
-        }
 
         // Determine baseline difficulty
         let baselineDifficulty = config.baseline_difficulty || 2;
@@ -2486,6 +2150,7 @@ export default function TakeTestPage() {
 
         // FALLBACK: If not enough questions with target difficulty
         if (nextSectionBaseQuestionsCandidates.length < baseCount) {
+          console.warn(`⚠️ Not enough baseline questions with difficulty ${baselineDifficulty} in section ${nextSection}. Found ${nextSectionBaseQuestionsCandidates.length}, need ${baseCount}. Using fallback.`);
 
           // Get all questions from this section
           const allSectionQuestions = questionPool.filter(q => getSection(q) === nextSection);
@@ -2513,8 +2178,8 @@ export default function TakeTestPage() {
         setSelectedQuestions(prev => [...prev, ...baseQuestionsForSection]);
       }
 
-      // Restart timer for new section (pass nextSection to avoid stale closure)
-      startSectionTimer(nextSection);
+      // Restart timer for new section
+      startSectionTimer();
     } else {
       // Test complete
       submitTest();
@@ -2524,15 +2189,20 @@ export default function TakeTestPage() {
   async function submitTest() {
     // Prevent double submission
     if (submitting) {
+      console.log('⚠️ Test is already being submitted, ignoring duplicate call');
       return;
     }
 
     setSubmitting(true);
+    console.log('🏁 Submitting test - all answers already saved in database');
 
     if (timerRef.current) clearInterval(timerRef.current);
 
+    // ❌ REMOVED: test_questions tracking (no longer needed, using answers.created_at instead)
+
     // Save final answer if any
     if (currentQuestion?.id && answers[currentQuestion.id]) {
+      console.log('💾 Saving final answer...');
       await saveAnswer(
         currentQuestion.id,
         answers[currentQuestion.id],
@@ -2549,10 +2219,13 @@ export default function TakeTestPage() {
         throw new Error('Failed to save completion details');
       }
 
+      console.log('✅ Test submission completed successfully');
+
       // Show completion screen
       setShowCompletionScreen(true);
       setSubmitting(false);
     } catch (err) {
+      console.error('❌ Error submitting test:', err);
       setSubmitting(false);
       alert('Error submitting test. Please contact your instructor.');
     }
@@ -2570,17 +2243,13 @@ export default function TakeTestPage() {
 
   // Check for multiple screens
   async function checkMultipleScreens(): Promise<boolean> {
-    // Disable multiple screen detection in guided mode
-    if (isGuidedMode) {
-      return false;
-    }
-
     // Disable multiple screen detection on localhost for development
     const isLocalhost = window.location.hostname === 'localhost' ||
                         window.location.hostname === '127.0.0.1' ||
                         window.location.hostname === '';
 
     if (isLocalhost) {
+      console.log('🛠️ Multiple screen detection disabled on localhost');
       return false;
     }
 
@@ -2602,20 +2271,17 @@ export default function TakeTestPage() {
       // Fallback: return false if API not available
       return false;
     } catch (err) {
+      console.error('Error checking screens:', err);
       return false;
     }
   }
 
   // Enter fullscreen mode
   function enterFullscreen() {
-    // Skip fullscreen in guided mode
-    if (isGuidedMode) {
-      return;
-    }
-
     // Skip fullscreen on localhost for testing
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     if (isLocalhost) {
+      console.log('🛠️ Fullscreen request skipped on localhost');
       return;
     }
 
@@ -2636,12 +2302,18 @@ export default function TakeTestPage() {
     annulmentReason?: string
   ) {
     try {
+      console.log('💾 saveCompletionDetails called:', { status, reason, annulmentReason, currentAttempt });
+
       // Get existing attempts history from database
       const { data: currentAssignment, error: fetchError } = await supabase
         .from('2V_test_assignments')
         .select('completion_details, start_time, current_attempt, total_attempts')
         .eq('id', assignmentId)
         .single();
+
+      if (fetchError) {
+        console.error('❌ Error fetching current assignment:', fetchError);
+      }
 
       const existingDetails = currentAssignment?.completion_details || {};
       const attempts = Array.isArray(existingDetails.attempts) ? existingDetails.attempts : [];
@@ -2683,17 +2355,21 @@ export default function TakeTestPage() {
       // Section completion tracking (for UI purposes)
       newAttempt.sections_completed = Array.from(new Set(selectedQuestions.map(q => getSectionField(q))));
 
+      console.log('📝 New attempt record created:', newAttempt);
+
       // Check if attempt already exists (update instead of duplicating)
       const existingAttemptIndex = attempts.findIndex(
         (a: any) => a.attempt_number === currentAttempt
       );
 
       if (existingAttemptIndex >= 0) {
+        console.log(`🔄 Updating existing attempt ${currentAttempt} at index ${existingAttemptIndex}`);
         attempts[existingAttemptIndex] = {
           ...attempts[existingAttemptIndex],
           ...newAttempt
         };
       } else {
+        console.log(`➕ Adding new attempt ${currentAttempt} to history`);
         attempts.push(newAttempt);
       }
 
@@ -2712,6 +2388,8 @@ export default function TakeTestPage() {
         results_viewable_by_student: false
       };
 
+      console.log('💾 Updating database with completion details:', updateData);
+
       const { data: updateResult, error } = await supabase
         .from('2V_test_assignments')
         .update(updateData)
@@ -2719,11 +2397,15 @@ export default function TakeTestPage() {
         .select();
 
       if (error) {
+        console.error('❌ Error saving completion details:', error);
         throw error;
       }
 
+      console.log('✅ Database update successful!', updateResult);
+      console.log(`✅ Test ${status} | Attempt ${currentAttempt} | Reason: ${reason} | Stats calculated from answers table`);
       return true;
     } catch (err) {
+      console.error('❌ Error in saveCompletionDetails:', err);
       return false;
     }
   }
@@ -2754,6 +2436,7 @@ export default function TakeTestPage() {
   function handleStayInTest() {
     // Extra safety: reject if countdown has expired
     if (exitCountdown <= 0) {
+      console.log('⚠️ Countdown expired, ignoring click');
       return;
     }
 
@@ -2765,6 +2448,7 @@ export default function TakeTestPage() {
   function handleConfirmExit() {
     // Extra safety: reject if countdown has expired
     if (exitCountdown <= 0) {
+      console.log('⚠️ Countdown expired, ignoring click');
       return;
     }
 
@@ -2981,7 +2665,7 @@ export default function TakeTestPage() {
                   <div className="flex-1">
                     <div className="font-semibold text-gray-800">{section}</div>
                     <div className="text-sm text-gray-500">
-                      {config?.questions_per_section?.[section] || allQuestions.filter(q => getSectionField(q) === section).length} {t('takeTest.questions')}
+                      {allQuestions.filter(q => getSectionField(q) === section).length} {t('takeTest.questions')}
                       {config.time_per_section?.[section] && (
                         <> • {config.time_per_section[section]} {t('common.minutes')}</>
                       )}
@@ -3061,9 +2745,7 @@ export default function TakeTestPage() {
   }
 
   // Pause Choice Screen (for user_choice mode)
-  // Use ref to persist across StrictMode remounts
-  const shouldShowPauseChoice = showPauseChoiceScreen || showPauseChoiceRef.current;
-  if (shouldShowPauseChoice) {
+  if (showPauseChoiceScreen) {
     const pausesRemaining = (config?.max_pauses || 0) - pausesUsed;
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -3213,27 +2895,6 @@ export default function TakeTestPage() {
               </span>
             </div>
           )}
-          {/* Guided Mode Indicator for PDF tests */}
-          {isGuidedMode && (
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 px-3 py-1 bg-purple-100 text-purple-700 rounded-lg text-sm font-semibold">
-                <span>🎓</span>
-                <span>Guided</span>
-                {!guidedTimed && <span className="text-purple-500">• No limit</span>}
-              </div>
-              {/* Toggle Show/Hide Answers */}
-              <button
-                onClick={() => setShowCorrectAnswers(!showCorrectAnswers)}
-                className={`px-3 py-1 rounded-lg text-sm font-semibold transition-all ${
-                  showCorrectAnswers
-                    ? 'bg-green-100 text-green-700 border-2 border-green-300'
-                    : 'bg-gray-100 text-gray-600 border-2 border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                {showCorrectAnswers ? '👁️ Hide' : '👁️ Show'}
-              </button>
-            </div>
-          )}
         </div>
 
         {/* PDF Test View */}
@@ -3242,10 +2903,10 @@ export default function TakeTestPage() {
             questions={sectionQuestions}
             currentPageGroup={currentPageGroup}
             answers={answers}
-            showCorrectAnswers={isGuidedMode && showCorrectAnswers}
             onAnswer={(questionId, answer) => {
               // Extra safety: reject if time has expired
               if (timeRemaining !== null && timeRemaining <= 0) {
+                console.log('⚠️ Time expired, ignoring PDF answer selection');
                 return;
               }
               setAnswers(prev => ({
@@ -3259,11 +2920,6 @@ export default function TakeTestPage() {
               }));
             }}
             onNext={async () => {
-              // Extra safety: reject if time has expired
-              if (timeRemaining !== null && timeRemaining <= 0) {
-                return;
-              }
-
               // Save all answers on current page before moving
               for (const question of sectionQuestions) {
                 if (answers[question.id]) {
@@ -3314,12 +2970,7 @@ export default function TakeTestPage() {
       {/* Header with Timer */}
       <div className="bg-white border-b-2 border-gray-200 px-6 py-4 flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-brand-dark">
-            {config?.section_order_mode === 'no_sections'
-              ? (currentQuestion?.section ? formatSectionName(currentQuestion.section) : `Domanda ${currentQuestionIndex + 1}`)
-              : formatSectionName(currentSection)
-            }
-          </h2>
+          <h2 className="text-xl font-bold text-brand-dark">{formatSectionName(currentSection)}</h2>
           <div className="flex items-center gap-3">
             <p className="text-sm text-gray-600">
               {t('takeTest.question')} {currentQuestionIndex + 1} {t('takeTest.of')} {sectionQuestionLimit}
@@ -3338,27 +2989,18 @@ export default function TakeTestPage() {
                 ⚠️ {saveError}
               </span>
             )}
-            {/* Review Mode Indicator with Changes Counter */}
-            {isInReviewMode && config?.max_answer_changes !== undefined && (
-              <span className={`text-xs font-semibold px-2 py-1 rounded ${
-                answerChangesUsed >= config.max_answer_changes
-                  ? 'bg-red-100 text-red-700'
-                  : 'bg-yellow-100 text-yellow-700'
-              }`}>
-                📝 {t('takeTest.changesUsed')}: {answerChangesUsed}/{config.max_answer_changes}
-              </span>
-            )}
           </div>
           {/* Debug info for testing - Only show in adaptive mode */}
-          {/* Hidden for production - uncomment to debug adaptive algorithm
           {config?.adaptivity_mode === 'adaptive' && (
             <div className="flex gap-4 mt-1 text-xs">
               <span className={`font-semibold ${currentQuestion?.is_base ? 'text-blue-600' : 'text-purple-600'}`}>
                 {currentQuestion?.is_base ? '🔵 BASELINE' : '🟣 ADAPTIVE'}
               </span>
+              <span className="text-gray-700">
+                Difficulty: <span className="font-semibold">{currentQuestion?.difficulty || 'N/A'}</span>
+              </span>
             </div>
           )}
-          */}
         </div>
         {timeRemaining !== null && (
           <div className="flex items-center gap-2 text-lg">
@@ -3368,387 +3010,217 @@ export default function TakeTestPage() {
             </span>
           </div>
         )}
-        {/* Guided Mode Indicator */}
-        {isGuidedMode && (
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1 bg-purple-100 text-purple-700 rounded-lg text-sm font-semibold">
-              <span>🎓</span>
-              <span>{t('takeTest.guidedMode', 'Guided Mode')}</span>
-              {!guidedTimed && <span className="text-purple-500">• {t('takeTest.noTimeLimit', 'No time limit')}</span>}
-            </div>
-            {/* Toggle Show/Hide Answers */}
-            <button
-              onClick={() => setShowCorrectAnswers(!showCorrectAnswers)}
-              className={`px-3 py-1 rounded-lg text-sm font-semibold transition-all ${
-                showCorrectAnswers
-                  ? 'bg-green-100 text-green-700 border-2 border-green-300'
-                  : 'bg-gray-100 text-gray-600 border-2 border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              {showCorrectAnswers ? '👁️ ' + t('takeTest.hideAnswers', 'Hide Answers') : '👁️ ' + t('takeTest.showAnswers', 'Show Answers')}
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Question Content */}
-      <div className={`flex-1 overflow-y-auto ${currentQuestion?.question_data?.passage_text ? 'p-4' : 'p-6'}`}>
-        <div className={`${currentQuestion?.question_data?.passage_text ? 'w-full max-w-full' : 'max-w-4xl'} mx-auto bg-white rounded-2xl shadow-lg ${currentQuestion?.question_data?.passage_text ? 'p-6' : 'p-8'}`}>
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-lg p-8">
           {/* Question Text */}
           <div className="mb-8">
-            <div className="flex items-start justify-end gap-2 mb-4">
-              {/* Bookmark Button (GMAT-style) */}
-              {config?.allow_bookmarks && currentQuestion?.id && (
-                <button
-                  onClick={() => toggleBookmark(currentQuestion.id)}
-                  className={`px-3 py-1 rounded-lg text-sm font-semibold transition-colors ${
-                    bookmarkedQuestions.has(currentQuestion.id)
-                      ? 'bg-yellow-100 text-yellow-700 border-2 border-yellow-400'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  <FontAwesomeIcon icon={faBookmark} className="mr-2" />
-                  {bookmarkedQuestions.has(currentQuestion.id)
-                    ? (t('takeTest.bookmarked') || 'Bookmarked')
-                    : (t('takeTest.bookmark') || 'Bookmark')
-                  }
-                </button>
-              )}
+            <div className="flex items-start justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-700">
+                {t('takeTest.question')} {currentQuestion?.question_number}
+              </h3>
+              <button
+                onClick={toggleFlag}
+                className={`px-3 py-1 rounded-lg text-sm font-semibold transition-colors ${
+                  answers[currentQuestion?.id]?.flagged
+                    ? 'bg-red-100 text-red-700'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                <FontAwesomeIcon icon={faFlag} className="mr-2" />
+                {answers[currentQuestion?.id]?.flagged ? t('takeTest.flagged') : t('takeTest.flag')}
+              </button>
             </div>
 
-            {/* Legacy format fallback - only show for questions without question_data */}
-            {!currentQuestion?.question_data && currentQuestion?.question_text ? (
+            {/* Render based on question type */}
+            {currentQuestion?.question_data?.question ? (
+              // Multiple choice question with JSON structure
+              <div className="text-gray-800 text-lg whitespace-pre-wrap">
+                {currentQuestion?.question_data?.question}
+              </div>
+            ) : !currentQuestion?.question_data?.di_type ? (
+              // Legacy format fallback
               <div className="text-gray-800 text-lg whitespace-pre-wrap">
                 {currentQuestion?.question_text}
               </div>
             ) : null}
 
             {/* GMAT Data Insights Question Types */}
-            {currentQuestion?.question_data?.di_type === 'DS' && (() => {
-              const answersData = typeof currentQuestion.answers === 'string'
-                ? JSON.parse(currentQuestion.answers)
-                : currentQuestion.answers;
-              const correctAnswerData = answersData?.correct_answer;
-              const correctDSAnswer = Array.isArray(correctAnswerData) ? correctAnswerData[0] : correctAnswerData;
+            {currentQuestion?.question_data?.di_type === 'DS' && (
+            <DSQuestion
+              problem={currentQuestion.question_data.problem || ''}
+              statement1={currentQuestion.question_data.statement1 || ''}
+              statement2={currentQuestion.question_data.statement2 || ''}
+              selectedAnswer={answers[currentQuestion.id]?.answer}
+              onAnswerChange={handleAnswerSelect}
+            />
+          )}
 
-              return (
-                <DSQuestion
-                  problem={currentQuestion.question_data.problem || ''}
-                  statement1={currentQuestion.question_data.statement1 || ''}
-                  statement2={currentQuestion.question_data.statement2 || ''}
-                  selectedAnswer={answers[currentQuestion.id]?.answer}
-                  onAnswerChange={handleAnswerSelect}
-                  correctAnswer={correctDSAnswer}
-                  showResults={isGuidedMode && showCorrectAnswers}
-                />
-              );
-            })()}
-
-          {currentQuestion?.question_data?.di_type === 'MSR' && (() => {
-            const answersData = typeof currentQuestion.answers === 'string'
-              ? JSON.parse(currentQuestion.answers)
-              : currentQuestion.answers;
-            const correctAnswerData = answersData?.correct_answer;
-            const correctMSRAnswers = Array.isArray(correctAnswerData) ? correctAnswerData : [];
-
-            return (
-              <MSRQuestion
-                sources={currentQuestion.question_data.sources || []}
-                questions={currentQuestion.question_data.questions || []}
-                selectedAnswers={answers[currentQuestion.id]?.msrAnswers || []}
-                onAnswerChange={(qIndex, answer) => {
-                  const currentMSRAnswers = answers[currentQuestion.id]?.msrAnswers || [];
-                  const newMSRAnswers = [...currentMSRAnswers];
-                  newMSRAnswers[qIndex] = answer;
-                  updateAnswer(currentQuestion.id, (prev) => ({
-                    ...prev,
-                    questionId: currentQuestion.id,
+          {currentQuestion?.question_data?.di_type === 'MSR' && (
+            <MSRQuestion
+              sources={currentQuestion.question_data.sources || []}
+              questions={currentQuestion.question_data.questions || []}
+              selectedAnswers={answers[currentQuestion.id]?.msrAnswers || []}
+              onAnswerChange={(qIndex, answer) => {
+                const currentMSRAnswers = answers[currentQuestion.id]?.msrAnswers || [];
+                const newMSRAnswers = [...currentMSRAnswers];
+                newMSRAnswers[qIndex] = answer;
+                setAnswers(prev => ({
+                  ...prev,
+                  [currentQuestion.id]: {
+                    ...prev[currentQuestion.id],
                     msrAnswers: newMSRAnswers,
-                    answer: newMSRAnswers.join(','),
-                    timeSpent: prev?.timeSpent || 0,
-                    flagged: prev?.flagged || false,
-                  }));
-                }}
-                correctAnswers={correctMSRAnswers}
-                showResults={isGuidedMode && showCorrectAnswers}
-              />
-            );
-          })()}
+                    answer: newMSRAnswers.join(','), // Store as comma-separated
+                  }
+                }));
+              }}
+            />
+          )}
 
-          {currentQuestion?.question_data?.di_type === 'GI' && (() => {
-            const answersData = typeof currentQuestion.answers === 'string'
-              ? JSON.parse(currentQuestion.answers)
-              : currentQuestion.answers;
-            const correctAnswerData = answersData?.correct_answer;
-
-            return (
-              <GIQuestion
-                chartConfig={currentQuestion.question_data.chart_config}
-                contextText={currentQuestion.question_data.context_text}
-                statementText={currentQuestion.question_data.statement_text || ''}
-                blank1Options={currentQuestion.question_data.blank1_options || []}
-                blank2Options={currentQuestion.question_data.blank2_options || []}
-                imageUrl={currentQuestion.question_data.image_url || undefined}
-                selectedBlank1={answers[currentQuestion.id]?.blank1}
-                selectedBlank2={answers[currentQuestion.id]?.blank2}
-                onBlank1Change={(value) => {
-                  updateAnswer(currentQuestion.id, (prev) => ({
-                    ...prev,
-                    questionId: currentQuestion.id,
+          {currentQuestion?.question_data?.di_type === 'GI' && (
+            <GIQuestion
+              chartConfig={currentQuestion.question_data.chart_config}
+              contextText={currentQuestion.question_data.context_text}
+              statementText={currentQuestion.question_data.statement_text || ''}
+              blank1Options={currentQuestion.question_data.blank1_options || []}
+              blank2Options={currentQuestion.question_data.blank2_options || []}
+              imageUrl={currentQuestion.question_data.image_url || undefined}
+              selectedBlank1={answers[currentQuestion.id]?.blank1}
+              selectedBlank2={answers[currentQuestion.id]?.blank2}
+              onBlank1Change={(value) => {
+                setAnswers(prev => ({
+                  ...prev,
+                  [currentQuestion.id]: {
+                    ...prev[currentQuestion.id],
                     blank1: value,
-                    blank2: prev?.blank2,
-                    answer: `${value}|${prev?.blank2 || ''}`,
-                    timeSpent: prev?.timeSpent || 0,
-                    flagged: prev?.flagged || false,
-                  }));
-                }}
-                onBlank2Change={(value) => {
-                  updateAnswer(currentQuestion.id, (prev) => ({
-                    ...prev,
-                    questionId: currentQuestion.id,
-                    blank1: prev?.blank1,
+                    answer: `${value}|${prev[currentQuestion.id]?.blank2 || ''}`,
+                  }
+                }));
+              }}
+              onBlank2Change={(value) => {
+                setAnswers(prev => ({
+                  ...prev,
+                  [currentQuestion.id]: {
+                    ...prev[currentQuestion.id],
                     blank2: value,
-                    answer: `${prev?.blank1 || ''}|${value}`,
-                    timeSpent: prev?.timeSpent || 0,
-                    flagged: prev?.flagged || false,
-                  }));
-                }}
-                correctBlank1={correctAnswerData}
-                correctBlank2={correctAnswerData}
-                showResults={isGuidedMode && showCorrectAnswers}
-              />
-            );
-          })()}
+                    answer: `${prev[currentQuestion.id]?.blank1 || ''}|${value}`,
+                  }
+                }));
+              }}
+            />
+          )}
 
-          {currentQuestion?.question_data?.di_type === 'TA' && (() => {
-            const answersData = typeof currentQuestion.answers === 'string'
-              ? JSON.parse(currentQuestion.answers)
-              : currentQuestion.answers;
-            const correctAnswerData = answersData?.correct_answer;
-            const correctTAAnswers = Array.isArray(correctAnswerData) && correctAnswerData.length > 0
-              ? correctAnswerData[0]
-              : correctAnswerData || {};
-
-            return (
-              <TAQuestion
-                tableTitle={currentQuestion.question_data.table_title}
-                columnHeaders={currentQuestion.question_data.column_headers || []}
-                tableData={currentQuestion.question_data.table_data || []}
-                statements={currentQuestion.question_data.statements || []}
-                selectedAnswers={answers[currentQuestion.id]?.taAnswers || {}}
-                onAnswerChange={(statementIndex, value) => {
-                  const currentTAAnswers = answers[currentQuestion.id]?.taAnswers || {};
-                  const newTAAnswers = { ...currentTAAnswers, [statementIndex]: value };
-                  updateAnswer(currentQuestion.id, (prev) => ({
-                    ...prev,
-                    questionId: currentQuestion.id,
+          {currentQuestion?.question_data?.di_type === 'TA' && (
+            <TAQuestion
+              tableTitle={currentQuestion.question_data.table_title}
+              columnHeaders={currentQuestion.question_data.column_headers || []}
+              tableData={currentQuestion.question_data.table_data || []}
+              statements={currentQuestion.question_data.statements || []}
+              selectedAnswers={answers[currentQuestion.id]?.taAnswers || {}}
+              onAnswerChange={(statementIndex, value) => {
+                const currentTAAnswers = answers[currentQuestion.id]?.taAnswers || {};
+                const newTAAnswers = { ...currentTAAnswers, [statementIndex]: value };
+                setAnswers(prev => ({
+                  ...prev,
+                  [currentQuestion.id]: {
+                    ...prev[currentQuestion.id],
                     taAnswers: newTAAnswers,
                     answer: Object.values(newTAAnswers).join(','),
-                    timeSpent: prev?.timeSpent || 0,
-                    flagged: prev?.flagged || false,
-                  }));
-                }}
-                correctAnswers={correctTAAnswers}
-                showResults={isGuidedMode && showCorrectAnswers}
-              />
-            );
-          })()}
+                  }
+                }));
+              }}
+            />
+          )}
 
-          {currentQuestion?.question_data?.di_type === 'TPA' && (() => {
-            const answersData = typeof currentQuestion.answers === 'string'
-              ? JSON.parse(currentQuestion.answers)
-              : currentQuestion.answers;
-            const correctAnswerData = answersData?.correct_answer;
-            const correctTPAAnswers = Array.isArray(correctAnswerData) && correctAnswerData.length > 0
-              ? correctAnswerData[0]
-              : correctAnswerData || {};
-
-            return (
-              <TPAQuestion
-                scenario={currentQuestion.question_data.scenario || ''}
-                column1Title={currentQuestion.question_data.column1_title || ''}
-                column2Title={currentQuestion.question_data.column2_title || ''}
-                sharedOptions={currentQuestion.question_data.shared_options || []}
-                selectedColumn1={answers[currentQuestion.id]?.column1}
-                selectedColumn2={answers[currentQuestion.id]?.column2}
-                onColumn1Change={(value) => {
-                  updateAnswer(currentQuestion.id, (prev) => ({
-                    ...prev,
-                    questionId: currentQuestion.id,
+          {currentQuestion?.question_data?.di_type === 'TPA' && (
+            <TPAQuestion
+              scenario={currentQuestion.question_data.scenario || ''}
+              column1Title={currentQuestion.question_data.column1_title || ''}
+              column2Title={currentQuestion.question_data.column2_title || ''}
+              sharedOptions={currentQuestion.question_data.shared_options || []}
+              selectedColumn1={answers[currentQuestion.id]?.column1}
+              selectedColumn2={answers[currentQuestion.id]?.column2}
+              onColumn1Change={(value) => {
+                setAnswers(prev => ({
+                  ...prev,
+                  [currentQuestion.id]: {
+                    ...prev[currentQuestion.id],
                     column1: value,
-                    column2: prev?.column2,
-                    answer: `${value}|${prev?.column2 || ''}`,
-                    timeSpent: prev?.timeSpent || 0,
-                    flagged: prev?.flagged || false,
-                  }));
-                }}
-                onColumn2Change={(value) => {
-                  updateAnswer(currentQuestion.id, (prev) => ({
-                    ...prev,
-                    questionId: currentQuestion.id,
-                    column1: prev?.column1,
+                    answer: `${value}|${prev[currentQuestion.id]?.column2 || ''}`,
+                  }
+                }));
+              }}
+              onColumn2Change={(value) => {
+                setAnswers(prev => ({
+                  ...prev,
+                  [currentQuestion.id]: {
+                    ...prev[currentQuestion.id],
                     column2: value,
-                    answer: `${prev?.column1 || ''}|${value}`,
-                    timeSpent: prev?.timeSpent || 0,
-                    flagged: prev?.flagged || false,
-                  }));
-                }}
-                correctColumn1={correctTPAAnswers}
-                correctColumn2={correctTPAAnswers}
-                showResults={isGuidedMode && showCorrectAnswers}
-              />
-            );
-          })()}
+                    answer: `${prev[currentQuestion.id]?.column1 || ''}|${value}`,
+                  }
+                }));
+              }}
+            />
+          )}
 
           {/* Standard Multiple Choice Questions (Quantitative & Verbal Reasoning) */}
-          {currentQuestion?.question_type === 'multiple_choice' && currentQuestion?.question_data?.options && (() => {
-            // Parse answers field (might be string or object)
-            const answersData = typeof currentQuestion.answers === 'string'
-              ? JSON.parse(currentQuestion.answers)
-              : currentQuestion.answers;
-            const correctAnswerData = answersData?.correct_answer;
-            const correctAnswer = Array.isArray(correctAnswerData)
-              ? correctAnswerData[0]
-              : correctAnswerData;
-
-            // Debug logging
-            if (isGuidedMode) {
-              console.log('🎯 Guided Mode Debug:', {
-                showCorrectAnswers,
-                answersData,
-                correctAnswerData,
-                correctAnswer,
-                questionType: currentQuestion.question_type
-              });
-            }
-
-            return (
-              <MultipleChoiceQuestion
-                questionText={getLocalizedQuestionText(currentQuestion.question_data)}
-                passageText={testLanguage === 'en' && currentQuestion.question_data.passage_text_eng
-                  ? currentQuestion.question_data.passage_text_eng
-                  : currentQuestion.question_data.passage_text}
-                passageTitle={currentQuestion.question_data.passage_title}
-                imageUrl={currentQuestion.question_data.image_url || undefined}
-                options={getLocalizedOptions(currentQuestion.question_data)}
-                selectedAnswer={answers[currentQuestion.id]?.answer}
-                onAnswerChange={handleAnswerSelect}
-                showResults={isGuidedMode && showCorrectAnswers}
-                correctAnswer={correctAnswer}
-              />
-            );
-          })()}
-
+          {currentQuestion?.question_type === 'multiple_choice' && currentQuestion?.question_data?.options && (
+            <MultipleChoiceQuestion
+              questionText={currentQuestion.question_data.question_text || ''}
+              imageUrl={currentQuestion.question_data.image_url || undefined}
+              options={currentQuestion.question_data.options}
+              selectedAnswer={answers[currentQuestion.id]?.answer}
+              onAnswerChange={handleAnswerSelect}
+            />
+          )}
 
           {/* Open-Ended Questions */}
           {currentQuestion?.question_type === 'open_ended' && (
-            currentQuestion.question_data?.passage_text ? (
-              // Layout with passage text on the left
-              <div className="flex gap-8 w-full">
-                {/* Passage Text on the left */}
-                <div className="flex-1 min-w-[45%] border-2 border-blue-200 rounded-xl p-6 bg-blue-50 h-fit sticky top-4">
-                  {currentQuestion.question_data.passage_title && (
-                    <h3 className="text-lg font-semibold text-blue-900 mb-4">
-                      {currentQuestion.question_data.passage_title}
-                    </h3>
-                  )}
-                  <div className="text-gray-700 whitespace-pre-wrap max-h-[650px] overflow-y-auto">
-                    {testLanguage === 'en' && currentQuestion.question_data.passage_text_eng
-                      ? currentQuestion.question_data.passage_text_eng
-                      : currentQuestion.question_data.passage_text}
-                  </div>
+            <div className="space-y-4">
+              {currentQuestion.question_data?.question_text && (
+                <div className="text-lg text-gray-800 mb-4">
+                  {currentQuestion.question_data.question_text}
                 </div>
-
-                {/* Question and answer area on the right */}
-                <div className="flex-1 min-w-[45%] space-y-4">
-                  {(currentQuestion.question_data?.question_text || currentQuestion.question_data?.question_text_eng) && (
-                    <div className="border-2 border-gray-200 rounded-xl p-6 bg-white">
-                      <div className="text-lg text-gray-800">
-                        {getLocalizedQuestionText(currentQuestion.question_data)}
-                      </div>
-                    </div>
-                  )}
-                  <textarea
-                    value={answers[currentQuestion.id]?.answer || ''}
-                    onChange={(e) => handleAnswerSelect(e.target.value)}
-                    placeholder={t('takeTest.enterYourAnswer', 'Enter your answer here...')}
-                    className="w-full h-48 p-4 border-2 border-gray-200 rounded-xl focus:border-brand-green focus:ring-2 focus:ring-brand-green focus:ring-opacity-20 outline-none resize-y text-gray-800"
-                  />
-                </div>
-              </div>
-            ) : (
-              // Layout without passage text
-              <div className="space-y-4">
-                {(currentQuestion.question_data?.question_text || currentQuestion.question_data?.question_text_eng) && (
-                  <div className="text-lg text-gray-800 mb-4">
-                    {getLocalizedQuestionText(currentQuestion.question_data)}
-                  </div>
-                )}
-                <textarea
-                  value={answers[currentQuestion.id]?.answer || ''}
-                  onChange={(e) => handleAnswerSelect(e.target.value)}
-                  placeholder={t('takeTest.enterYourAnswer', 'Enter your answer here...')}
-                  className="w-full h-48 p-4 border-2 border-gray-200 rounded-xl focus:border-brand-green focus:ring-2 focus:ring-brand-green focus:ring-opacity-20 outline-none resize-y text-gray-800"
-                />
-              </div>
-            )
+              )}
+              <textarea
+                value={answers[currentQuestion.id]?.answer || ''}
+                onChange={(e) => handleAnswerSelect(e.target.value)}
+                placeholder={t('takeTest.enterYourAnswer', 'Enter your answer here...')}
+                className="w-full h-48 p-4 border-2 border-gray-200 rounded-xl focus:border-brand-green focus:ring-2 focus:ring-brand-green focus:ring-opacity-20 outline-none resize-y text-gray-800"
+              />
+            </div>
           )}
         </div>
 
         {/* Standard Multiple Choice Answer Options */}
-          {!currentQuestion?.question_data?.di_type && (() => {
-            // Get correct answer for standard multiple choice
-            const answersData = currentQuestion?.answers ?
-              (typeof currentQuestion.answers === 'string' ? JSON.parse(currentQuestion.answers) : currentQuestion.answers)
-              : null;
-            const correctAnswerData = answersData?.correct_answer;
-            const stdCorrectAnswer = Array.isArray(correctAnswerData)
-              ? correctAnswerData[0]
-              : correctAnswerData;
-
-            return (
+          {!currentQuestion?.question_data?.di_type && (
             <div className="space-y-3">
             {currentQuestion?.question_data?.choices ? (
               // Multiple choice with JSON choices
               currentQuestion.question_data.choices.map(choice => {
                 const isSelected = answers[currentQuestion?.id]?.answer === choice.label;
-                const isCorrect = isGuidedMode && showCorrectAnswers && stdCorrectAnswer === choice.label;
-                const isWrong = isGuidedMode && showCorrectAnswers && isSelected && stdCorrectAnswer !== choice.label;
-
                 return (
                   <button
                     key={choice.label}
                     onClick={() => handleAnswerSelect(choice.label)}
                     className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                      isCorrect
-                        ? 'border-green-500 bg-green-100'
-                        : isWrong
-                        ? 'border-red-500 bg-red-50'
-                        : isSelected
+                      isSelected
                         ? 'border-brand-green bg-green-50'
                         : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                     }`}
                   >
                     <div className="flex items-start gap-4">
                       <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold ${
-                        isCorrect
-                          ? 'bg-green-500 text-white'
-                          : isWrong
-                          ? 'bg-red-500 text-white'
-                          : isSelected
+                        isSelected
                           ? 'bg-brand-green text-white'
                           : 'bg-gray-200 text-gray-700'
                       }`}>
                         {choice.label}
                       </div>
                       <div className="flex-1 text-gray-800">{choice.text}</div>
-                      {isCorrect && (
-                        <FontAwesomeIcon icon={faCheckCircle} className="text-green-500 text-xl" />
-                      )}
-                      {isWrong && (
-                        <FontAwesomeIcon icon={faTimesCircle} className="text-red-500 text-xl" />
-                      )}
-                      {isSelected && !isCorrect && !isWrong && (
+                      {isSelected && (
                         <FontAwesomeIcon icon={faCheckCircle} className="text-brand-green text-xl" />
                       )}
                     </div>
@@ -3764,43 +3236,27 @@ export default function TakeTestPage() {
                 if (!answerText) return null;
 
                 const isSelected = answers[currentQuestion?.id]?.answer === option;
-                const isCorrect = isGuidedMode && showCorrectAnswers && stdCorrectAnswer === option;
-                const isWrong = isGuidedMode && showCorrectAnswers && isSelected && stdCorrectAnswer !== option;
 
                 return (
                   <button
                     key={option}
                     onClick={() => handleAnswerSelect(option)}
                     className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                      isCorrect
-                        ? 'border-green-500 bg-green-100'
-                        : isWrong
-                        ? 'border-red-500 bg-red-50'
-                        : isSelected
+                      isSelected
                         ? 'border-brand-green bg-green-50'
                         : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                     }`}
                   >
                     <div className="flex items-start gap-4">
                       <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold ${
-                        isCorrect
-                          ? 'bg-green-500 text-white'
-                          : isWrong
-                          ? 'bg-red-500 text-white'
-                          : isSelected
+                        isSelected
                           ? 'bg-brand-green text-white'
                           : 'bg-gray-200 text-gray-700'
                       }`}>
                         {option}
                       </div>
                       <div className="flex-1 text-gray-800">{answerText as string}</div>
-                      {isCorrect && (
-                        <FontAwesomeIcon icon={faCheckCircle} className="text-green-500 text-xl" />
-                      )}
-                      {isWrong && (
-                        <FontAwesomeIcon icon={faTimesCircle} className="text-red-500 text-xl" />
-                      )}
-                      {isSelected && !isCorrect && !isWrong && (
+                      {isSelected && (
                         <FontAwesomeIcon icon={faCheckCircle} className="text-brand-green text-xl" />
                       )}
                     </div>
@@ -3809,71 +3265,28 @@ export default function TakeTestPage() {
               })
             )}
             </div>
-            );
-          })()}
-
-          {/* Report Issue Button - subtle link at bottom */}
-          <div className="mt-6 pt-4 border-t border-gray-100 text-center">
-            <button
-              onClick={toggleFlag}
-              className={`text-xs transition-colors ${
-                answers[currentQuestion?.id]?.flagged
-                  ? 'text-orange-600 font-medium'
-                  : 'text-gray-400 hover:text-gray-600'
-              }`}
-            >
-              <FontAwesomeIcon icon={faFlag} className="mr-1" />
-              {answers[currentQuestion?.id]?.flagged
-                ? t('takeTest.issueReported')
-                : t('takeTest.reportIssue')}
-            </button>
-          </div>
+          )}
         </div>
       </div>
 
       {/* Navigation Controls */}
       <div className="bg-white border-t-2 border-gray-200 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {/* Previous button - disabled in review mode */}
-          {!isInReviewMode && (
-            <button
-              onClick={goToPreviousQuestion}
-              disabled={!canGoBack() || (timeRemaining !== null && timeRemaining <= 1)}
-              className="px-6 py-3 rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-gray-200 text-gray-700 hover:bg-gray-300 disabled:hover:bg-gray-200"
-            >
-              <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
-              {t('takeTest.previous')}
-            </button>
-          )}
-          {/* Return to Review button (when in review mode) */}
-          {isInReviewMode && (
-            <button
-              onClick={returnToReviewScreen}
-              className="px-4 py-3 rounded-xl font-semibold transition-all bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-2 border-yellow-400"
-            >
-              <FontAwesomeIcon icon={faList} className="mr-2" />
-              {t('takeTest.returnToReview') || 'Return to Review'}
-            </button>
-          )}
-        </div>
+        <button
+          onClick={goToPreviousQuestion}
+          disabled={!canGoBack() || (timeRemaining !== null && timeRemaining <= 1)}
+          className="px-6 py-3 rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-gray-200 text-gray-700 hover:bg-gray-300 disabled:hover:bg-gray-200"
+        >
+          <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
+          {t('takeTest.previous')}
+        </button>
 
         <div className="text-sm text-gray-600">
           {t('takeTest.section')} {currentSectionIndex + 1} {t('takeTest.of')} {sections.length}
         </div>
 
-        {/* Next button - show Return to Review in review mode */}
-        {isInReviewMode ? (
-          <button
-            onClick={returnToReviewScreen}
-            className="px-6 py-3 rounded-xl font-semibold transition-all bg-brand-green text-white hover:bg-green-600"
-          >
-            <FontAwesomeIcon icon={faList} className="mr-2" />
-            {t('takeTest.returnToReview') || 'Return to Review'}
-          </button>
-        ) : (
-          <button
-            onClick={goToNextQuestion}
-            disabled={submitting || (timeRemaining !== null && timeRemaining <= 1)}
+        <button
+          onClick={goToNextQuestion}
+          disabled={submitting || (timeRemaining !== null && timeRemaining <= 1)}
           className="px-6 py-3 rounded-xl font-semibold transition-all bg-brand-green text-white hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {submitting ? (
@@ -3899,113 +3312,7 @@ export default function TakeTestPage() {
             </>
           )}
         </button>
-        )}
       </div>
-
-      {/* Review Screen Overlay (GMAT-style) */}
-      {showReviewScreen && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-brand-dark">
-                <FontAwesomeIcon icon={faList} className="mr-2" />
-                {t('takeTest.reviewSection') || 'Review Section'}
-              </h3>
-              <div className="text-sm text-gray-600">
-                {config?.max_answer_changes !== undefined && (
-                  <span className={answerChangesUsed >= (config.max_answer_changes || 0) ? 'text-red-600 font-bold' : ''}>
-                    {t('takeTest.changesUsed') || 'Changes used'}: {answerChangesUsed}/{config.max_answer_changes}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Question List */}
-            <div className="flex-1 overflow-y-auto mb-4">
-              <div className="grid gap-2">
-                {currentSectionQuestionsList.map((question, index) => {
-                  const answer = answers[question.id];
-                  const isAnswered = !!answer?.answer || !!answer?.msrAnswers || !!answer?.blank1 || !!answer?.taAnswers || !!answer?.column1;
-                  const isBookmarked = bookmarkedQuestions.has(question.id);
-
-                  return (
-                    <button
-                      key={question.id}
-                      onClick={() => goToQuestionFromReview(index)}
-                      className={`flex items-center justify-between p-3 rounded-lg border transition-all hover:shadow-md ${
-                        isBookmarked
-                          ? 'border-yellow-400 bg-yellow-50'
-                          : isAnswered
-                          ? 'border-green-400 bg-green-50'
-                          : 'border-gray-300 bg-gray-50'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
-                          isAnswered ? 'bg-brand-green text-white' : 'bg-gray-300 text-gray-700'
-                        }`}>
-                          {index + 1}
-                        </span>
-                        <span className="text-sm text-gray-700">
-                          {t('takeTest.question')} {index + 1}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {isBookmarked && (
-                          <FontAwesomeIcon icon={faBookmark} className="text-yellow-500" />
-                        )}
-                        {isAnswered ? (
-                          <FontAwesomeIcon icon={faCheckCircle} className="text-brand-green" />
-                        ) : (
-                          <span className="text-xs text-red-500 font-semibold">
-                            {t('takeTest.notAnswered') || 'Not answered'}
-                          </span>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex items-center justify-between pt-4 border-t">
-              <div className="text-sm text-gray-600">
-                {currentSectionQuestionsList.filter(q => {
-                  const answer = answers[q.id];
-                  return !!answer?.answer || !!answer?.msrAnswers || !!answer?.blank1 || !!answer?.taAnswers || !!answer?.column1;
-                }).length} / {currentSectionQuestionsList.length} {t('takeTest.answered') || 'answered'}
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={completeReview}
-                  className="px-6 py-2 rounded-lg bg-brand-green text-white font-semibold hover:bg-green-600 transition-all"
-                >
-                  {currentSectionIndex < sections.length - 1
-                    ? t('takeTest.completeSection')
-                    : t('takeTest.submitTest')
-                  }
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Change Blocked Toast (when max changes reached) */}
-      {showChangeBlockedMessage && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
-          <div className="bg-red-100 border-2 border-red-400 text-red-700 px-6 py-3 rounded-xl shadow-lg flex items-center gap-3">
-            <span className="text-xl">⚠️</span>
-            <div>
-              <p className="font-semibold">{t('takeTest.maxChangesReached') || 'Maximum changes reached'}</p>
-              <p className="text-sm">
-                {t('takeTest.cannotChangeMore') || 'You cannot change any more answers in this section'}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Answer Required Modal Overlay */}
       {showAnswerRequiredMessage && (

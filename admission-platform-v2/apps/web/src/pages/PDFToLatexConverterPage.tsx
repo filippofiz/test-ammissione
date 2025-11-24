@@ -16,6 +16,8 @@ import {
   faSave,
   faMagic,
   faRedo,
+  faImage,
+  faExchangeAlt,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import { MathJaxProvider, MathJaxRenderer, TikZGraph } from '../components/MathJaxRenderer';
@@ -443,9 +445,18 @@ export default function PDFToLatexConverterPage() {
 
   // Converted questions
   const [convertedQuestions, setConvertedQuestions] = useState<ConvertedQuestion[]>([]);
+  const [passages, setPassages] = useState<any[]>([]);
   const [converting, setConverting] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [retryingImageIndex, setRetryingImageIndex] = useState<number | null>(null);
+
+  // Manual image selection state
+  const [showImageSelector, setShowImageSelector] = useState(false);
+  const [imageSelectorQuestionIndex, setImageSelectorQuestionIndex] = useState<number | null>(null);
+  const [availableImages, setAvailableImages] = useState<{ url: string; width: number; height: number; y: number; blob: Blob }[]>([]);
+  const [loadingImages, setLoadingImages] = useState(false);
+  const [selectedImageTarget, setSelectedImageTarget] = useState<'question' | 'option_a' | 'option_b' | 'option_c' | 'option_d' | 'option_e'>('question');
+  const [sharedImageQuestions, setSharedImageQuestions] = useState<number[]>([]); // For selecting multiple questions to share an image
 
   // Preview mode
   const [showPdfPreview, setShowPdfPreview] = useState(true);
@@ -467,6 +478,29 @@ export default function PDFToLatexConverterPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Batch processing progress
+  const [batchProgress, setBatchProgress] = useState<{
+    show: boolean;
+    currentBatch: number;
+    totalBatches: number;
+    questionsExtracted: number;
+    status: string;
+  }>({
+    show: false,
+    currentBatch: 0,
+    totalBatches: 0,
+    questionsExtracted: 0,
+    status: '',
+  });
+
+  // Passage management modal
+  const [showPassageModal, setShowPassageModal] = useState(false);
+  const [editingPassageId, setEditingPassageId] = useState<string | null>(null);
+  const [selectedQuestionsForPassage, setSelectedQuestionsForPassage] = useState<number[]>([]);
+  const [newPassageText, setNewPassageText] = useState('');
+  const [detectingPassage, setDetectingPassage] = useState(false);
+  const [pageRangeInput, setPageRangeInput] = useState('');
 
   useEffect(() => {
     loadPDFTests();
@@ -622,6 +656,7 @@ export default function PDFToLatexConverterPage() {
     setError(null);
     setOldQuestions([]);
     setConvertedQuestions([]);
+    setPassages([]);
 
     try {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -654,37 +689,138 @@ export default function PDFToLatexConverterPage() {
       console.log(`Extracted ${databaseAnswers.length} answers from 2V_questions`);
       console.log('Sending PDF to AI for extraction...');
 
-      // Step 3: Send PDF URL to AI for extraction (AI will fetch and read the actual PDF)
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/extract-questions-from-pdf`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            pdfUrl: selectedTest.pdf_url,
-            testType: selectedTest.test_type,
-            section: selectedTest.section,
-            testNumber: selectedTest.test_number,
-            databaseAnswers: databaseAnswers,
-          }),
+      // Step 3: Get PDF page count and process in batches of 4 pages
+      const PAGES_PER_BATCH = 4;
+
+      // Fetch PDF to get page count
+      const pdfResponse = await fetch(selectedTest.pdf_url);
+      const pdfArrayBuffer = await pdfResponse.arrayBuffer();
+      const pdfDoc = await pdfjsLib.getDocument({ data: pdfArrayBuffer }).promise;
+      const totalPages = pdfDoc.numPages;
+
+      const totalBatches = Math.ceil(totalPages / PAGES_PER_BATCH);
+      console.log(`PDF has ${totalPages} pages, will process in ${totalBatches} batches of ${PAGES_PER_BATCH} pages`);
+
+      // Show batch progress modal
+      setBatchProgress({
+        show: true,
+        currentBatch: 0,
+        totalBatches,
+        questionsExtracted: 0,
+        status: 'Starting extraction...',
+      });
+
+      let allExtractedQuestions: any[] = [];
+      let allPassages: any[] = [];
+      let totalUsage = {
+        input_tokens: 0,
+        output_tokens: 0,
+        total_tokens: 0,
+        cost_usd: 0,
+        cost_breakdown: {
+          input_cost_usd: 0,
+          output_cost_usd: 0,
+        },
+      };
+
+      // Process each batch
+      for (let batch = 0; batch < totalBatches; batch++) {
+        const pageStart = batch * PAGES_PER_BATCH + 1;
+        const pageEnd = Math.min((batch + 1) * PAGES_PER_BATCH, totalPages);
+
+        setBatchProgress(prev => ({
+          ...prev,
+          currentBatch: batch + 1,
+          status: `Processing pages ${pageStart}-${pageEnd}...`,
+        }));
+
+        console.log(`📄 Batch ${batch + 1}/${totalBatches}: Processing pages ${pageStart}-${pageEnd}`);
+
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/extract-questions-from-pdf`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              pdfUrl: selectedTest.pdf_url,
+              testType: selectedTest.test_type,
+              section: selectedTest.section,
+              testNumber: selectedTest.test_number,
+              databaseAnswers: databaseAnswers,
+              pageStart,
+              pageEnd,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(`Batch ${batch + 1} failed: ${errorData.error || 'Failed to convert questions'}`);
         }
+
+        const data = await response.json();
+
+        if (data.questions && data.questions.length > 0) {
+          allExtractedQuestions = [...allExtractedQuestions, ...data.questions];
+          console.log(`✓ Batch ${batch + 1}: Extracted ${data.questions.length} questions (total: ${allExtractedQuestions.length})`);
+
+          setBatchProgress(prev => ({
+            ...prev,
+            questionsExtracted: allExtractedQuestions.length,
+          }));
+        }
+
+        // Collect passages from this batch
+        if (data.passages && data.passages.length > 0) {
+          allPassages = [...allPassages, ...data.passages];
+          console.log(`✓ Batch ${batch + 1}: Found ${data.passages.length} passages (total: ${allPassages.length})`);
+        }
+
+        // Accumulate usage stats
+        if (data.usage) {
+          totalUsage.input_tokens += data.usage.input_tokens || 0;
+          totalUsage.output_tokens += data.usage.output_tokens || 0;
+          totalUsage.total_tokens += data.usage.total_tokens || 0;
+          totalUsage.cost_usd += data.usage.cost_usd || 0;
+          if (data.usage.cost_breakdown) {
+            totalUsage.cost_breakdown.input_cost_usd += data.usage.cost_breakdown.input_cost_usd || 0;
+            totalUsage.cost_breakdown.output_cost_usd += data.usage.cost_breakdown.output_cost_usd || 0;
+          }
+        }
+      }
+
+      // Hide batch progress modal
+      setBatchProgress(prev => ({
+        ...prev,
+        show: false,
+        status: 'Complete!',
+      }));
+
+      if (allExtractedQuestions.length === 0) {
+        throw new Error('AI returned no questions from any batch');
+      }
+
+      // Filter out hallucinated questions (numbers higher than expected)
+      const maxQuestionNumber = databaseAnswers.length;
+      const validQuestions = allExtractedQuestions.filter(
+        q => q.question_number >= 1 && q.question_number <= maxQuestionNumber
       );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to convert questions');
+      if (validQuestions.length !== allExtractedQuestions.length) {
+        console.warn(`⚠️ Filtered out ${allExtractedQuestions.length - validQuestions.length} invalid questions (outside range 1-${maxQuestionNumber})`);
       }
 
-      const data = await response.json();
-
-      if (!data.questions || data.questions.length === 0) {
-        throw new Error('AI returned no questions');
+      console.log(`✅ All batches complete! Extracted ${validQuestions.length} valid questions (filtered from ${allExtractedQuestions.length})`);
+      if (allPassages.length > 0) {
+        console.log(`📖 Found ${allPassages.length} shared passages`);
       }
-
       console.log('AI extraction complete, now extracting images from PDF...');
+
+      // Use the filtered results
+      const data = { questions: validQuestions, passages: allPassages, usage: totalUsage };
 
       // Process questions - handle graph recreation or image extraction
       const processedQuestions = [];
@@ -730,6 +866,7 @@ export default function PDFToLatexConverterPage() {
       }
 
       setConvertedQuestions(questionsWithImages);
+      setPassages(data.passages || []);
       setApiUsage(data.usage || null);
 
       // Debug logging for image rendering
@@ -739,14 +876,24 @@ export default function PDFToLatexConverterPage() {
           has_image: q.has_image,
           image_url: q.image_url,
           image_options: q.image_options,
-          image_mapping: q.image_mapping
+          image_mapping: q.image_mapping,
+          passage_id: q.passage_id
         });
       });
+
+      if (data.passages && data.passages.length > 0) {
+        console.log('=== PASSAGES ===');
+        data.passages.forEach((p: any) => {
+          console.log(`${p.passage_id}: Questions ${p.question_numbers?.join(', ')}`);
+        });
+      }
     } catch (err) {
       console.error('Extraction error:', err);
       setError(err instanceof Error ? err.message : 'Failed to extract and convert questions');
     } finally {
       setConverting(false);
+      // Ensure modal is closed on completion or error
+      setBatchProgress(prev => ({ ...prev, show: false }));
     }
   };
 
@@ -789,43 +936,56 @@ export default function PDFToLatexConverterPage() {
       };
 
       // Images already extracted during conversion phase
+      // Create a map of passages by ID for easy lookup
+      const passageMap = new Map(passages.map(p => [p.passage_id, p]));
+
       // Transform to new format and UPDATE existing questions
-      const questionsToUpdate = convertedQuestions.map((q: any) => ({
-        test_id: testId,
-        test_type: selectedTest.test_type,
-        question_number: q.question_number,
-        question_type: 'multiple_choice',
-        section: q.section,
-        question_data: {
-          question_text: q.question_text,
-          question_text_eng: q.question_text_eng,
-          options: q.options,
-          options_eng: q.options_eng,
-          pdf_url: selectedTest.pdf_url,
-          page_number: q.page_number,
-          has_image: q.has_image || false,
-          image_url: q.image_url || null,
-          image_options: q.image_options || null,
-          // New fields for graph recreation
-          has_graph_latex: q.has_graph_latex || false,
-          graph_latex: q.graph_latex || null,
-          graph_function: q.graph_function || null,
-          graph_analysis: q.graph_analysis || null,
-          graph_type: q.graph_type || null,
-          graph_features: q.graph_features || null,
-          graph_domain: q.graph_domain || null,
-          graph_range: q.graph_range || null,
-          // Generated options for graph questions
-          generated_options: q.generated_options || false,
-          recreate_all_options: q.recreate_all_options || false,
-        },
-        answers: {
-          correct_answer: q.correct_answer,
-          wrong_answers: Object.keys(q.options).filter((key) => key !== q.correct_answer),
-        },
-        conversion_info: conversionInfo,
-        is_active: true,
-      }));
+      const questionsToUpdate = convertedQuestions.map((q: any) => {
+        // Get passage data if this question references one
+        const passage = q.passage_id ? passageMap.get(q.passage_id) : null;
+
+        return {
+          test_id: testId,
+          test_type: selectedTest.test_type,
+          question_number: q.question_number,
+          question_type: 'multiple_choice',
+          section: q.section,
+          question_data: {
+            question_text: q.question_text,
+            question_text_eng: q.question_text_eng,
+            options: q.options,
+            options_eng: q.options_eng,
+            pdf_url: selectedTest.pdf_url,
+            page_number: q.page_number,
+            has_image: q.has_image || false,
+            image_url: q.image_url || null,
+            image_options: q.image_options || null,
+            // Passage data for reading comprehension
+            passage_id: q.passage_id || null,
+            passage_text: passage?.passage_text || null,
+            passage_text_eng: passage?.passage_text_eng || null,
+            passage_title: passage?.passage_title || null,
+            // New fields for graph recreation
+            has_graph_latex: q.has_graph_latex || false,
+            graph_latex: q.graph_latex || null,
+            graph_function: q.graph_function || null,
+            graph_analysis: q.graph_analysis || null,
+            graph_type: q.graph_type || null,
+            graph_features: q.graph_features || null,
+            graph_domain: q.graph_domain || null,
+            graph_range: q.graph_range || null,
+            // Generated options for graph questions
+            generated_options: q.generated_options || false,
+            recreate_all_options: q.recreate_all_options || false,
+          },
+          answers: {
+            correct_answer: q.correct_answer,
+            wrong_answers: Object.keys(q.options).filter((key) => key !== q.correct_answer),
+          },
+          conversion_info: conversionInfo,
+          is_active: true,
+        };
+      });
 
       // Prepare questions for all selected tests (main + duplicates)
       const allTestIds = [testId, ...Array.from(selectedDuplicates)];
@@ -871,6 +1031,9 @@ export default function PDFToLatexConverterPage() {
           // Get all OTHER question IDs (duplicates in other tests)
           const duplicateIds = questionIds.filter((_, idx) => idx !== testIndex);
 
+          // Get passage data if this question references one
+          const passage = q.passage_id ? passageMap.get(q.passage_id) : null;
+
           return {
             id: currentQuestionId, // Pre-generated UUID
             test_id: currentTestId,
@@ -888,6 +1051,11 @@ export default function PDFToLatexConverterPage() {
               has_image: q.has_image || false,
               image_url: q.image_url || null,
               image_options: q.image_options || null,
+              // Passage data for reading comprehension
+              passage_id: q.passage_id || null,
+              passage_text: passage?.passage_text || null,
+              passage_text_eng: passage?.passage_text_eng || null,
+              passage_title: passage?.passage_title || null,
               has_graph_latex: q.has_graph_latex || false,
               graph_latex: q.graph_latex || null,
               graph_function: q.graph_function || null,
@@ -1281,6 +1449,242 @@ export default function PDFToLatexConverterPage() {
     }
   };
 
+  // Open manual image selector modal
+  const openImageSelector = async (index: number, target: 'question' | 'option_a' | 'option_b' | 'option_c' | 'option_d' | 'option_e' = 'question') => {
+    if (!selectedTest) return;
+
+    setImageSelectorQuestionIndex(index);
+    setSelectedImageTarget(target);
+    setShowImageSelector(true);
+    setLoadingImages(true);
+    setAvailableImages([]);
+    setSharedImageQuestions([index]); // Initialize with current question selected
+
+    const question = convertedQuestions[index] as any;
+
+    try {
+      // Fetch PDF
+      const pdfResponse = await fetch(selectedTest.pdf_url);
+      const pdfBlob = await pdfResponse.blob();
+      const pdfArrayBuffer = await pdfBlob.arrayBuffer();
+
+      // Load PDF
+      const loadingTask = pdfjsLib.getDocument({ data: pdfArrayBuffer });
+      const pdfDoc = await loadingTask.promise;
+
+      if (!question.page_number || question.page_number > pdfDoc.numPages) {
+        throw new Error(`Invalid page number ${question.page_number}`);
+      }
+
+      // Get the page
+      const page = await pdfDoc.getPage(question.page_number);
+
+      // Render page to ensure all objects are loaded
+      const viewport = page.getViewport({ scale: 1.0 });
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+
+      await page.render({
+        canvasContext: ctx!,
+        viewport: viewport,
+      }).promise;
+
+      // Get operator list to find all images
+      const ops = await page.getOperatorList();
+      const allImages: { url: string; width: number; height: number; y: number; blob: Blob }[] = [];
+
+      // Collect ALL images (no filtering)
+      for (let i = 0; i < ops.fnArray.length; i++) {
+        if (ops.fnArray[i] === pdfjsLib.OPS.paintImageXObject) {
+          const imageName = ops.argsArray[i][0];
+
+          try {
+            const image = await page.objs.get(imageName);
+
+            if (image && image.width && image.height) {
+              // Get Y position
+              let yPosition = 0;
+              for (let j = i - 1; j >= Math.max(0, i - 10); j--) {
+                if (ops.fnArray[j] === pdfjsLib.OPS.transform ||
+                    ops.fnArray[j] === pdfjsLib.OPS.setMatrix) {
+                  const matrix = ops.argsArray[j];
+                  if (matrix && matrix.length >= 6) {
+                    yPosition = matrix[5];
+                    break;
+                  }
+                }
+              }
+
+              // Create canvas and draw image
+              const imgCanvas = document.createElement('canvas');
+              imgCanvas.width = image.width;
+              imgCanvas.height = image.height;
+              const imgCtx = imgCanvas.getContext('2d');
+
+              if (imgCtx) {
+                let imageDrawn = false;
+
+                if (image.bitmap) {
+                  imgCtx.drawImage(image.bitmap, 0, 0);
+                  imageDrawn = true;
+                } else if (image.data) {
+                  const imageData = imgCtx.createImageData(image.width, image.height);
+                  if (image.data instanceof Uint8Array || image.data instanceof Uint8ClampedArray) {
+                    imageData.data.set(image.data);
+                  }
+                  imgCtx.putImageData(imageData, 0, 0);
+                  imageDrawn = true;
+                }
+
+                if (imageDrawn) {
+                  const blob = await new Promise<Blob | null>((resolve) => {
+                    imgCanvas.toBlob(resolve, 'image/png');
+                  });
+
+                  if (blob) {
+                    const url = URL.createObjectURL(blob);
+                    allImages.push({
+                      url,
+                      width: image.width,
+                      height: image.height,
+                      y: yPosition,
+                      blob,
+                    });
+                  }
+                }
+              }
+            }
+          } catch (err) {
+            // Skip unresolvable images
+          }
+        }
+      }
+
+      // Sort by Y position (top to bottom)
+      allImages.sort((a, b) => b.y - a.y);
+      setAvailableImages(allImages);
+      console.log(`[Manual Selection] Found ${allImages.length} images on page ${question.page_number}`);
+    } catch (err) {
+      console.error('Error loading images for manual selection:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load images');
+    } finally {
+      setLoadingImages(false);
+    }
+  };
+
+  // Handle selecting an image from the manual selector
+  const handleSelectImage = async (imageIndex: number) => {
+    if (imageSelectorQuestionIndex === null || !selectedTest || sharedImageQuestions.length === 0) return;
+
+    const selectedImage = availableImages[imageIndex];
+    const question = convertedQuestions[imageSelectorQuestionIndex] as any;
+
+    try {
+      // Upload the selected image to storage
+      const arrayBuffer = await selectedImage.blob.arrayBuffer();
+      const bytes = new Uint8Array(arrayBuffer);
+      let binary = '';
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      const imageBase64 = btoa(binary);
+
+      const timestamp = Date.now();
+      const filePath = `${selectedTest.test_type}/${selectedTest.section}/question_${question.question_number}_manual_${timestamp}.png`;
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+
+      if (!token) {
+        throw new Error('No auth token available');
+      }
+
+      const uploadResponse = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-question-image`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            filePath,
+            imageBase64,
+          }),
+        }
+      );
+
+      if (!uploadResponse.ok) {
+        throw new Error(`Upload failed: ${uploadResponse.status}`);
+      }
+
+      const uploadData = await uploadResponse.json();
+      const publicUrl = uploadData.publicUrl;
+
+      // Update ALL selected questions with the shared image
+      const updatedQuestions = [...convertedQuestions];
+
+      // Get question numbers for linking
+      const linkedQuestionNumbers = sharedImageQuestions.map(idx => convertedQuestions[idx].question_number);
+
+      for (const qIndex of sharedImageQuestions) {
+        if (selectedImageTarget === 'question') {
+          (updatedQuestions[qIndex] as any).image_url = publicUrl;
+          // Store linked questions info
+          if (sharedImageQuestions.length > 1) {
+            (updatedQuestions[qIndex] as any).shared_image_questions = linkedQuestionNumbers;
+          }
+        } else {
+          // Handle option images (only for primary question)
+          if (qIndex === imageSelectorQuestionIndex) {
+            const optionKey = selectedImageTarget.replace('option_', '');
+            if (!(updatedQuestions[qIndex] as any).image_options) {
+              (updatedQuestions[qIndex] as any).image_options = {};
+            }
+            (updatedQuestions[qIndex] as any).image_options[optionKey] = publicUrl;
+          }
+        }
+      }
+
+      setConvertedQuestions(updatedQuestions);
+      setShowImageSelector(false);
+
+      // Clean up object URLs
+      availableImages.forEach(img => URL.revokeObjectURL(img.url));
+      setAvailableImages([]);
+
+      const questionsList = linkedQuestionNumbers.join(', ');
+      console.log(`✓ Manually selected and uploaded image for question(s) ${questionsList}`);
+    } catch (err) {
+      console.error('Error uploading selected image:', err);
+      setError(err instanceof Error ? err.message : 'Failed to upload image');
+    }
+  };
+
+  // Toggle question selection for shared image
+  const toggleSharedQuestion = (index: number) => {
+    setSharedImageQuestions(prev => {
+      if (prev.includes(index)) {
+        // Don't allow deselecting if it's the only one
+        if (prev.length === 1) return prev;
+        return prev.filter(i => i !== index);
+      } else {
+        return [...prev, index].sort((a, b) => a - b);
+      }
+    });
+  };
+
+  // Close image selector and clean up
+  const closeImageSelector = () => {
+    setShowImageSelector(false);
+    setImageSelectorQuestionIndex(null);
+    // Clean up object URLs
+    availableImages.forEach(img => URL.revokeObjectURL(img.url));
+    setAvailableImages([]);
+  };
+
   return (
     <MathJaxProvider>
       <Layout pageTitle="PDF to LaTeX Converter" pageSubtitle="Convert PDF questions to interactive LaTeX format">
@@ -1312,6 +1716,274 @@ export default function PDFToLatexConverterPage() {
               <div>
                 <h3 className="font-semibold text-green-900">Success!</h3>
                 <p className="text-green-700">Questions saved successfully. Redirecting...</p>
+              </div>
+            </div>
+          )}
+
+          {/* Batch Progress Modal */}
+          {batchProgress.show && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4">
+                <h3 className="text-xl font-bold text-brand-dark mb-4 flex items-center gap-3">
+                  <FontAwesomeIcon icon={faSpinner} className="animate-spin text-brand-green" />
+                  Extracting Questions
+                </h3>
+
+                <div className="space-y-4">
+                  {/* Progress bar */}
+                  <div>
+                    <div className="flex justify-between text-sm text-gray-600 mb-1">
+                      <span>Batch {batchProgress.currentBatch} of {batchProgress.totalBatches}</span>
+                      <span>{Math.round((batchProgress.currentBatch / batchProgress.totalBatches) * 100)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div
+                        className="bg-gradient-to-r from-brand-green to-emerald-500 h-3 rounded-full transition-all duration-500"
+                        style={{ width: `${(batchProgress.currentBatch / batchProgress.totalBatches) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Status */}
+                  <p className="text-gray-600">{batchProgress.status}</p>
+
+                  {/* Questions extracted */}
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-sm text-gray-500">Questions extracted so far:</p>
+                    <p className="text-2xl font-bold text-brand-dark">{batchProgress.questionsExtracted}</p>
+                  </div>
+
+                  <p className="text-xs text-gray-400 text-center">
+                    Processing 4 pages per batch to ensure accurate extraction
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Passage Management Modal */}
+          {showPassageModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-xl shadow-2xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-brand-dark">
+                    {editingPassageId ? `Edit Passage: ${editingPassageId}` : 'Create New Passage'}
+                  </h3>
+                  <button
+                    onClick={() => {
+                      setShowPassageModal(false);
+                      setEditingPassageId(null);
+                      setSelectedQuestionsForPassage([]);
+                      setNewPassageText('');
+                    }}
+                    className="text-gray-500 hover:text-gray-700 text-2xl"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                {/* AI Detection */}
+                <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                  <label className="block text-sm font-semibold text-purple-700 mb-2">
+                    🤖 Let Claude Find the Passage
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={pageRangeInput}
+                      onChange={(e) => setPageRangeInput(e.target.value)}
+                      placeholder="e.g., pages 13-16, questions 9-13"
+                      className="flex-1 px-3 py-2 border-2 border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                      disabled={detectingPassage}
+                    />
+                    <button
+                      onClick={async () => {
+                        if (!selectedTest || !pageRangeInput) return;
+
+                        setDetectingPassage(true);
+                        try {
+                          const { data: sessionData } = await supabase.auth.getSession();
+                          const token = sessionData?.session?.access_token;
+
+                          // Parse page range
+                          const pageMatch = pageRangeInput.match(/pages?\s*(\d+)(?:\s*-\s*(\d+))?/i);
+                          const questionMatch = pageRangeInput.match(/questions?\s*(\d+)(?:\s*-\s*(\d+))?/i);
+
+                          const pageStart = pageMatch ? parseInt(pageMatch[1]) : undefined;
+                          const pageEnd = pageMatch && pageMatch[2] ? parseInt(pageMatch[2]) : pageStart;
+
+                          const questionStart = questionMatch ? parseInt(questionMatch[1]) : undefined;
+                          const questionEnd = questionMatch && questionMatch[2] ? parseInt(questionMatch[2]) : questionStart;
+
+                          // Call API to extract just the passage
+                          const response = await fetch(
+                            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/extract-questions-from-pdf`,
+                            {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                Authorization: `Bearer ${token}`,
+                              },
+                              body: JSON.stringify({
+                                pdfUrl: selectedTest.pdf_url,
+                                testType: selectedTest.test_type,
+                                section: selectedTest.section,
+                                testNumber: selectedTest.test_number,
+                                pageStart,
+                                pageEnd,
+                                extractPassageOnly: true,
+                                targetQuestions: questionStart && questionEnd ?
+                                  Array.from({length: questionEnd - questionStart + 1}, (_, i) => questionStart + i) :
+                                  selectedQuestionsForPassage
+                              }),
+                            }
+                          );
+
+                          if (response.ok) {
+                            const data = await response.json();
+                            if (data.passages && data.passages.length > 0) {
+                              setNewPassageText(data.passages[0].passage_text || '');
+
+                              // Auto-select questions if Claude identified them
+                              if (data.passages[0].question_numbers) {
+                                setSelectedQuestionsForPassage(data.passages[0].question_numbers);
+                              }
+                            } else if (data.extractedText) {
+                              // Fallback: raw text extraction
+                              setNewPassageText(data.extractedText);
+                            }
+                          }
+                        } catch (error) {
+                          console.error('Failed to detect passage:', error);
+                        } finally {
+                          setDetectingPassage(false);
+                        }
+                      }}
+                      disabled={detectingPassage || !pageRangeInput}
+                      className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:bg-gray-300 font-semibold flex items-center gap-2"
+                    >
+                      {detectingPassage ? (
+                        <>
+                          <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+                          Detecting...
+                        </>
+                      ) : (
+                        <>
+                          <FontAwesomeIcon icon={faMagic} />
+                          Detect
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <p className="text-xs text-purple-600 mt-1">
+                    Enter page numbers and/or question numbers where the passage appears
+                  </p>
+                </div>
+
+                {/* Passage Text */}
+                <div className="mb-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Passage Text
+                    </label>
+                    <span className="text-xs text-gray-500">
+                      {(newPassageText || passages.find(p => p.passage_id === editingPassageId)?.passage_text || '').length} characters
+                    </span>
+                  </div>
+                  <textarea
+                    value={newPassageText || (editingPassageId ? passages.find(p => p.passage_id === editingPassageId)?.passage_text : '')}
+                    onChange={(e) => setNewPassageText(e.target.value)}
+                    className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-mono text-sm"
+                    rows={10}
+                    placeholder="Enter the shared passage text or use AI detection above... (No length limit - passages can be as long as needed)"
+                    style={{ minHeight: '250px', maxHeight: '500px' }}
+                  />
+                </div>
+
+                {/* Select Questions */}
+                <div className="mb-4">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Assign Questions to this Passage
+                  </label>
+                  <div className="grid grid-cols-8 gap-2 max-h-40 overflow-y-auto p-2 bg-gray-50 rounded-lg">
+                    {convertedQuestions.map((q) => (
+                      <button
+                        key={q.question_number}
+                        onClick={() => {
+                          setSelectedQuestionsForPassage(prev =>
+                            prev.includes(q.question_number)
+                              ? prev.filter(n => n !== q.question_number)
+                              : [...prev, q.question_number]
+                          );
+                        }}
+                        className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                          selectedQuestionsForPassage.includes(q.question_number)
+                            ? 'bg-amber-500 text-white'
+                            : q.passage_id
+                              ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                      >
+                        Q{q.question_number}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Selected: {selectedQuestionsForPassage.length} questions
+                    {selectedQuestionsForPassage.length > 0 && ` (${selectedQuestionsForPassage.sort((a,b) => a-b).join(', ')})`}
+                  </p>
+                </div>
+
+                {/* Actions */}
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={() => {
+                      setShowPassageModal(false);
+                      setEditingPassageId(null);
+                      setSelectedQuestionsForPassage([]);
+                      setNewPassageText('');
+                    }}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      const passageId = editingPassageId || `passage_${passages.length + 1}`;
+                      const passageText = newPassageText || passages.find(p => p.passage_id === editingPassageId)?.passage_text || '';
+
+                      // Update or create passage
+                      if (editingPassageId) {
+                        setPassages(prev => prev.map(p =>
+                          p.passage_id === editingPassageId
+                            ? { ...p, passage_text: passageText, question_numbers: selectedQuestionsForPassage }
+                            : p
+                        ));
+                      } else {
+                        setPassages(prev => [...prev, {
+                          passage_id: passageId,
+                          passage_text: passageText,
+                          question_numbers: selectedQuestionsForPassage
+                        }]);
+                      }
+
+                      // Update questions with passage_id
+                      setConvertedQuestions(prev => prev.map(q => ({
+                        ...q,
+                        passage_id: selectedQuestionsForPassage.includes(q.question_number) ? passageId :
+                          (q.passage_id === editingPassageId && !selectedQuestionsForPassage.includes(q.question_number) ? null : q.passage_id)
+                      })));
+
+                      setShowPassageModal(false);
+                      setEditingPassageId(null);
+                      setSelectedQuestionsForPassage([]);
+                      setNewPassageText('');
+                    }}
+                    className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 font-semibold"
+                  >
+                    {editingPassageId ? 'Update Passage' : 'Create Passage'}
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -1638,38 +2310,43 @@ export default function PDFToLatexConverterPage() {
             </div>
           )}
 
-          {/* Results View - PDF Left, Questions Right */}
+          {/* Results View - PDF Left (Fixed), Questions Right */}
           {!fullScreenPreview && convertedQuestions.length > 0 && selectedTest && (
-            <div className={`grid grid-cols-1 gap-6 h-[calc(100vh-200px)] ${showPdfPreview ? 'lg:grid-cols-2' : ''}`}>
-              {/* Left Panel: PDF Viewer */}
+            <div className={`${showPdfPreview ? 'lg:grid lg:grid-cols-2 lg:gap-6' : ''}`}>
+              {/* Left Panel: PDF Viewer - Fixed on left */}
               {showPdfPreview && (
-                <div className="bg-white rounded-xl shadow-xl p-6 overflow-hidden flex flex-col">
-                  <div className="flex items-center justify-between mb-4 pb-4 border-b-2 border-gray-200">
-                    <h2 className="text-xl font-bold text-brand-dark flex items-center gap-2">
-                      <span className="text-2xl">📄</span>
-                      PDF Preview
-                    </h2>
-                    <a
-                      href={selectedTest.pdf_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
-                    >
-                      Open in new tab →
-                    </a>
+                <>
+                  {/* Fixed PDF Panel */}
+                  <div className="bg-white rounded-xl shadow-xl p-6 lg:fixed lg:left-8 lg:top-4 lg:w-[calc(50%-2rem)] lg:h-[calc(100vh-32px)] overflow-hidden flex flex-col z-10">
+                    <div className="flex items-center justify-between mb-4 pb-4 border-b-2 border-gray-200">
+                      <h2 className="text-xl font-bold text-brand-dark flex items-center gap-2">
+                        <span className="text-2xl">📄</span>
+                        PDF Preview
+                      </h2>
+                      <a
+                        href={selectedTest.pdf_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                      >
+                        Open in new tab →
+                      </a>
+                    </div>
+                    <div className="flex-1 overflow-hidden rounded-lg border-2 border-gray-300">
+                      <iframe
+                        src={selectedTest.pdf_url}
+                        className="w-full h-full"
+                        title="PDF Preview"
+                      />
+                    </div>
                   </div>
-                  <div className="flex-1 overflow-hidden rounded-lg border-2 border-gray-300">
-                    <iframe
-                      src={selectedTest.pdf_url}
-                      className="w-full h-full"
-                      title="PDF Preview"
-                    />
-                  </div>
-                </div>
+                  {/* Spacer to account for fixed panel */}
+                  <div className="hidden lg:block" />
+                </>
               )}
 
               {/* Right Panel: Converted Questions */}
-              <div className="bg-white rounded-xl shadow-xl p-6 overflow-hidden flex flex-col">
+              <div className="bg-white rounded-xl shadow-xl p-6">
                 <div className="flex items-center justify-between mb-4 pb-4 border-b-2 border-gray-200">
                   <h2 className="text-xl font-bold text-brand-dark flex items-center gap-2">
                     <span className="text-2xl">✨</span>
@@ -1734,13 +2411,94 @@ export default function PDFToLatexConverterPage() {
                   </div>
                 )}
 
-                <div className="flex-1 overflow-y-auto space-y-4 pr-2">
-                  {convertedQuestions.map((question, index) => (
-                    <div key={index} className="border-2 border-gray-200 rounded-xl p-4 hover:border-brand-green transition-colors">
-                      {/* Question Header */}
-                      <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-200">
-                        <h3 className="font-bold text-brand-dark text-lg">Question {question.question_number}</h3>
+                {/* Add New Passage Button */}
+                {convertedQuestions.length > 0 && (
+                  <div className="mb-4 flex justify-end">
+                    <button
+                      onClick={() => {
+                        setEditingPassageId(null);
+                        setSelectedQuestionsForPassage([]);
+                        setNewPassageText('');
+                        setPageRangeInput('');
+                        setShowPassageModal(true);
+                      }}
+                      className="bg-amber-500 text-white px-4 py-2 rounded-lg hover:bg-amber-600 font-semibold flex items-center gap-2"
+                    >
+                      <span>📖</span>
+                      Add Passage
+                    </button>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  {convertedQuestions.map((question, index) => {
+                    // Check if this question starts a passage group
+                    const passage = question.passage_id ? passages.find(p => p.passage_id === question.passage_id) : null;
+                    const isFirstInPassage = passage &&
+                      convertedQuestions.findIndex(q => q.passage_id === passage.passage_id) === index;
+
+                    return (
+                      <div key={index}>
+                        {/* Show passage before the first question that uses it */}
+                        {isFirstInPassage && passage && (
+                          <div className="mb-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-6 border-2 border-amber-200">
+                            <div className="flex items-center justify-between mb-3">
+                              <h3 className="font-bold text-amber-900 flex items-center gap-2">
+                                <span>📖</span>
+                                {passage.passage_title || 'Shared Passage'}
+                              </h3>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded">
+                                  For Questions: {convertedQuestions
+                                    .filter(q => q.passage_id === passage.passage_id)
+                                    .map(q => q.question_number)
+                                    .join(', ')}
+                                </span>
+                                <button
+                                  onClick={() => {
+                                    setEditingPassageId(passage.passage_id);
+                                    const linkedQuestions = convertedQuestions.filter(q => q.passage_id === passage.passage_id);
+                                    setSelectedQuestionsForPassage(linkedQuestions.map(q => q.question_number));
+                                    setNewPassageText(passage.passage_text || '');
+                                    setPageRangeInput('');
+                                    setShowPassageModal(true);
+                                  }}
+                                  className="text-amber-600 hover:text-amber-800 text-sm"
+                                  title="Edit passage"
+                                >
+                                  <FontAwesomeIcon icon={faEdit} />
+                                </button>
+                              </div>
+                            </div>
+                            <div className="bg-white rounded-lg p-4 text-gray-700 whitespace-pre-wrap">
+                              <MathJaxRenderer>{passage.passage_text || ''}</MathJaxRenderer>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Question Card */}
+                        <div className="border-2 border-gray-200 rounded-xl p-4 hover:border-brand-green transition-colors">
+                          {/* Question Header */}
+                          <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-200">
+                            <h3 className="font-bold text-brand-dark text-lg">
+                              Question {question.question_number}
+                              {question.passage_id && (
+                                <span className="ml-2 text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded">
+                                  📖 {question.passage_id}
+                                </span>
+                              )}
+                            </h3>
                         <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              setImageSelectorQuestionIndex(index);
+                              setShowImageSelector(true);
+                            }}
+                            className="text-green-600 hover:text-green-800 px-3 py-1.5 rounded-lg hover:bg-green-50 transition-colors"
+                            title={question.image_url ? "Edit image" : "Add image"}
+                          >
+                            <FontAwesomeIcon icon={faImage} />
+                          </button>
                           <button
                             onClick={() => setEditingIndex(editingIndex === index ? null : index)}
                             className="text-blue-600 hover:text-blue-800 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors"
@@ -1773,6 +2531,15 @@ export default function PDFToLatexConverterPage() {
                           {/* Display image(s) if present */}
                           {(question as any).image_url && (
                             <div className="mt-3 space-y-2">
+                              {/* Shared image indicator */}
+                              {(question as any).shared_image_questions && (question as any).shared_image_questions.length > 1 && (
+                                <div className="bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2 text-sm">
+                                  <span className="font-semibold text-indigo-700">Shared image:</span>
+                                  <span className="text-indigo-600 ml-1">
+                                    Questions {(question as any).shared_image_questions.join(', ')}
+                                  </span>
+                                </div>
+                              )}
                               <div className="border-2 border-indigo-300 rounded-lg overflow-hidden">
                                 <img
                                   src={(question as any).image_url}
@@ -1810,24 +2577,46 @@ export default function PDFToLatexConverterPage() {
                                 <div className="flex-1 text-sm text-red-900">
                                   ⚠️ Failed to extract image from page {(question as any).page_number}
                                 </div>
-                                <button
-                                  onClick={() => handleRetryImageExtraction(index)}
-                                  disabled={retryingImageIndex === index}
-                                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2 font-semibold text-sm"
-                                >
-                                  {retryingImageIndex === index ? (
-                                    <>
-                                      <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
-                                      Retrying...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <FontAwesomeIcon icon={faRedo} />
-                                      Retry Extraction
-                                    </>
-                                  )}
-                                </button>
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => handleRetryImageExtraction(index)}
+                                    disabled={retryingImageIndex === index}
+                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2 font-semibold text-sm"
+                                  >
+                                    {retryingImageIndex === index ? (
+                                      <>
+                                        <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+                                        Retrying...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <FontAwesomeIcon icon={faRedo} />
+                                        Retry
+                                      </>
+                                    )}
+                                  </button>
+                                  <button
+                                    onClick={() => openImageSelector(index, 'question')}
+                                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 font-semibold text-sm"
+                                  >
+                                    <FontAwesomeIcon icon={faImage} />
+                                    Select Manually
+                                  </button>
+                                </div>
                               </div>
+                            </div>
+                          )}
+
+                          {/* Button to change existing image */}
+                          {(question as any).image_url && (
+                            <div className="mt-2 flex justify-end">
+                              <button
+                                onClick={() => openImageSelector(index, 'question')}
+                                className="px-3 py-1 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2 text-sm"
+                              >
+                                <FontAwesomeIcon icon={faExchangeAlt} />
+                                Change Image
+                              </button>
                             </div>
                           )}
                         </div>
@@ -1908,8 +2697,10 @@ export default function PDFToLatexConverterPage() {
                           ))}
                         </select>
                       </div>
-                    </div>
-                  ))}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* Bottom Save Button */}
@@ -2037,6 +2828,134 @@ export default function PDFToLatexConverterPage() {
                 </div>
               );
             })()}
+          </div>
+        </div>
+      )}
+
+      {/* Manual Image Selector Modal */}
+      {showImageSelector && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-75 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="bg-indigo-600 p-4 text-white">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-xl font-bold">
+                    Select Image {selectedImageTarget === 'question' ? 'for Question' : `for Option ${selectedImageTarget.replace('option_', '').toUpperCase()}`}
+                  </h2>
+                  {imageSelectorQuestionIndex !== null && (
+                    <p className="text-indigo-200 text-sm">
+                      Question {convertedQuestions[imageSelectorQuestionIndex]?.question_number} - Page {(convertedQuestions[imageSelectorQuestionIndex] as any)?.page_number}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={closeImageSelector}
+                  className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors font-semibold"
+                >
+                  ✕ Close
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="flex-1 overflow-auto p-4">
+              {loadingImages ? (
+                <div className="flex items-center justify-center py-12">
+                  <FontAwesomeIcon icon={faSpinner} className="animate-spin text-4xl text-indigo-600" />
+                  <span className="ml-3 text-gray-600">Loading images from PDF...</span>
+                </div>
+              ) : availableImages.length === 0 ? (
+                <div className="text-center py-12">
+                  <FontAwesomeIcon icon={faImage} className="text-6xl text-gray-300 mb-4" />
+                  <p className="text-gray-500 text-lg">No images found on this page</p>
+                  <p className="text-gray-400 text-sm mt-2">The PDF may not contain extractable images</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Question selector for shared images */}
+                  {selectedImageTarget === 'question' && (
+                    <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4 mb-4">
+                      <p className="text-sm font-semibold text-yellow-800 mb-2">
+                        Share this image with multiple questions?
+                      </p>
+                      <p className="text-xs text-yellow-700 mb-3">
+                        Select all questions that should reference this image (e.g., "Answer questions 1-3 based on this graph")
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {convertedQuestions.map((q, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => toggleSharedQuestion(idx)}
+                            className={`px-3 py-1 rounded-full text-sm font-semibold transition-colors ${
+                              sharedImageQuestions.includes(idx)
+                                ? 'bg-indigo-600 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                          >
+                            Q{q.question_number}
+                          </button>
+                        ))}
+                      </div>
+                      {sharedImageQuestions.length > 1 && (
+                        <p className="mt-2 text-xs text-indigo-600 font-semibold">
+                          Image will be shared with questions: {sharedImageQuestions.map(i => convertedQuestions[i].question_number).join(', ')}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  <p className="text-sm text-gray-600 mb-4">
+                    Click on an image to select it. Found {availableImages.length} image(s) on this page.
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {availableImages.map((img, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleSelectImage(idx)}
+                        className="border-2 border-gray-200 rounded-lg p-3 hover:border-indigo-500 hover:bg-indigo-50 transition-all text-left group"
+                      >
+                        <div className="aspect-video bg-gray-100 rounded overflow-hidden mb-2 flex items-center justify-center">
+                          <img
+                            src={img.url}
+                            alt={`Image ${idx + 1}`}
+                            className="max-w-full max-h-full object-contain"
+                          />
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-600">
+                            Image #{idx + 1}
+                          </span>
+                          <span className="text-gray-500">
+                            {img.width}×{img.height}
+                          </span>
+                        </div>
+                        <div className="mt-2 text-center">
+                          <span className="inline-block px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-semibold group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                            Click to Select
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-gray-50 border-t">
+              <div className="flex justify-between items-center">
+                <p className="text-sm text-gray-500">
+                  Images are sorted from top to bottom of the page
+                </p>
+                <button
+                  onClick={closeImageSelector}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
