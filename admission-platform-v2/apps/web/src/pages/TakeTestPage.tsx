@@ -270,6 +270,7 @@ export default function TakeTestPage() {
   const [currentPageGroup, setCurrentPageGroup] = useState(0); // For PDF tests: current page group
   const [showStartScreen, setShowStartScreen] = useState(true);
   const [testLanguage, setTestLanguage] = useState<string>('it'); // Language captured at test start
+  const [exerciseType, setExerciseType] = useState<string>(''); // Exercise type from assignment
   const [showSectionSelectionScreen, setShowSectionSelectionScreen] = useState(false);
   const [showPauseScreen, setShowPauseScreen] = useState(false);
   const [showPauseChoiceScreen, setShowPauseChoiceScreen] = useState(false);
@@ -486,6 +487,10 @@ export default function TakeTestPage() {
   // Helper to format section names for display
   const formatSectionName = (name: string): string => {
     if (!name) return '';
+    // If section is "Multi-topic", display exercise type instead
+    if (name === 'Multi-topic' && exerciseType) {
+      return exerciseType;
+    }
     // Replace RW with "Reading and Writing"
     let formatted = name.replace(/^RW(\d*)/, 'Reading and Writing $1').trim();
     // Replace Math1, Math2 with "Math 1", "Math 2"
@@ -539,13 +544,14 @@ export default function TakeTestPage() {
 
   // Track question start time when question changes
   useEffect(() => {
-    if (currentQuestion?.id && !questionStartTimes[currentQuestion.id]) {
+    if (currentQuestion?.id) {
+      // Always reset start time when viewing a question (for accurate time tracking per session)
       setQuestionStartTimes(prev => ({
         ...prev,
         [currentQuestion.id]: new Date()
       }));
     }
-  }, [currentQuestion?.id, questionStartTimes]);
+  }, [currentQuestion?.id]);
 
   // ❌ REMOVED: test_questions tracking with race condition
   // ✅ NEW: Question order is now tracked via answers.created_at (atomic, no race conditions)
@@ -1175,6 +1181,9 @@ export default function TakeTestPage() {
       const testType = assignment['2V_tests'].test_type;
       const exerciseType = assignment['2V_tests'].exercise_type;
       const testFormat = assignment['2V_tests'].format;
+
+      // Store exercise type in state for display
+      setExerciseType(exerciseType || '');
 
       // Check if this is a PDF test
       if (testFormat === 'pdf') {
@@ -1883,11 +1892,31 @@ export default function TakeTestPage() {
       setIsSaving(true);
       setSaveError(null);
 
-      // Calculate time spent on this question
+      // Check if answer already exists (to preserve question_order and accumulate time)
+      const tableSuffix = isTestMode ? '_test' : '';
+      const { data: existingAnswer } = await db
+        .from(`2V_student_answers${tableSuffix}`)
+        .select('question_order, time_spent_seconds')
+        .eq('assignment_id', assignmentId)
+        .eq('question_id', questionId)
+        .eq('attempt_number', currentAttempt)
+        .maybeSingle();
+
+      // Calculate time spent on this question ONLY for this viewing session
       const startTime = questionStartTimes[questionId];
-      const timeSpentSeconds = startTime
+      const newTimeSpentSeconds = startTime
         ? Math.floor((new Date().getTime() - startTime.getTime()) / 1000)
         : 0;
+
+      // If answer exists, accumulate time and preserve question_order
+      // If new, use provided values
+      const finalTimeSpentSeconds = existingAnswer
+        ? (existingAnswer.time_spent_seconds || 0) + newTimeSpentSeconds
+        : newTimeSpentSeconds;
+
+      const finalQuestionOrder = existingAnswer
+        ? existingAnswer.question_order // Preserve original order
+        : questionOrder; // Use provided order for new answers
 
       // Transform answer to JSONB format based on question type
       let jsonbAnswer: any = {};
@@ -1924,7 +1953,6 @@ export default function TakeTestPage() {
       }
 
       // Upsert answer to database (uses test tables in test mode)
-      const tableSuffix = isTestMode ? '_test' : '';
       const { error } = await db
         .from(`2V_student_answers${tableSuffix}`)
         .upsert({
@@ -1934,8 +1962,8 @@ export default function TakeTestPage() {
           attempt_number: currentAttempt,
           answer: jsonbAnswer,
           is_flagged: isFlagged,
-          time_spent_seconds: timeSpentSeconds,
-          question_order: questionOrder,
+          time_spent_seconds: finalTimeSpentSeconds,
+          question_order: finalQuestionOrder,
           // Guided mode fields
           is_guided: isGuidedMode,
           guided_settings: isGuidedMode ? {
