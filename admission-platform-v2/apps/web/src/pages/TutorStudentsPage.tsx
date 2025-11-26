@@ -123,7 +123,7 @@ export default function TutorStudentsPage() {
   }
 
   return (
-    <Layout pageTitle="Student Management" pageSubtitle="Arched Preparation">
+    <Layout pageTitle="Student Management">
       <div className="flex-1 p-4 md:p-8">
         <div className="max-w-7xl mx-auto">
           {/* Page Header */}

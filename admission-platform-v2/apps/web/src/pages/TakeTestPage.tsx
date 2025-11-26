@@ -560,7 +560,7 @@ export default function TakeTestPage() {
     // Debounce saving to avoid too many requests
     const timeoutId = setTimeout(() => {
       const flaggedStatus = currentAnswer.flagged || false;
-      saveAnswer(currentQuestion.id, currentAnswer, flaggedStatus);
+      saveAnswer(currentQuestion.id, currentAnswer, flaggedStatus, 0, currentQuestionIndex + 1);
     }, 1000); // Save 1 second after last change
 
     return () => clearTimeout(timeoutId);
@@ -599,13 +599,15 @@ export default function TakeTestPage() {
   // This ensures "in_progress" status doesn't persist when student leaves
   useEffect(() => {
     const handleBeforeUnload = async (e: BeforeUnloadEvent) => {
-      // Save current answer if any
-      if (currentQuestion?.id && answers[currentQuestion.id]) {
+      // Save current answer if any (or save empty answer to track question order)
+      if (currentQuestion?.id) {
         // Try to save synchronously
         await saveAnswer(
           currentQuestion.id,
-          answers[currentQuestion.id],
-          answers[currentQuestion.id].flagged || false
+          answers[currentQuestion.id] || { answer: null },
+          answers[currentQuestion.id]?.flagged || false,
+          0,
+          currentQuestionIndex + 1
         );
       }
 
@@ -1839,12 +1841,14 @@ export default function TakeTestPage() {
 
     if (!canGoBack()) return;
 
-    // Save current answer before navigating back
-    if (currentQuestion?.id && answers[currentQuestion.id]) {
+    // Save current answer before navigating back (or save empty answer to track question order)
+    if (currentQuestion?.id) {
       await saveAnswer(
         currentQuestion.id,
-        answers[currentQuestion.id],
-        answers[currentQuestion.id].flagged || false
+        answers[currentQuestion.id] || { answer: null },
+        answers[currentQuestion.id]?.flagged || false,
+        0,
+        currentQuestionIndex + 1
       );
     }
 
@@ -1868,7 +1872,8 @@ export default function TakeTestPage() {
     questionId: string,
     answerData: any,
     isFlagged: boolean = false,
-    retryCount: number = 0
+    retryCount: number = 0,
+    questionOrder?: number
   ): Promise<boolean> {
     if (!assignmentId || !studentId) {
       return false;
@@ -1930,6 +1935,7 @@ export default function TakeTestPage() {
           answer: jsonbAnswer,
           is_flagged: isFlagged,
           time_spent_seconds: timeSpentSeconds,
+          question_order: questionOrder,
           // Guided mode fields
           is_guided: isGuidedMode,
           guided_settings: isGuidedMode ? {
@@ -1963,7 +1969,7 @@ export default function TakeTestPage() {
         const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s
 
         await new Promise(resolve => setTimeout(resolve, delay));
-        return saveAnswer(questionId, answerData, isFlagged, retryCount + 1);
+        return saveAnswer(questionId, answerData, isFlagged, retryCount + 1, questionOrder);
       } else {
         // Final failure after 3 attempts
         setSaveError('Failed to save answer. Your progress may not be saved.');
@@ -1979,12 +1985,14 @@ export default function TakeTestPage() {
       return;
     }
 
-    // Save current answer immediately before navigating
-    if (currentQuestion?.id && answers[currentQuestion.id]) {
+    // Save current answer immediately before navigating (or save empty answer to track question order)
+    if (currentQuestion?.id) {
       await saveAnswer(
         currentQuestion.id,
-        answers[currentQuestion.id],
-        answers[currentQuestion.id].flagged || false
+        answers[currentQuestion.id] || { answer: null },
+        answers[currentQuestion.id]?.flagged || false,
+        0,
+        currentQuestionIndex + 1
       );
     }
 
@@ -2522,12 +2530,14 @@ export default function TakeTestPage() {
 
     if (timerRef.current) clearInterval(timerRef.current);
 
-    // Save final answer if any
-    if (currentQuestion?.id && answers[currentQuestion.id]) {
+    // Save final answer if any (or save empty answer to track question order)
+    if (currentQuestion?.id) {
       await saveAnswer(
         currentQuestion.id,
-        answers[currentQuestion.id],
-        answers[currentQuestion.id].flagged || false
+        answers[currentQuestion.id] || { answer: null },
+        answers[currentQuestion.id]?.flagged || false,
+        0,
+        currentQuestionIndex + 1
       );
     }
 
@@ -2675,7 +2685,23 @@ export default function TakeTestPage() {
       newAttempt.pause_events = pauseEvents;
 
       // Section completion tracking (for UI purposes)
-      newAttempt.sections_completed = Array.from(new Set(selectedQuestions.map(q => getSectionField(q))));
+      // Use sections array (which includes "All Questions" for no_sections mode) instead of actual question sections
+      newAttempt.sections_completed = sections;
+
+      // Section time tracking - capture final section time before saving
+      const finalSectionTimes = { ...sectionTimes };
+      if (sectionStartTime && currentSection) {
+        const currentSectionTime = Math.floor((new Date().getTime() - sectionStartTime.getTime()) / 1000);
+        finalSectionTimes[currentSection] = (finalSectionTimes[currentSection] || 0) + currentSectionTime;
+      }
+      newAttempt.section_times = finalSectionTimes;
+
+      // Question statistics
+      newAttempt.total_questions = selectedQuestions.length;
+      newAttempt.questions_answered = Object.keys(answers).filter(qId => {
+        const ans = answers[qId];
+        return ans && ans.answer !== null && ans.answer !== undefined;
+      }).length;
 
       // Check if attempt already exists (update instead of duplicating)
       const existingAttemptIndex = attempts.findIndex(
@@ -3289,9 +3315,10 @@ export default function TakeTestPage() {
               }
 
               // Save all answers on current page before moving
-              for (const question of sectionQuestions) {
+              for (let i = 0; i < sectionQuestions.length; i++) {
+                const question = sectionQuestions[i];
                 if (answers[question.id]) {
-                  await saveAnswer(question.id, answers[question.id], answers[question.id].flagged);
+                  await saveAnswer(question.id, answers[question.id], answers[question.id].flagged, 0, i + 1);
                 }
               }
 
