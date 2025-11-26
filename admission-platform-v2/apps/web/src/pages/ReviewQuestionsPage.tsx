@@ -31,6 +31,13 @@ import { Layout } from '../components/Layout';
 import { MathJaxProvider, MathJaxRenderer } from '../components/MathJaxRenderer';
 import { AdvancedGraphRenderer } from '../components/GraphRenderer';
 import { supabase } from '../lib/supabase';
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Configure pdfjs worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url
+).toString();
 
 interface ReviewInfo {
   reviewed_at: string;
@@ -126,8 +133,7 @@ export default function ReviewQuestionsPage() {
   const [aiReviewResults, setAIReviewResults] = useState<AIReviewResult[]>([]);
   const [showAIResultsModal, setShowAIResultsModal] = useState(false);
 
-  // Image upload
-  const [uploadingImage, setUploadingImage] = useState<string | null>(null);
+  // Graph generation
   const [generatingGraph, setGeneratingGraph] = useState<string | null>(null);
 
   // Applying graph recreation
@@ -140,6 +146,24 @@ export default function ReviewQuestionsPage() {
 
   // Per-question language override (null = use global viewLanguage)
   const [questionLanguageOverrides, setQuestionLanguageOverrides] = useState<Record<string, 'it' | 'en'>>({});
+
+  // Passage management
+  const [passages, setPassages] = useState<any[]>([]);
+  const [showPassageModal, setShowPassageModal] = useState(false);
+  const [editingPassageId, setEditingPassageId] = useState<string | null>(null);
+  const [selectedQuestionsForPassage, setSelectedQuestionsForPassage] = useState<number[]>([]);
+  const [newPassageText, setNewPassageText] = useState('');
+  const [newPassageTextEng, setNewPassageTextEng] = useState('');
+  const [detectingPassage, setDetectingPassage] = useState(false);
+  const [pageRangeInput, setPageRangeInput] = useState('');
+
+  // Image management
+  const [showImageSourceModal, setShowImageSourceModal] = useState(false);
+  const [currentImageQuestionId, setCurrentImageQuestionId] = useState<string | null>(null);
+  const [selectedPageForExtraction, setSelectedPageForExtraction] = useState<number>(1);
+  const [availableImages, setAvailableImages] = useState<{ url: string; width: number; height: number; y: number }[]>([]);
+  const [loadingImages, setLoadingImages] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   // Get unique test types for filter
   const testTypes = [...new Set(tests.map(t => t.test_type))].sort();
@@ -231,8 +255,26 @@ export default function ReviewQuestionsPage() {
       if (error) throw error;
       setQuestions(data || []);
 
-      // Get flagged question IDs
+      // Extract passages from question data
       if (data && data.length > 0) {
+        const passageMap = new Map<string, any>();
+        data.forEach((q: any) => {
+          if (q.question_data?.passage_id && q.question_data?.passage_text) {
+            if (!passageMap.has(q.question_data.passage_id)) {
+              passageMap.set(q.question_data.passage_id, {
+                passage_id: q.question_data.passage_id,
+                passage_text: q.question_data.passage_text,
+                passage_text_eng: q.question_data.passage_text_eng,
+                passage_title: q.question_data.passage_title,
+                question_numbers: []
+              });
+            }
+            passageMap.get(q.question_data.passage_id)!.question_numbers.push(q.question_number);
+          }
+        });
+        setPassages(Array.from(passageMap.values()));
+
+        // Get flagged question IDs
         const questionIds = data.map(q => q.id);
         const { data: flaggedAnswers } = await supabase
           .from('2V_student_answers')
@@ -244,6 +286,7 @@ export default function ReviewQuestionsPage() {
         setFlaggedQuestionIds(flaggedIds);
       } else {
         setFlaggedQuestionIds(new Set());
+        setPassages([]);
       }
     } catch (err) {
       console.error('Error loading questions:', err);
@@ -780,6 +823,428 @@ export default function ReviewQuestionsPage() {
     }
   };
 
+  // Image management functions
+  const handleAddImage = (questionId: string) => {
+    const question = questions.find(q => q.id === questionId);
+    setCurrentImageQuestionId(questionId);
+    setSelectedPageForExtraction(question?.question_data?.page_number || 1);
+    setShowImageSourceModal(true);
+  };
+
+  const handleExtractFromPDF = async (pageNumber: number) => {
+    if (!currentImageQuestionId || !selectedTest) return;
+
+    const question = questions.find(q => q.id === currentImageQuestionId);
+    if (!question) return;
+
+    setLoadingImages(true);
+    try {
+      // Get PDF URL from question data
+      const pdfUrl = question.question_data?.pdf_url || questions[0]?.question_data?.pdf_url;
+      if (!pdfUrl) {
+        alert('No PDF URL found');
+        return;
+      }
+
+      // Fetch and load PDF
+      const pdfResponse = await fetch(pdfUrl);
+      const pdfBlob = await pdfResponse.blob();
+      const pdfArrayBuffer = await pdfBlob.arrayBuffer();
+
+      const loadingTask = pdfjsLib.getDocument({ data: pdfArrayBuffer });
+      const pdfDoc = await loadingTask.promise;
+
+      if (pageNumber > pdfDoc.numPages) {
+        alert(`Page ${pageNumber} does not exist. PDF has ${pdfDoc.numPages} pages.`);
+        return;
+      }
+
+      // Get the page
+      const page = await pdfDoc.getPage(pageNumber);
+
+      // Render page
+      const viewport = page.getViewport({ scale: 1.0 });
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+
+      await page.render({
+        canvasContext: ctx!,
+        viewport: viewport,
+      }).promise;
+
+      // Get operator list to find images
+      const ops = await page.getOperatorList();
+      const allImagesOnPage: any[] = [];
+
+      console.log(`📄 Found ${ops.fnArray.filter(fn => fn === pdfjsLib.OPS.paintImageXObject).length} image operations on page ${pageNumber}`);
+
+      // First, collect all image names
+      const imageNames: string[] = [];
+      for (let i = 0; i < ops.fnArray.length; i++) {
+        if (ops.fnArray[i] === pdfjsLib.OPS.paintImageXObject) {
+          imageNames.push(ops.argsArray[i][0]);
+        }
+      }
+
+      // Wait a bit for all objects to be loaded
+      if (imageNames.length > 0) {
+        console.log(`⏳ Waiting for ${imageNames.length} images to be resolved...`);
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      // Now process the images
+      for (let i = 0; i < ops.fnArray.length; i++) {
+        if (ops.fnArray[i] === pdfjsLib.OPS.paintImageXObject) {
+          const imageName = ops.argsArray[i][0];
+
+          try {
+            // Check if the image is resolved
+            const isResolved = page.objs.has(imageName);
+            if (!isResolved) {
+              console.log(`  ⏳ Image ${imageName} not yet resolved, waiting...`);
+              // Wait a bit more
+              await new Promise(resolve => setTimeout(resolve, 200));
+            }
+
+            const image = await page.objs.get(imageName);
+
+            if (image && image.width && image.height) {
+              // Get Y position
+              let yPosition = 0;
+              for (let j = i - 1; j >= Math.max(0, i - 10); j--) {
+                if (ops.fnArray[j] === pdfjsLib.OPS.transform ||
+                    ops.fnArray[j] === pdfjsLib.OPS.setMatrix) {
+                  const matrix = ops.argsArray[j];
+                  if (matrix && matrix.length >= 6) {
+                    yPosition = matrix[5];
+                    break;
+                  }
+                }
+              }
+
+              console.log(`  ✓ Image ${imageName}: ${image.width}×${image.height}px, Y: ${yPosition}`);
+
+              allImagesOnPage.push({
+                imageName,
+                image,
+                yPosition,
+                width: image.width,
+                height: image.height,
+                opIndex: i
+              });
+            } else {
+              console.log(`  ✗ Image ${imageName}: Invalid dimensions`);
+            }
+          } catch (err) {
+            console.error(`  ✗ Failed to get image ${imageName}:`, err);
+          }
+        }
+      }
+
+      console.log(`📊 Total valid images found: ${allImagesOnPage.length}`);
+
+      // Sort by Y position (top to bottom)
+      allImagesOnPage.sort((a, b) => b.yPosition - a.yPosition);
+
+      // No filtering - extract every single image
+      const imagesToProcess = allImagesOnPage;
+
+      // Extract images
+      const extractedImages: { url: string; width: number; height: number; y: number }[] = [];
+
+      console.log(`🎨 Processing ${imagesToProcess.length} images for extraction...`);
+
+      for (const imgData of imagesToProcess) {
+        const { image, yPosition, imageName } = imgData;
+
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = image.width;
+          canvas.height = image.height;
+          const ctx = canvas.getContext('2d');
+
+          if (!ctx) {
+            console.error(`  ✗ ${imageName}: Failed to get canvas context`);
+            continue;
+          }
+
+          let imageDrawn = false;
+
+          if (image.bitmap) {
+            console.log(`  📸 ${imageName}: Drawing from bitmap`);
+            ctx.drawImage(image.bitmap, 0, 0);
+            imageDrawn = true;
+          } else if (image.data) {
+            console.log(`  📸 ${imageName}: Drawing from raw data (type: ${typeof image.data})`);
+
+            // Try to handle different data formats
+            try {
+              if (image.data instanceof Uint8Array || image.data instanceof Uint8ClampedArray) {
+                const imageData = ctx.createImageData(image.width, image.height);
+
+                // Check if it's RGBA (4 channels) or other format
+                if (image.data.length === image.width * image.height * 4) {
+                  // RGBA data
+                  imageData.data.set(image.data);
+                } else if (image.data.length === image.width * image.height * 3) {
+                  // RGB data - convert to RGBA
+                  for (let i = 0, j = 0; i < image.data.length; i += 3, j += 4) {
+                    imageData.data[j] = image.data[i];     // R
+                    imageData.data[j + 1] = image.data[i + 1]; // G
+                    imageData.data[j + 2] = image.data[i + 2]; // B
+                    imageData.data[j + 3] = 255;           // A
+                  }
+                } else if (image.data.length === image.width * image.height) {
+                  // Grayscale - convert to RGBA
+                  for (let i = 0, j = 0; i < image.data.length; i++, j += 4) {
+                    const gray = image.data[i];
+                    imageData.data[j] = gray;     // R
+                    imageData.data[j + 1] = gray; // G
+                    imageData.data[j + 2] = gray; // B
+                    imageData.data[j + 3] = 255;  // A
+                  }
+                } else {
+                  console.error(`  ✗ ${imageName}: Unexpected data length: ${image.data.length} for ${image.width}×${image.height}`);
+                }
+
+                ctx.putImageData(imageData, 0, 0);
+                imageDrawn = true;
+              } else {
+                console.error(`  ✗ ${imageName}: Unexpected data type:`, typeof image.data);
+              }
+            } catch (dataErr) {
+              console.error(`  ✗ ${imageName}: Error processing image data:`, dataErr);
+            }
+          } else {
+            console.error(`  ✗ ${imageName}: No bitmap or data available. Image properties:`, Object.keys(image));
+          }
+
+          if (imageDrawn) {
+            const blob = await new Promise<Blob | null>((resolve) => {
+              canvas.toBlob(resolve, 'image/png');
+            });
+
+            if (blob) {
+              const url = URL.createObjectURL(blob);
+              extractedImages.push({
+                url,
+                width: image.width,
+                height: image.height,
+                y: yPosition,
+              });
+              console.log(`  ✅ ${imageName}: Successfully extracted (${blob.size} bytes)`);
+            } else {
+              console.error(`  ✗ ${imageName}: Failed to create blob`);
+            }
+          }
+        } catch (err) {
+          console.error(`  ✗ ${imageName}: Extraction failed:`, err);
+        }
+      }
+
+      console.log(`✅ Successfully extracted ${extractedImages.length} images`);
+
+      setAvailableImages(extractedImages);
+    } catch (err) {
+      console.error('Error extracting images:', err);
+      alert('Failed to extract images from PDF');
+    } finally {
+      setLoadingImages(false);
+    }
+  };
+
+  const handleSelectImage = async (imageUrl: string) => {
+    if (!currentImageQuestionId) return;
+
+    setUploadingImage(true);
+    try {
+      console.log('📤 Starting image upload...');
+
+      // Convert blob URL to base64
+      console.log('  📥 Fetching blob from URL...');
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      console.log(`  ✓ Blob fetched: ${blob.size} bytes, type: ${blob.type}`);
+
+      const arrayBuffer = await blob.arrayBuffer();
+      const bytes = new Uint8Array(arrayBuffer);
+      let binary = '';
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      const imageBase64 = btoa(binary);
+      console.log(`  ✓ Converted to base64: ${imageBase64.length} characters`);
+
+      // Upload via edge function
+      console.log('  🔐 Getting auth session...');
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+
+      if (!token) throw new Error('Not authenticated');
+      console.log('  ✓ Auth token obtained');
+
+      const question = questions.find(q => q.id === currentImageQuestionId);
+      const filePath = `question_${question?.question_number}_${Date.now()}.png`;
+      console.log(`  📝 File path: ${filePath}`);
+
+      console.log('  🌐 Uploading to edge function...');
+      const uploadResponse = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-question-image`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            filePath,
+            imageBase64,
+          }),
+        }
+      );
+
+      console.log(`  📡 Response status: ${uploadResponse.status} ${uploadResponse.statusText}`);
+
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        console.error('❌ Upload error response:', errorText);
+        throw new Error(`Upload failed (${uploadResponse.status}): ${errorText}`);
+      }
+
+      const responseData = await uploadResponse.json();
+      console.log('  ✓ Upload response:', responseData);
+      const { publicUrl } = responseData;
+
+      if (!publicUrl) {
+        console.error('❌ No publicUrl in response:', responseData);
+        throw new Error('No publicUrl returned from upload');
+      }
+
+      console.log(`  📸 Public URL: ${publicUrl}`);
+
+      // Update question in database
+      if (question) {
+        console.log('  💾 Updating question in database...');
+        const updatedData = {
+          ...question.question_data,
+          image_url: publicUrl,
+        };
+
+        const { error: updateError } = await supabase
+          .from('2V_questions')
+          .update({ question_data: updatedData })
+          .eq('id', currentImageQuestionId);
+
+        if (updateError) {
+          console.error('❌ Database update error:', updateError);
+          throw updateError;
+        }
+
+        console.log('  ✓ Database updated successfully');
+
+        // Update local state
+        setQuestions(prev => prev.map(q =>
+          q.id === currentImageQuestionId
+            ? { ...q, question_data: updatedData }
+            : q
+        ));
+        console.log('  ✓ Local state updated');
+      }
+
+      // Clean up
+      console.log('  🧹 Cleaning up...');
+      availableImages.forEach(img => URL.revokeObjectURL(img.url));
+      setAvailableImages([]);
+      setShowImageSourceModal(false);
+      setCurrentImageQuestionId(null);
+      console.log('✅ Image upload completed successfully!');
+    } catch (err) {
+      console.error('❌ Error uploading image:', err);
+      alert(`Failed to upload image: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleDirectUpload = async (file: File) => {
+    if (!currentImageQuestionId) return;
+
+    setUploadingImage(true);
+    try {
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve) => {
+        reader.onload = () => {
+          const base64 = (reader.result as string).split(',')[1];
+          resolve(base64);
+        };
+      });
+      reader.readAsDataURL(file);
+      const imageBase64 = await base64Promise;
+
+      // Upload via edge function
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+
+      if (!token) throw new Error('Not authenticated');
+
+      const question = questions.find(q => q.id === currentImageQuestionId);
+      const filePath = `question_${question?.question_number}_${Date.now()}.${file.name.split('.').pop()}`;
+
+      const uploadResponse = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-question-image`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            filePath,
+            imageBase64,
+          }),
+        }
+      );
+
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        console.error('Upload error response:', errorText);
+        throw new Error(`Upload failed: ${errorText}`);
+      }
+
+      const { publicUrl } = await uploadResponse.json();
+
+      // Update question in database
+      if (question) {
+        const updatedData = {
+          ...question.question_data,
+          image_url: publicUrl,
+        };
+
+        await supabase
+          .from('2V_questions')
+          .update({ question_data: updatedData })
+          .eq('id', currentImageQuestionId);
+
+        // Update local state
+        setQuestions(prev => prev.map(q =>
+          q.id === currentImageQuestionId
+            ? { ...q, question_data: updatedData }
+            : q
+        ));
+      }
+
+      setShowImageSourceModal(false);
+      setCurrentImageQuestionId(null);
+    } catch (err) {
+      console.error('Error uploading image:', err);
+      alert('Failed to upload image');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   // Filter tests
   const filteredTests = tests.filter(test => {
     // Search filter
@@ -1123,25 +1588,81 @@ export default function ReviewQuestionsPage() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {questions.map((question) => {
+                      {questions.map((question, index) => {
                         const isFlagged = flaggedQuestionIds.has(question.id);
                         const localizedOptions = getLocalizedOptions(question);
 
+                        // Check if this question starts a passage group
+                        const passageId = question.question_data?.passage_id;
+                        const passage = passageId ? passages.find(p => p.passage_id === passageId) : null;
+                        const isFirstInPassage = passage &&
+                          questions.findIndex(q => q.question_data?.passage_id === passageId) === index;
+
                         return (
-                        <div
-                          key={question.id}
-                          className={`border-2 rounded-xl p-4 transition-colors ${
-                            isFlagged
-                              ? 'border-red-400 bg-red-50'
-                              : 'border-gray-200 hover:border-brand-green'
-                          }`}
-                        >
-                          {/* Question Header */}
-                          <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-200">
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-bold text-brand-dark text-lg">
-                                Question {question.question_number}
-                              </h3>
+                        <div key={question.id}>
+                          {/* Show passage before the first question that uses it */}
+                          {isFirstInPassage && passage && (
+                            <div className="mb-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-6 border-2 border-amber-200">
+                              <div className="flex items-center justify-between mb-3">
+                                <h3 className="font-bold text-amber-900 flex items-center gap-2">
+                                  <span>📖</span>
+                                  {passage.passage_title || 'Shared Passage'}
+                                </h3>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded">
+                                    For Questions: {questions
+                                      .filter(q => q.question_data?.passage_id === passageId)
+                                      .map(q => q.question_number)
+                                      .join(', ')}
+                                  </span>
+                                  <button
+                                    onClick={() => {
+                                      setEditingPassageId(passageId);
+                                      const linkedQuestions = questions.filter(q => q.question_data?.passage_id === passageId);
+                                      setSelectedQuestionsForPassage(linkedQuestions.map(q => q.question_number));
+                                      setNewPassageText(passage.passage_text || '');
+                                      setNewPassageTextEng(passage.passage_text_eng || '');
+                                      setPageRangeInput('');
+                                      setShowPassageModal(true);
+                                    }}
+                                    className="text-amber-600 hover:text-amber-800 text-sm"
+                                    title="Edit passage"
+                                  >
+                                    <FontAwesomeIcon icon={faEdit} />
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="bg-white rounded-lg p-4 text-gray-700 overflow-x-auto">
+                                <div className="whitespace-pre-wrap">
+                                  <MathJaxRenderer>
+                                    {getQuestionLanguage(question.id) === 'en' && passage.passage_text_eng
+                                      ? passage.passage_text_eng
+                                      : passage.passage_text || ''}
+                                  </MathJaxRenderer>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Question Card */}
+                          <div
+                            className={`border-2 rounded-xl p-4 transition-colors ${
+                              isFlagged
+                                ? 'border-red-400 bg-red-50'
+                                : 'border-gray-200 hover:border-brand-green'
+                            }`}
+                          >
+                            {/* Question Header */}
+                            <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-200">
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-bold text-brand-dark text-lg">
+                                  Question {question.question_number}
+                                  {passageId && (
+                                    <span className="ml-2 text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded">
+                                      📖 {passageId}
+                                    </span>
+                                  )}
+                                </h3>
                               {isFlagged && (
                                 <span className="px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded-full">
                                   FLAGGED
@@ -1169,6 +1690,26 @@ export default function ReviewQuestionsPage() {
                                   Page {question.question_data.page_number}
                                 </span>
                               )}
+                              {/* Manage Passage */}
+                              <button
+                                onClick={() => {
+                                  setEditingPassageId(passageId || null);
+                                  const linkedQuestions = questions.filter(q => q.question_data?.passage_id === passageId);
+                                  setSelectedQuestionsForPassage(linkedQuestions.map(q => q.question_number));
+                                  setNewPassageText(passage?.passage_text || '');
+                                  setNewPassageTextEng(passage?.passage_text_eng || '');
+                                  setPageRangeInput('');
+                                  setShowPassageModal(true);
+                                }}
+                                className={`px-2 py-1 text-xs rounded ${
+                                  passageId
+                                    ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                }`}
+                                title={passageId ? "Edit passage" : "Add passage"}
+                              >
+                                📖
+                              </button>
                               {/* AI Check Single Question */}
                               <button
                                 onClick={() => startAICheck('single', question.id)}
@@ -1192,27 +1733,14 @@ export default function ReviewQuestionsPage() {
                                   )}
                                 </button>
                               )}
-                              {/* Upload Image */}
-                              <label
-                                className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded hover:bg-orange-200 cursor-pointer"
-                                title="Upload/Change Image"
+                              {/* Add/Change Image */}
+                              <button
+                                onClick={() => handleAddImage(question.id)}
+                                className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded hover:bg-orange-200"
+                                title={question.question_data?.image_url ? "Change Image" : "Add Image"}
                               >
-                                {uploadingImage === question.id ? (
-                                  <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
-                                ) : (
-                                  <FontAwesomeIcon icon={faUpload} />
-                                )}
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  className="hidden"
-                                  onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) handleImageUpload(question.id, file);
-                                    e.target.value = '';
-                                  }}
-                                />
-                              </label>
+                                <FontAwesomeIcon icon={faUpload} />
+                              </button>
                               {editingQuestionId === question.id ? (
                                 <>
                                   <button
@@ -1242,7 +1770,7 @@ export default function ReviewQuestionsPage() {
                           </div>
 
                           {/* Question Text */}
-                          <div className="bg-blue-50 p-4 rounded-lg mb-3 border border-blue-200">
+                          <div className="bg-blue-50 p-4 rounded-lg mb-3 border border-blue-200 overflow-x-auto">
                             {editingQuestionId === question.id ? (
                               <textarea
                                 value={question.question_data?.question_text || ''}
@@ -1251,9 +1779,11 @@ export default function ReviewQuestionsPage() {
                                 placeholder="Enter question text (supports LaTeX)"
                               />
                             ) : (
-                              <MathJaxRenderer>
-                                {getLocalizedText(question, 'question_text', 'question_text_eng') || 'No question text'}
-                              </MathJaxRenderer>
+                              <div className="overflow-x-auto">
+                                <MathJaxRenderer>
+                                  {getLocalizedText(question, 'question_text', 'question_text_eng') || 'No question text'}
+                                </MathJaxRenderer>
+                              </div>
                             )}
 
                             {/* Graph Recreation (if available) */}
@@ -1424,6 +1954,7 @@ export default function ReviewQuestionsPage() {
                               ))}
                             </div>
                           )}
+                          </div>
                         </div>
                       );
                       })}
@@ -1650,6 +2181,424 @@ export default function ReviewQuestionsPage() {
                       Regenerate
                     </button>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Passage Management Modal */}
+            {showPassageModal && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-xl shadow-2xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-bold text-brand-dark">
+                      {editingPassageId ? `Edit Passage: ${editingPassageId}` : 'Create New Passage'}
+                    </h3>
+                    <button
+                      onClick={() => {
+                        setShowPassageModal(false);
+                        setEditingPassageId(null);
+                        setSelectedQuestionsForPassage([]);
+                        setNewPassageText('');
+                        setNewPassageTextEng('');
+                      }}
+                      className="text-gray-500 hover:text-gray-700 text-2xl"
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  {/* AI Detection */}
+                  <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                    <label className="block text-sm font-semibold text-purple-700 mb-2">
+                      🤖 Let Claude Find the Passage
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={pageRangeInput}
+                        onChange={(e) => setPageRangeInput(e.target.value)}
+                        placeholder="e.g., pages 13-16, questions 9-13"
+                        className="flex-1 px-3 py-2 border-2 border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                        disabled={detectingPassage}
+                      />
+                      <button
+                        onClick={async () => {
+                          if (!selectedTest || !pageRangeInput) return;
+
+                          setDetectingPassage(true);
+                          try {
+                            const { data: sessionData } = await supabase.auth.getSession();
+                            const token = sessionData?.session?.access_token;
+
+                            // Parse page range
+                            const pageMatch = pageRangeInput.match(/pages?\s*(\d+)(?:\s*-\s*(\d+))?/i);
+                            const questionMatch = pageRangeInput.match(/questions?\s*(\d+)(?:\s*-\s*(\d+))?/i);
+
+                            const pageStart = pageMatch ? parseInt(pageMatch[1]) : undefined;
+                            const pageEnd = pageMatch && pageMatch[2] ? parseInt(pageMatch[2]) : pageStart;
+
+                            const questionStart = questionMatch ? parseInt(questionMatch[1]) : undefined;
+                            const questionEnd = questionMatch && questionMatch[2] ? parseInt(questionMatch[2]) : questionStart;
+
+                            // Get the PDF URL from the first question
+                            const pdfUrl = questions[0]?.question_data?.pdf_url;
+                            if (!pdfUrl) {
+                              alert('No PDF URL found in questions');
+                              return;
+                            }
+
+                            // Call API to extract just the passage
+                            const response = await fetch(
+                              `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/extract-questions-from-pdf`,
+                              {
+                                method: 'POST',
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                  Authorization: `Bearer ${token}`,
+                                },
+                                body: JSON.stringify({
+                                  pdfUrl,
+                                  testType: selectedTest.test_type,
+                                  section: selectedTest.section,
+                                  testNumber: selectedTest.test_number,
+                                  pageStart,
+                                  pageEnd,
+                                  extractPassageOnly: true,
+                                  targetQuestions: questionStart && questionEnd ?
+                                    Array.from({length: questionEnd - questionStart + 1}, (_, i) => questionStart + i) :
+                                    selectedQuestionsForPassage
+                                }),
+                              }
+                            );
+
+                            if (response.ok) {
+                              const data = await response.json();
+                              if (data.passages && data.passages.length > 0) {
+                                setNewPassageText(data.passages[0].passage_text || '');
+
+                                // Auto-select questions if Claude identified them
+                                if (data.passages[0].question_numbers) {
+                                  setSelectedQuestionsForPassage(data.passages[0].question_numbers);
+                                }
+                              } else if (data.extractedText) {
+                                // Fallback: raw text extraction
+                                setNewPassageText(data.extractedText);
+                              }
+                            }
+                          } catch (error) {
+                            console.error('Failed to detect passage:', error);
+                          } finally {
+                            setDetectingPassage(false);
+                          }
+                        }}
+                        disabled={detectingPassage || !pageRangeInput}
+                        className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:bg-gray-300 font-semibold flex items-center gap-2"
+                      >
+                        {detectingPassage ? (
+                          <>
+                            <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+                            Detecting...
+                          </>
+                        ) : (
+                          <>
+                            <FontAwesomeIcon icon={faMagic} />
+                            Detect
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <p className="text-xs text-purple-600 mt-1">
+                      Enter page numbers and/or question numbers where the passage appears
+                    </p>
+                  </div>
+
+                  {/* Passage Text - Italian */}
+                  <div className="mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="block text-sm font-semibold text-gray-700">
+                        Passage Text (Italian)
+                      </label>
+                      <span className="text-xs text-gray-500">
+                        {(newPassageText || passages.find(p => p.passage_id === editingPassageId)?.passage_text || '').length} characters
+                      </span>
+                    </div>
+                    <textarea
+                      value={newPassageText || (editingPassageId ? passages.find(p => p.passage_id === editingPassageId)?.passage_text : '')}
+                      onChange={(e) => setNewPassageText(e.target.value)}
+                      className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-mono text-sm"
+                      rows={6}
+                      placeholder="Enter the shared passage text or use AI detection above..."
+                      style={{ minHeight: '150px', maxHeight: '300px' }}
+                    />
+                  </div>
+
+                  {/* Passage Text - English */}
+                  <div className="mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="block text-sm font-semibold text-gray-700">
+                        Passage Text (English) - Optional
+                      </label>
+                      <span className="text-xs text-gray-500">
+                        {(newPassageTextEng || passages.find(p => p.passage_id === editingPassageId)?.passage_text_eng || '').length} characters
+                      </span>
+                    </div>
+                    <textarea
+                      value={newPassageTextEng || (editingPassageId ? passages.find(p => p.passage_id === editingPassageId)?.passage_text_eng : '')}
+                      onChange={(e) => setNewPassageTextEng(e.target.value)}
+                      className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-mono text-sm"
+                      rows={6}
+                      placeholder="Enter English translation of the passage (optional)"
+                      style={{ minHeight: '150px', maxHeight: '300px' }}
+                    />
+                  </div>
+
+                  {/* Select Questions */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Assign Questions to this Passage
+                    </label>
+                    <div className="grid grid-cols-8 gap-2 max-h-40 overflow-y-auto p-2 bg-gray-50 rounded-lg">
+                      {questions.map((q) => (
+                        <button
+                          key={q.question_number}
+                          onClick={() => {
+                            setSelectedQuestionsForPassage(prev =>
+                              prev.includes(q.question_number)
+                                ? prev.filter(n => n !== q.question_number)
+                                : [...prev, q.question_number]
+                            );
+                          }}
+                          className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                            selectedQuestionsForPassage.includes(q.question_number)
+                              ? 'bg-amber-500 text-white'
+                              : q.question_data?.passage_id
+                                ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                          }`}
+                        >
+                          Q{q.question_number}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Selected: {selectedQuestionsForPassage.length} questions
+                      {selectedQuestionsForPassage.length > 0 && ` (${selectedQuestionsForPassage.sort((a,b) => a-b).join(', ')})`}
+                    </p>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex justify-end gap-3">
+                    <button
+                      onClick={() => {
+                        setShowPassageModal(false);
+                        setEditingPassageId(null);
+                        setSelectedQuestionsForPassage([]);
+                        setNewPassageText('');
+                        setNewPassageTextEng('');
+                      }}
+                      className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={async () => {
+                        const passageId = editingPassageId || `passage_${passages.length + 1}`;
+                        const passageText = newPassageText || passages.find(p => p.passage_id === editingPassageId)?.passage_text || '';
+                        const passageTextEng = newPassageTextEng || passages.find(p => p.passage_id === editingPassageId)?.passage_text_eng || '';
+
+                        // Update or create passage in local state
+                        if (editingPassageId) {
+                          setPassages(prev => prev.map(p =>
+                            p.passage_id === editingPassageId
+                              ? { ...p, passage_text: passageText, passage_text_eng: passageTextEng, question_numbers: selectedQuestionsForPassage }
+                              : p
+                          ));
+                        } else {
+                          setPassages(prev => [...prev, {
+                            passage_id: passageId,
+                            passage_text: passageText,
+                            passage_text_eng: passageTextEng,
+                            question_numbers: selectedQuestionsForPassage
+                          }]);
+                        }
+
+                        // Update questions in database
+                        try {
+                          // Update questions that should have this passage
+                          const questionsToUpdate = questions.filter(q => selectedQuestionsForPassage.includes(q.question_number));
+                          for (const q of questionsToUpdate) {
+                            const updatedData = {
+                              ...q.question_data,
+                              passage_id: passageId,
+                              passage_text: passageText,
+                              passage_text_eng: passageTextEng || null,
+                              passage_title: `Passage ${passageId}`
+                            };
+
+                            await supabase
+                              .from('2V_questions')
+                              .update({ question_data: updatedData })
+                              .eq('id', q.id);
+                          }
+
+                          // Remove passage from questions that were previously linked but are no longer
+                          if (editingPassageId) {
+                            const questionsToUnlink = questions.filter(q =>
+                              q.question_data?.passage_id === editingPassageId &&
+                              !selectedQuestionsForPassage.includes(q.question_number)
+                            );
+                            for (const q of questionsToUnlink) {
+                              const updatedData = { ...q.question_data };
+                              delete updatedData.passage_id;
+                              delete updatedData.passage_text;
+                              delete updatedData.passage_text_eng;
+                              delete updatedData.passage_title;
+
+                              await supabase
+                                .from('2V_questions')
+                                .update({ question_data: updatedData })
+                                .eq('id', q.id);
+                            }
+                          }
+
+                          // Reload questions to reflect changes
+                          await loadQuestions(selectedTest!.id);
+                        } catch (err) {
+                          console.error('Error updating passage:', err);
+                          alert('Failed to save passage');
+                        }
+
+                        setShowPassageModal(false);
+                        setEditingPassageId(null);
+                        setSelectedQuestionsForPassage([]);
+                        setNewPassageText('');
+                        setNewPassageTextEng('');
+                      }}
+                      className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 font-semibold"
+                    >
+                      {editingPassageId ? 'Update Passage' : 'Create Passage'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Image Management Modal (shows on right side, PDF visible on left) */}
+            {showImageSourceModal && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-xl shadow-2xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-bold text-brand-dark">Add/Change Image</h3>
+                    <button
+                      onClick={() => {
+                        availableImages.forEach(img => URL.revokeObjectURL(img.url));
+                        setAvailableImages([]);
+                        setShowImageSourceModal(false);
+                        setCurrentImageQuestionId(null);
+                      }}
+                      className="text-gray-500 hover:text-gray-700 text-2xl"
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  {/* Page Selector for PDF Extraction */}
+                  <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <label className="block text-sm font-semibold text-blue-900 mb-2">
+                      📄 Extract from PDF - Select Page Number:
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        min="1"
+                        value={selectedPageForExtraction}
+                        onChange={(e) => setSelectedPageForExtraction(parseInt(e.target.value) || 1)}
+                        className="flex-1 px-3 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter page number"
+                      />
+                      <button
+                        onClick={() => handleExtractFromPDF(selectedPageForExtraction)}
+                        disabled={loadingImages}
+                        className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 font-semibold flex items-center gap-2"
+                      >
+                        {loadingImages ? (
+                          <>
+                            <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+                            Extracting...
+                          </>
+                        ) : (
+                          <>
+                            <FontAwesomeIcon icon={faImage} />
+                            Extract Images
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <p className="text-xs text-blue-700 mt-1">
+                      Current question is on page {questions.find(q => q.id === currentImageQuestionId)?.question_data?.page_number || '?'}
+                    </p>
+                  </div>
+
+                  {/* Direct Upload Option */}
+                  <div className="mb-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                    <label className="block text-sm font-semibold text-orange-900 mb-2">
+                      📤 Or Upload Image File:
+                    </label>
+                    <label className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-orange-300 rounded-lg hover:bg-orange-100 transition-colors cursor-pointer">
+                      <FontAwesomeIcon icon={faUpload} className="text-orange-700" />
+                      <span className="font-medium text-orange-900">Choose File from Computer</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleDirectUpload(file);
+                        }}
+                        disabled={uploadingImage}
+                      />
+                    </label>
+                  </div>
+
+                  {/* Extracted Images Grid */}
+                  {availableImages.length > 0 ? (
+                    <div>
+                      <h4 className="font-bold text-gray-900 mb-3">
+                        Found {availableImages.length} image(s) - Click to select:
+                      </h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        {availableImages.map((img, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => handleSelectImage(img.url)}
+                            disabled={uploadingImage}
+                            className="border-2 border-gray-300 rounded-lg overflow-hidden hover:border-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <img
+                              src={img.url}
+                              alt={`Extracted ${idx + 1}`}
+                              className="w-full"
+                            />
+                            <div className="p-2 bg-gray-50 text-xs text-gray-600">
+                              {img.width}×{img.height}px
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : loadingImages ? (
+                    <div className="text-center py-8">
+                      <FontAwesomeIcon icon={faSpinner} className="animate-spin text-4xl text-indigo-600 mb-4" />
+                      <p className="text-gray-600">Extracting images from page {selectedPageForExtraction}...</p>
+                    </div>
+                  ) : null}
+
+                  {uploadingImage && (
+                    <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg text-center">
+                      <FontAwesomeIcon icon={faSpinner} className="animate-spin text-brand-green mr-2" />
+                      <span className="text-sm text-green-700 font-medium">Uploading image...</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

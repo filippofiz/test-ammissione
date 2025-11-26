@@ -405,23 +405,33 @@ export default function TestTrackConfigPage() {
         questionsData?.map(q => useMacroSections ? q.macro_section : q.section).filter(Boolean) || []
       ));
 
-      // Check if we have a saved section_order in config - use it to preserve custom ordering
-      // but only if the sections match (user hasn't switched between standard/macro)
-      if (config.section_order && config.section_order.length > 0) {
-        const savedSectionsSet = new Set(config.section_order);
-        const dbSectionsSet = new Set(uniqueSections);
-        const sectionsMatch = config.section_order.every(s => dbSectionsSet.has(s)) &&
-                             config.section_order.length === uniqueSections.length;
+      // Fetch the global section order from 2V_section_order table
+      const { data: sectionOrderData, error: sectionOrderError } = await supabase
+        .from('2V_section_order')
+        .select('section_order')
+        .eq('test_type', testType)
+        .single();
 
-        if (sectionsMatch) {
-          // Use saved order to preserve user's custom ordering
-          setSections(config.section_order);
-        } else {
-          // Sections don't match (user switched modes), load fresh from DB
-          setSections(uniqueSections.sort());
-        }
+      if (sectionOrderError && sectionOrderError.code !== 'PGRST116') {
+        // Log error but continue (PGRST116 = no rows found, which is acceptable)
+        console.warn('Error fetching section order:', sectionOrderError);
+      }
+
+      // Order the sections according to 2V_section_order if available
+      if (sectionOrderData && sectionOrderData.section_order && sectionOrderData.section_order.length > 0) {
+        const globalOrder = sectionOrderData.section_order;
+        const uniqueSectionsSet = new Set(uniqueSections);
+
+        // Filter global order to only include sections that exist in this track
+        const orderedSections = globalOrder.filter(section => uniqueSectionsSet.has(section));
+
+        // Add any sections that exist in the track but not in global order (append at end)
+        const sectionsInOrder = new Set(orderedSections);
+        const missingSections = uniqueSections.filter(section => !sectionsInOrder.has(section));
+
+        setSections([...orderedSections, ...missingSections.sort()]);
       } else {
-        // No saved order, use fresh sections from DB
+        // No global order found, use alphabetical sort
         setSections(uniqueSections.sort());
       }
 

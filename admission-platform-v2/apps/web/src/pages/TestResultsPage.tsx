@@ -92,6 +92,9 @@ export default function TestResultsPage() {
   const [showComparison, setShowComparison] = useState(false);
   const [resultsViewable, setResultsViewable] = useState(false);
   const [togglingViewability, setTogglingViewability] = useState(false);
+  const [algorithmConfig, setAlgorithmConfig] = useState<any>(null);
+  const [simulatedSectionCorrect, setSimulatedSectionCorrect] = useState<Record<string, number>>({});
+  const [showScoreReport, setShowScoreReport] = useState(false);
 
   useEffect(() => {
     loadTestResults();
@@ -136,6 +139,23 @@ export default function TestResultsPage() {
 
       if (studentError) throw studentError;
 
+      // Load algorithm config for scoring
+      const { data: algoConfig, error: algoError } = await supabase
+        .from('2V_algorithm_config')
+        .select('*')
+        .eq('display_name', assignmentData['2V_tests'].test_type)
+        .maybeSingle();
+
+      console.log('🎯 ALGORITHM CONFIG FETCH:', {
+        testType: assignmentData['2V_tests'].test_type,
+        error: algoError,
+        data: algoConfig
+      });
+
+      if (!algoError && algoConfig) {
+        setAlgorithmConfig(algoConfig);
+      }
+
       // Combine data
       const fullAssignmentData = {
         ...assignmentData,
@@ -148,8 +168,9 @@ export default function TestResultsPage() {
       // Load ALL answers to determine which attempts have data
       const { data: allAnswers, error: answersError } = await supabase
         .from('2V_student_answers')
-        .select('question_id, created_at, attempt_number')
+        .select('question_id, created_at, updated_at, attempt_number')
         .eq('assignment_id', assignmentId)
+        .order('updated_at', { ascending: true })
         .order('created_at', { ascending: true });
 
       if (answersError) throw answersError;
@@ -190,15 +211,11 @@ export default function TestResultsPage() {
         (a: any) => a.attempt_number === attemptToLoad
       );
 
-      // Get question IDs - prefer test_questions from completion_details (includes unanswered)
-      // Fall back to answers if test_questions not available
+      // Get question IDs - use answers array ordered by updated_at
       let questionIds: string[] = [];
 
-      if (attemptRecord?.test_questions && attemptRecord.test_questions.length > 0) {
-        // Use all questions from the attempt (includes unanswered)
-        questionIds = attemptRecord.test_questions.map((tq: any) => tq.question_id);
-      } else if (answers.length > 0) {
-        // Fall back to answers-based loading
+      if (answers.length > 0) {
+        // Use answers-based loading (ordered by updated_at DESC)
         const seenQuestionIds = new Set<string>();
         const uniqueAnswers = answers.filter(a => {
           if (seenQuestionIds.has(a.question_id)) {
@@ -273,7 +290,6 @@ export default function TestResultsPage() {
 
       setResults(resultsData);
     } catch (err) {
-      console.error('Error loading test results:', err);
       setError(err instanceof Error ? err.message : 'Failed to load test results');
     } finally {
       setLoading(false);
@@ -301,7 +317,6 @@ export default function TestResultsPage() {
       const studentGI = studentAns.answers;
       const match1 = String(studentGI.part1 || '').trim() === String(correctAns[0] || '').trim();
       const match2 = String(studentGI.part2 || '').trim() === String(correctAns[1] || '').trim();
-      console.log('🔍 GI Check:', { student: studentGI, correct: correctAns, match1, match2 });
       return match1 && match2;
     }
 
@@ -322,7 +337,6 @@ export default function TestResultsPage() {
         }
         return true;
       });
-      console.log('🔍 TA Check:', { student: studentTA, correct: correctTA, result });
       return result;
     }
 
@@ -332,7 +346,6 @@ export default function TestResultsPage() {
       const studentTPA = studentAns.answers;
       const match1 = String(studentTPA.part1 || '').trim() === String(correctTPA.col1 || '').trim();
       const match2 = String(studentTPA.part2 || '').trim() === String(correctTPA.col2 || '').trim();
-      console.log('🔍 TPA Check:', { student: studentTPA, correct: correctTPA, match1, match2 });
       return match1 && match2;
     }
 
@@ -340,13 +353,11 @@ export default function TestResultsPage() {
     if (diType === 'MSR' && studentAns.answers && Array.isArray(correctAns)) {
       const studentMSR = Array.isArray(studentAns.answers) ? studentAns.answers : [];
       if (studentMSR.length !== correctAns.length) {
-        console.log('🔍 MSR Check - Length mismatch:', { studentLen: studentMSR.length, correctLen: correctAns.length });
         return false;
       }
       const result = studentMSR.every((ans: any, idx: number) =>
         String(ans || '').toLowerCase() === String(correctAns[idx] || '').toLowerCase()
       );
-      console.log('🔍 MSR Check:', { student: studentMSR, correct: correctAns, result });
       return result;
     }
 
@@ -355,7 +366,6 @@ export default function TestResultsPage() {
       const studentDS = typeof studentAns === 'string' ? studentAns : studentAns.answer;
       const correctDS = Array.isArray(correctAns) ? correctAns[0] : correctAns;
       const result = String(studentDS || '').toUpperCase() === String(correctDS || '').toUpperCase();
-      console.log('🔍 DS Check:', { student: studentDS, correct: correctDS, result });
       return result;
     }
 
@@ -479,7 +489,7 @@ export default function TestResultsPage() {
 
       setAttemptComparison(attempts);
     } catch (err) {
-      console.error('Error loading attempt comparison:', err);
+      // Error loading attempt comparison
     }
   }
 
@@ -494,15 +504,12 @@ export default function TestResultsPage() {
         .eq('id', assignmentId);
 
       if (error) {
-        console.error('Error toggling results viewability:', error);
         alert('Failed to update results viewability. Please try again.');
         return;
       }
 
       setResultsViewable(newValue);
-      console.log(`✅ Results viewability toggled to: ${newValue}`);
     } catch (err) {
-      console.error('Error toggling results viewability:', err);
       alert('An error occurred. Please try again.');
     } finally {
       setTogglingViewability(false);
@@ -560,15 +567,6 @@ export default function TestResultsPage() {
       const answersData = typeof question.answers === 'string' ? JSON.parse(question.answers) : question.answers;
       const correctAnswerData = answersData?.correct_answer;
 
-      console.log(`🔍 DS Question ID: ${question.id}`, {
-        fullStudentAnswer: studentAnswer,
-        answerField: dsAnswer,
-        extractedAnswer,
-        answersData,
-        correctAnswerData,
-        problem: questionData.problem?.substring(0, 50) + '...'
-      });
-
       // DS correct answers are stored as an array with one element: ["C"]
       const correctDSAnswer = Array.isArray(correctAnswerData) ? correctAnswerData[0] : correctAnswerData;
 
@@ -594,7 +592,6 @@ export default function TestResultsPage() {
       const answersData = typeof question.answers === 'string' ? JSON.parse(question.answers) : question.answers;
       const correctAnswerData = answersData?.correct_answer;
 
-      console.log('🔍 MSR correct_answer:', correctAnswerData);
       // MSR correct answers are stored as an array: ["a", "b", "c"]
       const correctMSRAnswers = Array.isArray(correctAnswerData) ? correctAnswerData : [];
 
@@ -706,7 +703,6 @@ export default function TestResultsPage() {
       const answersData = typeof question.answers === 'string' ? JSON.parse(question.answers) : question.answers;
       const correctAnswerData = answersData?.correct_answer;
 
-      console.log('🔍 Multiple Choice correct_answer:', correctAnswerData);
       // Multiple Choice correct answers are stored as a string: "b"
       const correctMCAnswer = typeof correctAnswerData === 'string' ? correctAnswerData : correctAnswerData;
 
@@ -791,6 +787,65 @@ export default function TestResultsPage() {
       grouped[section].push(result);
     });
     return grouped;
+  }
+
+  // Calculate scaled scores based on algorithm config
+  function calculateScaledScores() {
+    console.log('🎯 SCORE REPORT DEBUG:', {
+      hasAlgorithmConfig: !!algorithmConfig,
+      algorithmConfig: algorithmConfig,
+      resultsLength: results.length,
+      testType: assignment?.['2V_tests']?.test_type
+    });
+
+    if (!algorithmConfig) return null;
+
+    const groupedResults = groupBySection(results);
+    const sectionScores: Record<string, number> = {};
+
+    // Calculate score for each section
+    Object.keys(groupedResults).forEach(sectionName => {
+      const sectionResults = groupedResults[sectionName];
+      const actualSectionCorrect = sectionResults.filter(r => r.isCorrect).length;
+      const sectionTotal = sectionResults.length;
+
+      // Use simulated correct for this section if available, otherwise use actual
+      const sectionCorrect = simulatedSectionCorrect[sectionName] !== undefined
+        ? simulatedSectionCorrect[sectionName]
+        : actualSectionCorrect;
+
+      const percentageCorrect = sectionTotal > 0 ? sectionCorrect / sectionTotal : 0;
+
+      // Scale to section min/max range
+      const scoreRange = algorithmConfig.section_score_max - algorithmConfig.section_score_min;
+      const scaledScore = algorithmConfig.section_score_min + (percentageCorrect * scoreRange);
+
+      // Round to nearest score increment
+      const increment = algorithmConfig.score_increment || 1;
+      sectionScores[sectionName] = Math.round(scaledScore / increment) * increment;
+    });
+
+    // Calculate total score as average of section scores
+    const sectionScoreValues = Object.values(sectionScores);
+    const avgSectionScore = sectionScoreValues.length > 0
+      ? sectionScoreValues.reduce((sum, score) => sum + score, 0) / sectionScoreValues.length
+      : 0;
+
+    // Scale total score to total min/max range
+    const totalScoreRange = algorithmConfig.total_score_max - algorithmConfig.total_score_min;
+    const sectionRange = algorithmConfig.section_score_max - algorithmConfig.section_score_min;
+    const normalizedScore = (avgSectionScore - algorithmConfig.section_score_min) / sectionRange;
+    const totalScore = algorithmConfig.total_score_min + (normalizedScore * totalScoreRange);
+
+    // Round to nearest score increment
+    const increment = algorithmConfig.score_increment || 1;
+    const finalTotalScore = Math.round(totalScore / increment) * increment;
+
+    return {
+      sectionScores,
+      totalScore: finalTotalScore,
+      displayName: algorithmConfig.display_name
+    };
   }
 
   // Calculate statistics
@@ -897,6 +952,135 @@ export default function TestResultsPage() {
             <div className="text-sm opacity-90">{t('testResults.score')}</div>
           </div>
         </div>
+
+        {/* Score Report - Based on Algorithm Config */}
+        {(() => {
+          const scaledScores = calculateScaledScores();
+          if (!scaledScores) return null;
+
+          const groupedResults = groupBySection(results);
+
+          return (
+            <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl shadow-lg p-6 mb-6 border-2 border-purple-300">
+              <button
+                onClick={() => setShowScoreReport(!showScoreReport)}
+                className="w-full flex items-center justify-between text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <FontAwesomeIcon icon={faChartBar} className="text-2xl text-purple-700" />
+                  <div>
+                    <h2 className="text-2xl font-bold text-purple-900">
+                      {scaledScores.displayName} Score Report
+                    </h2>
+                    <p className="text-sm text-purple-700 mt-1">
+                      Scaled scores based on {scaledScores.displayName} algorithm
+                    </p>
+                  </div>
+                </div>
+                <FontAwesomeIcon
+                  icon={showScoreReport ? faChevronUp : faChevronDown}
+                  className="text-xl text-purple-700"
+                />
+              </button>
+
+              {showScoreReport && (
+                <div className="mt-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <div className="bg-white rounded-lg px-6 py-4 border-2 border-purple-400 shadow-md">
+                      <div className="text-sm text-purple-700 font-semibold">Total Score</div>
+                      <div className="text-4xl font-bold text-purple-900">{scaledScores.totalScore}</div>
+                      <div className="text-xs text-purple-600 mt-1">
+                        Range: {algorithmConfig.total_score_min}-{algorithmConfig.total_score_max}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSimulatedSectionCorrect({})}
+                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-semibold"
+                    >
+                      Reset All
+                    </button>
+                  </div>
+
+              {/* Section Scores */}
+              <div className="grid grid-cols-1 gap-4">
+                {Object.entries(scaledScores.sectionScores).map(([sectionName, score]) => {
+                  const sectionResults = groupedResults[sectionName] || [];
+                  const actualCorrect = sectionResults.filter(r => r.isCorrect).length;
+                  const totalQuestions = sectionResults.length;
+                  const currentCorrect = simulatedSectionCorrect[sectionName] !== undefined
+                    ? simulatedSectionCorrect[sectionName]
+                    : actualCorrect;
+
+                  console.log('🎯 SECTION DEBUG:', {
+                    sectionName,
+                    totalQuestions,
+                    actualCorrect,
+                    currentCorrect,
+                    hasSimulated: simulatedSectionCorrect[sectionName] !== undefined
+                  });
+
+                  return (
+                    <div key={sectionName} className="bg-white rounded-lg p-4 border-2 border-purple-200 shadow">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="text-lg font-bold text-purple-900">{sectionName}</div>
+                        <div className="text-3xl font-bold text-purple-900">{score}</div>
+                      </div>
+
+                      {totalQuestions > 0 ? (
+                        <div className="mb-3">
+                          <div className="flex justify-between items-center mb-2">
+                            <label className="text-sm font-semibold text-purple-700">
+                              Simulate: {currentCorrect}/{totalQuestions} correct ({Math.round((currentCorrect / totalQuestions) * 100)}%)
+                            </label>
+                            {simulatedSectionCorrect[sectionName] !== undefined && (
+                              <button
+                                onClick={() => {
+                                  const newSim = { ...simulatedSectionCorrect };
+                                  delete newSim[sectionName];
+                                  setSimulatedSectionCorrect(newSim);
+                                }}
+                                className="text-xs text-purple-600 hover:text-purple-800"
+                              >
+                                Reset
+                              </button>
+                            )}
+                          </div>
+                          <input
+                            type="range"
+                            min="0"
+                            max={totalQuestions}
+                            value={currentCorrect}
+                            onChange={(e) => setSimulatedSectionCorrect({
+                              ...simulatedSectionCorrect,
+                              [sectionName]: parseInt(e.target.value)
+                            })}
+                            className="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer"
+                            style={{
+                              background: `linear-gradient(to right, rgb(192, 132, 252) 0%, rgb(192, 132, 252) ${(currentCorrect / totalQuestions) * 100}%, rgb(233, 213, 255) ${(currentCorrect / totalQuestions) * 100}%, rgb(233, 213, 255) 100%)`
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <div className="text-sm text-gray-500 italic">No questions in this section</div>
+                      )}
+
+                      <div className="flex justify-between text-xs text-purple-600">
+                        <span>Range: {algorithmConfig.section_score_min}-{algorithmConfig.section_score_max}</span>
+                        {simulatedSectionCorrect[sectionName] !== undefined && simulatedSectionCorrect[sectionName] !== actualCorrect && (
+                          <span className="text-purple-700 font-semibold">
+                            (Actual: {actualCorrect}/{totalQuestions})
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Results Visibility Control - Only shown for tutors */}
         {!isStudentView && (
@@ -1283,7 +1467,12 @@ export default function TestResultsPage() {
         <div className="space-y-6">
           {(() => {
             const groupedResults = groupBySection(filteredResults);
-            const sections = Object.keys(groupedResults).sort();
+            // Sort sections by the order (created_at) of the first question in each section
+            const sections = Object.keys(groupedResults).sort((a, b) => {
+              const firstQuestionA = groupedResults[a][0];
+              const firstQuestionB = groupedResults[b][0];
+              return (firstQuestionA?.order || 0) - (firstQuestionB?.order || 0);
+            });
 
             return sections.map(sectionName => {
               // Calculate section statistics
@@ -1341,22 +1530,12 @@ export default function TestResultsPage() {
                           result.studentAnswer && !result.isCorrect ? 'bg-red-600' :
                           'bg-gray-400'
                         }`}>
-                          {result.order || index + 1}
+                          {index + 1}
                         </div>
                         <div className="flex items-center gap-2 flex-wrap">
                           {result.question.materia && (
                             <span className="text-sm text-gray-700 font-medium">
                               {result.question.materia}
-                            </span>
-                          )}
-                          {result.difficulty && result.difficulty !== 'unknown' && (
-                            <span className={`text-xs px-2 py-1 rounded font-semibold ${
-                              result.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
-                              result.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                              result.difficulty === 'hard' ? 'bg-red-100 text-red-700' :
-                              'bg-gray-100 text-gray-700'
-                            }`}>
-                              {result.difficulty.toUpperCase()}
                             </span>
                           )}
                           {!result.studentAnswer && (
@@ -1372,28 +1551,6 @@ export default function TestResultsPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
-                        {result.studentAnswer && (
-                          <div className={`px-3 py-2 rounded-lg ${
-                            result.studentAnswer.time_spent_seconds > 120 ? 'bg-orange-50 border border-orange-200' : 'bg-blue-50 border border-blue-200'
-                          }`}>
-                            <div className="flex items-center gap-2">
-                              <FontAwesomeIcon icon={faClock} className={
-                                result.studentAnswer.time_spent_seconds > 120 ? 'text-orange-600' : 'text-blue-600'
-                              } />
-                              <div>
-                                <div className={`text-sm font-bold ${
-                                  result.studentAnswer.time_spent_seconds > 120 ? 'text-orange-700' : 'text-blue-700'
-                                }`}>
-                                  {Math.floor(result.studentAnswer.time_spent_seconds / 60) > 0
-                                    ? `${Math.floor(result.studentAnswer.time_spent_seconds / 60)}m ${result.studentAnswer.time_spent_seconds % 60}s`
-                                    : `${result.studentAnswer.time_spent_seconds}s`
-                                  }
-                                </div>
-                                <div className="text-xs text-gray-500">{t('testResults.timeSpent')}</div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
                         {result.isCorrect && (
                           <FontAwesomeIcon icon={faCheckCircle} className="text-2xl text-green-600" />
                         )}

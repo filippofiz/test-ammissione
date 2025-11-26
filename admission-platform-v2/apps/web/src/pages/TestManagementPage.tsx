@@ -11,6 +11,7 @@ import {
   faCog,
   faFileAlt,
   faBrain,
+  faSitemap,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 
@@ -32,6 +33,51 @@ export default function TestManagementPage() {
 
           {/* Management Options Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Test Structure Viewer */}
+            <button
+              onClick={() => navigate('/tutor/test-structure')}
+              className="group relative bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 border-2 border-gray-100 hover:border-orange-500 transform hover:scale-105 animate-fadeInUp"
+              style={{ animationDelay: '0.05s' }}
+            >
+              {/* Icon */}
+              <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-orange-500 to-orange-700 rounded-full flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
+                <FontAwesomeIcon icon={faSitemap} className="text-4xl text-white" />
+              </div>
+
+              {/* Title */}
+              <h2 className="text-2xl font-bold text-brand-dark mb-3">
+                Test Structure
+              </h2>
+
+              {/* Description */}
+              <p className="text-gray-600 mb-4">
+                View complete test hierarchy with categories and exercises
+              </p>
+
+              {/* Features List */}
+              <ul className="text-left text-sm text-gray-500 space-y-2">
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-orange-500 rounded-full"></span>
+                  Browse all test types
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-orange-500 rounded-full"></span>
+                  View sections & topics
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-orange-500 rounded-full"></span>
+                  See question counts
+                </li>
+              </ul>
+
+              {/* Arrow Indicator */}
+              <div className="absolute bottom-4 right-4 text-orange-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </button>
+
             {/* Section Order Management */}
             <button
               onClick={() => navigate('/tutor/manage-section-order')}

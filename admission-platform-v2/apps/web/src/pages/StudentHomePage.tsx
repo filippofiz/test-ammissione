@@ -46,6 +46,7 @@ interface TestAssignment {
   assignment_id: string;
   test_id: string;
   status: 'locked' | 'unlocked' | 'in_progress' | 'completed' | 'incomplete' | 'annulled';
+  completion_status: string | null;
   assigned_at: string | null;
   start_time: string | null;
   completed_at: string | null;
@@ -252,7 +253,8 @@ export default function StudentHomePage() {
 
         const stats = typeMap.get(testType)!;
         stats.total_count++;
-        if (assignment.status === 'completed') stats.completed_count++;
+        // Backward compatible: check completion_status first, then fall back to status
+        if (assignment.completion_status?.startsWith('completed') || assignment.status === 'completed') stats.completed_count++;
         if (assignment.status === 'unlocked' || assignment.status === 'in_progress' || assignment.status === 'incomplete' || assignment.status === 'annulled') stats.unlocked_count++;
       });
 
@@ -273,6 +275,17 @@ export default function StudentHomePage() {
     }
   }
 
+  // Helper function to normalize section names for comparison (same as TestStructurePage)
+  const normalizeSectionName = (name: string): string => {
+    return name
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .replace(/[,;:.!?]/g, '') // Remove punctuation
+      .normalize('NFD') // Decompose accented characters
+      .replace(/[\u0300-\u036f]/g, ''); // Remove diacritics
+  };
+
   async function loadTests(testType: string) {
     setLoading(true);
     setError(null);
@@ -280,6 +293,51 @@ export default function StudentHomePage() {
     try {
       const profile = await getCurrentProfile();
       if (!profile) throw new Error('Profile not found');
+
+      // AUTO-ASSIGN: Find all tests of this type that are NOT assigned to this student
+      const { data: existingAssignments } = await supabase
+        .from('2V_test_assignments')
+        .select('test_id')
+        .eq('student_id', profile.id);
+
+      const assignedTestIds = (existingAssignments || []).map(a => a.test_id);
+
+      // Get all active tests of this test_type
+      let availableTestsQuery = supabase
+        .from('2V_tests')
+        .select('id')
+        .eq('test_type', testType)
+        .eq('is_active', true);
+
+      // Exclude already assigned tests
+      if (assignedTestIds.length > 0) {
+        availableTestsQuery = availableTestsQuery.not('id', 'in', `(${assignedTestIds.join(',')})`);
+      }
+
+      const { data: availableTests } = await availableTestsQuery;
+
+      // Auto-assign any missing tests as LOCKED
+      if (availableTests && availableTests.length > 0) {
+        console.log(`🔄 Auto-assigning ${availableTests.length} new tests to student ${profile.id}`);
+
+        const { error: assignError } = await supabase
+          .from('2V_test_assignments')
+          .insert(
+            availableTests.map(test => ({
+              student_id: profile.id,
+              test_id: test.id,
+              status: 'locked',
+              current_attempt: 1,
+              total_attempts: 0,
+            }))
+          );
+
+        if (assignError) {
+          console.error('Error auto-assigning tests:', assignError);
+        } else {
+          console.log(`✅ Successfully auto-assigned ${availableTests.length} tests`);
+        }
+      }
 
       // Fetch section order for this test type
       const { data: sectionOrderData, error: orderError } = await supabase
@@ -297,6 +355,7 @@ export default function StudentHomePage() {
           id,
           test_id,
           status,
+          completion_status,
           assigned_at,
           start_time,
           completed_at,
@@ -330,6 +389,7 @@ export default function StudentHomePage() {
           assignment_id: row.id,
           test_id: row.test_id,
           status: row.status,
+          completion_status: row.completion_status,
           assigned_at: row.assigned_at,
           start_time: row.start_time,
           completed_at: row.completed_at,
@@ -346,7 +406,7 @@ export default function StudentHomePage() {
         };
       });
 
-      // Sort client-side using section order if available
+      // Sort client-side using section order if available with normalized comparison
       transformedTests.sort((a, b) => {
         // Helper function to check if section/exercise is Assessment Iniziale
         const isAssessment = (item: typeof a) => {
@@ -373,10 +433,15 @@ export default function StudentHomePage() {
         if (aIsSimulazione && !bIsSimulazione) return 1;
         if (!aIsSimulazione && bIsSimulazione) return -1;
 
-        // For everything else, use section ordering
+        // For everything else, use section ordering with normalized comparison
         if (a.section !== b.section) {
-          const aIndex = sectionOrderArray.indexOf(a.section);
-          const bIndex = sectionOrderArray.indexOf(b.section);
+          // Normalize section names for comparison
+          const aNorm = normalizeSectionName(a.section);
+          const bNorm = normalizeSectionName(b.section);
+
+          // Find index in order array using normalized comparison
+          const aIndex = sectionOrderArray.findIndex(s => normalizeSectionName(s) === aNorm);
+          const bIndex = sectionOrderArray.findIndex(s => normalizeSectionName(s) === bNorm);
 
           // If both sections are in the order array, use that order
           if (aIndex !== -1 && bIndex !== -1) {
@@ -445,62 +510,85 @@ export default function StudentHomePage() {
     return grouped;
   }
 
-  function getStatusStyles(status: string) {
-    switch (status) {
-      case 'completed':
-        return {
-          bg: 'bg-gradient-to-r from-brand-green to-green-600',
-          text: 'text-white',
-          border: 'border-green-700',
-          icon: faCheckCircle,
-          hover: 'hover:shadow-lg',
-          cursor: 'cursor-pointer',
-        };
-      case 'in_progress':
-        return {
-          bg: 'bg-gradient-to-r from-blue-500 to-blue-600',
-          text: 'text-white',
-          border: 'border-blue-700',
-          icon: faSpinner,
-          hover: 'hover:shadow-lg',
-          cursor: 'cursor-pointer',
-        };
-      case 'unlocked':
-        return {
-          bg: 'bg-white',
-          text: 'text-brand-green',
-          border: 'border-brand-green',
-          icon: faLockOpen,
-          hover: 'hover:bg-brand-green hover:text-white',
-          cursor: 'cursor-pointer',
-        };
-      case 'incomplete':
-      case 'annulled':
-        // Annulled/incomplete tests are available for retake - show as orange/warning
-        return {
-          bg: 'bg-gradient-to-r from-orange-400 to-orange-500',
-          text: 'text-white',
-          border: 'border-orange-600',
-          icon: faLockOpen,
-          hover: 'hover:shadow-lg',
-          cursor: 'cursor-pointer',
-        };
-      case 'locked':
-      default:
-        return {
-          bg: 'bg-blue-50',
-          text: 'text-blue-700',
-          border: 'border-blue-300',
-          icon: faLock,
-          hover: 'hover:bg-blue-100 hover:border-blue-400',
-          cursor: 'cursor-pointer',
-        };
+  function getStatusStyles(status: string, completionStatus: string | null) {
+    // Backward compatible: use completion_status if available, otherwise fall back to status
+    const displayStatus = completionStatus || status;
+
+    // Check if completed (new format with timestamp or old 'completed' status)
+    if (displayStatus.startsWith('completed') || displayStatus === 'completed') {
+      return {
+        bg: 'bg-gradient-to-r from-brand-green to-green-600',
+        text: 'text-white',
+        border: 'border-green-700',
+        icon: faCheckCircle,
+        hover: 'hover:shadow-lg',
+        cursor: 'cursor-pointer',
+      };
     }
+
+    // Check if in progress
+    if (displayStatus === 'in_progress') {
+      return {
+        bg: 'bg-gradient-to-r from-blue-500 to-blue-600',
+        text: 'text-white',
+        border: 'border-blue-700',
+        icon: faSpinner,
+        hover: 'hover:shadow-lg',
+        cursor: 'cursor-pointer',
+      };
+    }
+
+    // Check if incomplete (new format with timestamp or old 'incomplete' status)
+    if (displayStatus.startsWith('incomplete') || displayStatus === 'incomplete') {
+      return {
+        bg: 'bg-gradient-to-r from-orange-400 to-orange-500',
+        text: 'text-white',
+        border: 'border-orange-600',
+        icon: faLockOpen,
+        hover: 'hover:shadow-lg',
+        cursor: 'cursor-pointer',
+      };
+    }
+
+    // Check if annulled (new format with timestamp or old 'annulled' status)
+    if (displayStatus.startsWith('annulled') || displayStatus === 'annulled') {
+      return {
+        bg: 'bg-gradient-to-r from-orange-400 to-orange-500',
+        text: 'text-white',
+        border: 'border-orange-600',
+        icon: faLockOpen,
+        hover: 'hover:shadow-lg',
+        cursor: 'cursor-pointer',
+      };
+    }
+
+    // Check if unlocked (always from status field)
+    if (status === 'unlocked') {
+      return {
+        bg: 'bg-white',
+        text: 'text-brand-green',
+        border: 'border-brand-green',
+        icon: faLockOpen,
+        hover: 'hover:bg-brand-green hover:text-white',
+        cursor: 'cursor-pointer',
+      };
+    }
+
+    // Default: locked
+    return {
+      bg: 'bg-blue-50',
+      text: 'text-blue-700',
+      border: 'border-blue-300',
+      icon: faLock,
+      hover: 'hover:bg-blue-100 hover:border-blue-400',
+      cursor: 'cursor-pointer',
+    };
   }
 
   function calculateProgress() {
     if (tests.length === 0) return 0;
-    const completed = tests.filter(t => t.status === 'completed').length;
+    // Backward compatible: check completion_status first, then fall back to status
+    const completed = tests.filter(t => t.completion_status?.startsWith('completed') || t.status === 'completed').length;
     return Math.round((completed / tests.length) * 100);
   }
 
@@ -606,11 +694,17 @@ export default function StudentHomePage() {
 
   // Test Track Screen
   const grouped = groupTests(tests);
-  // Sort sections using sectionOrder from database, with alphabetical fallback
+  // Sort sections using sectionOrder from database with normalized comparison
   const sections = Object.keys(grouped).sort((a, b) => {
     if (sectionOrder.length > 0) {
-      const aIndex = sectionOrder.indexOf(a);
-      const bIndex = sectionOrder.indexOf(b);
+      // Normalize section names for comparison
+      const aNorm = normalizeSectionName(a);
+      const bNorm = normalizeSectionName(b);
+
+      // Find index in order array using normalized comparison
+      const aIndex = sectionOrder.findIndex(s => normalizeSectionName(s) === aNorm);
+      const bIndex = sectionOrder.findIndex(s => normalizeSectionName(s) === bNorm);
+
       // If both in order array, use that order
       if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
       // If only one in order, prioritize it
@@ -621,7 +715,8 @@ export default function StudentHomePage() {
     return a.localeCompare(b);
   });
   const progress = calculateProgress();
-  const completedCount = tests.filter(t => t.status === 'completed').length;
+  // Backward compatible: check completion_status first, then fall back to status
+  const completedCount = tests.filter(t => t.completion_status?.startsWith('completed') || t.status === 'completed').length;
   const unlockedCount = tests.filter(t => t.status === 'unlocked' || t.status === 'in_progress' || t.status === 'incomplete' || t.status === 'annulled').length;
 
   return (
@@ -686,7 +781,8 @@ export default function StudentHomePage() {
                 });
 
                 const sectionTests = exerciseTypes.flatMap(et => grouped[section][et]);
-                const sectionCompleted = sectionTests.filter(t => t.status === 'completed').length;
+                // Backward compatible: check completion_status first, then fall back to status
+                const sectionCompleted = sectionTests.filter(t => t.completion_status?.startsWith('completed') || t.status === 'completed').length;
                 const sectionProgress = sectionTests.length > 0
                   ? Math.round((sectionCompleted / sectionTests.length) * 100)
                   : 0;
@@ -735,7 +831,7 @@ export default function StudentHomePage() {
                             )}
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                               {grouped[section][exerciseType].map(test => {
-                                const styles = getStatusStyles(test.status);
+                                const styles = getStatusStyles(test.status, test.completion_status);
                                 // Locked tests navigate to results page, others to take-test page
                                 const isClickable = true; // All tests are now clickable
 
@@ -744,8 +840,10 @@ export default function StudentHomePage() {
                                     <button
                                       onClick={() => {
                                         if (test.status === 'locked') {
-                                          // Navigate to results page for locked tests
-                                          navigate(`/student/test-results/${test.assignment_id}`);
+                                          // Only navigate to results if viewable by student
+                                          if (test.results_viewable_by_student) {
+                                            navigate(`/student/test-results/${test.assignment_id}`);
+                                          }
                                         } else {
                                           navigate(`/take-test/${test.assignment_id}`);
                                         }
@@ -755,9 +853,13 @@ export default function StudentHomePage() {
                                         transition-all duration-200 w-full
                                         flex flex-col items-center justify-center
                                         ${styles.bg} ${styles.text} ${styles.border}
-                                        ${styles.hover} ${styles.cursor}
+                                        ${test.status === 'locked' && !test.results_viewable_by_student ? 'cursor-not-allowed opacity-75' : styles.hover + ' ' + styles.cursor}
                                       `}
-                                      title={test.status === 'locked' ? 'View results (test locked)' : `Click to ${test.status === 'in_progress' ? 'continue' : 'start'} test`}
+                                      title={
+                                        test.status === 'locked'
+                                          ? (test.results_viewable_by_student ? 'View results' : 'Results locked - ask your tutor')
+                                          : `Click to ${test.status === 'in_progress' ? 'continue' : 'start'} test`
+                                      }
                                     >
                                       <div className="flex flex-col items-center gap-1">
                                         <span className="text-3xl">{test.test_number}</span>
@@ -773,7 +875,13 @@ export default function StudentHomePage() {
                                       </div>
                                       <FontAwesomeIcon
                                         icon={styles.icon}
-                                        className={`absolute top-2 right-2 ${test.status === 'locked' ? 'text-lg text-blue-600' : 'text-sm'}`}
+                                        className={`absolute top-2 right-2 ${
+                                          (test.completion_status?.startsWith('completed') || test.status === 'completed')
+                                            ? 'text-lg text-white'
+                                            : test.status === 'locked'
+                                            ? 'text-lg text-blue-600'
+                                            : 'text-sm'
+                                        }`}
                                       />
                                     </button>
 
@@ -903,14 +1011,14 @@ export default function StudentHomePage() {
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-gray-600">{t('studentHome.status')}:</span>
                 <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                  selectedTestForDetails.status === 'completed' ? 'bg-green-100 text-green-700' :
-                  selectedTestForDetails.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
+                  (selectedTestForDetails.completion_status?.startsWith('completed') || selectedTestForDetails.status === 'completed') ? 'bg-green-100 text-green-700' :
+                  (selectedTestForDetails.completion_status === 'in_progress' || selectedTestForDetails.status === 'in_progress') ? 'bg-blue-100 text-blue-700' :
                   selectedTestForDetails.status === 'unlocked' ? 'bg-yellow-100 text-yellow-700' :
-                  selectedTestForDetails.status === 'annulled' ? 'bg-red-100 text-red-700' :
-                  selectedTestForDetails.status === 'incomplete' ? 'bg-orange-100 text-orange-700' :
+                  (selectedTestForDetails.completion_status?.startsWith('annulled') || selectedTestForDetails.status === 'annulled') ? 'bg-red-100 text-red-700' :
+                  (selectedTestForDetails.completion_status?.startsWith('incomplete') || selectedTestForDetails.status === 'incomplete') ? 'bg-orange-100 text-orange-700' :
                   'bg-gray-100 text-gray-700'
                 }`}>
-                  {selectedTestForDetails.status.replace('_', ' ').toUpperCase()}
+                  {selectedTestForDetails.completion_status || selectedTestForDetails.status.replace('_', ' ').toUpperCase()}
                 </span>
               </div>
 
@@ -1148,8 +1256,8 @@ export default function StudentHomePage() {
                   className="w-full py-3 bg-gradient-to-r from-brand-green to-green-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all"
                   disabled={selectedTestForDetails.status === 'locked'}
                 >
-                  {selectedTestForDetails.status === 'in_progress' ? t('studentHome.continueTest') :
-                   selectedTestForDetails.status === 'completed' ? t('studentHome.viewResults') :
+                  {(selectedTestForDetails.completion_status === 'in_progress' || selectedTestForDetails.status === 'in_progress') ? t('studentHome.continueTest') :
+                   (selectedTestForDetails.completion_status?.startsWith('completed') || selectedTestForDetails.status === 'completed') ? t('studentHome.viewResults') :
                    selectedTestForDetails.status === 'locked' ? t('studentHome.testLocked') :
                    t('studentHome.startTest')}
                 </button>

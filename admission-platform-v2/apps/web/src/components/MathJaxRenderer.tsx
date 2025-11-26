@@ -1,14 +1,14 @@
 import React from 'react';
 import { MathJax, MathJaxContext } from 'better-react-mathjax';
 
-// MathJax configuration with support for advanced LaTeX features
+// MathJax configuration with support for advanced LaTeX features including tables
 const mathJaxConfig = {
   loader: {
-    load: ['[tex]/html', '[tex]/ams', '[tex]/color', '[tex]/bbox', '[tex]/boldsymbol']
+    load: ['[tex]/html', '[tex]/ams', '[tex]/color', '[tex]/bbox', '[tex]/boldsymbol', '[tex]/colortbl']
   },
   tex: {
     packages: {
-      '[+]': ['html', 'ams', 'color', 'bbox', 'boldsymbol']
+      '[+]': ['html', 'ams', 'color', 'bbox', 'boldsymbol', 'colortbl']
     },
     inlineMath: [
       ['$', '$'],
@@ -26,6 +26,10 @@ const mathJaxConfig = {
       tikzpicture: ['\\begin{array}{c}\\text{[Graph]}\\\\#1\\end{array}', 1],
       axis: ['\\text{[Axis: #1]}', 1],
       addplot: ['\\text{[Plot: #1]}', 1],
+    },
+    // Map tabular to array for MathJax compatibility
+    environments: {
+      tabular: ['array', '']
     }
   },
   svg: {
