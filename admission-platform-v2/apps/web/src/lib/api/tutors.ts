@@ -22,6 +22,7 @@ export interface StudentWithAssignments {
   tutor_id: string | null;
   tutor_name?: string;
   real_test_date?: string | null;
+  tests?: string[]; // Test types this student has access to
   assignments: Array<{
     id: string;
     test_id: string;
@@ -71,7 +72,7 @@ export async function fetchMyStudents(): Promise<StudentWithAssignments[]> {
   // Get students assigned to this tutor
   const { data: students, error: studentsError } = await supabase
     .from('2V_profiles')
-    .select('id, name, email, tutor_id, real_test_date')
+    .select('id, name, email, tutor_id, real_test_date, tests')
     .eq('tutor_id', tutorId)
     .contains('roles', '"STUDENT"');
 
@@ -84,7 +85,7 @@ export async function fetchMyStudents(): Promise<StudentWithAssignments[]> {
     return [];
   }
 
-  // Get test assignments for these students
+  // Get test assignments for these students (only where test exists and is active)
   const studentIds = students.map(s => s.id);
   const { data: assignments, error: assignmentsError } = await supabase
     .from('2V_test_assignments')
@@ -95,15 +96,17 @@ export async function fetchMyStudents(): Promise<StudentWithAssignments[]> {
       status,
       assigned_at,
       completed_at,
-      2V_tests (
+      2V_tests!inner (
         id,
         test_type,
         section,
         exercise_type,
-        test_number
+        test_number,
+        is_active
       )
     `)
-    .in('student_id', studentIds);
+    .in('student_id', studentIds)
+    .eq('2V_tests.is_active', true);
 
   if (assignmentsError) {
     console.error('Assignments error:', assignmentsError);
@@ -117,6 +120,7 @@ export async function fetchMyStudents(): Promise<StudentWithAssignments[]> {
     email: student.email,
     tutor_id: student.tutor_id,
     real_test_date: student.real_test_date,
+    tests: student.tests || [],
     assignments: (assignments || [])
       .filter(a => a.student_id === student.id)
       .map(a => ({
@@ -147,6 +151,7 @@ export async function fetchAllStudents(): Promise<StudentWithAssignments[]> {
       email,
       tutor_id,
       real_test_date,
+      tests,
       tutor:tutor_id (
         name
       )
@@ -162,7 +167,7 @@ export async function fetchAllStudents(): Promise<StudentWithAssignments[]> {
     return [];
   }
 
-  // Get test assignments for all students
+  // Get test assignments for all students (only where test exists and is active)
   const studentIds = students.map(s => s.id);
   const { data: assignments, error: assignmentsError } = await supabase
     .from('2V_test_assignments')
@@ -173,15 +178,17 @@ export async function fetchAllStudents(): Promise<StudentWithAssignments[]> {
       status,
       assigned_at,
       completed_at,
-      2V_tests (
+      2V_tests!inner (
         id,
         test_type,
         section,
         exercise_type,
-        test_number
+        test_number,
+        is_active
       )
     `)
-    .in('student_id', studentIds);
+    .in('student_id', studentIds)
+    .eq('2V_tests.is_active', true);
 
   if (assignmentsError) {
     console.error('Assignments error:', assignmentsError);
@@ -196,6 +203,7 @@ export async function fetchAllStudents(): Promise<StudentWithAssignments[]> {
     tutor_id: student.tutor_id,
     tutor_name: student.tutor?.name || undefined,
     real_test_date: student.real_test_date,
+    tests: student.tests || [],
     assignments: (assignments || [])
       .filter(a => a.student_id === student.id)
       .map(a => ({

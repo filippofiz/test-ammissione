@@ -425,6 +425,19 @@ export default function StudentTestsPage() {
       if (availableTests && availableTests.length > 0) {
         console.log(`🔄 Auto-assigning ${availableTests.length} new tests to student ${studentId}`);
 
+        // Get current user (tutor) ID for assigned_by field
+        const { data: { user } } = await supabase.auth.getUser();
+        let assignedBy = null;
+
+        if (user) {
+          const { data: profile } = await supabase
+            .from('2V_profiles')
+            .select('id')
+            .eq('auth_uid', user.id)
+            .single();
+          assignedBy = profile?.id;
+        }
+
         const { error: assignError } = await supabase
           .from('2V_test_assignments')
           .insert(
@@ -434,6 +447,8 @@ export default function StudentTestsPage() {
               status: 'locked',
               current_attempt: 1,
               total_attempts: 0,
+              assigned_by: assignedBy,
+              assigned_at: new Date().toISOString(),
             }))
           );
 

@@ -46,6 +46,11 @@ export default function TutorStudentsPage() {
   const [viewAll, setViewAll] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<StudentWithAssignments | null>(null);
   const [showTestModal, setShowTestModal] = useState(false);
+  const [showAssignTestModal, setShowAssignTestModal] = useState(false);
+  const [selectedTestTypes, setSelectedTestTypes] = useState<string[]>([]);
+  const [assigningTests, setAssigningTests] = useState(false);
+  const [testTypeCounts, setTestTypeCounts] = useState<Record<string, number>>({});
+  const [loadingCounts, setLoadingCounts] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddStudentModal, setShowAddStudentModal] = useState(false);
   const [newStudentEmail, setNewStudentEmail] = useState('');
@@ -71,6 +76,20 @@ export default function TutorStudentsPage() {
     }
   }, [showAddStudentModal]);
 
+  // Load available test types when assign modal opens
+  useEffect(() => {
+    if (showAssignTestModal) {
+      loadTestTypes();
+    }
+  }, [showAssignTestModal]);
+
+  // Load test counts when test modal opens
+  useEffect(() => {
+    if (showTestModal && selectedStudent) {
+      loadTestTypeCounts();
+    }
+  }, [showTestModal, selectedStudent]);
+
   async function loadStudents() {
     setLoading(true);
     setError(null);
@@ -83,6 +102,147 @@ export default function TutorStudentsPage() {
       setError(err instanceof Error ? err.message : 'Failed to load students');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadTestTypes() {
+    try {
+      // Fetch unique test types from 2V_tests table
+      const { data: tests, error: testsError } = await supabase
+        .from('2V_tests')
+        .select('test_type')
+        .eq('is_active', true);
+
+      if (testsError) throw testsError;
+
+      // Get unique test types
+      const uniqueTestTypes = [...new Set(tests?.map(t => t.test_type) || [])];
+      setAvailableTestTypes(uniqueTestTypes);
+    } catch (err) {
+      console.error('Error loading test types:', err);
+    }
+  }
+
+  async function loadTestTypeCounts() {
+    if (!selectedStudent) return;
+
+    setLoadingCounts(true);
+    try {
+      // Fetch all test assignments for this student where the test still exists and is active
+      const { data: assignments, error } = await supabase
+        .from('2V_test_assignments')
+        .select(`
+          id,
+          2V_tests!inner (
+            test_type,
+            is_active
+          )
+        `)
+        .eq('student_id', selectedStudent.id)
+        .eq('2V_tests.is_active', true);
+
+      if (error) throw error;
+
+      // Count tests per type (only those where test exists and is active)
+      const counts: Record<string, number> = {};
+      (assignments || []).forEach((assignment: any) => {
+        const testType = assignment['2V_tests']?.test_type;
+        if (testType) {
+          counts[testType] = (counts[testType] || 0) + 1;
+        }
+      });
+
+      setTestTypeCounts(counts);
+    } catch (err) {
+      console.error('Error loading test type counts:', err);
+    } finally {
+      setLoadingCounts(false);
+    }
+  }
+
+  async function handleAssignTestTypes() {
+    if (!selectedStudent || selectedTestTypes.length === 0) return;
+
+    setAssigningTests(true);
+    try {
+      // Get current user (tutor) ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data: tutorProfile } = await supabase
+        .from('2V_profiles')
+        .select('id')
+        .eq('auth_uid', user.id)
+        .single();
+
+      if (!tutorProfile) throw new Error('Tutor profile not found');
+
+      // Get current student's test types
+      const { data: currentProfile } = await supabase
+        .from('2V_profiles')
+        .select('tests')
+        .eq('id', selectedStudent.id)
+        .single();
+
+      const currentTests = currentProfile?.tests || [];
+
+      // Merge with new test types (avoiding duplicates)
+      const updatedTests = [...new Set([...currentTests, ...selectedTestTypes])];
+
+      // Update student's test types
+      const { error: profileError } = await supabase
+        .from('2V_profiles')
+        .update({ tests: updatedTests })
+        .eq('id', selectedStudent.id);
+
+      if (profileError) throw profileError;
+
+      // For each new test type, get all tests and create locked assignments
+      for (const testType of selectedTestTypes) {
+        // Get all tests of this type
+        const { data: tests, error: testsError } = await supabase
+          .from('2V_tests')
+          .select('id')
+          .eq('test_type', testType)
+          .eq('is_active', true);
+
+        if (testsError) {
+          console.error(`Error fetching tests for ${testType}:`, testsError);
+          continue;
+        }
+
+        if (!tests || tests.length === 0) continue;
+
+        // Create locked assignments for all tests of this type
+        const assignments = tests.map(test => ({
+          student_id: selectedStudent.id,
+          test_id: test.id,
+          status: 'locked',
+          assigned_by: tutorProfile.id,
+          assigned_at: new Date().toISOString(),
+        }));
+
+        const { error: assignError } = await supabase
+          .from('2V_test_assignments')
+          .insert(assignments);
+
+        if (assignError) {
+          console.error(`Error creating assignments for ${testType}:`, assignError);
+        }
+      }
+
+      // Reload students to show updated test types and assignments
+      await loadStudents();
+
+      // Close modal and reset
+      setShowAssignTestModal(false);
+      setSelectedTestTypes([]);
+      setSelectedStudent(null);
+    } catch (err) {
+      console.error('Error assigning test types:', err);
+      alert('Failed to assign test types. Please try again.');
+    } finally {
+      setAssigningTests(false);
     }
   }
 
@@ -100,15 +260,22 @@ export default function TutorStudentsPage() {
       const uniqueTestTypes = [...new Set(tests?.map(t => t.test_type) || [])];
       setAvailableTestTypes(uniqueTestTypes);
 
-      // Fetch tutors and admins from profiles
-      const { data: tutorsData, error: tutorsError } = await supabase
+      // Fetch all tutors and admins from profiles
+      const { data: allProfiles, error: tutorsError } = await supabase
         .from('2V_profiles')
-        .select('id, name, email')
-        .or('roles.cs.{"TUTOR"},roles.cs.{"ADMIN"}');
+        .select('id, name, email, roles');
 
       if (tutorsError) throw tutorsError;
 
-      setTutors(tutorsData || []);
+      // Filter profiles that have TUTOR or ADMIN role
+      const tutorsData = (allProfiles || []).filter(profile => {
+        if (!profile.roles) return false;
+        const roles = Array.isArray(profile.roles) ? profile.roles : [];
+        return roles.includes('TUTOR') || roles.includes('ADMIN');
+      });
+
+      setTutors(tutorsData);
+      console.log('Loaded tutors:', tutorsData);
 
       // Set current user as default tutor
       const { data: { user } } = await supabase.auth.getUser();
@@ -413,8 +580,10 @@ export default function TutorStudentsPage() {
                           {/* Tests Button */}
                           <button
                             onClick={() => {
-                              // If only one test type, navigate directly
-                              const testTypes = [...new Set(student.assignments.map(a => a.test_type || 'Other'))];
+                              // Get test types only from valid assignments
+                              const assignmentTests = student.assignments.map(a => a.test_type).filter(Boolean);
+                              const testTypes = [...new Set(assignmentTests)];
+
                               if (testTypes.length === 1) {
                                 navigate(`/tutor/student/${student.id}/tests/${testTypes[0]}`);
                               } else {
@@ -434,7 +603,8 @@ export default function TutorStudentsPage() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              navigate(`/tutor/student/${student.id}/profile`);
+                              setSelectedStudent(student);
+                              setShowAssignTestModal(true);
                             }}
                             className="px-3 py-2 bg-white border-2 border-green-600 text-green-600 rounded-lg hover:bg-green-50 transition-all text-sm font-semibold flex items-center gap-2"
                             title="Assign new tests"
@@ -447,8 +617,9 @@ export default function TutorStudentsPage() {
                         {/* Test Type Badges & Count */}
                         <div className="flex items-center gap-2">
                           {(() => {
-                            // Get unique test types
-                            const testTypes = [...new Set(student.assignments.map(a => a.test_type || 'Other'))];
+                            // Get unique test types only from valid assignments
+                            const assignmentTests = student.assignments.map(a => a.test_type).filter(Boolean);
+                            const testTypes = [...new Set(assignmentTests)];
 
                             return (
                               <>
@@ -516,11 +687,11 @@ export default function TutorStudentsPage() {
           onClick={() => setShowAddStudentModal(false)}
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl max-w-md w-full animate-slideUp"
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col animate-slideUp"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-brand-green to-green-600 p-6 text-white">
+            <div className="bg-gradient-to-r from-brand-green to-green-600 p-6 text-white flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
@@ -538,7 +709,7 @@ export default function TutorStudentsPage() {
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-4 overflow-y-auto">
               {createStudentError && (
                 <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
                   <p className="text-red-700 font-medium">{createStudentError}</p>
@@ -599,7 +770,7 @@ export default function TutorStudentsPage() {
                   <option value="">Select a tutor</option>
                   {tutors.map(tutor => (
                     <option key={tutor.id} value={tutor.id}>
-                      {tutor.name} ({tutor.email})
+                      {tutor.name || tutor.email} ({tutor.email})
                     </option>
                   ))}
                 </select>
@@ -642,8 +813,11 @@ export default function TutorStudentsPage() {
                   Select test types this student will have access to
                 </p>
               </div>
+            </div>
 
-              <div className="flex gap-3 pt-4">
+            {/* Modal Footer */}
+            <div className="p-6 border-t border-gray-200 flex-shrink-0 bg-gray-50">
+              <div className="flex gap-3">
                 <button
                   onClick={() => setShowAddStudentModal(false)}
                   disabled={creatingStudent}
@@ -678,7 +852,10 @@ export default function TutorStudentsPage() {
       {showTestModal && selectedStudent && (
         <div
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn"
-          onClick={() => setShowTestModal(false)}
+          onClick={() => {
+            setShowTestModal(false);
+            setTestTypeCounts({});
+          }}
         >
           <div
             className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden animate-slideUp"
@@ -701,32 +878,56 @@ export default function TutorStudentsPage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => setShowTestModal(false)}
+                  onClick={() => {
+                    setShowTestModal(false);
+                    setTestTypeCounts({});
+                  }}
                   className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 transition-colors flex items-center justify-center"
                 >
                   <span className="text-2xl font-bold">×</span>
                 </button>
               </div>
               <p className="text-white/90 text-sm">
-                {selectedStudent.assignments.length} {selectedStudent.assignments.length === 1 ? 'test' : 'tests'} assigned
+                {loadingCounts ? (
+                  'Loading...'
+                ) : (
+                  <>
+                    {Object.values(testTypeCounts).reduce((sum, count) => sum + count, 0) || selectedStudent.assignments.length} {' '}
+                    {(Object.values(testTypeCounts).reduce((sum, count) => sum + count, 0) || selectedStudent.assignments.length) === 1 ? 'test' : 'tests'} assigned
+                  </>
+                )}
               </p>
             </div>
 
             {/* Modal Content - Tests grouped by type */}
             <div className="p-6 overflow-y-auto max-h-[calc(80vh-180px)]">
-              {selectedStudent.assignments.length === 0 ? (
-                <div className="text-center py-12">
-                  <FontAwesomeIcon icon={faClipboardList} className="text-6xl text-gray-300 mb-4" />
-                  <p className="text-gray-500 text-lg">No tests assigned yet</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {(() => {
-                    // Get unique test types
-                    const testTypes = [...new Set(selectedStudent.assignments.map(a => a.test_type || 'Other'))];
+              {(() => {
+                // Only show test types that have valid test assignments (counts > 0)
+                const testTypes = Object.keys(testTypeCounts).filter(type => testTypeCounts[type] > 0);
 
-                    return testTypes.map((testType) => {
-                      const testsOfType = selectedStudent.assignments.filter(a => (a.test_type || 'Other') === testType);
+                if (loadingCounts) {
+                  return (
+                    <div className="text-center py-12">
+                      <FontAwesomeIcon icon={faSpinner} className="text-4xl text-gray-300 mb-4 animate-spin" />
+                      <p className="text-gray-500">Loading test types...</p>
+                    </div>
+                  );
+                }
+
+                if (testTypes.length === 0) {
+                  return (
+                    <div className="text-center py-12">
+                      <FontAwesomeIcon icon={faClipboardList} className="text-6xl text-gray-300 mb-4" />
+                      <p className="text-gray-500 text-lg">No active tests assigned yet</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {testTypes.map((testType) => {
+                      // Get test count from loaded counts or fallback to assignments
+                      const testCount = testTypeCounts[testType] || 0;
 
                       return (
                         <button
@@ -745,14 +946,156 @@ export default function TutorStudentsPage() {
                             {testType}
                           </h3>
                           <span className="text-xs text-gray-600">
-                            {testsOfType.length} {testsOfType.length === 1 ? 'test' : 'tests'}
+                            {loadingCounts ? (
+                              <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+                            ) : testCount > 0 ? (
+                              `${testCount} ${testCount === 1 ? 'test' : 'tests'}`
+                            ) : (
+                              'View tests'
+                            )}
                           </span>
                         </button>
                       );
-                    });
-                  })()}
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Assign Test Modal */}
+      {showAssignTestModal && selectedStudent && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn"
+          onClick={() => {
+            setShowAssignTestModal(false);
+            setSelectedTestTypes([]);
+          }}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col animate-slideUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-brand-green to-green-600 p-6 text-white flex-shrink-0">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
+                    <FontAwesomeIcon icon={faPlus} className="text-2xl" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold">Assign Tests</h2>
+                    <p className="text-white/90 text-sm mt-1">
+                      {selectedStudent.name || selectedStudent.email}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowAssignTestModal(false);
+                    setSelectedTestTypes([]);
+                  }}
+                  className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 transition-colors flex items-center justify-center"
+                >
+                  <span className="text-2xl font-bold">×</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto flex-1">
+              <p className="text-sm text-gray-600 mb-4">
+                Select test types to give this student access to. They will be able to take tests of these types.
+              </p>
+
+              {availableTestTypes.length === 0 ? (
+                <div className="text-center py-12">
+                  <FontAwesomeIcon icon={faSpinner} className="text-4xl text-gray-300 mb-4 animate-spin" />
+                  <p className="text-gray-500">Loading test types...</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {availableTestTypes.map(testType => {
+                    const isSelected = selectedTestTypes.includes(testType);
+                    // Check if student already has this test type in their profile
+                    const currentStudentTests = selectedStudent.tests || [];
+                    const isAlreadyAssigned = currentStudentTests.includes(testType);
+
+                    return (
+                      <label
+                        key={testType}
+                        className={`flex items-center gap-3 px-4 py-4 border-2 rounded-xl cursor-pointer transition-all ${
+                          isAlreadyAssigned
+                            ? 'border-gray-200 bg-gray-100 opacity-50 cursor-not-allowed'
+                            : isSelected
+                            ? 'border-brand-green bg-green-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          disabled={isAlreadyAssigned}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedTestTypes([...selectedTestTypes, testType]);
+                            } else {
+                              setSelectedTestTypes(selectedTestTypes.filter(t => t !== testType));
+                            }
+                          }}
+                          className="w-4 h-4 text-brand-green border-gray-300 rounded focus:ring-brand-green disabled:opacity-50"
+                        />
+                        <div className="flex-1">
+                          <span className="font-semibold text-sm">{testType}</span>
+                          {isAlreadyAssigned && (
+                            <span className="block text-xs text-gray-500 mt-1">Already assigned</span>
+                          )}
+                        </div>
+                      </label>
+                    );
+                  })}
                 </div>
               )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 border-t border-gray-200 flex-shrink-0 bg-gray-50">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-600">
+                  {selectedTestTypes.length} {selectedTestTypes.length === 1 ? 'type' : 'types'} selected
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowAssignTestModal(false);
+                      setSelectedTestTypes([]);
+                    }}
+                    disabled={assigningTests}
+                    className="px-6 py-3 rounded-xl font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAssignTestTypes}
+                    disabled={assigningTests || selectedTestTypes.length === 0}
+                    className="px-6 py-3 rounded-xl font-semibold bg-gradient-to-r from-brand-green to-green-600 text-white hover:shadow-lg transition-all disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {assigningTests ? (
+                      <>
+                        <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+                        Assigning...
+                      </>
+                    ) : (
+                      <>
+                        <FontAwesomeIcon icon={faPlus} />
+                        Assign {selectedTestTypes.length} {selectedTestTypes.length === 1 ? 'Type' : 'Types'}
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
