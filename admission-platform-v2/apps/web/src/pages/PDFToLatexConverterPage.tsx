@@ -18,6 +18,7 @@ import {
   faRedo,
   faImage,
   faExchangeAlt,
+  faTable,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import { MathJaxProvider, MathJaxRenderer, TikZGraph } from '../components/MathJaxRenderer';
@@ -434,6 +435,8 @@ export default function PDFToLatexConverterPage() {
   const [loadingTests, setLoadingTests] = useState(true);
   const [selectedTest, setSelectedTest] = useState<PDFTest | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedTrack, setSelectedTrack] = useState<string>('all'); // Filter by test_type
+  const [selectedExerciseType, setSelectedExerciseType] = useState<string>('all'); // Filter by exercise_type
   const [duplicateTests, setDuplicateTests] = useState<PDFTest[]>([]);
   const [selectedDuplicates, setSelectedDuplicates] = useState<Set<string>>(new Set());
   const [showPdfComparison, setShowPdfComparison] = useState(false);
@@ -457,6 +460,8 @@ export default function PDFToLatexConverterPage() {
   const [loadingImages, setLoadingImages] = useState(false);
   const [selectedImageTarget, setSelectedImageTarget] = useState<'question' | 'option_a' | 'option_b' | 'option_c' | 'option_d' | 'option_e'>('question');
   const [sharedImageQuestions, setSharedImageQuestions] = useState<number[]>([]); // For selecting multiple questions to share an image
+  const [selectedPageForExtraction, setSelectedPageForExtraction] = useState<number>(1);
+  const [totalPdfPages, setTotalPdfPages] = useState<number>(1);
 
   // Preview mode
   const [showPdfPreview, setShowPdfPreview] = useState(true);
@@ -509,86 +514,77 @@ export default function PDFToLatexConverterPage() {
   const loadPDFTests = async () => {
     setLoadingTests(true);
     try {
-      // Fetch ALL questions with PDF URLs (question_type = 'pdf') in batches
-      // Supabase has a default limit of 1000, so we need to paginate
-      const BATCH_SIZE = 1000;
-      let allPdfQuestions: any[] = [];
-      let offset = 0;
-      let hasMore = true;
+      // Step 1: Load all PDF format tests from 2V_tests
+      console.log('Loading PDF tests from 2V_tests...');
+      const { data: testsData, error: testsError } = await supabase
+        .from('2V_tests')
+        .select('id, test_type, section, exercise_type, test_number, format')
+        .eq('format', 'pdf')
+        .eq('is_active', true)
+        .order('test_type', { ascending: true })
+        .order('exercise_type', { ascending: true })
+        .order('test_number', { ascending: true });
 
-      while (hasMore) {
-        const { data: batch, error: questionsError } = await supabase
-          .from('2V_questions')
-          .select('test_id, test_type, section, question_data')
-          .eq('question_type', 'pdf')
-          .not('question_data->>pdf_url', 'is', null)
-          .range(offset, offset + BATCH_SIZE - 1);
+      if (testsError) throw testsError;
 
-        if (questionsError) throw questionsError;
-
-        if (batch && batch.length > 0) {
-          allPdfQuestions = [...allPdfQuestions, ...batch];
-          offset += BATCH_SIZE;
-          hasMore = batch.length === BATCH_SIZE;
-        } else {
-          hasMore = false;
-        }
-      }
-
-      const pdfQuestions = allPdfQuestions;
-      console.log(`Found ${pdfQuestions?.length || 0} PDF questions (fetched in batches)`);
-
-      if (!pdfQuestions || pdfQuestions.length === 0) {
+      if (!testsData || testsData.length === 0) {
+        console.log('No PDF tests found in 2V_tests');
         setPdfTests([]);
         return;
       }
 
-      // Group by test_id
-      const testMap = new Map<string, PDFTest>();
+      console.log(`Found ${testsData.length} PDF tests in 2V_tests`);
 
-      pdfQuestions.forEach((q: any) => {
-        const pdfUrl = q.question_data?.pdf_url;
-        if (!pdfUrl) return;
+      // Step 2: Get pdf_url and question count for each test
+      const testsList: PDFTest[] = [];
 
-        if (!testMap.has(q.test_id)) {
-          testMap.set(q.test_id, {
-            test_id: q.test_id,
-            test_type: q.test_type,
-            section: q.section,
-            exercise_type: 'PDF Test',
-            test_number: 0,
-            pdf_url: pdfUrl,
-            question_count: 1,
-          });
-        } else {
-          testMap.get(q.test_id)!.question_count++;
+      for (const test of testsData) {
+        // Get first question with pdf_url for this test
+        const { data: questions, error: questionsError } = await supabase
+          .from('2V_questions')
+          .select('question_data')
+          .eq('test_id', test.id)
+          .not('question_data->>pdf_url', 'is', null)
+          .limit(1);
+
+        if (questionsError) {
+          console.warn(`Error fetching questions for test ${test.id}:`, questionsError);
+          continue;
         }
-      });
 
-      console.log(`Grouped into ${testMap.size} unique tests`);
+        if (!questions || questions.length === 0) {
+          console.warn(`No PDF questions found for test ${test.id}`);
+          continue;
+        }
 
-      // Fetch test details from 2V_tests to get exercise_type and test_number
-      const testIds = Array.from(testMap.keys());
-      const { data: testsData, error: testsError } = await supabase
-        .from('2V_tests')
-        .select('id, exercise_type, test_number')
-        .in('id', testIds);
+        const pdfUrl = questions[0].question_data?.pdf_url;
+        if (!pdfUrl) {
+          console.warn(`No pdf_url in question_data for test ${test.id}`);
+          continue;
+        }
 
-      if (testsError) {
-        console.warn('Error fetching test details:', testsError);
-      } else if (testsData) {
-        testsData.forEach((test: any) => {
-          const existing = testMap.get(test.id);
-          if (existing) {
-            existing.exercise_type = test.exercise_type || 'PDF Test';
-            existing.test_number = test.test_number || 0;
-          }
+        // Count total questions for this test
+        const { count, error: countError } = await supabase
+          .from('2V_questions')
+          .select('*', { count: 'exact', head: true })
+          .eq('test_id', test.id);
+
+        if (countError) {
+          console.warn(`Error counting questions for test ${test.id}:`, countError);
+        }
+
+        testsList.push({
+          test_id: test.id,
+          test_type: test.test_type,
+          section: test.section,
+          exercise_type: test.exercise_type,
+          test_number: test.test_number,
+          pdf_url: pdfUrl,
+          question_count: count || 0,
         });
       }
 
-      const testsList = Array.from(testMap.values());
-      console.log('Final tests list:', testsList);
-
+      console.log(`Successfully loaded ${testsList.length} tests with PDF URLs`);
       setPdfTests(testsList);
     } catch (err) {
       console.error('Error loading PDF tests:', err);
@@ -1135,6 +1131,97 @@ export default function PDFToLatexConverterPage() {
     setConvertedQuestions(convertedQuestions.filter((_, i) => i !== index));
   };
 
+  const handleConvertTableToLatex = async (index: number) => {
+    const question = convertedQuestions[index];
+
+    // Use a simpler regex-based approach to convert plain text tables to LaTeX
+    try {
+      setConverting(true);
+
+      let convertedText = question.question_text;
+
+      // Try to detect and convert simple table patterns
+      // Pattern: lines with | separators
+      const lines = convertedText.split('\n');
+      let inTable = false;
+      let tableLines: string[] = [];
+      let nonTableLines: string[] = [];
+
+      for (const line of lines) {
+        const trimmedLine = line.trim();
+
+        // Detect table rows (lines with | separators)
+        if (trimmedLine.includes('|') && trimmedLine.split('|').length >= 3) {
+          if (!inTable) {
+            inTable = true;
+            tableLines = [];
+          }
+          // Remove leading/trailing pipes and split
+          const cells = trimmedLine.split('|').map(c => c.trim()).filter(c => c);
+          tableLines.push(cells);
+        } else if (inTable && trimmedLine.length === 0) {
+          // End of table
+          inTable = false;
+
+          if (tableLines.length > 0) {
+            // Convert to LaTeX array
+            const numCols = Math.max(...tableLines.map(row => row.length));
+            const colSpec = '|' + 'l|'.repeat(numCols);
+
+            let latexTable = `$$\\begin{array}{${colSpec}}\n\\hline\n`;
+
+            tableLines.forEach((row, idx) => {
+              const latexRow = row.map(cell => `\\text{${cell}}`).join(' & ');
+              latexTable += latexRow + ' \\\\\n';
+              if (idx === 0) {
+                latexTable += '\\hline\n';
+              }
+            });
+
+            latexTable += '\\hline\n\\end{array}$$';
+            nonTableLines.push(latexTable);
+            tableLines = [];
+          }
+        } else if (!inTable) {
+          nonTableLines.push(line);
+        }
+      }
+
+      // Handle table at end of text
+      if (tableLines.length > 0) {
+        const numCols = Math.max(...tableLines.map(row => row.length));
+        const colSpec = '|' + 'l|'.repeat(numCols);
+
+        let latexTable = `$$\\begin{array}{${colSpec}}\n\\hline\n`;
+
+        tableLines.forEach((row, idx) => {
+          const latexRow = row.map(cell => `\\text{${cell}}`).join(' & ');
+          latexTable += latexRow + ' \\\\\n';
+          if (idx === 0) {
+            latexTable += '\\hline\n';
+          }
+        });
+
+        latexTable += '\\hline\n\\end{array}$$';
+        nonTableLines.push(latexTable);
+      }
+
+      convertedText = nonTableLines.join('\n');
+
+      // Update the question
+      const updated = [...convertedQuestions];
+      updated[index].question_text = convertedText;
+      setConvertedQuestions(updated);
+
+      console.log('✓ Table converted to LaTeX');
+    } catch (err) {
+      console.error('Error converting table:', err);
+      setError(err instanceof Error ? err.message : 'Failed to convert table');
+    } finally {
+      setConverting(false);
+    }
+  };
+
   const handleRetryImageExtraction = async (index: number) => {
     if (!selectedTest) return;
 
@@ -1472,12 +1559,34 @@ export default function PDFToLatexConverterPage() {
       const loadingTask = pdfjsLib.getDocument({ data: pdfArrayBuffer });
       const pdfDoc = await loadingTask.promise;
 
-      if (!question.page_number || question.page_number > pdfDoc.numPages) {
-        throw new Error(`Invalid page number ${question.page_number}`);
+      // Store total pages for page selector
+      setTotalPdfPages(pdfDoc.numPages);
+
+      // Set initial page to question's page or page 1
+      const initialPage = question.page_number && question.page_number <= pdfDoc.numPages ? question.page_number : 1;
+      setSelectedPageForExtraction(initialPage);
+
+      // Load images from the initial page
+      await loadImagesFromPage(pdfDoc, initialPage);
+    } catch (err) {
+      console.error('Error loading images for manual selection:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load images');
+      setLoadingImages(false);
+    }
+  };
+
+  // Helper function to load images from a specific page
+  const loadImagesFromPage = async (pdfDoc: any, pageNumber: number) => {
+    setLoadingImages(true);
+    setAvailableImages([]);
+
+    try {
+      if (pageNumber < 1 || pageNumber > pdfDoc.numPages) {
+        throw new Error(`Invalid page number ${pageNumber}`);
       }
 
       // Get the page
-      const page = await pdfDoc.getPage(question.page_number);
+      const page = await pdfDoc.getPage(pageNumber);
 
       // Render page to ensure all objects are loaded
       const viewport = page.getViewport({ scale: 1.0 });
@@ -1565,12 +1674,34 @@ export default function PDFToLatexConverterPage() {
       // Sort by Y position (top to bottom)
       allImages.sort((a, b) => b.y - a.y);
       setAvailableImages(allImages);
-      console.log(`[Manual Selection] Found ${allImages.length} images on page ${question.page_number}`);
+      console.log(`[Manual Selection] Found ${allImages.length} images on page ${pageNumber}`);
     } catch (err) {
       console.error('Error loading images for manual selection:', err);
       setError(err instanceof Error ? err.message : 'Failed to load images');
     } finally {
       setLoadingImages(false);
+    }
+  };
+
+  // Handle page change in manual image selector
+  const handlePageChange = async (newPage: number) => {
+    if (!selectedTest) return;
+
+    setSelectedPageForExtraction(newPage);
+
+    // Reload PDF and extract images from the new page
+    try {
+      const pdfResponse = await fetch(selectedTest.pdf_url);
+      const pdfBlob = await pdfResponse.blob();
+      const pdfArrayBuffer = await pdfBlob.arrayBuffer();
+
+      const loadingTask = pdfjsLib.getDocument({ data: pdfArrayBuffer });
+      const pdfDoc = await loadingTask.promise;
+
+      await loadImagesFromPage(pdfDoc, newPage);
+    } catch (err) {
+      console.error('Error changing page:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load page');
     }
   };
 
@@ -2010,38 +2141,86 @@ export default function PDFToLatexConverterPage() {
                   </div>
                 ) : (
                   <>
-                    {/* Search Input */}
-                    <div className="mb-6">
-                      <input
-                        type="text"
-                        placeholder="Search by test type, section, test number, or exercise type..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-brand-green focus:outline-none text-base"
-                      />
-                      {searchTerm && (
-                        <p className="text-sm text-gray-600 mt-2">
-                          Found {pdfTests.filter(test =>
+                    {/* Filters */}
+                    <div className="mb-6 space-y-4">
+                      {/* Search Input */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          🔍 Search
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Search by test type, section, test number..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-brand-green focus:outline-none text-base"
+                        />
+                      </div>
+
+                      {/* Filter Dropdowns */}
+                      <div className="grid grid-cols-2 gap-4">
+                        {/* Track Filter */}
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            🎯 Track
+                          </label>
+                          <select
+                            value={selectedTrack}
+                            onChange={(e) => setSelectedTrack(e.target.value)}
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-brand-green focus:outline-none text-base bg-white"
+                          >
+                            <option value="all">All Tracks</option>
+                            {Array.from(new Set(pdfTests.map(t => t.test_type))).sort().map(track => (
+                              <option key={track} value={track}>{track}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Exercise Type Filter */}
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            📚 Exercise Type
+                          </label>
+                          <select
+                            value={selectedExerciseType}
+                            onChange={(e) => setSelectedExerciseType(e.target.value)}
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-brand-green focus:outline-none text-base bg-white"
+                          >
+                            <option value="all">All Types</option>
+                            <option value="Training">Training</option>
+                            <option value="Assessment Monotematico">Assessment Monotematico</option>
+                            <option value="Assessment Iniziale">Assessment Iniziale</option>
+                            <option value="Simulazione">Simulazione</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Results Count */}
+                      <div className="text-sm text-gray-600">
+                        Showing {pdfTests.filter(test => {
+                          const matchesSearch = !searchTerm ||
                             test.test_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             test.section.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             test.test_number.toString().includes(searchTerm) ||
-                            test.exercise_type.toLowerCase().includes(searchTerm.toLowerCase())
-                          ).length} tests
-                        </p>
-                      )}
+                            test.exercise_type.toLowerCase().includes(searchTerm.toLowerCase());
+                          const matchesTrack = selectedTrack === 'all' || test.test_type === selectedTrack;
+                          const matchesExerciseType = selectedExerciseType === 'all' || test.exercise_type === selectedExerciseType;
+                          return matchesSearch && matchesTrack && matchesExerciseType;
+                        }).length} of {pdfTests.length} tests
+                      </div>
                     </div>
 
                     <div className="space-y-3 max-h-[500px] overflow-y-auto mb-6">
                       {pdfTests
                         .filter(test => {
-                          if (!searchTerm) return true;
-                          const search = searchTerm.toLowerCase();
-                          return (
-                            test.test_type.toLowerCase().includes(search) ||
-                            test.section.toLowerCase().includes(search) ||
-                            test.test_number.toString().includes(search) ||
-                            test.exercise_type.toLowerCase().includes(search)
-                          );
+                          const matchesSearch = !searchTerm ||
+                            test.test_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            test.section.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            test.test_number.toString().includes(searchTerm) ||
+                            test.exercise_type.toLowerCase().includes(searchTerm.toLowerCase());
+                          const matchesTrack = selectedTrack === 'all' || test.test_type === selectedTrack;
+                          const matchesExerciseType = selectedExerciseType === 'all' || test.exercise_type === selectedExerciseType;
+                          return matchesSearch && matchesTrack && matchesExerciseType;
                         })
                         .map((test, idx) => (
                         <button
@@ -2050,26 +2229,48 @@ export default function PDFToLatexConverterPage() {
                           disabled={converting}
                           className={`w-full text-left p-5 rounded-xl border-2 transition-all ${
                             selectedTest === test
-                              ? 'border-brand-green bg-gradient-to-r from-green-50 to-green-100 shadow-lg'
-                              : 'border-gray-200 hover:border-brand-green bg-white hover:shadow-md'
+                              ? 'border-indigo-500 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 shadow-lg'
+                              : 'border-gray-200 hover:border-indigo-300 bg-white hover:shadow-md'
                           }`}
                         >
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <div className="font-bold text-brand-dark text-xl mb-1">
-                                {test.test_type} - {test.section}
+                          <div className="flex items-start gap-4">
+                            {/* Icon/Badge */}
+                            <div className={`flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center font-bold text-lg ${
+                              selectedTest === test
+                                ? 'bg-indigo-500 text-white'
+                                : 'bg-gray-100 text-gray-600'
+                            }`}>
+                              #{test.test_number}
+                            </div>
+
+                            {/* Content */}
+                            <div className="flex-1 min-w-0">
+                              <div className="font-bold text-gray-900 text-lg mb-1 truncate">
+                                {test.test_type}
                               </div>
-                              <div className="text-sm text-gray-600">
-                                {test.exercise_type} #{test.test_number}
+                              <div className="text-sm text-gray-600 mb-2 truncate">
+                                {test.section}
                               </div>
-                              <div className="text-xs text-gray-500 mt-1">
-                                📄 {test.question_count} questions
+                              <div className="flex items-center gap-3 flex-wrap">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  test.exercise_type === 'Simulazione' ? 'bg-purple-100 text-purple-800' :
+                                  test.exercise_type === 'Assessment Monotematico' ? 'bg-blue-100 text-blue-800' :
+                                  test.exercise_type === 'Assessment Iniziale' ? 'bg-green-100 text-green-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {test.exercise_type}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  📄 {test.question_count} questions
+                                </span>
                               </div>
                             </div>
+
+                            {/* Selection Indicator */}
                             {selectedTest === test && (
-                              <div className="ml-4">
-                                <div className="w-6 h-6 bg-brand-green rounded-full flex items-center justify-center">
-                                  <FontAwesomeIcon icon={faCheckCircle} className="text-white text-sm" />
+                              <div className="flex-shrink-0">
+                                <div className="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center shadow-lg">
+                                  <FontAwesomeIcon icon={faCheckCircle} className="text-white text-lg" />
                                 </div>
                               </div>
                             )}
@@ -2470,7 +2671,7 @@ export default function PDFToLatexConverterPage() {
                                 </button>
                               </div>
                             </div>
-                            <div className="bg-white rounded-lg p-4 text-gray-700 whitespace-pre-wrap">
+                            <div className="bg-white rounded-lg p-4 text-gray-700 whitespace-pre-wrap overflow-x-auto">
                               <MathJaxRenderer>{passage.passage_text || ''}</MathJaxRenderer>
                             </div>
                           </div>
@@ -2489,6 +2690,14 @@ export default function PDFToLatexConverterPage() {
                               )}
                             </h3>
                         <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleConvertTableToLatex(index)}
+                            disabled={converting}
+                            className="text-purple-600 hover:text-purple-800 px-3 py-1.5 rounded-lg hover:bg-purple-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Convert table to LaTeX format"
+                          >
+                            <FontAwesomeIcon icon={faTable} />
+                          </button>
                           <button
                             onClick={() => {
                               setImageSelectorQuestionIndex(index);
@@ -2525,7 +2734,7 @@ export default function PDFToLatexConverterPage() {
                           rows={3}
                         />
                       ) : (
-                        <div className="bg-blue-50 p-4 rounded-lg mb-3 border border-blue-200">
+                        <div className="bg-blue-50 p-4 rounded-lg mb-3 border border-blue-200 overflow-x-auto">
                           <MathJaxRenderer>{question.question_text}</MathJaxRenderer>
 
                           {/* Display image(s) if present */}
@@ -2838,14 +3047,14 @@ export default function PDFToLatexConverterPage() {
           <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             {/* Modal Header */}
             <div className="bg-indigo-600 p-4 text-white">
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center mb-3">
                 <div>
                   <h2 className="text-xl font-bold">
                     Select Image {selectedImageTarget === 'question' ? 'for Question' : `for Option ${selectedImageTarget.replace('option_', '').toUpperCase()}`}
                   </h2>
                   {imageSelectorQuestionIndex !== null && (
                     <p className="text-indigo-200 text-sm">
-                      Question {convertedQuestions[imageSelectorQuestionIndex]?.question_number} - Page {(convertedQuestions[imageSelectorQuestionIndex] as any)?.page_number}
+                      Question {convertedQuestions[imageSelectorQuestionIndex]?.question_number}
                     </p>
                   )}
                 </div>
@@ -2855,6 +3064,53 @@ export default function PDFToLatexConverterPage() {
                 >
                   ✕ Close
                 </button>
+              </div>
+              {/* Page Selector */}
+              <div className="flex items-center gap-3 mt-2">
+                <label className="text-sm font-semibold text-indigo-100">
+                  Extract from page:
+                </label>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handlePageChange(Math.max(1, selectedPageForExtraction - 1))}
+                    disabled={selectedPageForExtraction <= 1 || loadingImages}
+                    className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                  >
+                    ←
+                  </button>
+                  <input
+                    type="number"
+                    min={1}
+                    max={totalPdfPages}
+                    value={selectedPageForExtraction}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value);
+                      if (!isNaN(value) && value >= 1 && value <= totalPdfPages) {
+                        handlePageChange(value);
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const value = parseInt(e.target.value);
+                      if (isNaN(value) || value < 1) {
+                        setSelectedPageForExtraction(1);
+                      } else if (value > totalPdfPages) {
+                        setSelectedPageForExtraction(totalPdfPages);
+                      }
+                    }}
+                    disabled={loadingImages}
+                    className="w-20 px-3 py-1 bg-white text-indigo-900 rounded-lg font-semibold disabled:opacity-50 text-center"
+                  />
+                  <button
+                    onClick={() => handlePageChange(Math.min(totalPdfPages, selectedPageForExtraction + 1))}
+                    disabled={selectedPageForExtraction >= totalPdfPages || loadingImages}
+                    className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                  >
+                    →
+                  </button>
+                  <span className="text-sm text-indigo-100 ml-2">
+                    of {totalPdfPages}
+                  </span>
+                </div>
               </div>
             </div>
 

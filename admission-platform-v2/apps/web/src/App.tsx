@@ -12,6 +12,7 @@ import AnalyticsDashboardPage from './pages/AnalyticsDashboardPage';
 import StudentTestsPage from './pages/StudentTestsPage';
 import TestResultsPage from './pages/TestResultsPage';
 import TestManagementPage from './pages/TestManagementPage';
+import TestStructurePage from './pages/TestStructurePage';
 import ManageSectionOrderPage from './pages/ManageSectionOrderPage';
 import TestTypeSelectionPage from './pages/TestTypeSelectionPage';
 import TestTrackConfigPage from './pages/TestTrackConfigPage';
@@ -129,6 +130,14 @@ function App() {
           element={
             <ProtectedRoute requiredRoles={['TUTOR', 'ADMIN']}>
               <TestManagementPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tutor/test-structure"
+          element={
+            <ProtectedRoute requiredRoles={['TUTOR', 'ADMIN']}>
+              <TestStructurePage />
             </ProtectedRoute>
           }
         />

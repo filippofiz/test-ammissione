@@ -344,7 +344,10 @@
     "maxChangesReached": "Modifiche massime raggiunte",
     "cannotChangeMore": "Non puoi modificare altre risposte in questa sezione",
     "answersSubmitted": "Le tue risposte sono state inviate con successo",
-    "thankYou": "Grazie per aver completato il test"
+    "thankYou": "Grazie per aver completato il test",
+    "testLocked": "Test Bloccato",
+    "testLockedMessage": "Questo test è stato completato ed è ora bloccato. Contatta il tuo tutor per sbloccarlo se hai bisogno di ripeterlo.",
+    "backToHome": "Torna alla Home"
   },
   "common": {
     "loading": "Caricamento...",

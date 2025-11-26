@@ -342,7 +342,10 @@
     "bookmark": "Bookmark",
     "bookmarked": "Bookmarked",
     "maxChangesReached": "Maximum changes reached",
-    "cannotChangeMore": "You cannot change any more answers in this section"
+    "cannotChangeMore": "You cannot change any more answers in this section",
+    "testLocked": "Test Locked",
+    "testLockedMessage": "This test has been completed and is now locked. Contact your tutor to unlock it if you need to retake the test.",
+    "backToHome": "Back to Home"
   },
   "common": {
     "loading": "Loading...",

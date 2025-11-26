@@ -318,33 +318,6 @@ export default function AdminDashboardPage() {
                 </div>
               </button>
 
-              {/* Database Management Card */}
-              <button
-                onClick={() => navigate('/admin/database')}
-                className="group relative bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 border-2 border-gray-100 hover:border-red-500 transform hover:scale-105 opacity-60 cursor-not-allowed"
-                disabled
-              >
-                {/* Icon */}
-                <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-red-500 to-red-700 rounded-full flex items-center justify-center shadow-lg">
-                  <FontAwesomeIcon icon={faDatabase} className="text-4xl text-white" />
-                </div>
-
-                {/* Title */}
-                <h3 className="text-2xl font-bold text-brand-dark mb-3">
-                  Database
-                </h3>
-
-                {/* Description */}
-                <p className="text-gray-600 mb-4">
-                  Manage database migrations and data integrity
-                </p>
-
-                {/* Coming Soon Badge */}
-                <div className="absolute top-4 right-4 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-                  Coming Soon
-                </div>
-              </button>
-
               {/* System Configuration Card */}
               <button
                 onClick={() => navigate('/admin/settings')}

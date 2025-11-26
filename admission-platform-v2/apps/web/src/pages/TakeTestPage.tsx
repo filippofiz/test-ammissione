@@ -1063,8 +1063,18 @@ export default function TakeTestPage() {
 
       if (assignmentError) throw assignmentError;
 
+      console.log('📊 [STATUS] Loaded assignment:', {
+        assignmentId,
+        status: assignment.status,
+        currentAttempt: assignment.current_attempt,
+        totalAttempts: assignment.total_attempts,
+        startTime: assignment.start_time,
+        completedAt: assignment.completed_at
+      });
+
       // Check if test is locked (completed tests are auto-locked)
       if (assignment.status === 'locked') {
+        console.log('🔒 [STATUS] Test is locked - showing locked screen');
         setIsLocked(true);
         setShowStartScreen(false); // Don't show start screen
         setLoading(false);
@@ -1175,13 +1185,6 @@ export default function TakeTestPage() {
       const normalize = (str: string) => str.toLowerCase().replace(/[\s_]+/g, '_');
       const trackTypeNormalized = normalize(exerciseType);
 
-      console.log('🔍 [CONFIG LOADING] Starting config load:', {
-        testType,
-        exerciseType,
-        trackTypeNormalized,
-        testFormat
-      });
-
       // Load all configs for this test type, then find by normalized track_type
       const { data: configsData, error: configsError } = await supabase
         .from('2V_test_track_config')
@@ -1193,20 +1196,10 @@ export default function TakeTestPage() {
         throw configsError;
       }
 
-      console.log('📋 [CONFIG DATA] All configs for test type:', configsData);
-
       // Find matching config by normalized track_type (case and space/underscore insensitive)
       const configData = configsData?.find(config =>
         normalize(config.track_type) === trackTypeNormalized
       );
-
-      console.log('✅ [CONFIG MATCH] Found config:', {
-        configData,
-        section_order_mode: configData?.section_order_mode,
-        section_order: configData?.section_order,
-        navigation_mode: configData?.navigation_mode,
-        can_leave_blank: configData?.can_leave_blank
-      });
 
       if (!configData) {
         console.error('❌ [CONFIG MISSING] No config found for:', {
@@ -1276,24 +1269,15 @@ export default function TakeTestPage() {
       // Set up sections based on config
       let sectionsToUse: string[] = [];
 
-      console.log('🎯 [SECTION SETUP] Starting section setup:', {
-        section_order_mode: configData.section_order_mode,
-        section_order: configData.section_order,
-        total_questions: questions?.length
-      });
-
       // Check if this is a no-sections test first
       if (configData.section_order_mode === 'no_sections') {
         // For no_sections mode, create a single virtual section with all questions
         sectionsToUse = ['All Questions'];
-        console.log('📝 [SECTION MODE] NO SECTIONS - treating as single continuous test');
       } else if (configData.section_order_mode === 'mandatory' && configData.section_order) {
         sectionsToUse = configData.section_order;
-        console.log('📝 [SECTION MODE] Using MANDATORY sections from config:', sectionsToUse);
       } else if (configData.section_order_mode?.includes('macro_sections') && configData.section_order) {
         // Use section_order from config when using macro_sections mode
         sectionsToUse = configData.section_order;
-        console.log('📝 [SECTION MODE] Using MACRO_SECTIONS from config:', sectionsToUse);
       } else if (configData.section_order_mode !== 'no_sections') {
         // Get unique sections from questions only if not in no_sections mode
         const sectionField = configData.section_order_mode?.includes('macro_sections')
@@ -1302,22 +1286,14 @@ export default function TakeTestPage() {
         sectionsToUse = Array.from(new Set(
           questions?.map(q => (q as any)[sectionField]).filter(Boolean) || []
         ));
-        console.log('📝 [SECTION MODE] Using sections from questions:', {
-          sectionField,
-          sectionsToUse,
-          section_order_mode: configData.section_order_mode
-        });
       }
 
       // Apply section adaptivity filtering if configured
       if (configData.section_adaptivity_config && Object.keys(configData.section_adaptivity_config).length > 0) {
-        console.log('🔧 [SECTION ADAPTIVITY] Applying adaptivity filter:', configData.section_adaptivity_config);
         sectionsToUse = filterSectionsWithAdaptivity(sectionsToUse, configData.section_adaptivity_config);
-        console.log('🔧 [SECTION ADAPTIVITY] Filtered sections:', sectionsToUse);
       }
 
       setSections(sectionsToUse);
-      console.log('✅ [SECTION SETUP] Final sections set:', sectionsToUse);
 
       // Initialize question selection based on config
       const initialQuestions = prepareInitialQuestions(
@@ -1441,34 +1417,58 @@ export default function TakeTestPage() {
       const newAttempt = (assignment.current_attempt || 1) + 1;
       const newTotalAttempts = assignment.total_attempts || (assignment.current_attempt || 1);
 
+      console.log(`🔄 [STATUS] ${assignment.status} → in_progress (attempt ${assignment.current_attempt} → ${newAttempt})`, {
+        assignmentId,
+        previousStatus: assignment.status,
+        newStatus: 'in_progress',
+        completion_status: 'in_progress',
+        previousAttempt: assignment.current_attempt,
+        newAttempt,
+        totalAttempts: newTotalAttempts
+      });
+
       const { error: updateError } = await supabase
         .from('2V_test_assignments')
         .update({
           current_attempt: newAttempt,
           total_attempts: newTotalAttempts,
           status: 'in_progress',
+          completion_status: 'in_progress',
           start_time: new Date().toISOString()
         })
         .eq('id', assignmentId);
 
       if (updateError) {
+        console.error('❌ [STATUS ERROR] Failed to update status to in_progress:', updateError);
         return;
       }
 
+      console.log('✅ [STATUS] Successfully updated to in_progress');
       setCurrentAttempt(newAttempt);
     } else if (assignment.status === 'unlocked') {
       // First time starting this test
+      console.log(`🔄 [STATUS] unlocked → in_progress (first attempt)`, {
+        assignmentId,
+        previousStatus: 'unlocked',
+        newStatus: 'in_progress',
+        completion_status: 'in_progress'
+      });
+
       const { error: updateError } = await supabase
         .from('2V_test_assignments')
         .update({
           status: 'in_progress',
+          completion_status: 'in_progress',
           start_time: new Date().toISOString()
         })
         .eq('id', assignmentId);
 
       if (updateError) {
+        console.error('❌ [STATUS ERROR] Failed to update status to in_progress:', updateError);
         return;
       }
+
+      console.log('✅ [STATUS] Successfully updated to in_progress');
     }
 
 
@@ -1809,41 +1809,25 @@ export default function TakeTestPage() {
 
   function canGoBack(): boolean {
     if (!config) {
-      console.log('🚫 [NAV] No config, cannot go back');
       return false;
     }
 
     // Can't go back if at first question of first section
     if (currentSectionIndex === 0 && currentQuestionIndex === 0) {
-      console.log('🚫 [NAV] At first question, cannot go back');
       return false;
     }
 
     // Check navigation within section
     if (currentQuestionIndex > 0 && config.navigation_mode === 'back_forward') {
-      console.log('✅ [NAV] Can go back within section:', {
-        currentQuestionIndex,
-        navigation_mode: config.navigation_mode
-      });
       return true;
     }
 
     // Check navigation between sections
     if (currentQuestionIndex === 0 && currentSectionIndex > 0 &&
         config.navigation_between_sections === 'back_forward') {
-      console.log('✅ [NAV] Can go back between sections:', {
-        currentSectionIndex,
-        navigation_between_sections: config.navigation_between_sections
-      });
       return true;
     }
 
-    console.log('🚫 [NAV] Cannot go back:', {
-      currentQuestionIndex,
-      currentSectionIndex,
-      navigation_mode: config.navigation_mode,
-      navigation_between_sections: config.navigation_between_sections
-    });
     return false;
   }
 
@@ -2524,8 +2508,15 @@ export default function TakeTestPage() {
   async function submitTest() {
     // Prevent double submission
     if (submitting) {
+      console.warn('⚠️ [STATUS] Submit prevented - already submitting');
       return;
     }
+
+    console.log('🚀 [STATUS] Test submission started', {
+      assignmentId,
+      currentAttempt,
+      answersCount: Object.keys(answers).length
+    });
 
     setSubmitting(true);
 
@@ -2542,6 +2533,7 @@ export default function TakeTestPage() {
 
     // Mark test as completed in database with completion_details
     try {
+      console.log('💾 [STATUS] Saving completion details...');
       // Save completion details
       const success = await saveCompletionDetails('completed', 'submitted');
 
@@ -2549,10 +2541,12 @@ export default function TakeTestPage() {
         throw new Error('Failed to save completion details');
       }
 
+      console.log('✅ [STATUS] Test submitted successfully - status="locked", completion_status="completed YYYY-MM-DD at HH:MM"');
       // Show completion screen
       setShowCompletionScreen(true);
       setSubmitting(false);
     } catch (err) {
+      console.error('❌ [STATUS] Test submission failed:', err);
       setSubmitting(false);
       alert('Error submitting test. Please contact your instructor.');
     }
@@ -2699,11 +2693,28 @@ export default function TakeTestPage() {
 
       const newTotalAttempts = status === 'incomplete' ? currentAttempt - 1 : currentAttempt;
 
-      // IMPORTANT: completed tests are AUTO-LOCKED (tutor must unlock to allow retake)
+      // Format completion timestamp for completion_status field
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+      const timeStr = now.toTimeString().split(' ')[0].substring(0, 5); // HH:MM
+      const completionStatusText = `${status} ${dateStr} at ${timeStr}`;
+
+      // Auto-lock when completed (tutor must unlock to allow retake)
       const finalStatus = status === 'completed' ? 'locked' : status;
+
+      console.log(`🔄 [STATUS] Completing test: in_progress → ${finalStatus}`, {
+        assignmentId,
+        status,
+        finalStatus,
+        completion_status: completionStatusText,
+        reason,
+        currentAttempt,
+        newTotalAttempts
+      });
 
       const updateData = {
         status: finalStatus,
+        completion_status: completionStatusText,
         completed_at: new Date().toISOString(),
         completion_details: { attempts },
         total_attempts: newTotalAttempts,
@@ -2712,6 +2723,11 @@ export default function TakeTestPage() {
         results_viewable_by_student: false
       };
 
+      console.log('📝 [STATUS] Update data:', {
+        ...updateData,
+        completion_details: `${attempts.length} attempt(s)`
+      });
+
       const { data: updateResult, error } = await supabase
         .from('2V_test_assignments')
         .update(updateData)
@@ -2719,8 +2735,16 @@ export default function TakeTestPage() {
         .select();
 
       if (error) {
+        console.error('❌ [STATUS ERROR] Failed to save completion:', error);
         throw error;
       }
+
+      console.log('✅ [STATUS] Test completion saved successfully', {
+        assignmentId,
+        finalStatus,
+        completion_status: completionStatusText,
+        updateResult: updateResult?.[0]
+      });
 
       return true;
     } catch (err) {
@@ -3610,17 +3634,6 @@ export default function TakeTestPage() {
             const correctAnswer = Array.isArray(correctAnswerData)
               ? correctAnswerData[0]
               : correctAnswerData;
-
-            // Debug logging
-            if (isGuidedMode) {
-              console.log('🎯 Guided Mode Debug:', {
-                showCorrectAnswers,
-                answersData,
-                correctAnswerData,
-                correctAnswer,
-                questionType: currentQuestion.question_type
-              });
-            }
 
             return (
               <MultipleChoiceQuestion

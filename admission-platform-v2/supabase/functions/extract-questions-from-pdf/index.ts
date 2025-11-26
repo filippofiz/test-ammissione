@@ -337,12 +337,34 @@ INSTRUCTIONS:
 4. Return the passage text exactly as it appears
 5. If there's a title or heading for the passage, include it
 
+CRITICAL - TABLE FORMATTING:
+If the passage contains a table, you MUST convert it to proper LaTeX table format using \\begin{array}:
+
+Example table format:
+\\begin{array}{|l|c|c|}
+\\hline
+\\text{Header 1} & \\text{Header 2} & \\text{Header 3} \\\\
+\\hline
+\\text{Row 1 Col 1} & \\text{Row 1 Col 2} & \\text{Row 1 Col 3} \\\\
+\\text{Row 2 Col 1} & \\text{Row 2 Col 2} & \\text{Row 2 Col 3} \\\\
+\\hline
+\\end{array}
+
+Table formatting rules:
+- Use |l|c|c| or |l|c|r| for column alignment: l=left, c=center, r=right
+- Add | between columns for vertical lines
+- Use \\hline for horizontal lines between rows
+- Separate columns with &
+- End each row with \\\\
+- Wrap text content in \\text{} to preserve formatting
+- Preserve all data accurately from the PDF
+
 Return JSON in this format:
 {
   "passages": [
     {
       "passage_id": "passage_1",
-      "passage_text": "The full text of the passage...",
+      "passage_text": "The full text of the passage with proper LaTeX table formatting...",
       "passage_title": "Title if present",
       "question_numbers": [${targetQuestions?.join(', ') || ''}]
     }
@@ -369,18 +391,35 @@ CRITICAL INSTRUCTIONS - READ CAREFULLY:
    - Square roots: $\\sqrt{expression}$
    - Complex expressions: $\\frac{x^2 + 1}{4^x - 3}$ - verify each part!
 
-4. ZOOM IN MENTALLY on each mathematical symbol:
+5. TABLE FORMATTING - If question or options contain tables:
+   Convert tables to LaTeX \\begin{array} format (MathJax compatible):
+   \\begin{array}{|l|c|c|}
+   \\hline
+   \\text{Proposta} & \\text{Sì} & \\text{No} \\\\
+   \\hline
+   \\text{Il Fante e l'Asso non sono accanto al cavallo} & \\text{A} & \\text{B} \\\\
+   \\text{L'Asso e il Fante non sono a fianco del Re} & \\text{C} & \\text{D} \\\\
+   \\hline
+   \\end{array}
+   - Use |l|c|r| for left/center/right alignment
+   - Add | for vertical lines between columns
+   - Use \\hline for horizontal lines
+   - Separate columns with &
+   - End rows with \\\\
+   - Wrap all text in \\text{} for proper rendering
+
+6. ZOOM IN MENTALLY on each mathematical symbol:
    - Is that 4^x or just x?
    - Is the denominator 4^x or x?
    - Is it x² or 2x?
    - Are there nested exponents like (x^2)^3?
 
-5. Preserve question numbering exactly as in PDF
-6. Do NOT try to determine correct answers - just extract questions and options
-7. Return ONLY valid JSON, no markdown, no explanations
+7. Preserve question numbering exactly as in PDF
+8. Do NOT try to determine correct answers - just extract questions and options
+9. Return ONLY valid JSON, no markdown, no explanations
 
 GENIUS GRAPH RECREATION FEATURE:
-8. FOR QUESTIONS WITH GRAPHS: Analyze EVERY graph intelligently:
+10. FOR QUESTIONS WITH GRAPHS: Analyze EVERY graph intelligently:
 
    TYPE 1: GRAPH IN QUESTION, TEXT OPTIONS (identify which text matches):
    A. IDENTIFY THE GRAPH TYPE by visual characteristics:
@@ -490,12 +529,12 @@ Return JSON in this exact format:
   ]
 }
 
-Example with shared passage:
+Example with shared passage containing a table:
 {
   "passages": [
     {
       "passage_id": "passage_1",
-      "passage_text": "The following table shows the population of City X from 1990 to 2020...",
+      "passage_text": "The following table shows the population of City X from 1990 to 2020:\\n\\n$$\\\\begin{array}{|l|c|}\\\\hline\\n\\\\text{Year} & \\\\text{Population} \\\\\\\\\\\\hline\\n\\\\text{1990} & \\\\text{50,000} \\\\\\\\\\n\\\\text{2000} & \\\\text{65,000} \\\\\\\\\\n\\\\text{2010} & \\\\text{78,000} \\\\\\\\\\n\\\\text{2020} & \\\\text{92,000} \\\\\\\\\\\\hline\\n\\\\end{array}$$",
       "passage_title": "Population Data",
       "question_numbers": [5, 6, 7]
     }

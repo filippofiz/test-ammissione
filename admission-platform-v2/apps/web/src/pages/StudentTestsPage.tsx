@@ -24,7 +24,6 @@ import {
   faClock,
   faPercent,
   faEye,
-  faPlus,
   faChevronDown,
   faChevronRight,
   faPlay,
@@ -32,10 +31,6 @@ import {
   faChalkboardTeacher,
   faStopwatch,
   faInfinity,
-  faSearch,
-  faFilter,
-  faCheckSquare,
-  faSquare,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import { supabase } from '../lib/supabase';
@@ -175,6 +170,7 @@ interface TestAssignment {
   id: string;
   test_id: string;
   status: 'locked' | 'unlocked' | 'in_progress' | 'completed' | 'incomplete' | 'annulled';
+  completion_status: string | null;
   assigned_at: string | null;
   start_time: string | null;
   completed_at: string | null;
@@ -211,17 +207,9 @@ export default function StudentTestsPage() {
   const [overlayFadingOut, setOverlayFadingOut] = useState(false);
   const [showConfirmLock, setShowConfirmLock] = useState(false);
   const [pendingLockId, setPendingLockId] = useState<string | null>(null);
-  const [showAssignModal, setShowAssignModal] = useState(false);
-  const [availableTests, setAvailableTests] = useState<any[]>([]);
-  const [loadingAvailable, setLoadingAvailable] = useState(false);
-  const [assigning, setAssigning] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [translatedSections, setTranslatedSections] = useState<Record<string, string>>({});
-
-  // Assign Modal filters and multiselect state
-  const [assignSearchQuery, setAssignSearchQuery] = useState('');
-  const [assignFormatFilter, setAssignFormatFilter] = useState<'all' | 'pdf' | 'interactive' | 'mixed'>('all');
-  const [selectedTestIds, setSelectedTestIds] = useState<Set<string>>(new Set());
+  const [sectionOrder, setSectionOrder] = useState<string[]>([]);
 
   // Start Test Modal state
   const [showStartTestModal, setShowStartTestModal] = useState(false);
@@ -265,6 +253,39 @@ export default function StudentTestsPage() {
 
     translateSections();
   }, [assignments, t]);
+
+  // Helper function to normalize section names for comparison (same as TestStructurePage)
+  const normalizeSectionName = (name: string): string => {
+    return name
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .replace(/[,;:.!?]/g, '') // Remove punctuation
+      .normalize('NFD') // Decompose accented characters
+      .replace(/[\u0300-\u036f]/g, ''); // Remove diacritics
+  };
+
+  // Helper function to get sorted sections (same logic as TestStructurePage)
+  const getSortedSections = (sections: string[], sectionOrder: string[]): string[] => {
+    return sections.sort((a, b) => {
+      // Normalize section names for comparison
+      const aNorm = normalizeSectionName(a);
+      const bNorm = normalizeSectionName(b);
+
+      // Find index in order array using normalized comparison
+      const aIndex = sectionOrder.findIndex(s => normalizeSectionName(s) === aNorm);
+      const bIndex = sectionOrder.findIndex(s => normalizeSectionName(s) === bNorm);
+
+      if (aIndex !== -1 && bIndex !== -1) {
+        return aIndex - bIndex;
+      }
+      if (aIndex !== -1) return -1;
+      if (bIndex !== -1) return 1;
+
+      // Fall back to alphabetical
+      return a.localeCompare(b);
+    });
+  };
 
   // Group tests by section
   interface GroupedTests {
@@ -378,6 +399,51 @@ export default function StudentTestsPage() {
         email: studentData.email,
       });
 
+      // AUTO-ASSIGN: Find all tests of this type that are NOT assigned to this student
+      const { data: existingAssignments } = await supabase
+        .from('2V_test_assignments')
+        .select('test_id')
+        .eq('student_id', studentId);
+
+      const assignedTestIds = (existingAssignments || []).map(a => a.test_id);
+
+      // Get all active tests of this test_type
+      let availableTestsQuery = supabase
+        .from('2V_tests')
+        .select('id')
+        .eq('test_type', testType)
+        .eq('is_active', true);
+
+      // Exclude already assigned tests
+      if (assignedTestIds.length > 0) {
+        availableTestsQuery = availableTestsQuery.not('id', 'in', `(${assignedTestIds.join(',')})`);
+      }
+
+      const { data: availableTests } = await availableTestsQuery;
+
+      // Auto-assign any missing tests as LOCKED
+      if (availableTests && availableTests.length > 0) {
+        console.log(`🔄 Auto-assigning ${availableTests.length} new tests to student ${studentId}`);
+
+        const { error: assignError } = await supabase
+          .from('2V_test_assignments')
+          .insert(
+            availableTests.map(test => ({
+              student_id: studentId,
+              test_id: test.id,
+              status: 'locked',
+              current_attempt: 1,
+              total_attempts: 0,
+            }))
+          );
+
+        if (assignError) {
+          console.error('Error auto-assigning tests:', assignError);
+        } else {
+          console.log(`✅ Successfully auto-assigned ${availableTests.length} tests`);
+        }
+      }
+
       // Fetch section order for this test type
       const { data: sectionOrderData, error: orderError } = await supabase
         .from('2V_section_order')
@@ -389,7 +455,8 @@ export default function StudentTestsPage() {
         console.error('Error fetching section order:', orderError);
       }
 
-      const sectionOrder = sectionOrderData?.section_order || [];
+      const fetchedSectionOrder = sectionOrderData?.section_order || [];
+      setSectionOrder(fetchedSectionOrder);
 
       // Fetch test assignments
       const { data: assignmentData, error: assignmentError } = await supabase
@@ -398,6 +465,7 @@ export default function StudentTestsPage() {
           id,
           test_id,
           status,
+          completion_status,
           assigned_at,
           start_time,
           completed_at,
@@ -465,6 +533,7 @@ export default function StudentTestsPage() {
           id: row.id,
           test_id: row.test_id,
           status: row.status,
+          completion_status: row.completion_status,
           assigned_at: row.assigned_at,
           start_time: row.start_time,
           completed_at: row.completed_at,
@@ -508,10 +577,15 @@ export default function StudentTestsPage() {
         if (aIsSimulazione && !bIsSimulazione) return 1;
         if (!aIsSimulazione && bIsSimulazione) return -1;
 
-        // For everything else, use section ordering
+        // For everything else, use section ordering with normalized comparison
         if (a.section !== b.section) {
-          const aIndex = sectionOrder.indexOf(a.section);
-          const bIndex = sectionOrder.indexOf(b.section);
+          // Normalize section names for comparison
+          const aNorm = normalizeSectionName(a.section);
+          const bNorm = normalizeSectionName(b.section);
+
+          // Find index in order array using normalized comparison
+          const aIndex = fetchedSectionOrder.findIndex(s => normalizeSectionName(s) === aNorm);
+          const bIndex = fetchedSectionOrder.findIndex(s => normalizeSectionName(s) === bNorm);
 
           // If both sections are in the order array, use that order
           if (aIndex !== -1 && bIndex !== -1) {
@@ -579,7 +653,8 @@ export default function StudentTestsPage() {
       // - completed: student finished the test, now getting another attempt
       // - locked with total_attempts > 0: test was completed and then locked again
       // Do NOT increment for first-time unlock (locked with total_attempts === 0)
-      const isRetake = assignment?.status === 'completed' ||
+      // Backward compatible: check completion_status first, then fall back to status
+      const isRetake = assignment?.completion_status?.startsWith('completed') || assignment?.status === 'completed' ||
                        (assignment?.status === 'locked' && (assignment?.total_attempts || 0) > 0);
 
       if (isRetake) {
@@ -704,203 +779,11 @@ export default function StudentTestsPage() {
     }
   }
 
-  async function loadAvailableTests() {
-    setLoadingAvailable(true);
-    try {
-      // Get all tests of this test_type that are NOT already assigned to this student
-      const assignedTestIds = assignments.map(a => a.test_id);
-
-      let query = supabase
-        .from('2V_tests')
-        .select('*')
-        .eq('test_type', testType);
-
-      // Only add the NOT IN filter if there are assigned tests
-      if (assignedTestIds.length > 0) {
-        query = query.not('id', 'in', `(${assignedTestIds.join(',')})`);
-      }
-
-      const { data: tests, error } = await query
-        .order('section')
-        .order('test_number');
-
-      if (error) throw error;
-
-      // For each test, check question format
-      const testsWithFormat = await Promise.all(
-        (tests || []).map(async (test: any) => {
-          const { data: questions } = await supabase
-            .from('2V_questions')
-            .select('question_type')
-            .eq('test_id', test.id);
-
-          let format: 'pdf' | 'interactive' | 'mixed' = 'pdf';
-          if (questions && questions.length > 0) {
-            const pdfCount = questions.filter(q => q.question_type === 'pdf').length;
-            const interactiveCount = questions.filter(q => q.question_type === 'multiple_choice').length;
-
-            if (pdfCount > 0 && interactiveCount > 0) {
-              format = 'mixed';
-            } else if (interactiveCount > 0) {
-              format = 'interactive';
-            }
-          }
-
-          return { ...test, question_format: format };
-        })
-      );
-
-      setAvailableTests(testsWithFormat);
-    } catch (err) {
-      console.error('Error loading available tests:', err);
-      alert('Failed to load available tests');
-    } finally {
-      setLoadingAvailable(false);
-    }
-  }
-
-  async function handleAssignTest(testId: string) {
-    if (!studentId) return;
-
-    setAssigning(true);
-    try {
-      const { error } = await supabase
-        .from('2V_test_assignments')
-        .insert({
-          student_id: studentId,
-          test_id: testId,
-          status: 'locked',
-          current_attempt: 1,  // First attempt
-          total_attempts: 0,   // No completed attempts yet
-        });
-
-      if (error) throw error;
-
-      setShowAssignModal(false);
-      await loadData();
-      alert('Test assigned successfully!');
-    } catch (err) {
-      console.error('Error assigning test:', err);
-      alert('Failed to assign test');
-    } finally {
-      setAssigning(false);
-    }
-  }
-
-  async function openAssignModal() {
-    setShowAssignModal(true);
-    setAssignSearchQuery('');
-    setAssignFormatFilter('all');
-    setSelectedTestIds(new Set());
-    await loadAvailableTests();
-  }
-
-  // Toggle test selection for multiselect
-  function toggleTestSelection(testId: string) {
-    setSelectedTestIds(prev => {
-      const next = new Set(prev);
-      if (next.has(testId)) {
-        next.delete(testId);
-      } else {
-        next.add(testId);
-      }
-      return next;
-    });
-  }
-
-  // Select/deselect all filtered tests
-  function toggleSelectAll(filteredTests: any[]) {
-    const allFilteredIds = filteredTests.map(t => t.id);
-    const allSelected = allFilteredIds.every(id => selectedTestIds.has(id));
-
-    if (allSelected) {
-      // Deselect all filtered
-      setSelectedTestIds(prev => {
-        const next = new Set(prev);
-        allFilteredIds.forEach(id => next.delete(id));
-        return next;
-      });
-    } else {
-      // Select all filtered
-      setSelectedTestIds(prev => {
-        const next = new Set(prev);
-        allFilteredIds.forEach(id => next.add(id));
-        return next;
-      });
-    }
-  }
-
-  // Assign multiple selected tests
-  async function handleAssignSelectedTests() {
-    if (!studentId || selectedTestIds.size === 0) return;
-
-    setAssigning(true);
-    try {
-      const testIds = Array.from(selectedTestIds);
-
-      // Insert all selected tests
-      const { error } = await supabase
-        .from('2V_test_assignments')
-        .insert(
-          testIds.map(testId => ({
-            student_id: studentId,
-            test_id: testId,
-            status: 'locked',
-            current_attempt: 1,
-            total_attempts: 0,
-          }))
-        );
-
-      if (error) throw error;
-
-      setShowAssignModal(false);
-      await loadData();
-      alert(`${testIds.length} test(s) assigned successfully!`);
-    } catch (err) {
-      console.error('Error assigning tests:', err);
-      alert('Failed to assign tests');
-    } finally {
-      setAssigning(false);
-    }
-  }
-
-  // Filter and sort available tests
-  function getFilteredAvailableTests() {
-    let filtered = [...availableTests];
-
-    // Apply search filter
-    if (assignSearchQuery.trim()) {
-      const query = assignSearchQuery.toLowerCase();
-      filtered = filtered.filter(test =>
-        test.section.toLowerCase().includes(query) ||
-        test.exercise_type.toLowerCase().includes(query) ||
-        `${test.test_number}`.includes(query)
-      );
-    }
-
-    // Apply format filter
-    if (assignFormatFilter !== 'all') {
-      filtered = filtered.filter(test => test.question_format === assignFormatFilter);
-    }
-
-    // Sort alphabetically by section, then exercise_type, then test_number
-    filtered.sort((a, b) => {
-      const sectionCompare = a.section.localeCompare(b.section);
-      if (sectionCompare !== 0) return sectionCompare;
-
-      const exerciseCompare = a.exercise_type.localeCompare(b.exercise_type);
-      if (exerciseCompare !== 0) return exerciseCompare;
-
-      return a.test_number - b.test_number;
-    });
-
-    return filtered;
-  }
-
   function openStartTestModal(assignment: TestAssignment) {
     setSelectedTestForStart(assignment);
     // For locked/completed tests, force guided mode
-    const isLocked = assignment.status === 'locked' || assignment.status === 'completed';
+    // Backward compatible: check completion_status first, then fall back to status
+    const isLocked = assignment.status === 'locked' || assignment.completion_status?.startsWith('completed') || assignment.status === 'completed';
     setStartTestMode(isLocked ? 'guided' : 'student');
     setGuidedTimed(true);
     setShowStartTestModal(true);
@@ -923,64 +806,78 @@ export default function StudentTestsPage() {
     navigate(url);
   }
 
-  function getStatusStyles(status: string) {
-    switch (status) {
-      case 'completed':
-        return {
-          bg: 'bg-gradient-to-r from-green-50 to-emerald-50',
-          border: 'border-green-200',
-          text: 'text-green-700',
-          icon: faCheckCircle,
-          iconColor: 'text-green-600',
-          label: t('studentTests.statusLabels.completed'),
-        };
-      case 'in_progress':
-        return {
-          bg: 'bg-gradient-to-r from-blue-50 to-cyan-50',
-          border: 'border-blue-200',
-          text: 'text-blue-700',
-          icon: faSpinner,
-          iconColor: 'text-blue-600',
-          label: t('studentTests.statusLabels.inProgress'),
-        };
-      case 'unlocked':
-        return {
-          bg: 'bg-gradient-to-r from-yellow-50 to-amber-50',
-          border: 'border-yellow-200',
-          text: 'text-yellow-700',
-          icon: faLockOpen,
-          iconColor: 'text-green-600', // Always green when unlocked
-          label: t('studentTests.statusLabels.unlocked'),
-        };
-      case 'incomplete':
-        return {
-          bg: 'bg-gradient-to-r from-orange-50 to-orange-100',
-          border: 'border-orange-300',
-          text: 'text-orange-700',
-          icon: faLockOpen,
-          iconColor: 'text-green-600', // Always green when unlocked
-          label: t('studentTests.statusLabels.incomplete'),
-        };
-      case 'annulled':
-        return {
-          bg: 'bg-gradient-to-r from-red-50 to-red-100',
-          border: 'border-red-300',
-          text: 'text-red-700',
-          icon: faLockOpen,
-          iconColor: 'text-green-600', // Always green when unlocked
-          label: t('studentTests.statusLabels.annulled'),
-        };
-      case 'locked':
-      default:
-        return {
-          bg: 'bg-gradient-to-r from-gray-50 to-slate-50',
-          border: 'border-gray-200',
-          text: 'text-gray-700',
-          icon: faLock,
-          iconColor: 'text-red-600', // Always red when locked
-          label: t('studentTests.statusLabels.locked'),
-        };
+  function getStatusStyles(status: string, completionStatus: string | null) {
+    // Backward compatible: use completion_status if available, otherwise fall back to status
+    const displayStatus = completionStatus || status;
+
+    // Check if completed (new format with timestamp or old 'completed' status)
+    if (displayStatus.startsWith('completed') || displayStatus === 'completed') {
+      return {
+        bg: 'bg-gradient-to-r from-green-50 to-emerald-50',
+        border: 'border-green-200',
+        text: 'text-green-700',
+        icon: faCheckCircle,
+        iconColor: 'text-green-600',
+        label: displayStatus, // Show full completion_status with timestamp
+      };
     }
+
+    if (displayStatus === 'in_progress') {
+      return {
+        bg: 'bg-gradient-to-r from-blue-50 to-cyan-50',
+        border: 'border-blue-200',
+        text: 'text-blue-700',
+        icon: faSpinner,
+        iconColor: 'text-blue-600',
+        label: t('studentTests.statusLabels.inProgress'),
+      };
+    }
+
+    // Check if incomplete (new format with timestamp or old 'incomplete' status)
+    if (displayStatus.startsWith('incomplete') || displayStatus === 'incomplete') {
+      return {
+        bg: 'bg-gradient-to-r from-orange-50 to-orange-100',
+        border: 'border-orange-300',
+        text: 'text-orange-700',
+        icon: faLockOpen,
+        iconColor: 'text-green-600', // Always green when unlocked
+        label: displayStatus, // Show full completion_status with timestamp
+      };
+    }
+
+    // Check if annulled (new format with timestamp or old 'annulled' status)
+    if (displayStatus.startsWith('annulled') || displayStatus === 'annulled') {
+      return {
+        bg: 'bg-gradient-to-r from-red-50 to-red-100',
+        border: 'border-red-300',
+        text: 'text-red-700',
+        icon: faLockOpen,
+        iconColor: 'text-green-600', // Always green when unlocked
+        label: displayStatus, // Show full completion_status with timestamp
+      };
+    }
+
+    // Check status field for unlocked/locked
+    if (status === 'unlocked') {
+      return {
+        bg: 'bg-gradient-to-r from-yellow-50 to-amber-50',
+        border: 'border-yellow-200',
+        text: 'text-yellow-700',
+        icon: faLockOpen,
+        iconColor: 'text-green-600', // Always green when unlocked
+        label: t('studentTests.statusLabels.unlocked'),
+      };
+    }
+
+    // Default: locked
+    return {
+      bg: 'bg-gradient-to-r from-gray-50 to-slate-50',
+      border: 'border-gray-200',
+      text: 'text-gray-700',
+      icon: faLock,
+      iconColor: 'text-red-600', // Always red when locked
+      label: t('studentTests.statusLabels.locked'),
+    };
   }
 
   function formatDate(dateString: string | null): string {
@@ -1104,16 +1001,7 @@ export default function StudentTestsPage() {
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="mb-6 flex justify-end">
-            <button
-              onClick={openAssignModal}
-              className="px-6 py-3 rounded-xl font-semibold text-base transition-all transform bg-gradient-to-r from-brand-green to-green-600 text-white shadow-lg hover:shadow-xl hover:scale-105"
-            >
-              <FontAwesomeIcon icon={faPlus} className="mr-2" />
-              {t('studentTests.assignNewTest')}
-            </button>
-          </div>
+          {/* Note: Tests are now auto-assigned when student visits this page */}
 
           {/* Tests List */}
           {assignments.length === 0 ? (
@@ -1128,11 +1016,13 @@ export default function StudentTestsPage() {
               {(() => {
                 const grouped = groupTestsBySection(assignments);
                 const sections = Object.keys(grouped);
+                const sortedSections = getSortedSections(sections, sectionOrder);
 
-                return sections.map((section, sectionIndex) => {
+                return sortedSections.map((section, sectionIndex) => {
                   const sectionTests = grouped[section];
                   const isExpanded = expandedSections.has(section);
-                  const sectionCompleted = sectionTests.filter(t => t.status === 'completed').length;
+                  // Backward compatible: check completion_status first, then fall back to status
+                  const sectionCompleted = sectionTests.filter(t => t.completion_status?.startsWith('completed') || t.status === 'completed').length;
                   const sectionProgress = sectionTests.length > 0
                     ? Math.round((sectionCompleted / sectionTests.length) * 100)
                     : 0;
@@ -1188,7 +1078,7 @@ export default function StudentTestsPage() {
                               return a.test_number - b.test_number;
                             })
                             .map((assignment, index) => {
-                            const statusStyle = getStatusStyles(assignment.status);
+                            const statusStyle = getStatusStyles(assignment.status, assignment.completion_status);
                             const isUnlocking = unlocking === assignment.id;
                             const isLocking = locking === assignment.id;
 
@@ -1350,218 +1240,6 @@ export default function StudentTestsPage() {
         </div>
       </div>
 
-      {/* Assign New Test Modal */}
-      {showAssignModal && (
-        <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn"
-          onClick={() => setShowAssignModal(false)}
-        >
-          <div
-            className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden animate-slideUp"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div className="bg-gradient-to-r from-brand-green to-green-600 p-6 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold">Assign New Tests</h2>
-                  <p className="text-white/90 text-sm mt-1">
-                    Select tests to assign to {student?.name || student?.email}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setShowAssignModal(false)}
-                  className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 transition-colors flex items-center justify-center"
-                >
-                  <span className="text-2xl font-bold">×</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Search and Filter Bar */}
-            {!loadingAvailable && availableTests.length > 0 && (
-              <div className="p-4 border-b border-gray-200 bg-gray-50">
-                <div className="flex flex-col md:flex-row gap-3">
-                  {/* Search Input */}
-                  <div className="flex-1 relative">
-                    <FontAwesomeIcon
-                      icon={faSearch}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Search by section, exercise type, or number..."
-                      value={assignSearchQuery}
-                      onChange={(e) => setAssignSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent"
-                    />
-                  </div>
-
-                  {/* Format Filter */}
-                  <div className="flex items-center gap-2">
-                    <FontAwesomeIcon icon={faFilter} className="text-gray-400" />
-                    <select
-                      value={assignFormatFilter}
-                      onChange={(e) => setAssignFormatFilter(e.target.value as any)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent bg-white"
-                    >
-                      <option value="all">All Formats</option>
-                      <option value="pdf">PDF Only</option>
-                      <option value="interactive">Interactive Only</option>
-                      <option value="mixed">Mixed Only</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Modal Content */}
-            <div className="p-6 overflow-y-auto max-h-[calc(80vh-280px)]">
-              {loadingAvailable ? (
-                <div className="text-center py-12">
-                  <div className="inline-block w-12 h-12 border-4 border-brand-green border-t-transparent rounded-full animate-spin mb-4" />
-                  <p className="text-gray-600">Loading available tests...</p>
-                </div>
-              ) : availableTests.length === 0 ? (
-                <div className="text-center py-12">
-                  <FontAwesomeIcon icon={faClipboardList} className="text-6xl text-gray-300 mb-4" />
-                  <p className="text-gray-500 text-lg">No tests available to assign</p>
-                  <p className="text-gray-400 text-sm mt-2">All tests of this type have been assigned</p>
-                </div>
-              ) : (
-                (() => {
-                  const filteredTests = getFilteredAvailableTests();
-                  const allFilteredSelected = filteredTests.length > 0 && filteredTests.every(t => selectedTestIds.has(t.id));
-
-                  return (
-                    <>
-                      {/* Select All / Selection Info */}
-                      <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
-                        <button
-                          onClick={() => toggleSelectAll(filteredTests)}
-                          className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-brand-green transition-colors"
-                        >
-                          <FontAwesomeIcon
-                            icon={allFilteredSelected ? faCheckSquare : faSquare}
-                            className={allFilteredSelected ? 'text-brand-green' : 'text-gray-400'}
-                          />
-                          {allFilteredSelected ? 'Deselect All' : 'Select All'}
-                          {assignSearchQuery || assignFormatFilter !== 'all' ? ' (filtered)' : ''}
-                        </button>
-                        <span className="text-sm text-gray-600">
-                          {selectedTestIds.size > 0 ? (
-                            <span className="font-semibold text-brand-green">
-                              {selectedTestIds.size} selected
-                            </span>
-                          ) : (
-                            `${filteredTests.length} test${filteredTests.length !== 1 ? 's' : ''} available`
-                          )}
-                        </span>
-                      </div>
-
-                      {filteredTests.length === 0 ? (
-                        <div className="text-center py-8">
-                          <FontAwesomeIcon icon={faSearch} className="text-4xl text-gray-300 mb-3" />
-                          <p className="text-gray-500">No tests match your search criteria</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          {filteredTests.map((test) => {
-                            const isSelected = selectedTestIds.has(test.id);
-
-                            return (
-                              <div
-                                key={test.id}
-                                onClick={() => toggleTestSelection(test.id)}
-                                className={`bg-gray-50 border-2 rounded-xl p-4 cursor-pointer transition-all ${
-                                  isSelected
-                                    ? 'border-brand-green bg-green-50 shadow-md'
-                                    : 'border-gray-200 hover:border-brand-green hover:shadow-lg'
-                                }`}
-                              >
-                                <div className="flex items-center gap-4">
-                                  {/* Checkbox */}
-                                  <FontAwesomeIcon
-                                    icon={isSelected ? faCheckSquare : faSquare}
-                                    className={`text-xl ${isSelected ? 'text-brand-green' : 'text-gray-400'}`}
-                                  />
-
-                                  {/* Test Info */}
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <h3 className="text-lg font-bold text-brand-dark">
-                                        {test.section} - {test.exercise_type} {test.test_number}
-                                      </h3>
-                                      {/* PDF/Interactive Badge */}
-                                      <span
-                                        className={`px-2 py-1 rounded text-xs font-bold ${
-                                          test.question_format === 'interactive'
-                                            ? 'bg-green-100 text-green-700 border border-green-300'
-                                            : test.question_format === 'mixed'
-                                            ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                                            : 'bg-gray-100 text-gray-700 border border-gray-300'
-                                        }`}
-                                      >
-                                        {test.question_format === 'interactive'
-                                          ? 'Interactive'
-                                          : test.question_format === 'mixed'
-                                          ? 'Mixed'
-                                          : 'PDF'}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-4 text-sm text-gray-600">
-                                      <span>
-                                        <FontAwesomeIcon icon={faClock} className="mr-1" />
-                                        {test.default_duration_mins} min
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </>
-                  );
-                })()
-              )}
-            </div>
-
-            {/* Modal Footer with Assign Button */}
-            {!loadingAvailable && availableTests.length > 0 && (
-              <div className="p-4 border-t border-gray-200 bg-gray-50">
-                <div className="flex items-center justify-between">
-                  <button
-                    onClick={() => setShowAssignModal(false)}
-                    className="px-6 py-3 rounded-lg font-semibold bg-gray-200 text-gray-700 hover:bg-gray-300 transition-all"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleAssignSelectedTests}
-                    disabled={assigning || selectedTestIds.size === 0}
-                    className="px-6 py-3 bg-gradient-to-r from-brand-green to-green-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {assigning ? (
-                      <>
-                        <FontAwesomeIcon icon={faSpinner} className="animate-spin mr-2" />
-                        Assigning...
-                      </>
-                    ) : (
-                      <>
-                        <FontAwesomeIcon icon={faPlus} className="mr-2" />
-                        Assign {selectedTestIds.size > 0 ? `(${selectedTestIds.size})` : ''}
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Start Test Configuration Modal */}
       {showStartTestModal && selectedTestForStart && (
         <div
@@ -1600,7 +1278,7 @@ export default function StudentTestsPage() {
                 <div className="space-y-3">
                   {/* Student mode - disabled for locked/completed tests */}
                   {(() => {
-                    const isLocked = selectedTestForStart?.status === 'locked' || selectedTestForStart?.status === 'completed';
+                    const isLocked = selectedTestForStart?.status === 'locked' || selectedTestForStart?.completion_status?.startsWith('completed');
                     return (
                       <label className={`flex items-start gap-3 p-4 border-2 rounded-xl transition-colors ${
                         isLocked
