@@ -291,6 +291,50 @@ export default function AdminDashboardPage() {
                 </div>
               </button>
 
+              {/* Migrate Answers Card */}
+              <button
+                onClick={() => navigate('/admin/migrate-answers')}
+                className="group relative bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 border-2 border-gray-100 hover:border-rose-500 transform hover:scale-105"
+              >
+                {/* Icon */}
+                <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-rose-500 to-rose-700 rounded-full flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
+                  <FontAwesomeIcon icon={faDatabase} className="text-4xl text-white" />
+                </div>
+
+                {/* Title */}
+                <h3 className="text-2xl font-bold text-brand-dark mb-3">
+                  Migrate Answers
+                </h3>
+
+                {/* Description */}
+                <p className="text-gray-600 mb-4">
+                  Migrate old student answers to new system
+                </p>
+
+                {/* Features List */}
+                <ul className="text-left text-sm text-gray-500 space-y-2">
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-rose-500 rounded-full"></span>
+                    Extract old answers
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-rose-500 rounded-full"></span>
+                    Map to new tests
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-rose-500 rounded-full"></span>
+                    Progress tracking
+                  </li>
+                </ul>
+
+                {/* Arrow Indicator */}
+                <div className="absolute bottom-4 right-4 text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </button>
+
               {/* System Analytics Card */}
               <button
                 onClick={() => navigate('/admin/analytics')}

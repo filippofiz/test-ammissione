@@ -857,7 +857,8 @@ export default function TestTrackConfigPage() {
         // Set adaptive-related fields to null when non_adaptive
         base_questions_scope: config.adaptivity_mode === 'adaptive' ? config.base_questions_scope : null,
         base_questions_count: config.adaptivity_mode === 'adaptive' ? config.base_questions_count : null,
-        algorithm_id: config.adaptivity_mode === 'adaptive' ? config.algorithm_id : null,
+        // Algorithm ID is saved regardless of adaptivity mode (can be used for scoring)
+        algorithm_id: config.algorithm_id || null,
         // Include section adaptivity config
         section_adaptivity_config: useSectionAdaptivity ? sectionAdaptivityConfig : null,
         difficulty_levels_count: useSectionAdaptivity ? difficultyLevelsCount : null,
@@ -2382,6 +2383,52 @@ export default function TestTrackConfigPage() {
                             </div>
                           </>
                         )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                )}
+
+                {/* Scoring Algorithm - Only show when NOT in adaptive mode */}
+                {!useSectionAdaptivity && config.adaptivity_mode !== 'adaptive' && (
+                <div className="border-b border-gray-200 pb-6">
+                  <h3 className="text-lg font-bold text-brand-dark mb-4">Scoring Algorithm</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Select an algorithm to use for scoring student answers. The algorithm can be used for evaluation regardless of whether the test uses adaptive question selection.
+                  </p>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                      Algorithm for Scoring
+                    </label>
+                    {algorithms.length === 0 ? (
+                      <div className="p-4 bg-yellow-50 border-2 border-yellow-200 rounded-lg">
+                        <p className="text-sm text-yellow-700">
+                          No algorithms configured. <a href="/tutor/algorithm-config" className="text-brand-green underline font-semibold">Create one in the Algorithm Library</a>
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <select
+                          value={config.algorithm_id || ''}
+                          onChange={(e) => setConfig({ ...config, algorithm_id: e.target.value })}
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-brand-green focus:outline-none font-medium"
+                        >
+                          <option value="">No algorithm (manual scoring only)</option>
+                          {algorithms.map((algo) => (
+                            <option key={algo.id} value={algo.id}>
+                              {algo.display_name || algo.algorithm_type}
+                            </option>
+                          ))}
+                        </select>
+                        {config.algorithm_id && (
+                          <p className="text-xs text-gray-500">
+                            {algorithms.find(a => a.id === config.algorithm_id)?.description || 'No description'}
+                          </p>
+                        )}
+                        <p className="text-xs text-gray-400 mt-2">
+                          <a href="/tutor/algorithm-config" className="text-brand-green underline">Manage algorithms</a>
+                        </p>
                       </div>
                     )}
                   </div>

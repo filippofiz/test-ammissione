@@ -93,7 +93,6 @@ export default function TestResultsPage() {
   const [resultsViewable, setResultsViewable] = useState(false);
   const [togglingViewability, setTogglingViewability] = useState(false);
   const [algorithmConfig, setAlgorithmConfig] = useState<any>(null);
-  const [simulatedSectionCorrect, setSimulatedSectionCorrect] = useState<Record<string, number>>({});
   const [showScoreReport, setShowScoreReport] = useState(false);
 
   useEffect(() => {
@@ -139,21 +138,52 @@ export default function TestResultsPage() {
 
       if (studentError) throw studentError;
 
-      // Load algorithm config for scoring
-      const { data: algoConfig, error: algoError } = await supabase
-        .from('2V_algorithm_config')
-        .select('*')
-        .eq('display_name', assignmentData['2V_tests'].test_type)
-        .maybeSingle();
+      // Load algorithm config for scoring via test_track_config
+      const testType = assignmentData['2V_tests'].test_type;
+      const exerciseType = assignmentData['2V_tests'].exercise_type;
 
-      console.log('🎯 ALGORITHM CONFIG FETCH:', {
-        testType: assignmentData['2V_tests'].test_type,
-        error: algoError,
-        data: algoConfig
+      console.log('🎯 TEST DATA:', {
+        testType,
+        exerciseType,
+        fullTest: assignmentData['2V_tests']
       });
 
-      if (!algoError && algoConfig) {
-        setAlgorithmConfig(algoConfig);
+      // First fetch the test track config to get the algorithm_id
+      const { data: trackConfig, error: trackConfigError } = await supabase
+        .from('2V_test_track_config')
+        .select('*')
+        .eq('test_type', testType)
+        .eq('track_type', exerciseType)
+        .maybeSingle();
+
+      console.log('🎯 TRACK CONFIG FETCH:', {
+        testType,
+        exerciseType_used_as_track_type: exerciseType,
+        error: trackConfigError,
+        trackConfig: trackConfig,
+        algorithmId: trackConfig?.algorithm_id
+      });
+
+      // If there's an algorithm_id, fetch the algorithm config
+      if (!trackConfigError && trackConfig?.algorithm_id) {
+        const { data: algoConfig, error: algoError } = await supabase
+          .from('2V_algorithm_config')
+          .select('*')
+          .eq('id', trackConfig.algorithm_id)
+          .single();
+
+        console.log('🎯 ALGORITHM CONFIG FETCH:', {
+          algorithmId: trackConfig.algorithm_id,
+          error: algoError,
+          data: algoConfig,
+          testType: testType
+        });
+
+        // Set algorithm config if found - score calculation works for any test type
+        if (!algoError && algoConfig) {
+          setAlgorithmConfig(algoConfig);
+          console.log('✅ Algorithm loaded - score report will be shown');
+        }
       }
 
       // Combine data
@@ -168,10 +198,10 @@ export default function TestResultsPage() {
       // Load ALL answers to determine which attempts have data
       const { data: allAnswers, error: answersError } = await supabase
         .from('2V_student_answers')
-        .select('question_id, created_at, updated_at, attempt_number')
+        .select('question_id, created_at, updated_at, attempt_number, question_order')
         .eq('assignment_id', assignmentId)
-        .order('updated_at', { ascending: true })
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true, nullsFirst: false })
+        .order('question_order', { ascending: true, nullsFirst: false });
 
       if (answersError) throw answersError;
 
@@ -239,10 +269,24 @@ export default function TestResultsPage() {
       // Create a map for quick lookup
       const questionMap = new Map(questionsData?.map(q => [q.id, q]) || []);
 
-      // Order questions according to test_questions order or answer creation time
-      const questions: Question[] = questionIds
+      // Order questions according to answer order (already sorted by question_order, created_at)
+      // Map to get the actual question objects
+      let questions: Question[] = questionIds
         .map(id => questionMap.get(id))
         .filter((q: any) => q !== undefined);
+
+      // Final sort by question number as tiebreaker (in case question_order and created_at are same)
+      const answerOrderMap = new Map(answers.map((a, idx) => [a.question_id, idx]));
+      questions.sort((a, b) => {
+        const orderA = answerOrderMap.get(a.id) ?? 999999;
+        const orderB = answerOrderMap.get(b.id) ?? 999999;
+        if (orderA !== orderB) return orderA - orderB;
+
+        // Tiebreaker: use question number from question data
+        const numA = a.question_number || 0;
+        const numB = b.question_number || 0;
+        return numA - numB;
+      });
 
       // Create metadata map from completion_details (for difficulty info)
       const metadataMap = new Map<string, any>();
@@ -795,7 +839,8 @@ export default function TestResultsPage() {
       hasAlgorithmConfig: !!algorithmConfig,
       algorithmConfig: algorithmConfig,
       resultsLength: results.length,
-      testType: assignment?.['2V_tests']?.test_type
+      testType: assignment?.['2V_tests']?.test_type,
+      scoringMethod: algorithmConfig?.scoring_method
     });
 
     if (!algorithmConfig) return null;
@@ -803,49 +848,107 @@ export default function TestResultsPage() {
     const groupedResults = groupBySection(results);
     const sectionScores: Record<string, number> = {};
 
-    // Calculate score for each section
-    Object.keys(groupedResults).forEach(sectionName => {
-      const sectionResults = groupedResults[sectionName];
-      const actualSectionCorrect = sectionResults.filter(r => r.isCorrect).length;
-      const sectionTotal = sectionResults.length;
+    // Check scoring method
+    if (algorithmConfig.scoring_method === 'raw_score') {
+      // RAW SCORE: +1 correct, penalty for wrong/blank
+      const penaltyWrong = parseFloat(algorithmConfig.penalty_for_wrong || '0');
+      const penaltyBlank = parseFloat(algorithmConfig.penalty_for_blank || '0');
 
-      // Use simulated correct for this section if available, otherwise use actual
-      const sectionCorrect = simulatedSectionCorrect[sectionName] !== undefined
-        ? simulatedSectionCorrect[sectionName]
-        : actualSectionCorrect;
+      let totalCorrect = 0;
+      let totalWrong = 0;
+      let totalBlank = 0;
+      let totalQuestions = 0;
 
-      const percentageCorrect = sectionTotal > 0 ? sectionCorrect / sectionTotal : 0;
+      Object.keys(groupedResults).forEach(sectionName => {
+        const sectionResults = groupedResults[sectionName];
+        totalQuestions += sectionResults.length;
 
-      // Scale to section min/max range
-      const scoreRange = algorithmConfig.section_score_max - algorithmConfig.section_score_min;
-      const scaledScore = algorithmConfig.section_score_min + (percentageCorrect * scoreRange);
+        let score = 0;
+        let sectionCorrect = 0;
+        let sectionWrong = 0;
+        let sectionBlank = 0;
+
+        sectionResults.forEach(r => {
+          if (r.isCorrect) {
+            score += 1;
+            sectionCorrect++;
+            totalCorrect++;
+          } else if (r.studentAnswer && !r.isCorrect) {
+            score += penaltyWrong; // This is negative (e.g., -0.2)
+            sectionWrong++;
+            totalWrong++;
+          } else if (!r.studentAnswer) {
+            score += penaltyBlank; // Usually 0
+            sectionBlank++;
+            totalBlank++;
+          }
+        });
+
+        sectionScores[sectionName] = parseFloat(score.toFixed(2));
+      });
+
+      // Total raw score
+      const totalRawScore = Object.values(sectionScores).reduce((sum, score) => sum + score, 0);
+
+      // Scale to 50 points (BOCCONI standard)
+      const scaledTo50 = totalQuestions > 0 ? (totalRawScore / totalQuestions) * 50 : 0;
+
+      return {
+        sectionScores,
+        totalScore: parseFloat(scaledTo50.toFixed(2)),
+        displayName: algorithmConfig.display_name,
+        rawScoreDetails: {
+          correct: totalCorrect,
+          correctPoints: totalCorrect * 1,
+          wrong: totalWrong,
+          wrongPoints: parseFloat((totalWrong * penaltyWrong).toFixed(2)),
+          blank: totalBlank,
+          blankPoints: totalBlank * penaltyBlank,
+          totalRawScore: parseFloat(totalRawScore.toFixed(2)),
+          totalQuestions: totalQuestions,
+          scaledTo50: parseFloat(scaledTo50.toFixed(2))
+        }
+      };
+    } else {
+      // IRT-BASED / SCALED SCORE: Use min/max ranges (GMAT style)
+      Object.keys(groupedResults).forEach(sectionName => {
+        const sectionResults = groupedResults[sectionName];
+        const actualSectionCorrect = sectionResults.filter(r => r.isCorrect).length;
+        const sectionTotal = sectionResults.length;
+
+        const percentageCorrect = sectionTotal > 0 ? actualSectionCorrect / sectionTotal : 0;
+
+        // Scale to section min/max range
+        const scoreRange = algorithmConfig.section_score_max - algorithmConfig.section_score_min;
+        const scaledScore = algorithmConfig.section_score_min + (percentageCorrect * scoreRange);
+
+        // Round to nearest score increment
+        const increment = algorithmConfig.score_increment || 1;
+        sectionScores[sectionName] = Math.round(scaledScore / increment) * increment;
+      });
+
+      // Calculate total score as average of section scores
+      const sectionScoreValues = Object.values(sectionScores);
+      const avgSectionScore = sectionScoreValues.length > 0
+        ? sectionScoreValues.reduce((sum, score) => sum + score, 0) / sectionScoreValues.length
+        : 0;
+
+      // Scale total score to total min/max range
+      const totalScoreRange = algorithmConfig.total_score_max - algorithmConfig.total_score_min;
+      const sectionRange = algorithmConfig.section_score_max - algorithmConfig.section_score_min;
+      const normalizedScore = (avgSectionScore - algorithmConfig.section_score_min) / sectionRange;
+      const totalScore = algorithmConfig.total_score_min + (normalizedScore * totalScoreRange);
 
       // Round to nearest score increment
       const increment = algorithmConfig.score_increment || 1;
-      sectionScores[sectionName] = Math.round(scaledScore / increment) * increment;
-    });
+      const finalTotalScore = Math.round(totalScore / increment) * increment;
 
-    // Calculate total score as average of section scores
-    const sectionScoreValues = Object.values(sectionScores);
-    const avgSectionScore = sectionScoreValues.length > 0
-      ? sectionScoreValues.reduce((sum, score) => sum + score, 0) / sectionScoreValues.length
-      : 0;
-
-    // Scale total score to total min/max range
-    const totalScoreRange = algorithmConfig.total_score_max - algorithmConfig.total_score_min;
-    const sectionRange = algorithmConfig.section_score_max - algorithmConfig.section_score_min;
-    const normalizedScore = (avgSectionScore - algorithmConfig.section_score_min) / sectionRange;
-    const totalScore = algorithmConfig.total_score_min + (normalizedScore * totalScoreRange);
-
-    // Round to nearest score increment
-    const increment = algorithmConfig.score_increment || 1;
-    const finalTotalScore = Math.round(totalScore / increment) * increment;
-
-    return {
-      sectionScores,
-      totalScore: finalTotalScore,
-      displayName: algorithmConfig.display_name
-    };
+      return {
+        sectionScores,
+        totalScore: finalTotalScore,
+        displayName: algorithmConfig.display_name
+      };
+    }
   }
 
   // Calculate statistics
@@ -983,99 +1086,83 @@ export default function TestResultsPage() {
                 />
               </button>
 
-              {showScoreReport && (
+              {showScoreReport && (!isStudentView || resultsViewable) && (
                 <div className="mt-6">
-                  <div className="flex justify-between items-center mb-4">
-                    <div className="bg-white rounded-lg px-6 py-4 border-2 border-purple-400 shadow-md">
-                      <div className="text-sm text-purple-700 font-semibold">Total Score</div>
-                      <div className="text-4xl font-bold text-purple-900">{scaledScores.totalScore}</div>
-                      <div className="text-xs text-purple-600 mt-1">
-                        Range: {algorithmConfig.total_score_min}-{algorithmConfig.total_score_max}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setSimulatedSectionCorrect({})}
-                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-semibold"
-                    >
-                      Reset All
-                    </button>
-                  </div>
-
-              {/* Section Scores */}
-              <div className="grid grid-cols-1 gap-4">
-                {Object.entries(scaledScores.sectionScores).map(([sectionName, score]) => {
-                  const sectionResults = groupedResults[sectionName] || [];
-                  const actualCorrect = sectionResults.filter(r => r.isCorrect).length;
-                  const totalQuestions = sectionResults.length;
-                  const currentCorrect = simulatedSectionCorrect[sectionName] !== undefined
-                    ? simulatedSectionCorrect[sectionName]
-                    : actualCorrect;
-
-                  console.log('🎯 SECTION DEBUG:', {
-                    sectionName,
-                    totalQuestions,
-                    actualCorrect,
-                    currentCorrect,
-                    hasSimulated: simulatedSectionCorrect[sectionName] !== undefined
-                  });
-
-                  return (
-                    <div key={sectionName} className="bg-white rounded-lg p-4 border-2 border-purple-200 shadow">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="text-lg font-bold text-purple-900">{sectionName}</div>
-                        <div className="text-3xl font-bold text-purple-900">{score}</div>
-                      </div>
-
-                      {totalQuestions > 0 ? (
-                        <div className="mb-3">
-                          <div className="flex justify-between items-center mb-2">
-                            <label className="text-sm font-semibold text-purple-700">
-                              Simulate: {currentCorrect}/{totalQuestions} correct ({Math.round((currentCorrect / totalQuestions) * 100)}%)
-                            </label>
-                            {simulatedSectionCorrect[sectionName] !== undefined && (
-                              <button
-                                onClick={() => {
-                                  const newSim = { ...simulatedSectionCorrect };
-                                  delete newSim[sectionName];
-                                  setSimulatedSectionCorrect(newSim);
-                                }}
-                                className="text-xs text-purple-600 hover:text-purple-800"
-                              >
-                                Reset
-                              </button>
-                            )}
-                          </div>
-                          <input
-                            type="range"
-                            min="0"
-                            max={totalQuestions}
-                            value={currentCorrect}
-                            onChange={(e) => setSimulatedSectionCorrect({
-                              ...simulatedSectionCorrect,
-                              [sectionName]: parseInt(e.target.value)
-                            })}
-                            className="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer"
-                            style={{
-                              background: `linear-gradient(to right, rgb(192, 132, 252) 0%, rgb(192, 132, 252) ${(currentCorrect / totalQuestions) * 100}%, rgb(233, 213, 255) ${(currentCorrect / totalQuestions) * 100}%, rgb(233, 213, 255) 100%)`
-                            }}
-                          />
+                  {algorithmConfig.scoring_method === 'raw_score' ? (
+                    // BOCCONI: Only Total Score (centered)
+                    <div className="flex justify-center">
+                      <div className="bg-white rounded-lg px-6 py-4 border-2 border-purple-400 shadow-md max-w-md w-full">
+                        <div className="text-sm text-purple-700 font-semibold">Total Score</div>
+                        <div className="text-4xl font-bold text-purple-900 my-2">
+                          {scaledScores.totalScore} / 50
                         </div>
-                      ) : (
-                        <div className="text-sm text-gray-500 italic">No questions in this section</div>
-                      )}
-
-                      <div className="flex justify-between text-xs text-purple-600">
-                        <span>Range: {algorithmConfig.section_score_min}-{algorithmConfig.section_score_max}</span>
-                        {simulatedSectionCorrect[sectionName] !== undefined && simulatedSectionCorrect[sectionName] !== actualCorrect && (
-                          <span className="text-purple-700 font-semibold">
-                            (Actual: {actualCorrect}/{totalQuestions})
-                          </span>
+                        {scaledScores.rawScoreDetails && (
+                          <div className="mt-4 pt-4 border-t border-purple-200 space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-green-700">✓ Correct ({scaledScores.rawScoreDetails.correct}):</span>
+                              <span className="font-semibold text-green-700">+{scaledScores.rawScoreDetails.correctPoints}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-red-700">✗ Wrong ({scaledScores.rawScoreDetails.wrong}):</span>
+                              <span className="font-semibold text-red-700">{scaledScores.rawScoreDetails.wrongPoints}</span>
+                            </div>
+                            {scaledScores.rawScoreDetails.blank > 0 && (
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-600">○ Blank ({scaledScores.rawScoreDetails.blank}):</span>
+                                <span className="font-semibold text-gray-600">{scaledScores.rawScoreDetails.blankPoints}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between pt-2 border-t border-purple-200 text-sm">
+                              <span className="text-purple-700 font-semibold">Raw Total:</span>
+                              <span className="font-bold text-purple-700">{scaledScores.rawScoreDetails.totalRawScore}</span>
+                            </div>
+                          </div>
                         )}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                  ) : (
+                    // GMAT: Side by side layout
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Left: Total Score */}
+                      <div className="bg-white rounded-lg px-6 py-4 border-2 border-purple-400 shadow-md h-fit">
+                        <div className="text-sm text-purple-700 font-semibold">Total Score</div>
+                        <div className="text-4xl font-bold text-purple-900 my-2">
+                          {scaledScores.totalScore}
+                        </div>
+                        <div className="text-xs text-purple-600">
+                          Range: {algorithmConfig.total_score_min}-{algorithmConfig.total_score_max}
+                        </div>
+                      </div>
+
+                      {/* Right: Section Scores */}
+                      <div className="space-y-3">
+                        {Object.entries(scaledScores.sectionScores).map(([sectionName, score]) => {
+                          const sectionResults = groupedResults[sectionName] || [];
+                          const actualCorrect = sectionResults.filter(r => r.isCorrect).length;
+                          const totalQuestions = sectionResults.length;
+
+                          return (
+                            <div key={sectionName} className="bg-white rounded-lg p-4 border-2 border-purple-200 shadow">
+                              <div className="flex items-center justify-between">
+                                <div className="text-lg font-bold text-purple-900">{sectionName}</div>
+                                <div className="text-3xl font-bold text-purple-900">{score}</div>
+                              </div>
+
+                              {totalQuestions > 0 && (
+                                <div className="text-sm text-purple-700 mt-2">
+                                  {actualCorrect}/{totalQuestions} correct ({Math.round((actualCorrect / totalQuestions) * 100)}%)
+                                </div>
+                              )}
+
+                              <div className="text-xs text-purple-600 mt-1">
+                                Range: {algorithmConfig.section_score_min}-{algorithmConfig.section_score_max}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
