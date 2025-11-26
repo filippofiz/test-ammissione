@@ -35,6 +35,7 @@ import {
   fetchAllStudents,
   type StudentWithAssignments,
 } from '../lib/api/tutors';
+import { supabase } from '../lib/supabase';
 
 export default function TutorStudentsPage() {
   const { t } = useTranslation();
@@ -46,10 +47,29 @@ export default function TutorStudentsPage() {
   const [selectedStudent, setSelectedStudent] = useState<StudentWithAssignments | null>(null);
   const [showTestModal, setShowTestModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showAddStudentModal, setShowAddStudentModal] = useState(false);
+  const [newStudentEmail, setNewStudentEmail] = useState('');
+  const [newStudentName, setNewStudentName] = useState('');
+  const [newStudentPassword, setNewStudentPassword] = useState('');
+  const [newStudentTests, setNewStudentTests] = useState<string[]>([]);
+  const [newStudentTutorId, setNewStudentTutorId] = useState<string>(''); // Selected tutor for new student
+  const [creatingStudent, setCreatingStudent] = useState(false);
+  const [createStudentError, setCreateStudentError] = useState<string | null>(null);
+
+  // Available test types (fetched from database)
+  const [availableTestTypes, setAvailableTestTypes] = useState<string[]>([]);
+  const [tutors, setTutors] = useState<Array<{ id: string; name: string; email: string }>>([]);
 
   useEffect(() => {
     loadStudents();
   }, [viewAll]);
+
+  // Load available test types and tutors when modal opens
+  useEffect(() => {
+    if (showAddStudentModal) {
+      loadTestTypesAndTutors();
+    }
+  }, [showAddStudentModal]);
 
   async function loadStudents() {
     setLoading(true);
@@ -63,6 +83,108 @@ export default function TutorStudentsPage() {
       setError(err instanceof Error ? err.message : 'Failed to load students');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadTestTypesAndTutors() {
+    try {
+      // Fetch unique test types from 2V_tests table
+      const { data: tests, error: testsError } = await supabase
+        .from('2V_tests')
+        .select('test_type')
+        .eq('is_active', true);
+
+      if (testsError) throw testsError;
+
+      // Get unique test types
+      const uniqueTestTypes = [...new Set(tests?.map(t => t.test_type) || [])];
+      setAvailableTestTypes(uniqueTestTypes);
+
+      // Fetch tutors and admins from profiles
+      const { data: tutorsData, error: tutorsError } = await supabase
+        .from('2V_profiles')
+        .select('id, name, email')
+        .or('roles.cs.{"TUTOR"},roles.cs.{"ADMIN"}');
+
+      if (tutorsError) throw tutorsError;
+
+      setTutors(tutorsData || []);
+
+      // Set current user as default tutor
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: currentProfile } = await supabase
+          .from('2V_profiles')
+          .select('id')
+          .eq('auth_uid', user.id)
+          .single();
+
+        if (currentProfile) {
+          setNewStudentTutorId(currentProfile.id);
+        }
+      }
+    } catch (err) {
+      console.error('Error loading test types and tutors:', err);
+    }
+  }
+
+  async function createStudent() {
+    if (!newStudentEmail || !newStudentName || !newStudentPassword || !newStudentTutorId) {
+      setCreateStudentError('Please fill in all fields');
+      return;
+    }
+
+    setCreatingStudent(true);
+    setCreateStudentError(null);
+
+    try {
+      // Use selected tutor ID
+      const tutorId = newStudentTutorId;
+
+      // Create auth user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: newStudentEmail,
+        password: newStudentPassword,
+        options: {
+          data: {
+            name: newStudentName,
+          }
+        }
+      });
+
+      if (authError) throw authError;
+      if (!authData.user) throw new Error('Failed to create user');
+
+      // Create profile
+      const { error: profileError } = await supabase
+        .from('2V_profiles')
+        .insert({
+          auth_uid: authData.user.id,
+          email: newStudentEmail,
+          name: newStudentName,
+          roles: ['STUDENT'],
+          tutor_id: tutorId,
+          tests: newStudentTests,
+          esigenze_speciali: false,
+          must_change_password: true,
+          platform_version: 'v2'
+        });
+
+      if (profileError) throw profileError;
+
+      // Success - close modal and reload students
+      setShowAddStudentModal(false);
+      setNewStudentEmail('');
+      setNewStudentName('');
+      setNewStudentPassword('');
+      setNewStudentTests([]);
+      setNewStudentTutorId('');
+      await loadStudents();
+    } catch (err) {
+      console.error('Error creating student:', err);
+      setCreateStudentError(err instanceof Error ? err.message : 'Failed to create student');
+    } finally {
+      setCreatingStudent(false);
     }
   }
 
@@ -127,27 +249,6 @@ export default function TutorStudentsPage() {
       <div className="flex-1 p-4 md:p-8">
         <div className="max-w-7xl mx-auto">
           {/* Page Header */}
-          <div className="mb-8 animate-fadeInUp">
-
-            {/* Action Buttons */}
-            <div className="flex flex-wrap justify-center gap-4 mb-6">
-              <button
-                onClick={() => navigate('/assign-tests')}
-                className="px-6 py-3 rounded-xl font-semibold text-base transition-all transform bg-gradient-to-r from-brand-green to-green-600 text-white shadow-lg hover:shadow-xl hover:scale-105"
-              >
-                <FontAwesomeIcon icon={faPlus} className="mr-2" />
-                Assign New Tests
-              </button>
-
-              <button
-                onClick={() => navigate('/modify-tests')}
-                className="px-6 py-3 rounded-xl font-semibold text-base transition-all transform bg-gray-50 text-brand-dark hover:bg-gray-100 hover:shadow-md border border-gray-200"
-              >
-                <FontAwesomeIcon icon={faEdit} className="mr-2" />
-                Modify Tests
-              </button>
-            </div>
-          </div>
 
           {/* Main Content Card */}
           <div className="bg-white rounded-2xl shadow-2xl overflow-hidden animate-fadeInUp relative">
@@ -161,6 +262,14 @@ export default function TutorStudentsPage() {
                   <div className="flex items-center gap-3">
                     <FontAwesomeIcon icon={faUsers} className="text-2xl text-brand-green" />
                     <h2 className="text-2xl font-bold text-brand-dark">Students</h2>
+                    <button
+                      onClick={() => setShowAddStudentModal(true)}
+                      className="px-4 py-2 bg-gradient-to-r from-brand-green to-green-600 text-white rounded-lg text-sm font-semibold hover:shadow-lg transition-all flex items-center gap-2"
+                      title="Add new student"
+                    >
+                      <FontAwesomeIcon icon={faPlus} />
+                      <span className="hidden sm:inline">Add Student</span>
+                    </button>
                   </div>
 
                   {/* View All Toggle */}
@@ -320,6 +429,19 @@ export default function TutorStudentsPage() {
                             <FontAwesomeIcon icon={faChartLine} />
                             <span className="hidden md:inline">Tests</span>
                           </button>
+
+                          {/* Assign Tests Button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/tutor/student/${student.id}/profile`);
+                            }}
+                            className="px-3 py-2 bg-white border-2 border-green-600 text-green-600 rounded-lg hover:bg-green-50 transition-all text-sm font-semibold flex items-center gap-2"
+                            title="Assign new tests"
+                          >
+                            <FontAwesomeIcon icon={faPlus} />
+                            <span className="hidden md:inline">Assign Tests</span>
+                          </button>
                         </div>
 
                         {/* Test Type Badges & Count */}
@@ -386,6 +508,171 @@ export default function TutorStudentsPage() {
           </div>
         </div>
       </div>
+
+      {/* Add Student Modal */}
+      {showAddStudentModal && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn"
+          onClick={() => setShowAddStudentModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full animate-slideUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-brand-green to-green-600 p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
+                    <FontAwesomeIcon icon={faUserGraduate} className="text-2xl" />
+                  </div>
+                  <h2 className="text-2xl font-bold">Add New Student</h2>
+                </div>
+                <button
+                  onClick={() => setShowAddStudentModal(false)}
+                  className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 transition-colors flex items-center justify-center"
+                >
+                  <span className="text-2xl font-bold">×</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4">
+              {createStudentError && (
+                <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
+                  <p className="text-red-700 font-medium">{createStudentError}</p>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-semibold text-brand-dark mb-2">
+                  Student Name *
+                </label>
+                <input
+                  type="text"
+                  value={newStudentName}
+                  onChange={(e) => setNewStudentName(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-brand-green focus:outline-none transition-colors"
+                  placeholder="Enter student name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-brand-dark mb-2">
+                  Email Address *
+                </label>
+                <input
+                  type="email"
+                  value={newStudentEmail}
+                  onChange={(e) => setNewStudentEmail(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-brand-green focus:outline-none transition-colors"
+                  placeholder="student@example.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-brand-dark mb-2">
+                  Password *
+                </label>
+                <input
+                  type="password"
+                  value={newStudentPassword}
+                  onChange={(e) => setNewStudentPassword(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-brand-green focus:outline-none transition-colors"
+                  placeholder="Enter password"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Student will be required to change password on first login
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-brand-dark mb-2">
+                  Assigned Tutor *
+                </label>
+                <select
+                  value={newStudentTutorId}
+                  onChange={(e) => setNewStudentTutorId(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-brand-green focus:outline-none transition-colors"
+                >
+                  <option value="">Select a tutor</option>
+                  {tutors.map(tutor => (
+                    <option key={tutor.id} value={tutor.id}>
+                      {tutor.name} ({tutor.email})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Select the tutor who will manage this student
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-brand-dark mb-2">
+                  Test Types
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {availableTestTypes.map(testType => (
+                    <label
+                      key={testType}
+                      className={`flex items-center gap-2 px-4 py-3 border-2 rounded-xl cursor-pointer transition-all ${
+                        newStudentTests.includes(testType)
+                          ? 'border-brand-green bg-green-50 text-brand-green'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={newStudentTests.includes(testType)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setNewStudentTests([...newStudentTests, testType]);
+                          } else {
+                            setNewStudentTests(newStudentTests.filter(t => t !== testType));
+                          }
+                        }}
+                        className="w-4 h-4 text-brand-green border-gray-300 rounded focus:ring-brand-green"
+                      />
+                      <span className="font-medium text-sm">{testType}</span>
+                    </label>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Select test types this student will have access to
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => setShowAddStudentModal(false)}
+                  disabled={creatingStudent}
+                  className="flex-1 px-6 py-3 rounded-xl font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={createStudent}
+                  disabled={creatingStudent}
+                  className="flex-1 px-6 py-3 rounded-xl font-semibold bg-gradient-to-r from-brand-green to-green-600 text-white hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {creatingStudent ? (
+                    <>
+                      <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <FontAwesomeIcon icon={faPlus} />
+                      Create Student
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Test Selection Modal */}
       {showTestModal && selectedStudent && (

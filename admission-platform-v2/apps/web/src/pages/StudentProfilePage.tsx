@@ -217,10 +217,10 @@ export default function StudentProfilePage() {
           <div className="text-center">
             <p className="text-red-600 text-lg mb-4">Student not found</p>
             <button
-              onClick={() => navigate('/tutor-students')}
+              onClick={() => navigate(-1)}
               className="px-6 py-2 bg-brand-green text-white rounded-lg hover:bg-green-600 transition-colors"
             >
-              Back to Students
+              Back
             </button>
           </div>
         </div>
@@ -232,15 +232,6 @@ export default function StudentProfilePage() {
     <Layout pageTitle="Student Profile" pageSubtitle={profile.name}>
       <div className="flex-1 p-4 md:p-8">
         <div className="max-w-5xl mx-auto">
-          {/* Back Button */}
-          <button
-            onClick={() => navigate('/tutor-students')}
-            className="mb-6 flex items-center gap-2 text-brand-dark hover:text-brand-green transition-colors font-medium"
-          >
-            <FontAwesomeIcon icon={faArrowLeft} />
-            Back to Students
-          </button>
-
           {/* Success Message */}
           {successMessage && (
             <div className="mb-6 bg-green-50 border-2 border-green-200 rounded-xl p-4 animate-fadeInUp">
@@ -257,9 +248,19 @@ export default function StudentProfilePage() {
 
           {/* Student Info Card */}
           <div className="bg-gradient-to-br from-brand-green to-green-600 rounded-2xl shadow-xl p-6 text-white mb-6">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
-                <FontAwesomeIcon icon={faUser} className="text-3xl" />
+            <div className="flex items-start gap-4">
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
+                  <FontAwesomeIcon icon={faUser} className="text-3xl" />
+                </div>
+                {/* Back Button */}
+                <button
+                  onClick={() => navigate(-1)}
+                  className="flex items-center gap-2 text-white/90 hover:text-white transition-colors font-medium text-sm"
+                >
+                  <FontAwesomeIcon icon={faArrowLeft} />
+                  Back
+                </button>
               </div>
               <div>
                 <h2 className="text-2xl font-bold">{profile.name}</h2>

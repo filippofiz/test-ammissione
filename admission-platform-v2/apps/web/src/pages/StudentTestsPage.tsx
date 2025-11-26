@@ -973,8 +973,17 @@ export default function StudentTestsPage() {
           <div className="mb-8 animate-fadeInUp">
             <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8">
               <div className="flex items-start gap-4">
-                <div className="w-16 h-16 bg-gradient-to-br from-brand-green to-green-600 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-lg flex-shrink-0">
-                  <FontAwesomeIcon icon={faUserGraduate} />
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-16 h-16 bg-gradient-to-br from-brand-green to-green-600 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-lg flex-shrink-0">
+                    <FontAwesomeIcon icon={faUserGraduate} />
+                  </div>
+                  <button
+                    onClick={() => navigate(`/tutor/student/${studentId}/profile`)}
+                    className="px-4 py-2 bg-gradient-to-r from-brand-green to-green-600 text-white rounded-lg text-sm font-semibold hover:shadow-lg transition-all whitespace-nowrap"
+                  >
+                    <FontAwesomeIcon icon={faUser} className="mr-2" />
+                    Profile
+                  </button>
                 </div>
                 <div className="flex-1">
                   {student?.name && (
