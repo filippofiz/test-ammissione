@@ -51,7 +51,7 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <Layout pageTitle="Admin Dashboard" pageSubtitle="Arched Preparation - Administrator">
+    <Layout pageTitle="Admin Dashboard">
       <div className="flex-1 p-4 md:p-8">
         <div className="max-w-6xl mx-auto">
 

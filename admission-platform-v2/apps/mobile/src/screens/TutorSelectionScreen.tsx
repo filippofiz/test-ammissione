@@ -63,7 +63,7 @@ export default function TutorSelectionScreen({ navigation }: any) {
   }
 
   return (
-    <Layout pageTitle="Tutor Dashboard" pageSubtitle="Arched Preparation">
+    <Layout pageTitle="Tutor Dashboard">
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
 
         {/* Selection Cards */}

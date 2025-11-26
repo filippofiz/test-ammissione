@@ -118,7 +118,6 @@ export default function TutorStudentsScreen() {
         {/* Page Header */}
         <View style={styles.pageHeader}>
           <Text style={styles.pageTitle}>Student Management</Text>
-          <Text style={styles.pageSubtitle}>Arched Preparation</Text>
         </View>
 
         {/* Action Buttons */}

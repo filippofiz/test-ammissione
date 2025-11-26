@@ -85,7 +85,6 @@ export default function AdminDashboardScreen() {
         {/* Page Header */}
         <View style={styles.pageHeader}>
           <Text style={styles.pageTitle}>Admin Dashboard</Text>
-          <Text style={styles.pageSubtitle}>Arched Preparation - Administrator</Text>
         </View>
 
         {/* Tutor Functions Section */}
