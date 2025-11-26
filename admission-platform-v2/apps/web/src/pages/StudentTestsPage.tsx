@@ -499,13 +499,13 @@ export default function StudentTestsPage() {
 
       if (assignmentError) throw assignmentError;
 
-      // For each assignment, check the question_type distribution
+      // For each assignment, check the question_type distribution and calculate score
       const assignmentWithFormat = await Promise.all(
         (assignmentData || []).map(async (assignment: any) => {
           // Count question types for this test
           const { data: questions } = await supabase
             .from('2V_questions')
-            .select('question_type')
+            .select('id, question_type')
             .eq('test_id', assignment.test_id);
 
           // Determine format based on question types
@@ -523,7 +523,36 @@ export default function StudentTestsPage() {
             }
           }
 
-          return { ...assignment, question_format: format };
+          // Calculate score if test has been completed (total_attempts > 0)
+          let score: number | null = null;
+          if ((assignment.total_attempts || 0) > 0 && questions && questions.length > 0) {
+            console.log(`📊 Calculating score for assignment ${assignment.id}, total_attempts: ${assignment.total_attempts}`);
+
+            // Get student answers for the most recent attempt
+            const { data: studentAnswers, error: answersError } = await supabase
+              .from('2V_student_answers')
+              .select('question_id, answer, auto_score')
+              .eq('assignment_id', assignment.id)
+              .eq('attempt_number', assignment.total_attempts);
+
+            console.log(`📊 Found ${studentAnswers?.length || 0} answers for attempt ${assignment.total_attempts}`, answersError);
+
+            if (studentAnswers && studentAnswers.length > 0) {
+              let correctCount = 0;
+
+              studentAnswers.forEach(sa => {
+                // Count based on auto_score (1 = correct, 0 = incorrect)
+                if (sa.auto_score !== null && sa.auto_score !== undefined && sa.auto_score > 0) {
+                  correctCount++;
+                }
+              });
+
+              score = Math.round((correctCount / studentAnswers.length) * 100);
+              console.log(`📊 Score calculated: ${score}% (${correctCount}/${studentAnswers.length} correct)`);
+            }
+          }
+
+          return { ...assignment, question_format: format, calculated_score: score };
         })
       );
 
@@ -552,7 +581,7 @@ export default function StudentTestsPage() {
           assigned_at: row.assigned_at,
           start_time: row.start_time,
           completed_at: row.completed_at,
-          score: null, // TODO: Extract from completion_details JSONB or test_results table
+          score: row.calculated_score,
           current_attempt: row.current_attempt || 1,
           total_attempts: row.total_attempts || 0,
           test_name: testName,
@@ -1070,15 +1099,33 @@ export default function StudentTestsPage() {
                           <h3 className="text-xl font-bold text-brand-dark">{translatedSections[section] || section}</h3>
                         </div>
                         <div className="flex items-center gap-4">
-                          <span className="text-sm text-gray-600">
-                            {sectionCompleted}/{sectionTests.length}
-                          </span>
-                          <div className="w-32 bg-gray-200 rounded-full h-2">
-                            <div
-                              className="bg-gradient-to-r from-brand-green to-green-600 h-2 rounded-full"
-                              style={{ width: `${sectionProgress}%` }}
-                            />
-                          </div>
+                          {(() => {
+                            // Calculate average score for completed tests in this section
+                            const completedTests = sectionTests.filter(t => t.score !== null);
+                            const avgScore = completedTests.length > 0
+                              ? Math.round(completedTests.reduce((sum, t) => sum + (t.score || 0), 0) / completedTests.length)
+                              : null;
+
+                            return (
+                              <>
+                                {avgScore !== null && (
+                                  <span className="text-sm font-semibold text-brand-green flex items-center gap-1">
+                                    <FontAwesomeIcon icon={faPercent} className="text-xs" />
+                                    {avgScore}%
+                                  </span>
+                                )}
+                                <span className="text-sm text-gray-600">
+                                  {sectionCompleted}/{sectionTests.length}
+                                </span>
+                                <div className="w-32 bg-gray-200 rounded-full h-2">
+                                  <div
+                                    className="bg-gradient-to-r from-brand-green to-green-600 h-2 rounded-full"
+                                    style={{ width: `${sectionProgress}%` }}
+                                  />
+                                </div>
+                              </>
+                            );
+                          })()}
                         </div>
                       </button>
 
