@@ -19,10 +19,13 @@ import {
   faImage,
   faExchangeAlt,
   faTable,
+  faPlus,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import { MathJaxProvider, MathJaxRenderer, TikZGraph } from '../components/MathJaxRenderer';
 import { AdvancedGraphRenderer } from '../components/GraphRenderer';
+import { NewTestCreator } from '../components/NewTestCreator';
+import { LanguageSelectionModal } from '../components/LanguageSelectionModal';
 import { supabase } from '../lib/supabase';
 import * as pdfjsLib from 'pdfjs-dist';
 import { Document, Page, pdfjs } from 'react-pdf';
@@ -430,6 +433,9 @@ async function extractAndUploadImages(
 export default function PDFToLatexConverterPage() {
   const navigate = useNavigate();
 
+  // Mode: 'existing' or 'new'
+  const [mode, setMode] = useState<'existing' | 'new'>('existing');
+
   // PDF Tests from old system
   const [pdfTests, setPdfTests] = useState<PDFTest[]>([]);
   const [loadingTests, setLoadingTests] = useState(true);
@@ -441,6 +447,33 @@ export default function PDFToLatexConverterPage() {
   const [selectedDuplicates, setSelectedDuplicates] = useState<Set<string>>(new Set());
   const [showPdfComparison, setShowPdfComparison] = useState(false);
   const [pdfNumPages, setPdfNumPages] = useState<Record<string, number>>({});
+
+  // New test creation state
+  const [newTestMetadata, setNewTestMetadata] = useState({
+    test_type: '',
+    exercise_type: 'Training',
+    test_number: 1,
+  });
+  const [uploadedSections, setUploadedSections] = useState<{
+    section: string;
+    testPdfFile: File | null;
+    testPdfUrl: string | null;
+    solutionsPdfFile: File | null;
+    solutionsPdfUrl: string | null;
+    correctAnswers: string;
+    questionCount: number;
+  }[]>([]);
+  const [currentSection, setCurrentSection] = useState({
+    section: '',
+    testPdfFile: null as File | null,
+    solutionsPdfFile: null as File | null,
+    correctAnswers: '',
+    questionCount: 0,
+  });
+
+  // Section-by-section workflow state for new tests
+  const [baseTestId, setBaseTestId] = useState<string | null>(null); // Shared test ID across sections
+  const [savedSections, setSavedSections] = useState<string[]>([]); // Track which sections have been saved
 
   // Questions from old system
   const [oldQuestions, setOldQuestions] = useState<OldQuestion[]>([]);
@@ -462,6 +495,14 @@ export default function PDFToLatexConverterPage() {
   const [sharedImageQuestions, setSharedImageQuestions] = useState<number[]>([]); // For selecting multiple questions to share an image
   const [selectedPageForExtraction, setSelectedPageForExtraction] = useState<number>(1);
   const [totalPdfPages, setTotalPdfPages] = useState<number>(1);
+
+  // Language selection modal
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const [selectedLanguages, setSelectedLanguages] = useState<'ITA' | 'ENG' | 'BOTH'>('BOTH');
+  const [pendingConversion, setPendingConversion] = useState<{ type: 'existing' | 'new'; data?: any } | null>(null);
+
+  // Language toggle for viewing questions (ITA/ENG)
+  const [viewLanguage, setViewLanguage] = useState<'ITA' | 'ENG'>('ITA');
 
   // Preview mode
   const [showPdfPreview, setShowPdfPreview] = useState(true);
@@ -535,42 +576,45 @@ export default function PDFToLatexConverterPage() {
 
       console.log(`Found ${testsData.length} PDF tests in 2V_tests`);
 
-      // Step 2: Get pdf_url and question count for each test
-      const testsList: PDFTest[] = [];
+      // Step 2: Get ALL questions for ALL tests in ONE query (optimization!)
+      const testIds = testsData.map(t => t.id);
+      const { data: allQuestions, error: questionsError } = await supabase
+        .from('2V_questions')
+        .select('test_id, question_data')
+        .in('test_id', testIds)
+        .not('question_data->>pdf_url', 'is', null);
 
-      for (const test of testsData) {
-        // Get first question with pdf_url for this test
-        const { data: questions, error: questionsError } = await supabase
-          .from('2V_questions')
-          .select('question_data')
-          .eq('test_id', test.id)
-          .not('question_data->>pdf_url', 'is', null)
-          .limit(1);
+      if (questionsError) {
+        console.error('Error fetching questions:', questionsError);
+        throw questionsError;
+      }
 
-        if (questionsError) {
-          console.warn(`Error fetching questions for test ${test.id}:`, questionsError);
-          continue;
+      // Step 3: Group questions by test_id and count them
+      const questionsByTestId = new Map<string, { pdfUrl: string; count: number }>();
+
+      if (allQuestions) {
+        for (const q of allQuestions) {
+          const existing = questionsByTestId.get(q.test_id);
+          if (!existing && q.question_data?.pdf_url) {
+            // First question with pdf_url for this test
+            questionsByTestId.set(q.test_id, {
+              pdfUrl: q.question_data.pdf_url,
+              count: 1
+            });
+          } else if (existing) {
+            // Increment count
+            existing.count++;
+          }
         }
+      }
 
-        if (!questions || questions.length === 0) {
+      // Step 4: Build the tests list
+      const testsList: PDFTest[] = [];
+      for (const test of testsData) {
+        const questionData = questionsByTestId.get(test.id);
+        if (!questionData) {
           console.warn(`No PDF questions found for test ${test.id}`);
           continue;
-        }
-
-        const pdfUrl = questions[0].question_data?.pdf_url;
-        if (!pdfUrl) {
-          console.warn(`No pdf_url in question_data for test ${test.id}`);
-          continue;
-        }
-
-        // Count total questions for this test
-        const { count, error: countError } = await supabase
-          .from('2V_questions')
-          .select('*', { count: 'exact', head: true })
-          .eq('test_id', test.id);
-
-        if (countError) {
-          console.warn(`Error counting questions for test ${test.id}:`, countError);
         }
 
         testsList.push({
@@ -579,8 +623,8 @@ export default function PDFToLatexConverterPage() {
           section: test.section,
           exercise_type: test.exercise_type,
           test_number: test.test_number,
-          pdf_url: pdfUrl,
-          question_count: count || 0,
+          pdf_url: questionData.pdfUrl,
+          question_count: questionData.count,
         });
       }
 
@@ -643,6 +687,32 @@ export default function PDFToLatexConverterPage() {
   };
 
   const handleExtractAndConvert = async () => {
+    if (!selectedTest) {
+      setError('No test selected');
+      return;
+    }
+
+    // Show language selection modal
+    setPendingConversion({ type: 'existing' });
+    setShowLanguageModal(true);
+  };
+
+  const handleLanguageConfirm = async (languages: 'ITA' | 'ENG' | 'BOTH') => {
+    setSelectedLanguages(languages);
+
+    if (!pendingConversion) return;
+
+    if (pendingConversion.type === 'existing') {
+      await handleExtractAndConvertInternal(languages);
+    } else if (pendingConversion.type === 'new' && pendingConversion.data) {
+      const { metadata, sections } = pendingConversion.data;
+      await handleConvertNewTestInternal(languages, metadata, sections);
+    }
+
+    setPendingConversion(null);
+  };
+
+  const handleExtractAndConvertInternal = async (languages: 'ITA' | 'ENG' | 'BOTH') => {
     if (!selectedTest) {
       setError('No test selected');
       return;
@@ -748,6 +818,7 @@ export default function PDFToLatexConverterPage() {
               databaseAnswers: databaseAnswers,
               pageStart,
               pageEnd,
+              languages: languages,
             }),
           }
         );
@@ -893,9 +964,274 @@ export default function PDFToLatexConverterPage() {
     }
   };
 
+  const handleConvertNewTest = async (
+    metadata: { test_type: string; exercise_type: string; test_number: number; languages?: 'ITA' | 'ENG' | 'BOTH' },
+    sections: {
+      section: string;
+      testPdfFile: File | null;
+      testPdfUrl: string | null;
+      solutionsPdfFile: File | null;
+      solutionsPdfUrl: string | null;
+      correctAnswers: string;
+      questionCount: number;
+    }[]
+  ) => {
+    // If languages is provided (from NewTestCreator after modal), use it directly
+    if (metadata.languages) {
+      await handleConvertNewTestInternal(metadata.languages, metadata, sections);
+      return;
+    }
+
+    // Otherwise show language selection modal
+    setPendingConversion({ type: 'new', data: { metadata, sections } });
+    setShowLanguageModal(true);
+  };
+
+  const handleConvertNewTestInternal = async (
+    languages: 'ITA' | 'ENG' | 'BOTH',
+    metadata: { test_type: string; exercise_type: string; test_number: number },
+    sections: {
+      section: string;
+      testPdfFile: File | null;
+      testPdfUrl: string | null;
+      solutionsPdfFile: File | null;
+      solutionsPdfUrl: string | null;
+      correctAnswers: string;
+      questionCount: number;
+    }[]
+  ) => {
+    setConverting(true);
+    setError(null);
+    setConvertedQuestions([]);
+    setPassages([]);
+    setNewTestMetadata(metadata);
+    setUploadedSections(sections);
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+
+      if (!token) throw new Error('Not authenticated');
+
+      let allConvertedQuestions: any[] = [];
+      let allPassages: any[] = [];
+      let totalUsage = {
+        input_tokens: 0,
+        output_tokens: 0,
+        total_tokens: 0,
+        cost_usd: 0,
+        cost_breakdown: {
+          input_cost_usd: 0,
+          output_cost_usd: 0,
+        },
+      };
+
+      // Process each section
+      for (const section of sections) {
+        if (!section.testPdfUrl) continue;
+
+        console.log(`Processing section: ${section.section}`);
+
+        // No database answers - AI will extract from solutions PDF
+        const databaseAnswers = undefined;
+
+        // Get PDF page count and process in batches
+        const PAGES_PER_BATCH = 4;
+        const pdfResponse = await fetch(section.testPdfUrl);
+        const pdfArrayBuffer = await pdfResponse.arrayBuffer();
+        const pdfDoc = await pdfjsLib.getDocument({ data: pdfArrayBuffer }).promise;
+        const totalPages = pdfDoc.numPages;
+
+        const totalBatches = Math.ceil(totalPages / PAGES_PER_BATCH);
+        console.log(`Section ${section.section}: ${totalPages} pages, ${totalBatches} batches`);
+
+        // Show batch progress
+        setBatchProgress({
+          show: true,
+          currentBatch: 0,
+          totalBatches,
+          questionsExtracted: allConvertedQuestions.length,
+          status: `Processing section: ${section.section}`,
+        });
+
+        // Process each batch for this section
+        for (let batch = 0; batch < totalBatches; batch++) {
+          const pageStart = batch * PAGES_PER_BATCH + 1;
+          const pageEnd = Math.min((batch + 1) * PAGES_PER_BATCH, totalPages);
+
+          setBatchProgress(prev => ({
+            ...prev,
+            currentBatch: batch + 1,
+            status: `${section.section}: Processing pages ${pageStart}-${pageEnd}...`,
+          }));
+
+          console.log(`🔍 API Call - Section: ${section.section}, Batch ${batch + 1}:`, {
+            hasSolutionsPdf: !!section.solutionsPdfUrl,
+            solutionsPdfUrl: section.solutionsPdfUrl ? section.solutionsPdfUrl.substring(0, 100) + '...' : 'NONE',
+            testType: metadata.test_type,
+            section: section.section,
+            pageRange: `${pageStart}-${pageEnd}`
+          });
+
+          const response = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/extract-questions-from-pdf`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                pdfUrl: section.testPdfUrl,
+                solutionsPdfUrl: section.solutionsPdfUrl || undefined,
+                testType: metadata.test_type,
+                section: section.section,
+                testNumber: metadata.test_number,
+                databaseAnswers: databaseAnswers,
+                pageStart,
+                pageEnd,
+                languages: languages,
+              }),
+            }
+          );
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Section ${section.section}, Batch ${batch + 1} failed: ${errorData.error || 'Failed to convert'}`);
+          }
+
+          const data = await response.json();
+
+          console.log(`📥 API Response - Section: ${section.section}, Batch ${batch + 1}:`, {
+            questionCount: data.questions?.length || 0,
+            firstQuestionSample: data.questions?.[0] ? {
+              question_number: data.questions[0].question_number,
+              has_correct_answer: 'correct_answer' in data.questions[0],
+              correct_answer: data.questions[0].correct_answer,
+              has_options: !!data.questions[0].options,
+              options_keys: data.questions[0].options ? Object.keys(data.questions[0].options) : []
+            } : 'NO QUESTIONS'
+          });
+
+          if (data.questions && data.questions.length > 0) {
+            // Add section info to each question
+            const questionsWithSection = data.questions.map((q: any) => ({
+              ...q,
+              section: section.section,
+            }));
+            allConvertedQuestions = [...allConvertedQuestions, ...questionsWithSection];
+
+            setBatchProgress(prev => ({
+              ...prev,
+              questionsExtracted: allConvertedQuestions.length,
+            }));
+          }
+
+          if (data.passages && data.passages.length > 0) {
+            allPassages = [...allPassages, ...data.passages];
+          }
+
+          if (data.usage) {
+            totalUsage.input_tokens += data.usage.input_tokens || 0;
+            totalUsage.output_tokens += data.usage.output_tokens || 0;
+            totalUsage.total_tokens += data.usage.total_tokens || 0;
+            totalUsage.cost_usd += data.usage.cost_usd || 0;
+            if (data.usage.cost_breakdown) {
+              totalUsage.cost_breakdown.input_cost_usd += data.usage.cost_breakdown.input_cost_usd || 0;
+              totalUsage.cost_breakdown.output_cost_usd += data.usage.cost_breakdown.output_cost_usd || 0;
+            }
+          }
+        }
+      }
+
+      // Hide batch progress
+      setBatchProgress(prev => ({ ...prev, show: false }));
+
+      if (allConvertedQuestions.length === 0) {
+        throw new Error('No questions extracted from any section');
+      }
+
+      console.log(`All sections complete! Extracted ${allConvertedQuestions.length} questions`);
+
+      // Process questions for images/graphs (similar to existing flow)
+      const processedQuestions = [];
+      for (const question of allConvertedQuestions) {
+        if (question.recreate_graph || question.graph_function) {
+          processedQuestions.push({
+            ...question,
+            has_graph_latex: true,
+            has_image: false,
+            image_url: null
+          });
+        } else {
+          processedQuestions.push(question);
+        }
+      }
+
+      // Extract images if needed
+      const questionsNeedingImages = processedQuestions.filter(q => q.has_image && !q.has_graph_latex);
+
+      let questionsWithImages = processedQuestions;
+      if (questionsNeedingImages.length > 0) {
+        console.log(`Extracting images for ${questionsNeedingImages.length} questions...`);
+
+        // Group questions by section for image extraction
+        const questionsBySection = new Map<string, any[]>();
+        processedQuestions.forEach(q => {
+          const section = q.section;
+          if (!questionsBySection.has(section)) {
+            questionsBySection.set(section, []);
+          }
+          questionsBySection.get(section)!.push(q);
+        });
+
+        // Extract images for each section
+        let allQuestionsWithImages: any[] = [];
+        for (const [sectionName, sectionQuestions] of questionsBySection.entries()) {
+          const sectionData = sections.find(s => s.section === sectionName);
+          if (sectionData && sectionData.testPdfUrl) {
+            const withImages = await extractAndUploadImages(
+              sectionData.testPdfUrl,
+              sectionQuestions,
+              metadata.test_type,
+              sectionName
+            );
+            allQuestionsWithImages = [...allQuestionsWithImages, ...withImages];
+          } else {
+            allQuestionsWithImages = [...allQuestionsWithImages, ...sectionQuestions];
+          }
+        }
+        questionsWithImages = allQuestionsWithImages;
+      }
+
+      setConvertedQuestions(questionsWithImages);
+      setPassages(allPassages);
+      setApiUsage(totalUsage);
+
+      console.log(`✅ Conversion complete! ${questionsWithImages.length} questions ready`);
+    } catch (err) {
+      console.error('New test conversion error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to convert new test');
+    } finally {
+      setConverting(false);
+      setBatchProgress(prev => ({ ...prev, show: false }));
+    }
+  };
+
   const handleSaveQuestions = async () => {
-    if (!selectedTest || convertedQuestions.length === 0) {
+    if (convertedQuestions.length === 0) {
       setError('No questions to save');
+      return;
+    }
+
+    // Validate based on mode
+    if (mode === 'existing' && !selectedTest) {
+      setError('No test selected');
+      return;
+    }
+
+    if (mode === 'new' && !newTestMetadata.test_type) {
+      setError('Invalid test metadata');
       return;
     }
 
@@ -907,8 +1243,95 @@ export default function PDFToLatexConverterPage() {
       // Get current user for audit trail
       const { data: { user } } = await supabase.auth.getUser();
 
-      // Use the existing test_id
-      const testId = selectedTest.test_id;
+      let testId: string;
+      let testType: string;
+      let pdfUrl: string;
+
+      // Handle NEW test mode: Create test first
+      if (mode === 'new') {
+        console.log('Creating new test in database...');
+
+        // Use first section's PDF URL as the main test PDF URL
+        const firstSection = uploadedSections[0];
+        if (!firstSection || !firstSection.testPdfUrl) {
+          throw new Error('No PDF URL found for new test');
+        }
+
+        // Find or create user profile in 2V_profiles
+        let profileId: string | null = null;
+        if (user?.id) {
+          // Query existing profile by auth_uid
+          const { data: existingProfile } = await supabase
+            .from('2V_profiles')
+            .select('id')
+            .eq('auth_uid', user.id)
+            .single();
+
+          if (existingProfile) {
+            profileId = existingProfile.id;
+          } else {
+            // Create new profile
+            const newProfileId = crypto.randomUUID();
+            const { error: insertError } = await supabase
+              .from('2V_profiles')
+              .insert({
+                id: newProfileId,
+                auth_uid: user.id,
+                email: user.email,
+                name: user.email?.split('@')[0] || 'Admin',
+                roles: '["ADMIN"]',
+              });
+
+            if (!insertError) {
+              profileId = newProfileId;
+            } else {
+              console.warn('Could not create profile:', insertError);
+            }
+          }
+        }
+
+        // Check if test already exists
+        const { data: existingTest } = await supabase
+          .from('2V_tests')
+          .select('id')
+          .eq('test_type', newTestMetadata.test_type)
+          .eq('exercise_type', newTestMetadata.exercise_type)
+          .eq('test_number', newTestMetadata.test_number)
+          .single();
+
+        if (existingTest) {
+          // Test exists - reuse it, don't create new entry
+          testId = existingTest.id;
+          console.log(`✓ Test already exists, reusing test_id: ${testId}`);
+        } else {
+          // New test - create ONE entry in 2V_tests
+          testId = crypto.randomUUID();
+          const { error: testInsertError } = await supabase
+            .from('2V_tests')
+            .insert({
+              id: testId,
+              test_type: newTestMetadata.test_type,
+              exercise_type: newTestMetadata.exercise_type,
+              test_number: newTestMetadata.test_number,
+              format: 'interactive',
+              is_active: true,
+              created_by: profileId,
+            });
+
+          if (testInsertError) {
+            console.error('Error inserting test:', testInsertError);
+            throw new Error(`Failed to create test: ${testInsertError.message}`);
+          }
+          console.log(`✓ Created new test in 2V_tests with id: ${testId}`);
+        }
+        testType = newTestMetadata.test_type;
+        pdfUrl = firstSection.testPdfUrl;
+      } else {
+        // EXISTING test mode: Use existing test
+        testId = selectedTest!.test_id;
+        testType = selectedTest!.test_type;
+        pdfUrl = selectedTest!.pdf_url;
+      }
 
       // Prepare conversion info for audit trail
       const conversionInfo = {
@@ -923,26 +1346,40 @@ export default function PDFToLatexConverterPage() {
           output: apiUsage.output_tokens,
           total: apiUsage.total_tokens
         } : null,
-        pdf_url: selectedTest.pdf_url,
+        pdf_url: pdfUrl,
         questions_converted: convertedQuestions.length,
         // Track special features
         has_image_extraction: convertedQuestions.some((q: any) => q.has_image && q.image_url),
         has_graph_recreation: convertedQuestions.some((q: any) => q.has_graph_latex || q.recreate_graph),
-        has_generated_options: convertedQuestions.some((q: any) => q.generated_options)
+        has_generated_options: convertedQuestions.some((q: any) => q.generated_options),
+        mode: mode, // Track whether this was existing or new test
       };
 
       // Images already extracted during conversion phase
       // Create a map of passages by ID for easy lookup
       const passageMap = new Map(passages.map(p => [p.passage_id, p]));
 
-      // Transform to new format and UPDATE existing questions
+      // For new tests, we need to assign questions to their respective test sections
+      const testIdsBySection = new Map<string, string>();
+      if (mode === 'new') {
+        uploadedSections.forEach(section => {
+          testIdsBySection.set(section.section, `${testId}_${section.section}`);
+        });
+      }
+
+      // Transform to new format and UPDATE/INSERT questions
       const questionsToUpdate = convertedQuestions.map((q: any) => {
         // Get passage data if this question references one
         const passage = q.passage_id ? passageMap.get(q.passage_id) : null;
 
+        // For new tests, use the section-specific test ID
+        const questionTestId = mode === 'new' && testIdsBySection.has(q.section)
+          ? testIdsBySection.get(q.section)!
+          : testId;
+
         return {
-          test_id: testId,
-          test_type: selectedTest.test_type,
+          test_id: questionTestId,
+          test_type: testType,
           question_number: q.question_number,
           question_type: 'multiple_choice',
           section: q.section,
@@ -951,7 +1388,7 @@ export default function PDFToLatexConverterPage() {
             question_text_eng: q.question_text_eng,
             options: q.options,
             options_eng: q.options_eng,
-            pdf_url: selectedTest.pdf_url,
+            pdf_url: pdfUrl,
             page_number: q.page_number,
             has_image: q.has_image || false,
             image_url: q.image_url || null,
@@ -975,8 +1412,8 @@ export default function PDFToLatexConverterPage() {
             recreate_all_options: q.recreate_all_options || false,
           },
           answers: {
-            correct_answer: q.correct_answer,
-            wrong_answers: Object.keys(q.options).filter((key) => key !== q.correct_answer),
+            correct_answer: q.correct_answer || 'a',
+            wrong_answers: q.options ? Object.keys(q.options).filter((key) => key !== q.correct_answer) : [],
           },
           conversion_info: conversionInfo,
           is_active: true,
@@ -984,15 +1421,21 @@ export default function PDFToLatexConverterPage() {
       });
 
       // Prepare questions for all selected tests (main + duplicates)
-      const allTestIds = [testId, ...Array.from(selectedDuplicates)];
+      // For new tests, only use the main test ID. For existing tests, include duplicates
+      const allTestIds = mode === 'new'
+        ? [testId]
+        : [testId, ...Array.from(selectedDuplicates)];
 
       console.log(`Preparing questions for ${allTestIds.length} test(s)`);
 
       // Fetch existing question IDs (if questions already exist, we'll reuse their IDs)
-      const { data: existingQuestions } = await supabase
-        .from('2V_questions')
-        .select('id, test_id, question_number')
-        .in('test_id', allTestIds);
+      // Skip this for new tests since they won't have existing questions
+      const { data: existingQuestions } = mode === 'new'
+        ? { data: null }
+        : await supabase
+            .from('2V_questions')
+            .select('id, test_id, question_number')
+            .in('test_id', allTestIds);
 
       const existingIdMap = new Map<string, string>(); // "test_id:question_number" -> id
       (existingQuestions || []).forEach((q: any) => {
@@ -1033,7 +1476,7 @@ export default function PDFToLatexConverterPage() {
           return {
             id: currentQuestionId, // Pre-generated UUID
             test_id: currentTestId,
-            test_type: selectedTest.test_type,
+            test_type: testType,
             question_number: q.question_number,
             question_type: 'multiple_choice',
             section: q.section,
@@ -1042,7 +1485,7 @@ export default function PDFToLatexConverterPage() {
               question_text_eng: q.question_text_eng,
               options: q.options,
               options_eng: q.options_eng,
-              pdf_url: selectedTest.pdf_url,
+              pdf_url: pdfUrl,
               page_number: q.page_number,
               has_image: q.has_image || false,
               image_url: q.image_url || null,
@@ -1064,8 +1507,8 @@ export default function PDFToLatexConverterPage() {
               recreate_all_options: q.recreate_all_options || false,
             },
             answers: {
-              correct_answer: q.correct_answer,
-              wrong_answers: Object.keys(q.options).filter((key) => key !== q.correct_answer),
+              correct_answer: q.correct_answer || 'a',
+              wrong_answers: q.options ? Object.keys(q.options).filter((key) => key !== q.correct_answer) : [],
             },
             conversion_info: conversionInfo,
             is_active: true,
@@ -1077,12 +1520,71 @@ export default function PDFToLatexConverterPage() {
       });
 
       console.log(`Inserting ${allQuestionsToUpdate.length} questions in ONE batch with duplicate links already set`);
+      console.log('========== SOURCE CONVERTED QUESTIONS (first 2) ==========');
+      convertedQuestions.slice(0, 2).forEach(q => {
+        console.log(JSON.stringify({
+          question_number: q.question_number,
+          correct_answer: q.correct_answer,
+          has_options: !!q.options,
+          options_keys: q.options ? Object.keys(q.options) : []
+        }, null, 2));
+      });
+      console.log('==========================================================');
+
+      // Validate and clean question_data structure before insert
+      allQuestionsToUpdate.forEach((q, idx) => {
+        const data = q.question_data as any;
+
+        // Remove empty options (e.g., option e if it's empty for SAT 4-option questions)
+        if (data.options) {
+          Object.keys(data.options).forEach(key => {
+            if (!data.options[key] || data.options[key].trim() === '') {
+              delete data.options[key];
+            }
+          });
+        }
+
+        // If no valid options exist, change to open_ended
+        const hasOptions = data.options && typeof data.options === 'object' && Object.keys(data.options).length > 0;
+        if (q.question_type === 'multiple_choice' && !hasOptions) {
+          console.log(`✓ Converting Q${q.question_number} (${q.section}) to open_ended (no options found)`);
+          q.question_type = 'open_ended';
+          // Ensure options is removed for open_ended questions
+          delete data.options;
+          // Update answers structure - open_ended questions have empty wrong_answers array
+          q.answers = { correct_answer: q.answers.correct_answer || 'a', wrong_answers: [] };
+        }
+
+        if (q.question_type === 'multiple_choice') {
+          if (!data.question_text || !data.options || !data.options.a || !data.options.b) {
+            console.error(`❌ INVALID Q${q.question_number} (${q.section}):`, {
+              question_type: q.question_type,
+              question_text_length: data.question_text?.length || 0,
+              options_keys: Object.keys(data.options || {}),
+              option_a: data.options?.a,
+              option_b: data.options?.b,
+              full_data: data
+            });
+          }
+        }
+      });
+
+      // Debug: Log a few questions to see their structure
+      console.log('Sample questions being inserted (with defaults applied):');
+      allQuestionsToUpdate.slice(0, 3).forEach(q => {
+        console.log(`Q${q.question_number} (${q.question_type}):`, {
+          has_options: !!q.question_data.options,
+          answers_json: JSON.stringify(q.answers),
+          correct_answer: q.answers.correct_answer,
+          wrong_answers_count: q.answers.wrong_answers?.length || 0
+        });
+      });
 
       // Insert ALL questions in ONE operation with duplicate_question_ids already set
       const { error: updateError } = await supabase
         .from('2V_questions')
         .upsert(allQuestionsToUpdate, {
-          onConflict: 'test_id,question_number',
+          onConflict: 'test_id,question_number,section',
         });
 
       if (updateError) {
@@ -1091,27 +1593,66 @@ export default function PDFToLatexConverterPage() {
 
       console.log(`✓ Successfully inserted ${allQuestionsToUpdate.length} questions with duplicate links`);
 
-      // Update test format from 'pdf' to 'interactive' for all tests
-      const { error: testUpdateError } = await supabase
-        .from('2V_tests')
-        .update({ format: 'interactive' })
-        .in('id', allTestIds);
+      // Update test format from 'pdf' to 'interactive' for existing tests only
+      // New tests already have the correct format set
+      if (mode === 'existing') {
+        const { error: testUpdateError } = await supabase
+          .from('2V_tests')
+          .update({ format: 'interactive' })
+          .in('id', allTestIds);
 
-      if (testUpdateError) {
-        console.warn('Error updating test format:', testUpdateError);
-        // Don't throw - questions are saved, format update is secondary
+        if (testUpdateError) {
+          console.warn('Error updating test format:', testUpdateError);
+          // Don't throw - questions are saved, format update is secondary
+        }
+        console.log(`✓ Updated ${allTestIds.length} test(s) format to interactive`);
       }
 
-      console.log(`✓ Successfully updated ${allTestIds.length} test(s) with ${convertedQuestions.length} questions each`);
+      console.log(`✅ Successfully saved ${allTestIds.length} test(s) with ${convertedQuestions.length} questions each`);
+      console.log(`📍 Current mode: ${mode}, saveSuccess will be set to TRUE`);
 
       setSaveSuccess(true);
-      setTimeout(() => navigate('/admin'), 2000);
+
+      // For existing tests, navigate back to admin
+      if (mode === 'existing') {
+        setTimeout(() => navigate('/admin'), 2000);
+      }
+
+      // For new tests, clear converted questions and show NewTestCreator again
+      // This allows user to add another section or finish
+      if (mode === 'new') {
+        // Add current section(s) to saved sections list
+        const currentSections = uploadedSections.map(s => s.section);
+        setSavedSections(prev => [...prev, ...currentSections]);
+
+        // Clear state to show NewTestCreator form again
+        setTimeout(() => {
+          setConvertedQuestions([]);
+          setPassages([]);
+          setUploadedSections([]);
+          setSaveSuccess(false);
+        }, 2000); // 2 second delay to show success message
+      }
     } catch (err) {
       console.error('Save error:', err);
       setError(err instanceof Error ? err.message : 'Failed to save questions');
     } finally {
       setSaving(false);
     }
+  };
+
+  // Handler for adding another section after saving current one
+  const handleAddAnotherSection = () => {
+    // Add current section(s) to saved sections list
+    const currentSections = uploadedSections.map(s => s.section);
+    setSavedSections(prev => [...prev, ...currentSections]);
+
+    // Clear converted questions and go back to form
+    setConvertedQuestions([]);
+    setPassages([]);
+    setUploadedSections([]);
+    setError(null);
+    setSaveSuccess(false);
   };
 
   const handleEditQuestion = (index: number, field: string, value: string) => {
@@ -1538,7 +2079,18 @@ export default function PDFToLatexConverterPage() {
 
   // Open manual image selector modal
   const openImageSelector = async (index: number, target: 'question' | 'option_a' | 'option_b' | 'option_c' | 'option_d' | 'option_e' = 'question') => {
-    if (!selectedTest) return;
+    // Get PDF URL from either selected test or uploaded sections
+    let pdfUrl: string | null = null;
+    if (selectedTest) {
+      pdfUrl = selectedTest.pdf_url;
+    } else if (uploadedSections.length > 0 && uploadedSections[0].testPdfUrl) {
+      pdfUrl = uploadedSections[0].testPdfUrl;
+    }
+
+    if (!pdfUrl) {
+      alert('No PDF available for image extraction');
+      return;
+    }
 
     setImageSelectorQuestionIndex(index);
     setSelectedImageTarget(target);
@@ -1551,7 +2103,7 @@ export default function PDFToLatexConverterPage() {
 
     try {
       // Fetch PDF
-      const pdfResponse = await fetch(selectedTest.pdf_url);
+      const pdfResponse = await fetch(pdfUrl);
       const pdfBlob = await pdfResponse.blob();
       const pdfArrayBuffer = await pdfBlob.arrayBuffer();
 
@@ -1842,11 +2394,62 @@ export default function PDFToLatexConverterPage() {
           )}
 
           {saveSuccess && (
-            <div className="mb-6 bg-green-50 border-2 border-green-500 rounded-xl p-4 flex items-start gap-3">
-              <FontAwesomeIcon icon={faCheckCircle} className="text-green-500 text-xl mt-1" />
-              <div>
-                <h3 className="font-semibold text-green-900">Success!</h3>
-                <p className="text-green-700">Questions saved successfully. Redirecting...</p>
+            <div className="mb-6 bg-green-50 border-2 border-green-500 rounded-xl p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <FontAwesomeIcon icon={faCheckCircle} className="text-green-500 text-3xl" />
+                  <div>
+                    <h3 className="font-bold text-green-900 text-lg">
+                      {mode === 'new'
+                        ? 'Section saved successfully!'
+                        : 'Questions saved successfully!'}
+                    </h3>
+                    <p className="text-green-700">
+                      {mode === 'new'
+                        ? 'Returning to form to add more sections...'
+                        : 'Redirecting to admin dashboard...'}
+                    </p>
+                  </div>
+                </div>
+                {mode === 'new' && (
+                  <button
+                    onClick={() => navigate('/admin')}
+                    className="bg-green-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-green-700 transition-all shadow-lg flex items-center gap-2 whitespace-nowrap"
+                  >
+                    <FontAwesomeIcon icon={faCheckCircle} />
+                    Done - Go to Admin
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Mode Toggle */}
+          {convertedQuestions.length === 0 && (
+            <div className="max-w-4xl mx-auto mb-6">
+              <div className="bg-white rounded-xl shadow-lg p-4">
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => setMode('existing')}
+                    className={`flex-1 px-6 py-4 rounded-lg font-semibold transition-all ${
+                      mode === 'existing'
+                        ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    Convert Existing Test
+                  </button>
+                  <button
+                    onClick={() => setMode('new')}
+                    className={`flex-1 px-6 py-4 rounded-lg font-semibold transition-all ${
+                      mode === 'new'
+                        ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    Create New Test
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -1965,7 +2568,8 @@ export default function PDFToLatexConverterPage() {
                                 extractPassageOnly: true,
                                 targetQuestions: questionStart && questionEnd ?
                                   Array.from({length: questionEnd - questionStart + 1}, (_, i) => questionStart + i) :
-                                  selectedQuestionsForPassage
+                                  selectedQuestionsForPassage,
+                                languages: selectedLanguages,
                               }),
                             }
                           );
@@ -2119,8 +2723,8 @@ export default function PDFToLatexConverterPage() {
             </div>
           )}
 
-          {/* Test Selection Panel - Shows before conversion */}
-          {convertedQuestions.length === 0 && (
+          {/* Test Selection Panel - Shows before conversion (EXISTING MODE) */}
+          {convertedQuestions.length === 0 && mode === 'existing' && (
             <div className="max-w-4xl mx-auto">
               <div className="bg-white rounded-xl shadow-xl p-8">
                 <h2 className="text-2xl font-bold text-brand-dark mb-6 flex items-center gap-3">
@@ -2431,6 +3035,15 @@ export default function PDFToLatexConverterPage() {
             </div>
           )}
 
+          {/* New Test Creation Panel - Shows before conversion (NEW MODE) */}
+          {convertedQuestions.length === 0 && mode === 'new' && (
+            <NewTestCreator
+              onConvert={handleConvertNewTest}
+              converting={converting}
+              savedSections={savedSections}
+            />
+          )}
+
           {/* Full Screen Preview Mode - Real Test View */}
           {fullScreenPreview && convertedQuestions.length > 0 && (
             <div className="fixed inset-0 bg-white z-50 overflow-auto">
@@ -2478,33 +3091,35 @@ export default function PDFToLatexConverterPage() {
                     </div>
 
                     {/* Options */}
-                    <div className="space-y-3">
-                      {Object.entries(question.options).map(([key, value]) => {
-                        const hasImageOption = !!(question as any).image_options?.[key];
-                        const imageUrl = (question as any).image_options?.[key];
+                    {question.options && (
+                      <div className="space-y-3">
+                        {Object.entries(question.options).map(([key, value]) => {
+                          const hasImageOption = !!(question as any).image_options?.[key];
+                          const imageUrl = (question as any).image_options?.[key];
 
-                        return (
-                          <div key={key} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                            <span className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center font-bold text-lg">
-                              {key.toUpperCase()}
-                            </span>
-                            <div className="flex-1 pt-1">
-                              {hasImageOption ? (
-                                <img
-                                  src={imageUrl}
-                                  alt={`Option ${key.toUpperCase()}`}
-                                  className="max-w-full border border-gray-300 rounded"
-                                />
-                              ) : (
-                                <div className="text-lg">
-                                  <MathJaxRenderer>{value}</MathJaxRenderer>
-                                </div>
-                              )}
+                          return (
+                            <div key={key} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                              <span className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center font-bold text-lg">
+                                {key.toUpperCase()}
+                              </span>
+                              <div className="flex-1 pt-1">
+                                {hasImageOption ? (
+                                  <img
+                                    src={imageUrl}
+                                    alt={`Option ${key.toUpperCase()}`}
+                                    className="max-w-full border border-gray-300 rounded"
+                                  />
+                                ) : (
+                                  <div className="text-lg">
+                                    <MathJaxRenderer>{value}</MathJaxRenderer>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -2512,10 +3127,10 @@ export default function PDFToLatexConverterPage() {
           )}
 
           {/* Results View - PDF Left (Fixed), Questions Right */}
-          {!fullScreenPreview && convertedQuestions.length > 0 && selectedTest && (
+          {!fullScreenPreview && convertedQuestions.length > 0 && (mode === 'existing' ? selectedTest : mode === 'new') && (
             <div className={`${showPdfPreview ? 'lg:grid lg:grid-cols-2 lg:gap-6' : ''}`}>
               {/* Left Panel: PDF Viewer - Fixed on left */}
-              {showPdfPreview && (
+              {showPdfPreview && (mode === 'existing' ? selectedTest : uploadedSections.length > 0) && (
                 <>
                   {/* Fixed PDF Panel */}
                   <div className="bg-white rounded-xl shadow-xl p-6 lg:fixed lg:left-8 lg:top-4 lg:w-[calc(50%-2rem)] lg:h-[calc(100vh-32px)] overflow-hidden flex flex-col z-10">
@@ -2525,7 +3140,7 @@ export default function PDFToLatexConverterPage() {
                         PDF Preview
                       </h2>
                       <a
-                        href={selectedTest.pdf_url}
+                        href={mode === 'existing' ? selectedTest?.pdf_url : uploadedSections[0]?.testPdfUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
@@ -2535,7 +3150,7 @@ export default function PDFToLatexConverterPage() {
                     </div>
                     <div className="flex-1 overflow-hidden rounded-lg border-2 border-gray-300">
                       <iframe
-                        src={selectedTest.pdf_url}
+                        src={mode === 'existing' ? selectedTest?.pdf_url : uploadedSections[0]?.testPdfUrl}
                         className="w-full h-full"
                         title="PDF Preview"
                       />
@@ -2549,10 +3164,39 @@ export default function PDFToLatexConverterPage() {
               {/* Right Panel: Converted Questions */}
               <div className="bg-white rounded-xl shadow-xl p-6">
                 <div className="flex items-center justify-between mb-4 pb-4 border-b-2 border-gray-200">
-                  <h2 className="text-xl font-bold text-brand-dark flex items-center gap-2">
-                    <span className="text-2xl">✨</span>
-                    Converted Questions ({convertedQuestions.length})
-                  </h2>
+                  <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-bold text-brand-dark flex items-center gap-2">
+                      <span className="text-2xl">✨</span>
+                      Converted Questions ({convertedQuestions.length})
+                    </h2>
+
+                    {/* Language Toggle - Only show if questions have both languages */}
+                    {convertedQuestions.length > 0 &&
+                     convertedQuestions.some(q => q.question_text_eng || q.options_eng) && (
+                      <div className="flex items-center gap-2 border-2 border-gray-300 rounded-lg p-1">
+                        <button
+                          onClick={() => setViewLanguage('ITA')}
+                          className={`px-3 py-1 rounded-md text-sm font-semibold transition-all ${
+                            viewLanguage === 'ITA'
+                              ? 'bg-brand-blue text-white'
+                              : 'text-gray-600 hover:bg-gray-100'
+                          }`}
+                        >
+                          🇮🇹 Italian
+                        </button>
+                        <button
+                          onClick={() => setViewLanguage('ENG')}
+                          className={`px-3 py-1 rounded-md text-sm font-semibold transition-all ${
+                            viewLanguage === 'ENG'
+                              ? 'bg-brand-blue text-white'
+                              : 'text-gray-600 hover:bg-gray-100'
+                          }`}
+                        >
+                          🇬🇧 English
+                        </button>
+                      </div>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setFullScreenPreview(true)}
@@ -2672,7 +3316,11 @@ export default function PDFToLatexConverterPage() {
                               </div>
                             </div>
                             <div className="bg-white rounded-lg p-4 text-gray-700 whitespace-pre-wrap overflow-x-auto">
-                              <MathJaxRenderer>{passage.passage_text || ''}</MathJaxRenderer>
+                              <MathJaxRenderer>
+                                {viewLanguage === 'ENG' && passage.passage_text_eng
+                                  ? passage.passage_text_eng
+                                  : passage.passage_text || ''}
+                              </MathJaxRenderer>
                             </div>
                           </div>
                         )}
@@ -2735,7 +3383,11 @@ export default function PDFToLatexConverterPage() {
                         />
                       ) : (
                         <div className="bg-blue-50 p-4 rounded-lg mb-3 border border-blue-200 overflow-x-auto">
-                          <MathJaxRenderer>{question.question_text}</MathJaxRenderer>
+                          <MathJaxRenderer>
+                            {viewLanguage === 'ENG' && question.question_text_eng
+                              ? question.question_text_eng
+                              : question.question_text}
+                          </MathJaxRenderer>
 
                           {/* Display image(s) if present */}
                           {(question as any).image_url && (
@@ -2832,72 +3484,78 @@ export default function PDFToLatexConverterPage() {
                       )}
 
                       {/* Options */}
-                      <div className="space-y-2 mb-3">
-                        {Object.entries(question.options).map(([key, value]) => {
-                          // Debug log for image options
-                          const hasImageOption = !!(question as any).image_options?.[key];
-                          const imageUrl = (question as any).image_options?.[key];
-                          if (index === 0 && key === 'a') {
-                            console.log(`[DEBUG] Q${question.question_number} Option ${key}:`, {
-                              hasImageOption,
-                              imageUrl,
-                              allImageOptions: (question as any).image_options
-                            });
-                          }
+                      {question.options && (
+                        <>
+                          <div className="space-y-2 mb-3">
+                            {Object.entries(question.options).map(([key, value]) => {
+                              // Debug log for image options
+                              const hasImageOption = !!(question as any).image_options?.[key];
+                              const imageUrl = (question as any).image_options?.[key];
+                              if (index === 0 && key === 'a') {
+                                console.log(`[DEBUG] Q${question.question_number} Option ${key}:`, {
+                                  hasImageOption,
+                                  imageUrl,
+                                  allImageOptions: (question as any).image_options
+                                });
+                              }
 
-                          return (
-                            <div key={key} className="flex items-start gap-2">
-                              <span className={`flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center font-bold ${
-                                question.correct_answer === key
-                                  ? 'bg-green-600 text-white shadow-md'
-                                  : 'bg-gray-200 text-gray-700'
-                              }`}>
-                                {key.toUpperCase()}
-                              </span>
-                              {editingIndex === index ? (
-                                <input
-                                  type="text"
-                                  value={value}
-                                  onChange={(e) => handleEditQuestion(index, `option_${key}`, e.target.value)}
-                                  className="flex-1 px-3 py-2 border-2 border-blue-300 rounded-lg font-mono text-sm focus:ring-2 focus:ring-blue-500"
-                                />
-                              ) : (
-                                <div className={`flex-1 ${question.correct_answer === key ? 'bg-green-50 rounded-lg p-2' : 'p-2'}`}>
-                                  {/* Show option image if exists */}
-                                  {hasImageOption ? (
-                                    <div className="border-2 border-indigo-400 rounded-lg overflow-hidden bg-white p-2">
-                                      <img
-                                        src={imageUrl}
-                                        alt={`Option ${key.toUpperCase()}`}
-                                        className="w-full"
-                                        onError={(e) => {
-                                          console.error(`Failed to load image for option ${key}:`, imageUrl);
-                                          (e.target as HTMLImageElement).style.display = 'none';
-                                        }}
-                                        onLoad={() => {
-                                          console.log(`✓ Successfully loaded image for option ${key}`);
-                                        }}
-                                      />
-                                    </div>
+                              return (
+                                <div key={key} className="flex items-start gap-2">
+                                  <span className={`flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center font-bold ${
+                                    question.correct_answer === key
+                                      ? 'bg-green-600 text-white shadow-md'
+                                      : 'bg-gray-200 text-gray-700'
+                                  }`}>
+                                    {key.toUpperCase()}
+                                  </span>
+                                  {editingIndex === index ? (
+                                    <input
+                                      type="text"
+                                      value={value}
+                                      onChange={(e) => handleEditQuestion(index, `option_${key}`, e.target.value)}
+                                      className="flex-1 px-3 py-2 border-2 border-blue-300 rounded-lg font-mono text-sm focus:ring-2 focus:ring-blue-500"
+                                    />
                                   ) : (
-                                    <div className="py-2 px-3">
-                                      <MathJaxRenderer>{value}</MathJaxRenderer>
+                                    <div className={`flex-1 ${question.correct_answer === key ? 'bg-green-50 rounded-lg p-2' : 'p-2'}`}>
+                                      {/* Show option image if exists */}
+                                      {hasImageOption ? (
+                                        <div className="border-2 border-indigo-400 rounded-lg overflow-hidden bg-white p-2">
+                                          <img
+                                            src={imageUrl}
+                                            alt={`Option ${key.toUpperCase()}`}
+                                            className="w-full"
+                                            onError={(e) => {
+                                              console.error(`Failed to load image for option ${key}:`, imageUrl);
+                                              (e.target as HTMLImageElement).style.display = 'none';
+                                            }}
+                                            onLoad={() => {
+                                              console.log(`✓ Successfully loaded image for option ${key}`);
+                                            }}
+                                          />
+                                        </div>
+                                      ) : (
+                                        <div className="py-2 px-3">
+                                          <MathJaxRenderer>
+                                            {viewLanguage === 'ENG' && question.options_eng?.[key]
+                                              ? question.options_eng[key]
+                                              : value}
+                                          </MathJaxRenderer>
+                                        </div>
+                                      )}
                                     </div>
                                   )}
                                 </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
+                              );
+                            })}
+                          </div>
 
-                      {/* Correct Answer Selector */}
-                      <div className="flex items-center gap-3 bg-green-50 p-3 rounded-lg border border-green-200">
-                        <span className="font-semibold text-green-900">✓ Correct Answer:</span>
-                        <select
-                          value={question.correct_answer}
-                          onChange={(e) => handleEditQuestion(index, 'correct_answer', e.target.value)}
-                          className="px-4 py-2 border-2 border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 bg-white font-bold text-green-900"
+                          {/* Correct Answer Selector */}
+                          <div className="flex items-center gap-3 bg-green-50 p-3 rounded-lg border border-green-200">
+                            <span className="font-semibold text-green-900">✓ Correct Answer:</span>
+                            <select
+                              value={question.correct_answer}
+                              onChange={(e) => handleEditQuestion(index, 'correct_answer', e.target.value)}
+                              className="px-4 py-2 border-2 border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 bg-white font-bold text-green-900"
                         >
                           {Object.keys(question.options).map((key) => (
                             <option key={key} value={key}>
@@ -2906,6 +3564,8 @@ export default function PDFToLatexConverterPage() {
                           ))}
                         </select>
                       </div>
+                        </>
+                      )}
                         </div>
                       </div>
                     );
@@ -3215,6 +3875,16 @@ export default function PDFToLatexConverterPage() {
           </div>
         </div>
       )}
+
+      {/* Language Selection Modal */}
+      <LanguageSelectionModal
+        isOpen={showLanguageModal}
+        onClose={() => {
+          setShowLanguageModal(false);
+          setPendingConversion(null);
+        }}
+        onConfirm={handleLanguageConfirm}
+      />
     </MathJaxProvider>
   );
 }

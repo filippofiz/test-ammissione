@@ -31,7 +31,8 @@
     "react-katex": "^3.1.0",
     "react-pdf": "^10.2.0",
     "react-router-dom": "^6.28.0",
-    "react-select": "^5.10.2"
+    "react-select": "^5.10.2",
+    "recharts": "^3.5.1"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",

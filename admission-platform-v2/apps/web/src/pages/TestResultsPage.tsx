@@ -200,8 +200,8 @@ export default function TestResultsPage() {
         .from('2V_student_answers')
         .select('question_id, created_at, updated_at, attempt_number, question_order')
         .eq('assignment_id', assignmentId)
-        .order('created_at', { ascending: true, nullsFirst: false })
-        .order('question_order', { ascending: true, nullsFirst: false });
+        .order('question_order', { ascending: true, nullsFirst: false })
+        .order('created_at', { ascending: true, nullsFirst: false });
 
       if (answersError) throw answersError;
 
@@ -275,14 +275,22 @@ export default function TestResultsPage() {
         .map(id => questionMap.get(id))
         .filter((q: any) => q !== undefined);
 
-      // Final sort by question number as tiebreaker (in case question_order and created_at are same)
+      // Sort by question_order (primary), then created_at (secondary), then question_number (tertiary)
       const answerOrderMap = new Map(answers.map((a, idx) => [a.question_id, idx]));
+      const answerCreatedAtMap = new Map(answers.map(a => [a.question_id, new Date(a.created_at).getTime()]));
+
       questions.sort((a, b) => {
+        // Primary: question_order from answer
         const orderA = answerOrderMap.get(a.id) ?? 999999;
         const orderB = answerOrderMap.get(b.id) ?? 999999;
         if (orderA !== orderB) return orderA - orderB;
 
-        // Tiebreaker: use question number from question data
+        // Secondary: created_at timestamp
+        const timeA = answerCreatedAtMap.get(a.id) ?? 999999999999999;
+        const timeB = answerCreatedAtMap.get(b.id) ?? 999999999999999;
+        if (timeA !== timeB) return timeA - timeB;
+
+        // Tertiary: question number from question data
         const numA = a.question_number || 0;
         const numB = b.question_number || 0;
         return numA - numB;
