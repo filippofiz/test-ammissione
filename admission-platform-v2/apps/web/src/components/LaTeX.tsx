@@ -66,7 +66,8 @@ export const LaTeX: React.FC<LaTeXProps> = ({ children, className = '' }) => {
       const looksLikeMath = possibleMathContent && /[<>=\\^_{}a-zA-Z]/.test(possibleMathContent);
 
       if (!looksLikeMath) {
-        const currencyMatch = remaining.match(/^\$([\d,]+(?:\.\d+)?(?:[MKBmkb]|million|thousand|billion)?)(?=\s|[.,;:!?)]|$)/);
+        // Check for currency - but NOT if followed by another $ (which would make it $...$)
+        const currencyMatch = remaining.match(/^\$([\d,]+(?:\.\d+)?(?:[MKBmkb]|million|thousand|billion)?)(?=\s|[.,;:!?)]|$)(?!\$)/);
         if (currencyMatch) {
           // This is a standalone currency amount, render as plain text
           parts.push(<span key={key++}>{currencyMatch[0]}</span>);
@@ -80,10 +81,41 @@ export const LaTeX: React.FC<LaTeXProps> = ({ children, className = '' }) => {
       if (inlineMatch) {
         const content = inlineMatch[1];
 
+        // SPECIAL CASE: If content starts with ^ or _ (superscript/subscript),
+        // merge it with the previous plain text part to create proper LaTeX
+        if (/^[\^_]/.test(content) && parts.length > 0) {
+          const lastPart = parts[parts.length - 1];
+
+          // Check if last part was plain text (a span element)
+          if (React.isValidElement(lastPart) && lastPart.type === 'span') {
+            const prevText = lastPart.props.children;
+
+            // Extract the last word/number from previous text
+            const match = typeof prevText === 'string' ? prevText.match(/([a-zA-Z0-9./]+)$/):null;
+
+            if (match) {
+              const baseText = match[1]; // e.g., "m" or "kg/m"
+              const prefix = prevText.substring(0, prevText.length - baseText.length);
+
+              // Remove the last part and add two new parts:
+              // 1. The prefix as plain text
+              // 2. The base + superscript as math
+              parts.pop();
+              if (prefix) {
+                parts.push(<span key={key++}>{prefix}</span>);
+              }
+              parts.push(<InlineMath key={key++} math={baseText + content} />);
+              remaining = remaining.slice(inlineMatch[0].length);
+              continue;
+            }
+          }
+        }
+
         // Check if this contains LaTeX/math operators
-        // Include: backslash, ^, _, {, }, common math operators like =, !, <, >
+        // Include: backslash, ^, _, {, }, common math operators like =, !, <, >, +, -, *, /
         // Also include Unicode math symbols: ≥, ≤, ≠, ×, ÷, ±, etc.
-        const hasMathOperators = /[\\^_{}=!<>≥≤≠×÷±∞∑∏∫√π∈∉⊂⊃∪∩]/.test(content);
+        // Do NOT include letters here - they're checked separately in isLikelyMath
+        const hasMathOperators = /[\\^_{}=!<>\+\-\*\/≥≤≠×÷±∞∑∏∫√π∈∉⊂⊃∪∩]/.test(content);
 
         // Reject long text or text with multiple spaces as not being math
         // UNLESS it contains math operators (then it's definitely math)
@@ -99,8 +131,9 @@ export const LaTeX: React.FC<LaTeXProps> = ({ children, className = '' }) => {
         }
 
         // Check if this looks like actual LaTeX math
-        // Math contains: letters, backslashes, ^, _, {, }, comparison operators (<, >, =), or coordinate notation (parentheses, commas)
-        const isLikelyMath = /[a-zA-Z\\^_{}<=>\+\-\*\/(),]/.test(content);
+        // Math contains: letters, backslashes, ^, _, {, }, comparison operators (<, >, =), coordinate notation, OR numbers (including decimals with .)
+        // Anything wrapped in $...$ should be rendered as math
+        const isLikelyMath = /[a-zA-Z\\^_{}<=>\+\-\*\/(),\d\.]/.test(content);
 
         if (isLikelyMath) {
           // This is LaTeX math - render it
@@ -108,7 +141,7 @@ export const LaTeX: React.FC<LaTeXProps> = ({ children, className = '' }) => {
           remaining = remaining.slice(inlineMatch[0].length);
           continue;
         } else {
-          // Not LaTeX math (just plain numbers), treat as currency
+          // Not LaTeX math, render as plain text with dollar signs
           parts.push(<span key={key++}>{inlineMatch[0]}</span>);
           remaining = remaining.slice(inlineMatch[0].length);
           continue;
@@ -158,6 +191,20 @@ export const LaTeX: React.FC<LaTeXProps> = ({ children, className = '' }) => {
         // Add text before next delimiter as plain text
         const plainText = remaining.slice(0, nextDelimiter);
         if (plainText) {
+          // Check if this plain text ends with a number and next char is $ (European currency)
+          // AND the $ is followed by space/punctuation/end (not another $ for inline math)
+          if (delimiterType === 'dollar' && /[\d,]+(?:\.\d+)?$/.test(plainText)) {
+            const charAfterDollar = remaining[nextDelimiter + 1];
+            const isEuropeanCurrency = !charAfterDollar || /[\s.,;:!?)]/.test(charAfterDollar);
+
+            if (isEuropeanCurrency) {
+              // Include the $ as part of the currency
+              parts.push(<span key={key++}>{plainText}$</span>);
+              remaining = remaining.slice(nextDelimiter + 1); // Skip past the $
+              continue;
+            }
+          }
+
           parts.push(<span key={key++}>{plainText}</span>);
         }
         remaining = remaining.slice(nextDelimiter);

@@ -30,6 +30,7 @@ import {
 import { Layout } from '../components/Layout';
 import { MathJaxProvider, MathJaxRenderer } from '../components/MathJaxRenderer';
 import { AdvancedGraphRenderer } from '../components/GraphRenderer';
+import RechartsRenderer from '../components/RechartsRenderer';
 import { supabase } from '../lib/supabase';
 import * as pdfjsLib from 'pdfjs-dist';
 
@@ -67,6 +68,7 @@ interface Question {
   question_data: any;
   answers: any;
   is_active: boolean;
+  review_info: ReviewInfo | null;
 }
 
 interface AIReviewResult {
@@ -110,6 +112,7 @@ export default function ReviewQuestionsPage() {
   const [formatFilter, setFormatFilter] = useState<'all' | 'pdf' | 'interactive' | 'mixed'>('all');
   const [reviewedFilter, setReviewedFilter] = useState<'all' | 'reviewed' | 'unreviewed'>('all');
   const [flaggedFilter, setFlaggedFilter] = useState<'all' | 'flagged' | 'not_flagged'>('all');
+  const [sectionFilter, setSectionFilter] = useState<string>('all');
 
   // Questions state
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -143,6 +146,18 @@ export default function ReviewQuestionsPage() {
   const [showRegenerateModal, setShowRegenerateModal] = useState(false);
   const [regenerateQuestionId, setRegenerateQuestionId] = useState<string | null>(null);
   const [regenerateFeedback, setRegenerateFeedback] = useState('');
+
+  // Image action modal
+  const [showImageActionModal, setShowImageActionModal] = useState(false);
+  const [imageActionQuestionId, setImageActionQuestionId] = useState<string | null>(null);
+  const [imageExtractionProgress, setImageExtractionProgress] = useState<number>(0);
+  const [extractingImage, setExtractingImage] = useState(false);
+  const [recreateWithPython, setRecreateWithPython] = useState(false);
+  const [recreateWithRecharts, setRecreateWithRecharts] = useState(false);
+
+  // Recharts code editing
+  const [editingRechartsCode, setEditingRechartsCode] = useState<string | null>(null);
+  const [rechartsCodeQuestionId, setRechartsCodeQuestionId] = useState<string | null>(null);
 
   // Per-question language override (null = use global viewLanguage)
   const [questionLanguageOverrides, setQuestionLanguageOverrides] = useState<Record<string, 'it' | 'en'>>({});
@@ -354,6 +369,50 @@ export default function ReviewQuestionsPage() {
     }
   }
 
+  async function markQuestionAsReviewed(questionId: string) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      const reviewInfo: ReviewInfo = {
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: user?.id || 'unknown',
+        reviewed_by_email: user?.email || 'unknown',
+      };
+
+      const { error } = await supabase
+        .from('2V_questions')
+        .update({ review_info: reviewInfo })
+        .eq('id', questionId);
+
+      if (error) throw error;
+
+      setQuestions(prev => prev.map(q =>
+        q.id === questionId ? { ...q, review_info: reviewInfo } : q
+      ));
+    } catch (err) {
+      console.error('Error marking question as reviewed:', err);
+      alert('Failed to mark question as reviewed');
+    }
+  }
+
+  async function markQuestionAsUnreviewed(questionId: string) {
+    try {
+      const { error } = await supabase
+        .from('2V_questions')
+        .update({ review_info: null })
+        .eq('id', questionId);
+
+      if (error) throw error;
+
+      setQuestions(prev => prev.map(q =>
+        q.id === questionId ? { ...q, review_info: null } : q
+      ));
+    } catch (err) {
+      console.error('Error marking question as unreviewed:', err);
+      alert('Failed to mark question as unreviewed');
+    }
+  }
+
   // Edit question handlers
   const handleEditQuestion = (questionId: string, field: string, value: any) => {
     setQuestions(prev => prev.map(q => {
@@ -361,16 +420,32 @@ export default function ReviewQuestionsPage() {
 
       const updated = { ...q };
 
-      if (field === 'question_text') {
-        updated.question_data = { ...updated.question_data, question_text: value };
+      if (field === 'question_text' || field === 'question_text_eng') {
+        updated.question_data = { ...updated.question_data, [field]: value };
       } else if (field === 'correct_answer') {
         updated.answers = { ...updated.answers, correct_answer: value };
       } else if (field.startsWith('option_')) {
-        const optionKey = field.replace('option_', '');
-        updated.question_data = {
-          ...updated.question_data,
-          options: { ...updated.question_data.options, [optionKey]: value }
-        };
+        // Handle language-specific options (e.g., option_a_eng, option_a_it)
+        if (field.endsWith('_eng')) {
+          const optionKey = field.replace('option_', '').replace('_eng', '');
+          updated.question_data = {
+            ...updated.question_data,
+            options_eng: { ...updated.question_data.options_eng, [optionKey]: value }
+          };
+        } else if (field.endsWith('_it')) {
+          const optionKey = field.replace('option_', '').replace('_it', '');
+          updated.question_data = {
+            ...updated.question_data,
+            options: { ...updated.question_data.options, [optionKey]: value }
+          };
+        } else {
+          // Legacy format without language suffix - default to Italian
+          const optionKey = field.replace('option_', '');
+          updated.question_data = {
+            ...updated.question_data,
+            options: { ...updated.question_data.options, [optionKey]: value }
+          };
+        }
       }
 
       return updated;
@@ -823,6 +898,167 @@ export default function ReviewQuestionsPage() {
     }
   };
 
+  // Delete Recharts code and go back to image
+  const handleDeleteRechartsCode = async (questionId: string) => {
+    if (!confirm('Are you sure you want to remove the Recharts graph and go back to the static image?')) {
+      return;
+    }
+
+    try {
+      const question = questions.find(q => q.id === questionId);
+      if (!question) return;
+
+      const updatedData = {
+        ...question.question_data,
+        recharts_code: null,
+        graph_type: null,
+      };
+
+      const { error } = await supabase
+        .from('2V_questions')
+        .update({ question_data: updatedData })
+        .eq('id', questionId);
+
+      if (error) throw error;
+
+      setQuestions(prev => prev.map(q =>
+        q.id === questionId
+          ? { ...q, question_data: updatedData }
+          : q
+      ));
+
+      console.log('✓ Recharts code removed, showing static image');
+    } catch (err) {
+      console.error('Error deleting Recharts code:', err);
+      alert('Failed to delete Recharts code');
+    }
+  };
+
+  // Save edited Recharts code
+  const handleSaveRechartsCode = async () => {
+    if (!rechartsCodeQuestionId || !editingRechartsCode) return;
+
+    try {
+      const question = questions.find(q => q.id === rechartsCodeQuestionId);
+      if (!question) return;
+
+      const updatedData = {
+        ...question.question_data,
+        recharts_code: editingRechartsCode,
+      };
+
+      const { error } = await supabase
+        .from('2V_questions')
+        .update({ question_data: updatedData })
+        .eq('id', rechartsCodeQuestionId);
+
+      if (error) throw error;
+
+      setQuestions(prev => prev.map(q =>
+        q.id === rechartsCodeQuestionId
+          ? { ...q, question_data: updatedData }
+          : q
+      ));
+
+      setEditingRechartsCode(null);
+      setRechartsCodeQuestionId(null);
+      alert('✅ Recharts code updated successfully!');
+    } catch (err) {
+      console.error('Error saving Recharts code:', err);
+      alert('Failed to save Recharts code');
+    }
+  };
+
+  // Recreate graph with Recharts using Claude API
+  const handleRecreateGraphWithRecharts = async (questionId: string) => {
+    setGeneratingGraph(questionId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Not authenticated');
+      }
+
+      const question = questions.find(q => q.id === questionId);
+      if (!question) return;
+
+      // Check if question has an image
+      const imageUrl = question.question_data?.image_url || question.question_data?.graph_url;
+      if (!imageUrl) {
+        alert('Please extract an image from PDF first before recreating the graph.');
+        setGeneratingGraph(null);
+        return;
+      }
+
+      console.log(`📊 Recreating graph with Recharts for Q${question.question_number}`);
+
+      // Fetch the image as base64
+      const imageResponse = await fetch(imageUrl);
+      const imageBlob = await imageResponse.blob();
+      const base64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const result = reader.result as string;
+          resolve(result.split(',')[1]); // Remove data:image/png;base64, prefix
+        };
+        reader.readAsDataURL(imageBlob);
+      });
+
+      // Call the edge function
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/recreate-graph-with-recharts`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            imageBase64: base64,
+            width: question.question_data?.image_width || 800,
+            height: question.question_data?.image_height || 600,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Recharts generation failed:', errorData);
+        throw new Error(errorData.error || 'Recharts generation failed');
+      }
+
+      const data = await response.json();
+      console.log('Recharts code generated:', data);
+
+      if (data.rechartsCode) {
+        const updatedData = {
+          ...question.question_data,
+          recharts_code: data.rechartsCode,
+          graph_type: 'recharts',
+          recreate_graph: true,
+        };
+
+        await supabase
+          .from('2V_questions')
+          .update({ question_data: updatedData })
+          .eq('id', questionId);
+
+        setQuestions(prev => prev.map(q =>
+          q.id === questionId
+            ? { ...q, question_data: updatedData }
+            : q
+        ));
+
+        alert('✅ Graph recreated with Recharts! Check the question data.');
+        console.log(`✓ Recharts code generated for Q${question.question_number}`);
+      }
+    } catch (err) {
+      console.error('Error generating Recharts code:', err);
+      alert('Failed to generate Recharts code: ' + (err as Error).message);
+    } finally {
+      setGeneratingGraph(null);
+    }
+  };
+
   // Image management functions
   const handleAddImage = (questionId: string) => {
     const question = questions.find(q => q.id === questionId);
@@ -1045,8 +1281,103 @@ export default function ReviewQuestionsPage() {
       }
 
       console.log(`✅ Successfully extracted ${extractedImages.length} images`);
+      console.log('  → recreateWithRecharts flag after extraction:', recreateWithRecharts);
+      console.log('  → recreateWithPython flag after extraction:', recreateWithPython);
 
-      setAvailableImages(extractedImages);
+      // Python recreation if enabled
+      if (recreateWithPython && extractedImages.length > 0) {
+        setExtractingImage(true);
+        setLoadingImages(false);
+
+        try {
+          console.log(`🐍 Recreating ${extractedImages.length} images with Python API...`);
+          const recreatedImages: { url: string; width: number; height: number; y: number }[] = [];
+
+          for (let i = 0; i < extractedImages.length; i++) {
+            setImageExtractionProgress(Math.round(((i + 1) / extractedImages.length) * 100));
+
+            const img = extractedImages[i];
+
+            // Convert image to base64
+            const response = await fetch(img.url);
+            const blob = await response.blob();
+            const arrayBuffer = await blob.arrayBuffer();
+            const bytes = new Uint8Array(arrayBuffer);
+            let binary = '';
+            for (let j = 0; j < bytes.byteLength; j++) {
+              binary += String.fromCharCode(bytes[j]);
+            }
+            const imageBase64 = btoa(binary);
+
+            // Call Python API to recreate image
+            const { data: sessionData } = await supabase.auth.getSession();
+            const token = sessionData?.session?.access_token;
+
+            if (!token) throw new Error('Not authenticated');
+
+            console.log(`  🔄 Recreating image ${i + 1}/${extractedImages.length}...`);
+
+            const pythonResponse = await fetch(
+              `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/recreate-image-python`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                  imageBase64,
+                  width: img.width,
+                  height: img.height,
+                }),
+              }
+            );
+
+            if (!pythonResponse.ok) {
+              console.error(`  ✗ Python recreation failed for image ${i + 1}`);
+              // Fallback to original image
+              recreatedImages.push(img);
+              continue;
+            }
+
+            const pythonData = await pythonResponse.json();
+
+            if (pythonData.recreatedImageBase64) {
+              // Convert base64 back to blob URL
+              const binaryString = atob(pythonData.recreatedImageBase64);
+              const bytes = new Uint8Array(binaryString.length);
+              for (let j = 0; j < binaryString.length; j++) {
+                bytes[j] = binaryString.charCodeAt(j);
+              }
+              const recreatedBlob = new Blob([bytes], { type: 'image/png' });
+              const recreatedUrl = URL.createObjectURL(recreatedBlob);
+
+              recreatedImages.push({
+                url: recreatedUrl,
+                width: pythonData.width || img.width,
+                height: pythonData.height || img.height,
+                y: img.y,
+              });
+              console.log(`  ✅ Image ${i + 1} recreated successfully`);
+            } else {
+              // Fallback to original
+              recreatedImages.push(img);
+            }
+          }
+
+          console.log(`✅ Python recreation complete: ${recreatedImages.length} images`);
+          setAvailableImages(recreatedImages);
+        } catch (err) {
+          console.error('Python recreation error:', err);
+          alert(`Python recreation failed: ${err.message}. Showing original images.`);
+          setAvailableImages(extractedImages);
+        } finally {
+          setExtractingImage(false);
+          setImageExtractionProgress(0);
+        }
+      } else {
+        setAvailableImages(extractedImages);
+      }
     } catch (err) {
       console.error('Error extracting images:', err);
       alert('Failed to extract images from PDF');
@@ -1057,6 +1388,10 @@ export default function ReviewQuestionsPage() {
 
   const handleSelectImage = async (imageUrl: string) => {
     if (!currentImageQuestionId) return;
+
+    console.log('📸 User selected image');
+    console.log('  → recreateWithRecharts state:', recreateWithRecharts);
+    console.log('  → recreateWithPython state:', recreateWithPython);
 
     setUploadingImage(true);
     try {
@@ -1153,6 +1488,23 @@ export default function ReviewQuestionsPage() {
         console.log('  ✓ Local state updated');
       }
 
+      // If recreating with Recharts, trigger it now
+      console.log('  🔍 Checking Recharts flag:', { recreateWithRecharts, currentImageQuestionId });
+      if (recreateWithRecharts && currentImageQuestionId) {
+        console.log('🤖 Auto-triggering Recharts recreation...');
+        setRecreateWithRecharts(false);
+        // Clean up modal first
+        availableImages.forEach(img => URL.revokeObjectURL(img.url));
+        setAvailableImages([]);
+        setShowImageSourceModal(false);
+        const questionId = currentImageQuestionId;
+        setCurrentImageQuestionId(null);
+        // Then trigger recreation
+        handleRecreateGraphWithRecharts(questionId);
+        console.log('✅ Image uploaded, Recharts recreation triggered!');
+        return;
+      }
+
       // Clean up
       console.log('  🧹 Cleaning up...');
       availableImages.forEach(img => URL.revokeObjectURL(img.url));
@@ -1163,6 +1515,8 @@ export default function ReviewQuestionsPage() {
     } catch (err) {
       console.error('❌ Error uploading image:', err);
       alert(`Failed to upload image: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setRecreateWithRecharts(false);
+      setRecreateWithPython(false);
     } finally {
       setUploadingImage(false);
     }
@@ -1498,7 +1852,7 @@ export default function ReviewQuestionsPage() {
                     <div className="flex items-center justify-between">
                       <h2 className="text-xl font-bold text-brand-dark flex items-center gap-2">
                         <span className="text-2xl">✨</span>
-                        Questions ({questions.length})
+                        Questions ({sectionFilter === 'all' ? questions.length : `${questions.filter(q => q.section === sectionFilter).length}/${questions.length}`})
                       </h2>
                       <div className="flex items-center gap-2">
                         {selectedTest.review_info ? (
@@ -1531,32 +1885,49 @@ export default function ReviewQuestionsPage() {
                       </div>
                     </div>
 
-                    {/* Language Toggle and AI Check */}
-                    <div className="flex items-center justify-between">
-                      {/* Language Toggle */}
-                      <div className="flex items-center gap-2">
-                        <FontAwesomeIcon icon={faLanguage} className="text-gray-500" />
-                        <div className="flex rounded-lg overflow-hidden border border-gray-300">
-                          <button
-                            onClick={() => setViewLanguage('it')}
-                            className={`px-3 py-1.5 text-sm font-medium transition ${
-                              viewLanguage === 'it'
-                                ? 'bg-brand-green text-white'
-                                : 'bg-white text-gray-700 hover:bg-gray-100'
-                            }`}
+                    {/* Language Toggle, Section Filter and AI Check */}
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-3">
+                        {/* Language Toggle */}
+                        <div className="flex items-center gap-2">
+                          <FontAwesomeIcon icon={faLanguage} className="text-gray-500" />
+                          <div className="flex rounded-lg overflow-hidden border border-gray-300">
+                            <button
+                              onClick={() => setViewLanguage('it')}
+                              className={`px-3 py-1.5 text-sm font-medium transition ${
+                                viewLanguage === 'it'
+                                  ? 'bg-brand-green text-white'
+                                  : 'bg-white text-gray-700 hover:bg-gray-100'
+                              }`}
+                            >
+                              🇮🇹 IT
+                            </button>
+                            <button
+                              onClick={() => setViewLanguage('en')}
+                              className={`px-3 py-1.5 text-sm font-medium transition ${
+                                viewLanguage === 'en'
+                                  ? 'bg-brand-green text-white'
+                                  : 'bg-white text-gray-700 hover:bg-gray-100'
+                              }`}
+                            >
+                              🇬🇧 EN
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Section Filter */}
+                        <div className="flex items-center gap-2">
+                          <FontAwesomeIcon icon={faFilter} className="text-gray-500" />
+                          <select
+                            value={sectionFilter}
+                            onChange={(e) => setSectionFilter(e.target.value)}
+                            className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green bg-white"
                           >
-                            🇮🇹 IT
-                          </button>
-                          <button
-                            onClick={() => setViewLanguage('en')}
-                            className={`px-3 py-1.5 text-sm font-medium transition ${
-                              viewLanguage === 'en'
-                                ? 'bg-brand-green text-white'
-                                : 'bg-white text-gray-700 hover:bg-gray-100'
-                            }`}
-                          >
-                            🇬🇧 EN
-                          </button>
+                            <option value="all">All Sections</option>
+                            {[...new Set(questions.map(q => q.section))].sort().map(section => (
+                              <option key={section} value={section}>{section}</option>
+                            ))}
+                          </select>
                         </div>
                       </div>
 
@@ -1588,7 +1959,9 @@ export default function ReviewQuestionsPage() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {questions.map((question, index) => {
+                      {questions
+                        .filter(q => sectionFilter === 'all' || q.section === sectionFilter)
+                        .map((question, index) => {
                         const isFlagged = flaggedQuestionIds.has(question.id);
                         const localizedOptions = getLocalizedOptions(question);
 
@@ -1668,22 +2041,52 @@ export default function ReviewQuestionsPage() {
                                   FLAGGED
                                 </span>
                               )}
-                              {/* Per-question language toggle */}
-                              <button
-                                onClick={() => toggleQuestionLanguage(question.id)}
-                                className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded hover:bg-gray-200"
-                                title="Toggle language for this question"
-                              >
-                                {getQuestionLanguage(question.id) === 'it' ? '🇮🇹' : '🇬🇧'}
-                              </button>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {/* Mark as Reviewed Button */}
+                                {question.review_info ? (
+                                  <button
+                                    onClick={() => markQuestionAsUnreviewed(question.id)}
+                                    className="px-3 py-1 bg-green-100 text-green-700 border border-green-300 rounded-lg hover:bg-green-200 transition-colors flex items-center gap-1 text-xs font-semibold"
+                                    title={`Reviewed by ${question.review_info.reviewed_by_email} on ${new Date(question.review_info.reviewed_at).toLocaleDateString()}`}
+                                  >
+                                    <FontAwesomeIcon icon={faCheckCircle} className="text-green-600" />
+                                    Reviewed
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => markQuestionAsReviewed(question.id)}
+                                    className="px-3 py-1 bg-gray-100 text-gray-700 border border-gray-300 rounded-lg hover:bg-green-100 hover:text-green-700 hover:border-green-300 transition-colors flex items-center gap-1 text-xs font-semibold"
+                                    title="Mark this question as reviewed"
+                                  >
+                                    <FontAwesomeIcon icon={faCheckCircle} />
+                                    Mark Reviewed
+                                  </button>
+                                )}
+                                {/* Per-question language toggle */}
+                                <button
+                                  onClick={() => toggleQuestionLanguage(question.id)}
+                                  className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded hover:bg-gray-200"
+                                  title="Toggle language for this question"
+                                >
+                                  {getQuestionLanguage(question.id) === 'it' ? '🇮🇹' : '🇬🇧'}
+                                </button>
+                              </div>
                             </div>
                             <div className="flex items-center gap-1">
                               <span className={`text-xs px-2 py-1 rounded ${
                                 question.question_type === 'multiple_choice'
                                   ? 'bg-green-100 text-green-700'
+                                  : question.question_type === 'open_ended'
+                                  ? 'bg-purple-100 text-purple-700'
+                                  : question.question_type === 'data_insights'
+                                  ? 'bg-blue-100 text-blue-700'
                                   : 'bg-gray-100 text-gray-700'
                               }`}>
-                                {question.question_type === 'multiple_choice' ? 'Interactive' : 'PDF'}
+                                {question.question_type === 'multiple_choice' ? 'Multiple Choice'
+                                : question.question_type === 'open_ended' ? 'Open Ended'
+                                : question.question_type === 'data_insights' ? 'Data Insights'
+                                : 'PDF'}
                               </span>
                               {question.question_data?.page_number && (
                                 <span className="text-xs text-gray-500">
@@ -1767,14 +2170,20 @@ export default function ReviewQuestionsPage() {
                                 </button>
                               )}
                             </div>
-                          </div>
 
                           {/* Question Text */}
                           <div className="bg-blue-50 p-4 rounded-lg mb-3 border border-blue-200 overflow-x-auto">
                             {editingQuestionId === question.id ? (
                               <textarea
-                                value={question.question_data?.question_text || ''}
-                                onChange={(e) => handleEditQuestion(question.id, 'question_text', e.target.value)}
+                                value={
+                                  getQuestionLanguage(question.id) === 'en'
+                                    ? (question.question_data?.question_text_eng || '')
+                                    : (question.question_data?.question_text || '')
+                                }
+                                onChange={(e) => {
+                                  const field = getQuestionLanguage(question.id) === 'en' ? 'question_text_eng' : 'question_text';
+                                  handleEditQuestion(question.id, field, e.target.value);
+                                }}
                                 className="w-full p-3 border border-blue-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent min-h-[100px] font-mono text-sm"
                                 placeholder="Enter question text (supports LaTeX)"
                               />
@@ -1863,8 +2272,54 @@ export default function ReviewQuestionsPage() {
                               </div>
                             )}
 
-                            {/* Image if present (only show if no graph recreation) */}
-                            {question.question_data?.image_url && !question.question_data?.recreate_graph && (
+                            {/* Recharts recreation if present */}
+                            {question.question_data?.recharts_code && (
+                              <div className="mt-3">
+                                <div className="mb-2 flex items-center gap-2 justify-between">
+                                  <span className="text-xs font-semibold text-indigo-700 bg-indigo-50 px-2 py-1 rounded">
+                                    🤖 Interactive Recharts Graph
+                                  </span>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => {
+                                        setRechartsCodeQuestionId(question.id);
+                                        setEditingRechartsCode(question.question_data.recharts_code);
+                                      }}
+                                      className="px-2 py-1 text-xs bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200"
+                                    >
+                                      <FontAwesomeIcon icon={faEdit} className="mr-1" />
+                                      Edit Code
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteRechartsCode(question.id)}
+                                      className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200"
+                                      title="Remove Recharts and show static image"
+                                    >
+                                      <FontAwesomeIcon icon={faTrash} className="mr-1" />
+                                      Remove
+                                    </button>
+                                  </div>
+                                </div>
+                                <RechartsRenderer
+                                  code={question.question_data.recharts_code}
+                                  className="rounded-lg border-2 border-indigo-300 p-4 bg-white"
+                                />
+                                {/* Show original image below for comparison */}
+                                {question.question_data?.image_url && (
+                                  <div className="mt-2">
+                                    <span className="text-xs text-gray-500">Original extracted image:</span>
+                                    <img
+                                      src={question.question_data.image_url}
+                                      alt="Original"
+                                      className="max-w-full max-h-32 mt-1 rounded border border-gray-300 opacity-70 hover:opacity-100 transition-opacity"
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Image if present (only show if no graph recreation and no recharts) */}
+                            {question.question_data?.image_url && !question.question_data?.recreate_graph && !question.question_data?.recharts_code && (
                               <div className="mt-3 relative group">
                                 <img
                                   src={question.question_data.image_url}
@@ -1872,26 +2327,37 @@ export default function ReviewQuestionsPage() {
                                   className="max-w-full rounded-lg border-2 border-indigo-300"
                                 />
                                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <label className="px-3 py-1 bg-white/90 text-gray-700 text-xs rounded shadow cursor-pointer hover:bg-white">
+                                  <button
+                                    onClick={() => handleAddImage(question.id)}
+                                    className="px-3 py-1 bg-white/90 text-gray-700 text-xs rounded shadow cursor-pointer hover:bg-white"
+                                  >
                                     Change
-                                    <input
-                                      type="file"
-                                      accept="image/*"
-                                      className="hidden"
-                                      onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file) handleImageUpload(question.id, file);
-                                        e.target.value = '';
-                                      }}
-                                    />
-                                  </label>
+                                  </button>
                                 </div>
                               </div>
                             )}
                           </div>
 
-                          {/* Options */}
-                          {localizedOptions && (
+                          {/* Options / Answer */}
+                          {question.question_type === 'open_ended' ? (
+                            /* Open-Ended Answer */
+                            <div className="mt-3 p-4 bg-purple-50 border-2 border-purple-300 rounded-lg">
+                              <h4 className="text-sm font-semibold text-purple-900 mb-2">Answer:</h4>
+                              {editingQuestionId === question.id ? (
+                                <textarea
+                                  value={question.answers?.correct_answer || ''}
+                                  onChange={(e) => handleEditQuestion(question.id, 'correct_answer', e.target.value)}
+                                  className="w-full p-3 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent min-h-[100px] font-mono text-sm"
+                                  placeholder="Enter correct answer..."
+                                />
+                              ) : (
+                                <div className="text-gray-800 font-medium">
+                                  <MathJaxRenderer>{String(question.answers?.correct_answer || 'No answer provided')}</MathJaxRenderer>
+                                </div>
+                              )}
+                            </div>
+                          ) : localizedOptions && (
+                            /* Multiple Choice Options */
                             <div className="space-y-2">
                               {editingQuestionId === question.id && (
                                 <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -1941,8 +2407,15 @@ export default function ReviewQuestionsPage() {
                                     ) : editingQuestionId === question.id ? (
                                       <input
                                         type="text"
-                                        value={String(question.question_data?.options?.[key] || '')}
-                                        onChange={(e) => handleEditQuestion(question.id, `option_${key}`, e.target.value)}
+                                        value={String(
+                                          getQuestionLanguage(question.id) === 'en'
+                                            ? (question.question_data?.options_eng?.[key] || '')
+                                            : (question.question_data?.options?.[key] || '')
+                                        )}
+                                        onChange={(e) => {
+                                          const isEnglish = getQuestionLanguage(question.id) === 'en';
+                                          handleEditQuestion(question.id, `option_${key}_${isEnglish ? 'eng' : 'it'}`, e.target.value);
+                                        }}
                                         className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-brand-green focus:border-transparent font-mono text-sm"
                                         placeholder={`Option ${key.toUpperCase()}`}
                                       />
@@ -2488,13 +2961,20 @@ export default function ReviewQuestionsPage() {
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                 <div className="bg-white rounded-xl shadow-2xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xl font-bold text-brand-dark">Add/Change Image</h3>
+                    <h3 className="text-xl font-bold text-brand-dark">
+                      {questions.find(q => q.id === currentImageQuestionId)?.question_data?.image_url
+                        ? 'Change Image'
+                        : 'Add Image'}
+                    </h3>
                     <button
                       onClick={() => {
                         availableImages.forEach(img => URL.revokeObjectURL(img.url));
                         setAvailableImages([]);
                         setShowImageSourceModal(false);
                         setCurrentImageQuestionId(null);
+                        setImageActionQuestionId(null);
+                        setRecreateWithRecharts(false);
+                        setRecreateWithPython(false);
                       }}
                       className="text-gray-500 hover:text-gray-700 text-2xl"
                     >
@@ -2502,12 +2982,51 @@ export default function ReviewQuestionsPage() {
                     </button>
                   </div>
 
+                  {/* Choice: Recreate Graph vs Extract Image */}
+                  {!imageActionQuestionId && (
+                    <div className="mb-6">
+                      <h4 className="text-lg font-semibold text-gray-800 mb-4">Choose an action:</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <button
+                          onClick={() => {
+                            console.log('🤖 User clicked Recreate Graph (AI)');
+                            setRecreateWithRecharts(true);
+                            setImageActionQuestionId(currentImageQuestionId);
+                            console.log('  → Set recreateWithRecharts to true');
+                          }}
+                          className="p-6 border-2 border-indigo-300 rounded-xl hover:bg-indigo-50 hover:border-indigo-500 transition-all group"
+                        >
+                          <div className="text-4xl mb-3">🤖</div>
+                          <h5 className="font-bold text-indigo-900 mb-2">Recreate Graph (AI)</h5>
+                          <p className="text-sm text-gray-600">
+                            Use Claude to analyze graph and generate Recharts code
+                          </p>
+                        </button>
+                        <button
+                          onClick={() => setImageActionQuestionId(currentImageQuestionId)}
+                          className="p-6 border-2 border-orange-300 rounded-xl hover:bg-orange-50 hover:border-orange-500 transition-all group"
+                        >
+                          <div className="text-4xl mb-3">📄</div>
+                          <h5 className="font-bold text-orange-900 mb-2">Extract from PDF</h5>
+                          <p className="text-sm text-gray-600">
+                            Extract professional-quality image directly from PDF
+                          </p>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Page Selector for PDF Extraction - Only show if image extraction chosen */}
+                  {imageActionQuestionId && (
+                    <>
                   {/* Page Selector for PDF Extraction */}
                   <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <label className="block text-sm font-semibold text-blue-900 mb-2">
-                      📄 Extract from PDF - Select Page Number:
+                      {recreateWithRecharts
+                        ? '🤖 Select graph from PDF to recreate with Recharts:'
+                        : '📄 Extract from PDF - Select Page Number:'}
                     </label>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 mb-3">
                       <input
                         type="number"
                         min="1"
@@ -2518,13 +3037,13 @@ export default function ReviewQuestionsPage() {
                       />
                       <button
                         onClick={() => handleExtractFromPDF(selectedPageForExtraction)}
-                        disabled={loadingImages}
+                        disabled={loadingImages || extractingImage}
                         className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 font-semibold flex items-center gap-2"
                       >
-                        {loadingImages ? (
+                        {loadingImages || extractingImage ? (
                           <>
                             <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
-                            Extracting...
+                            {extractingImage ? `Processing... ${imageExtractionProgress}%` : 'Extracting...'}
                           </>
                         ) : (
                           <>
@@ -2534,7 +3053,36 @@ export default function ReviewQuestionsPage() {
                         )}
                       </button>
                     </div>
-                    <p className="text-xs text-blue-700 mt-1">
+
+                    {/* Python Recreation Option - hide if recreating with Recharts */}
+                    {!recreateWithRecharts && (
+                      <label className="flex items-center gap-2 p-3 bg-indigo-50 border border-indigo-300 rounded-lg cursor-pointer hover:bg-indigo-100 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={recreateWithPython}
+                          onChange={(e) => setRecreateWithPython(e.target.checked)}
+                          className="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500"
+                        />
+                        <div className="flex-1">
+                          <span className="font-semibold text-indigo-900">🐍 Recreate image with Python API</span>
+                          <p className="text-xs text-indigo-700 mt-0.5">
+                            Use Python script to professionally recreate the extracted image (higher quality, vector-based)
+                          </p>
+                        </div>
+                      </label>
+                    )}
+
+                    {/* Recharts Recreation Info */}
+                    {recreateWithRecharts && (
+                      <div className="p-3 bg-indigo-50 border border-indigo-300 rounded-lg">
+                        <span className="font-semibold text-indigo-900">🤖 Recharts Recreation Mode</span>
+                        <p className="text-xs text-indigo-700 mt-0.5">
+                          After selecting an image, Claude will analyze it and generate interactive Recharts code
+                        </p>
+                      </div>
+                    )}
+
+                    <p className="text-xs text-blue-700 mt-2">
                       Current question is on page {questions.find(q => q.id === currentImageQuestionId)?.question_data?.page_number || '?'}
                     </p>
                   </div>
@@ -2598,6 +3146,8 @@ export default function ReviewQuestionsPage() {
                       <FontAwesomeIcon icon={faSpinner} className="animate-spin text-brand-green mr-2" />
                       <span className="text-sm text-green-700 font-medium">Uploading image...</span>
                     </div>
+                  )}
+                  </>
                   )}
                 </div>
               </div>
@@ -2833,6 +3383,56 @@ export default function ReviewQuestionsPage() {
                 </div>
               </div>
             )}
+
+          {/* Recharts Code Editor Modal */}
+          {editingRechartsCode && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-xl shadow-2xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-brand-dark">Edit Recharts Code</h3>
+                  <button
+                    onClick={() => {
+                      setEditingRechartsCode(null);
+                      setRechartsCodeQuestionId(null);
+                    }}
+                    className="text-gray-500 hover:text-gray-700 text-2xl"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <p className="text-sm text-gray-600 mb-4">
+                  Edit the Recharts component code below. The code will be saved and the graph will update.
+                </p>
+
+                <textarea
+                  value={editingRechartsCode}
+                  onChange={(e) => setEditingRechartsCode(e.target.value)}
+                  className="w-full h-96 p-4 border-2 border-gray-300 rounded-lg font-mono text-sm"
+                  placeholder="Recharts component code..."
+                  spellCheck={false}
+                />
+
+                <div className="flex justify-end gap-3 mt-4">
+                  <button
+                    onClick={() => {
+                      setEditingRechartsCode(null);
+                      setRechartsCodeQuestionId(null);
+                    }}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveRechartsCode}
+                    className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                  >
+                    Save Code
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
           </div>
         </div>
       </Layout>

@@ -24,6 +24,7 @@ import { Layout } from '../components/Layout';
 import { supabase } from '../lib/supabase';
 import { supabaseTest, fromTest } from '../lib/supabaseTest';
 import { useTranslation } from 'react-i18next';
+import { LaTeX } from '../components/LaTeX';
 import { DSQuestion } from '../components/questions/DSQuestion';
 import { MSRQuestion } from '../components/questions/MSRQuestion';
 import { GIQuestion } from '../components/questions/GIQuestion';
@@ -50,6 +51,9 @@ interface TestConfig {
   max_pauses?: number;
   test_start_message?: string; // English message
   messaggio_iniziale_test?: string; // Italian message
+
+  // Calculator configuration
+  calculator_type?: 'none' | 'regular' | 'graphing' | 'scientific'; // Calculator type: none, regular (GMAT-style), graphing (Desmos), scientific (Desmos/SAT)
 
   // Algorithm configuration
   question_order?: 'random' | 'sequential';
@@ -180,17 +184,25 @@ interface StudentAnswer {
 /**
  * Filters sections based on section adaptivity configuration.
  * - Base sections are always included
- * - For adaptive sections, randomly picks one from each group
+ * - For adaptive sections:
+ *   - If initialOnly=true (macro_section mode): Returns only base sections, adaptive sections added later based on performance
+ *   - If initialOnly=false: Randomly picks one from each group
  * - Maintains the original order from section_order
  *
- * Example:
+ * Example (initialOnly=false):
  * Input: ["RW1", "RW2-Easy", "RW2-Hard", "Math1", "Math2-Easy", "Math2-Hard"]
  * Config: { RW1: base, RW2-Easy: adaptive, RW2-Hard: adaptive, Math1: base, Math2-Easy: adaptive, Math2-Hard: adaptive }
  * Output: ["RW1", "RW2-Hard", "Math1", "Math2-Easy"] (randomly picked RW2-Hard and Math2-Easy)
+ *
+ * Example (initialOnly=true):
+ * Input: ["RW1", "RW2-Easy", "RW2-Hard", "Math1", "Math2-Easy", "Math2-Hard"]
+ * Config: { RW1: base, RW2-Easy: adaptive, RW2-Hard: adaptive, Math1: base, Math2-Easy: adaptive, Math2-Hard: adaptive }
+ * Output: ["RW1", "Math1"] (only base sections, adaptive sections added later based on 65% threshold)
  */
 function filterSectionsWithAdaptivity(
   sections: string[],
-  adaptivityConfig: Record<string, { type: 'base' | 'adaptive'; difficulty?: string }>
+  adaptivityConfig: Record<string, { type: 'base' | 'adaptive'; difficulty?: string }>,
+  initialOnly: boolean = false
 ): string[] {
   const result: string[] = [];
   const processedGroups = new Set<string>();
@@ -207,7 +219,7 @@ function filterSectionsWithAdaptivity(
     if (config.type === 'base') {
       // Always include base sections
       result.push(section);
-    } else if (config.type === 'adaptive') {
+    } else if (config.type === 'adaptive' && !initialOnly) {
       // Extract group prefix (e.g., "RW2" from "RW2-Easy")
       const groupPrefix = section.replace(/-Easy|-Hard$/i, '');
 
@@ -229,6 +241,7 @@ function filterSectionsWithAdaptivity(
       result.push(pickedSection);
       processedGroups.add(groupPrefix);
     }
+    // If initialOnly=true and adaptive, skip (will be added later based on performance)
   }
 
   return result;
@@ -321,6 +334,11 @@ export default function TakeTestPage() {
 
   // Toggle bookmark for current question
   const toggleBookmark = (questionId: string) => {
+    // Extra safety: reject if time has expired
+    if (timeRemaining !== null && timeRemaining <= 0) {
+      return;
+    }
+
     setBookmarkedQuestions(prev => {
       const newSet = new Set(prev);
       if (newSet.has(questionId)) {
@@ -424,6 +442,11 @@ export default function TakeTestPage() {
 
   // Go to specific question from review screen
   const goToQuestionFromReview = (questionIndex: number) => {
+    // Extra safety: reject if time has expired
+    if (timeRemaining !== null && timeRemaining <= 0) {
+      return;
+    }
+
     setShowReviewScreen(false);
     showReviewScreenRef.current = false;
     setCurrentQuestionIndex(questionIndex);
@@ -431,12 +454,22 @@ export default function TakeTestPage() {
 
   // Return to review screen
   const returnToReviewScreen = () => {
+    // Extra safety: reject if time has expired
+    if (timeRemaining !== null && timeRemaining <= 0) {
+      return;
+    }
+
     setShowReviewScreen(true);
     showReviewScreenRef.current = true;
   };
 
   // Complete review and move to next section
   const completeReview = () => {
+    // Extra safety: reject if time has expired
+    if (timeRemaining !== null && timeRemaining <= 0) {
+      return;
+    }
+
     setShowReviewScreen(false);
     showReviewScreenRef.current = false;
     setIsInReviewMode(false);
@@ -518,6 +551,23 @@ export default function TakeTestPage() {
     return questionData.options || {};
   };
 
+  // Calculate expected total sections (for footer display)
+  // In macro_section adaptivity mode, each base section will have an adaptive section added
+  const expectedTotalSections = (() => {
+    if (!config?.section_adaptivity_config || Object.keys(config.section_adaptivity_config).length === 0) {
+      return sections.length; // No adaptivity, use actual length
+    }
+
+    const useMacroSectionAdaptivity = config?.section_order_mode?.includes('macro_sections');
+    if (!useMacroSectionAdaptivity) {
+      return sections.length; // Not macro_section mode, use actual length
+    }
+
+    // Count base sections (each will get 1 adaptive section added)
+    const baseSectionCount = Object.values(config.section_adaptivity_config).filter(c => c.type === 'base').length;
+    return baseSectionCount * 2; // base + adaptive for each
+  })();
+
   // Use selectedQuestions if they've been prepared (for both adaptive and non-adaptive tests)
   const questionsToUse = selectedQuestions.length > 0
     ? selectedQuestions
@@ -534,8 +584,18 @@ export default function TakeTestPage() {
 
   // Calculate total questions expected for THIS section
   const calculateSectionQuestionLimit = (): number => {
-    if (config?.questions_per_section) {
-      return config.questions_per_section[currentSection] || 20; // default to 20
+    if (config?.questions_per_section && currentSection) {
+      // Try exact section name first
+      let limit = config.questions_per_section[currentSection];
+
+      // If not found and this is an adaptive section (ends with -Easy or -Hard),
+      // try the base section name
+      if (limit === undefined && (currentSection.endsWith('-Easy') || currentSection.endsWith('-Hard'))) {
+        const baseSection = currentSection.replace(/-Easy|-Hard$/i, '');
+        limit = config.questions_per_section[baseSection];
+      }
+
+      return limit || 20; // default to 20
     }
     // Fallback: use current section questions loaded
     return totalQuestionsInSection;
@@ -1182,6 +1242,11 @@ export default function TakeTestPage() {
       const exerciseType = assignment['2V_tests'].exercise_type;
       const testFormat = assignment['2V_tests'].format;
 
+      // SAT tests always start in English regardless of user's language setting
+      if (testType === 'SAT' && i18n.language !== 'en') {
+        await i18n.changeLanguage('en');
+      }
+
       // Store exercise type in state for display
       setExerciseType(exerciseType || '');
 
@@ -1284,9 +1349,9 @@ export default function TakeTestPage() {
       if (configData.section_order_mode === 'no_sections') {
         // For no_sections mode, create a single virtual section with all questions
         sectionsToUse = ['All Questions'];
-      } else if (configData.section_order_mode === 'mandatory' && configData.section_order) {
+      } else if (configData.section_order_mode === 'mandatory' && configData.section_order && configData.section_order.length > 0) {
         sectionsToUse = configData.section_order;
-      } else if (configData.section_order_mode?.includes('macro_sections') && configData.section_order) {
+      } else if (configData.section_order_mode?.includes('macro_sections') && configData.section_order && configData.section_order.length > 0) {
         // Use section_order from config when using macro_sections mode
         sectionsToUse = configData.section_order;
       } else if (configData.section_order_mode !== 'no_sections') {
@@ -1301,7 +1366,9 @@ export default function TakeTestPage() {
 
       // Apply section adaptivity filtering if configured
       if (configData.section_adaptivity_config && Object.keys(configData.section_adaptivity_config).length > 0) {
-        sectionsToUse = filterSectionsWithAdaptivity(sectionsToUse, configData.section_adaptivity_config);
+        // For macro_section mode, use performance-based selection (initially only base sections)
+        const useMacroSectionAdaptivity = configData.section_order_mode?.includes('macro_sections');
+        sectionsToUse = filterSectionsWithAdaptivity(sectionsToUse, configData.section_adaptivity_config, useMacroSectionAdaptivity);
       }
 
       setSections(sectionsToUse);
@@ -1645,8 +1712,15 @@ export default function TakeTestPage() {
     let sectionTime: number | null = null;
 
     if (config?.time_per_section && section) {
-      // Specific time per section
-      sectionTime = config.time_per_section[section] || null;
+      // Try exact section name first
+      sectionTime = config.time_per_section[section];
+
+      // If not found and this is an adaptive section (ends with -Easy or -Hard),
+      // try the base section name (e.g., "RW2" from "RW2-Easy")
+      if (!sectionTime && (section.endsWith('-Easy') || section.endsWith('-Hard'))) {
+        const baseSection = section.replace(/-Easy|-Hard$/i, '');
+        sectionTime = config.time_per_section[baseSection] || null;
+      }
     } else if (config?.total_time_minutes && sections.length > 0) {
       // Proportional time: divide total time by number of sections
       sectionTime = Math.round(config.total_time_minutes / sections.length);
@@ -1748,7 +1822,7 @@ export default function TakeTestPage() {
     }
 
     // No pause - show transition message (if not the last section)
-    if (actualCurrentSectionIndex < sections.length - 1) {
+    if (actualCurrentSectionIndex < expectedTotalSections - 1) {
       setShowSectionTransition(true);
       setTimeout(() => {
         setIsCompletingSection(false);
@@ -2277,7 +2351,7 @@ export default function TakeTestPage() {
     }
 
     // No pause - show transition message (if not the last section)
-    if (actualCurrentSectionIndex < sections.length - 1) {
+    if (actualCurrentSectionIndex < expectedTotalSections - 1) {
       setShowSectionTransition(true);
       // Reset flag when transition completes
       setTimeout(() => {
@@ -2438,6 +2512,102 @@ export default function TakeTestPage() {
   function moveToNextSection(sectionIndexOverride?: number) {
     // Use override if provided (to avoid stale closure issues), otherwise use state
     const currentIndex = sectionIndexOverride !== undefined ? sectionIndexOverride : currentSectionIndex;
+
+    // MACRO SECTION ADAPTIVITY: Check if we just finished a base section and need to add adaptive section
+    const useMacroSectionAdaptivity = config?.section_order_mode?.includes('macro_sections') &&
+                                       config?.section_adaptivity_config &&
+                                       Object.keys(config.section_adaptivity_config).length > 0;
+
+    if (useMacroSectionAdaptivity) {
+      const currentSection = sections[currentIndex];
+      const sectionConfig = config!.section_adaptivity_config![currentSection];
+
+      // If we just finished a base section, calculate performance and add next adaptive section
+      if (sectionConfig?.type === 'base') {
+        // Calculate performance in the current (finished) base section
+        const currentSectionQuestions = selectedQuestions.filter(q => {
+          const qSection = config?.section_order_mode?.includes('macro_sections') && q.macro_section
+            ? q.macro_section
+            : q.section;
+          return qSection === currentSection;
+        });
+
+        const answeredQuestions = currentSectionQuestions.filter(q => answers[q.id]?.answer);
+        const correctAnswers = answeredQuestions.filter(q => {
+          const answer = answers[q.id]?.answer;
+          return answer === q.correct_answer;
+        });
+
+        const percentCorrect = answeredQuestions.length > 0
+          ? (correctAnswers.length / answeredQuestions.length) * 100
+          : 0;
+
+        console.log(`Base section "${currentSection}" performance: ${percentCorrect.toFixed(1)}% correct (${correctAnswers.length}/${answeredQuestions.length})`);
+
+        // Find the next adaptive group in the original config order
+        // Look through config.section_order to find the next adaptive group after current base section
+        const allConfigSections = config?.section_order || [];
+        const currentSectionIndexInConfig = allConfigSections.indexOf(currentSection);
+
+        // Find next adaptive group (sections with same prefix but different difficulties)
+        let adaptiveSectionToAdd: string | null = null;
+
+        for (let i = currentSectionIndexInConfig + 1; i < allConfigSections.length; i++) {
+          const candidateSection = allConfigSections[i];
+          const candidateConfig = config!.section_adaptivity_config![candidateSection];
+
+          if (candidateConfig?.type === 'adaptive') {
+            // Found an adaptive section - determine if it's Easy or Hard
+            const isHardSection = candidateSection.endsWith('-Hard');
+            const isEasySection = candidateSection.endsWith('-Easy');
+
+            if (isHardSection || isEasySection) {
+              // Extract group prefix (e.g., "RW2" from "RW2-Easy" or "RW2-Hard")
+              const groupPrefix = candidateSection.replace(/-Easy|-Hard$/i, '');
+
+              // Choose Hard if ≥65%, otherwise Easy
+              if (percentCorrect >= 65) {
+                adaptiveSectionToAdd = `${groupPrefix}-Hard`;
+              } else {
+                adaptiveSectionToAdd = `${groupPrefix}-Easy`;
+              }
+
+              console.log(`Adding adaptive section: ${adaptiveSectionToAdd} (threshold: 65%, actual: ${percentCorrect.toFixed(1)}%)`);
+              break;
+            }
+          }
+        }
+
+        // Add the adaptive section to the sections array if found
+        if (adaptiveSectionToAdd && !sections.includes(adaptiveSectionToAdd)) {
+          let insertIndex = currentIndex + 1; // Default: insert right after current section
+
+          // Find the correct insertion position based on config order
+          const adaptiveSectionIndexInConfig = allConfigSections.indexOf(adaptiveSectionToAdd);
+          const newSections = [...sections];
+
+          for (let i = 0; i < newSections.length; i++) {
+            const sectionIndexInConfig = allConfigSections.indexOf(newSections[i]);
+            if (sectionIndexInConfig > adaptiveSectionIndexInConfig) {
+              insertIndex = i;
+              break;
+            }
+          }
+
+          newSections.splice(insertIndex, 0, adaptiveSectionToAdd);
+          setSections(newSections);
+
+          // Move to the newly added adaptive section immediately
+          setCurrentSectionIndex(insertIndex);
+          setCurrentQuestionIndex(0);
+          setSectionStartTime(new Date());
+
+          // Restart timer for the new adaptive section
+          startSectionTimer(adaptiveSectionToAdd);
+          return; // Exit early - we've already moved to the next section
+        }
+      }
+    }
 
     if (currentIndex < sections.length - 1) {
       const nextSectionIndex = currentIndex + 1;
@@ -3097,7 +3267,55 @@ export default function TakeTestPage() {
   // Section Transition Screen
   if (showSectionTransition) {
     const nextSectionIndex = currentSectionIndex + 1;
-    const nextSection = sections[nextSectionIndex];
+    let nextSection = sections[nextSectionIndex];
+
+    // MACRO SECTION ADAPTIVITY: If current section is a base section,
+    // predict which adaptive section will be added (based on current performance)
+    const useMacroSectionAdaptivity = config?.section_order_mode?.includes('macro_sections') &&
+                                       config?.section_adaptivity_config &&
+                                       Object.keys(config.section_adaptivity_config).length > 0;
+
+    if (useMacroSectionAdaptivity && config?.section_adaptivity_config?.[currentSection]?.type === 'base') {
+      // Calculate performance to predict Easy vs Hard
+      const currentSectionQuestions = selectedQuestions.filter(q => {
+        const qSection = config?.section_order_mode?.includes('macro_sections') && q.macro_section
+          ? q.macro_section
+          : q.section;
+        return qSection === currentSection;
+      });
+
+      const answeredQuestions = currentSectionQuestions.filter(q => answers[q.id]?.answer);
+      const correctAnswers = answeredQuestions.filter(q => {
+        const answer = answers[q.id]?.answer;
+        return answer === q.correct_answer;
+      });
+
+      const percentCorrect = answeredQuestions.length > 0
+        ? (correctAnswers.length / answeredQuestions.length) * 100
+        : 0;
+
+      // Find next adaptive group in config
+      const allConfigSections = config?.section_order || [];
+      const currentSectionIndexInConfig = allConfigSections.indexOf(currentSection);
+
+      for (let i = currentSectionIndexInConfig + 1; i < allConfigSections.length; i++) {
+        const candidateSection = allConfigSections[i];
+        const candidateConfig = config!.section_adaptivity_config![candidateSection];
+
+        if (candidateConfig?.type === 'adaptive') {
+          const isHardSection = candidateSection.endsWith('-Hard');
+          const isEasySection = candidateSection.endsWith('-Easy');
+
+          if (isHardSection || isEasySection) {
+            const groupPrefix = candidateSection.replace(/-Easy|-Hard$/i, '');
+            // Choose Hard if ≥65%, otherwise Easy
+            nextSection = percentCorrect >= 65 ? `${groupPrefix}-Hard` : `${groupPrefix}-Easy`;
+            break;
+          }
+        }
+      }
+    }
+
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-green-50">
         <div className="text-center bg-white rounded-2xl shadow-xl p-12 max-w-lg">
@@ -3280,7 +3498,7 @@ export default function TakeTestPage() {
           <div>
             <h2 className="text-xl font-bold text-brand-dark">{formatSectionName(currentSection)}</h2>
             <p className="text-sm text-gray-600">
-              Section {currentSectionIndex + 1} of {sections.length}
+              Section {currentSectionIndex + 1} of {expectedTotalSections}
             </p>
           </div>
           {timeRemaining !== null && (
@@ -3480,7 +3698,8 @@ export default function TakeTestPage() {
               {config?.allow_bookmarks && currentQuestion?.id && (
                 <button
                   onClick={() => toggleBookmark(currentQuestion.id)}
-                  className={`px-3 py-1 rounded-lg text-sm font-semibold transition-colors ${
+                  disabled={timeRemaining !== null && timeRemaining <= 1}
+                  className={`px-3 py-1 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                     bookmarkedQuestions.has(currentQuestion.id)
                       ? 'bg-yellow-100 text-yellow-700 border-2 border-yellow-400'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -3732,7 +3951,9 @@ export default function TakeTestPage() {
                   {(currentQuestion.question_data?.question_text || currentQuestion.question_data?.question_text_eng) && (
                     <div className="border-2 border-gray-200 rounded-xl p-6 bg-white">
                       <div className="text-lg text-gray-800">
-                        {getLocalizedQuestionText(currentQuestion.question_data)}
+                        <LaTeX>
+                          {getLocalizedQuestionText(currentQuestion.question_data)}
+                        </LaTeX>
                       </div>
                     </div>
                   )}
@@ -3749,7 +3970,9 @@ export default function TakeTestPage() {
               <div className="space-y-4">
                 {(currentQuestion.question_data?.question_text || currentQuestion.question_data?.question_text_eng) && (
                   <div className="text-lg text-gray-800 mb-4">
-                    {getLocalizedQuestionText(currentQuestion.question_data)}
+                    <LaTeX>
+                      {getLocalizedQuestionText(currentQuestion.question_data)}
+                    </LaTeX>
                   </div>
                 )}
                 <textarea
@@ -3809,7 +4032,9 @@ export default function TakeTestPage() {
                       }`}>
                         {choice.label}
                       </div>
-                      <div className="flex-1 text-gray-800">{choice.text}</div>
+                      <div className="flex-1 text-gray-800">
+                        <LaTeX>{choice.text}</LaTeX>
+                      </div>
                       {isCorrect && (
                         <FontAwesomeIcon icon={faCheckCircle} className="text-green-500 text-xl" />
                       )}
@@ -3861,7 +4086,9 @@ export default function TakeTestPage() {
                       }`}>
                         {option}
                       </div>
-                      <div className="flex-1 text-gray-800">{answerText as string}</div>
+                      <div className="flex-1 text-gray-800">
+                        <LaTeX>{answerText as string}</LaTeX>
+                      </div>
                       {isCorrect && (
                         <FontAwesomeIcon icon={faCheckCircle} className="text-green-500 text-xl" />
                       )}
@@ -3884,7 +4111,8 @@ export default function TakeTestPage() {
           <div className="mt-6 pt-4 border-t border-gray-100 text-center">
             <button
               onClick={toggleFlag}
-              className={`text-xs transition-colors ${
+              disabled={timeRemaining !== null && timeRemaining <= 1}
+              className={`text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                 answers[currentQuestion?.id]?.flagged
                   ? 'text-orange-600 font-medium'
                   : 'text-gray-400 hover:text-gray-600'
@@ -3917,7 +4145,8 @@ export default function TakeTestPage() {
           {isInReviewMode && (
             <button
               onClick={returnToReviewScreen}
-              className="px-4 py-3 rounded-xl font-semibold transition-all bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-2 border-yellow-400"
+              disabled={timeRemaining !== null && timeRemaining <= 1}
+              className="px-4 py-3 rounded-xl font-semibold transition-all bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-2 border-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <FontAwesomeIcon icon={faList} className="mr-2" />
               {t('takeTest.returnToReview') || 'Return to Review'}
@@ -3926,14 +4155,15 @@ export default function TakeTestPage() {
         </div>
 
         <div className="text-sm text-gray-600">
-          {t('takeTest.section')} {currentSectionIndex + 1} {t('takeTest.of')} {sections.length}
+          {t('takeTest.section')} {currentSectionIndex + 1} {t('takeTest.of')} {expectedTotalSections}
         </div>
 
         {/* Next button - show Return to Review in review mode */}
         {isInReviewMode ? (
           <button
             onClick={returnToReviewScreen}
-            className="px-6 py-3 rounded-xl font-semibold transition-all bg-brand-green text-white hover:bg-green-600"
+            disabled={timeRemaining !== null && timeRemaining <= 1}
+            className="px-6 py-3 rounded-xl font-semibold transition-all bg-brand-green text-white hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <FontAwesomeIcon icon={faList} className="mr-2" />
             {t('takeTest.returnToReview') || 'Return to Review'}
@@ -3959,7 +4189,7 @@ export default function TakeTestPage() {
                   {t('takeTest.next')}
                   <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
                 </>
-              ) : currentSectionIndex < sections.length - 1 ? (
+              ) : currentSectionIndex < expectedTotalSections - 1 ? (
                 t('takeTest.completeSection')
               ) : (
                 t('takeTest.submitTest')
@@ -4000,7 +4230,8 @@ export default function TakeTestPage() {
                     <button
                       key={question.id}
                       onClick={() => goToQuestionFromReview(index)}
-                      className={`flex items-center justify-between p-3 rounded-lg border transition-all hover:shadow-md ${
+                      disabled={timeRemaining !== null && timeRemaining <= 1}
+                      className={`flex items-center justify-between p-3 rounded-lg border transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed ${
                         isBookmarked
                           ? 'border-yellow-400 bg-yellow-50'
                           : isAnswered
@@ -4047,9 +4278,10 @@ export default function TakeTestPage() {
               <div className="flex gap-3">
                 <button
                   onClick={completeReview}
-                  className="px-6 py-2 rounded-lg bg-brand-green text-white font-semibold hover:bg-green-600 transition-all"
+                  disabled={timeRemaining !== null && timeRemaining <= 1}
+                  className="px-6 py-2 rounded-lg bg-brand-green text-white font-semibold hover:bg-green-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {currentSectionIndex < sections.length - 1
+                  {currentSectionIndex < expectedTotalSections - 1
                     ? t('takeTest.completeSection')
                     : t('takeTest.submitTest')
                   }

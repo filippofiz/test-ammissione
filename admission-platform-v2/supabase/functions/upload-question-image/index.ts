@@ -87,11 +87,24 @@ Deno.serve(async (req) => {
     // Convert base64 to blob
     const imageData = Uint8Array.from(atob(imageBase64), (c) => c.charCodeAt(0));
 
+    // Determine content type based on file extension
+    const getContentType = (path: string): string => {
+      const lowerPath = path.toLowerCase();
+      if (lowerPath.endsWith('.pdf')) return 'application/pdf';
+      if (lowerPath.endsWith('.jpg') || lowerPath.endsWith('.jpeg')) return 'image/jpeg';
+      if (lowerPath.endsWith('.png')) return 'image/png';
+      if (lowerPath.endsWith('.gif')) return 'image/gif';
+      if (lowerPath.endsWith('.svg')) return 'image/svg+xml';
+      return 'application/octet-stream';
+    };
+
+    const contentType = getContentType(filePath);
+
     // Upload to storage using SERVICE ROLE (bypasses RLS)
     const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
       .from('question-images')
       .upload(filePath, imageData, {
-        contentType: 'image/png',
+        contentType: contentType,
         upsert: false,
       });
 

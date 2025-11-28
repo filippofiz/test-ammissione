@@ -98,7 +98,10 @@
       "WebFetch(domain:www.gmac.com)",
       "mcp__ide__getDiagnostics",
       "Bash(cd C:/App UpToTen/admission-test/admission-platform-v2)",
-      "WebFetch(domain:gmatclub.com)"
+      "WebFetch(domain:gmatclub.com)",
+      "Bash(npx expo export:*)",
+      "Bash(npx eas update --branch production --message \"Fix correct_answer extraction and database constraint issues\")",
+      "Bash(npx eas update --auto)"
     ],
     "deny": [],
     "ask": []

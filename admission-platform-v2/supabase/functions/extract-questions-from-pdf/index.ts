@@ -18,12 +18,15 @@ interface ExtractQuestionsRequest {
   testNumber: number;
   extractFromPdf?: boolean;
   databaseAnswers?: { question_number: number; correct_answer: string; wrong_answers?: string[] }[];
+  solutionsPdfUrl?: string;  // NEW: Solutions PDF to extract answers from
   // Chunking parameters for large PDFs (by pages, not questions)
   pageStart?: number;  // First page number in this chunk (1-indexed)
   pageEnd?: number;    // Last page number in this chunk (1-indexed)
   // Passage extraction mode
   extractPassageOnly?: boolean;  // Extract only passage text, no questions
   targetQuestions?: number[];     // Which questions this passage is for
+  // Language selection
+  languages?: 'ITA' | 'ENG' | 'BOTH';  // Which language(s) to extract
 }
 
 interface Passage {
@@ -209,7 +212,9 @@ serve(async (req) => {
     console.log('✓ Auth check passed for user:', user.email);
 
     // Parse request body
-    const { pdfUrl, pdfText, testType, section, testNumber, extractFromPdf, databaseAnswers, pageStart, pageEnd, extractPassageOnly, targetQuestions }: ExtractQuestionsRequest = await req.json();
+    const { pdfUrl, pdfText, testType, section, testNumber, extractFromPdf, databaseAnswers, solutionsPdfUrl, pageStart, pageEnd, extractPassageOnly, targetQuestions, languages = 'BOTH' }: ExtractQuestionsRequest = await req.json();
+
+    console.log(`Language selection: ${languages}`);
 
     if ((!pdfText && !pdfUrl) || !testType || !section) {
       return new Response(
@@ -310,18 +315,64 @@ serve(async (req) => {
         }
         pdfBase64 = btoa(binary);
 
-        // Send PDF to Claude with vision
+        // Fetch and process solutions PDF if provided
+        let solutionsPdfBase64: string = '';
+        if (solutionsPdfUrl) {
+          console.log('Fetching solutions PDF from URL:', solutionsPdfUrl);
+          try {
+            const solutionsPdfResponse = await fetch(solutionsPdfUrl);
+            if (!solutionsPdfResponse.ok) {
+              throw new Error(`Failed to fetch solutions PDF: ${solutionsPdfResponse.statusText}`);
+            }
+
+            const solutionsPdfBuffer = await solutionsPdfResponse.arrayBuffer();
+            console.log(`Solutions PDF fetched successfully, size: ${solutionsPdfBuffer.byteLength} bytes`);
+
+            // Convert solutions PDF to base64
+            const solutionsUint8Array = new Uint8Array(solutionsPdfBuffer);
+            let solutionsBinary = '';
+            for (let i = 0; i < solutionsUint8Array.length; i += chunkSize) {
+              const chunk = solutionsUint8Array.slice(i, i + chunkSize);
+              solutionsBinary += String.fromCharCode.apply(null, Array.from(chunk));
+            }
+            solutionsPdfBase64 = btoa(solutionsBinary);
+            console.log('✓ Solutions PDF converted to base64');
+          } catch (error) {
+            console.error('Error fetching solutions PDF:', error);
+            // Continue without solutions PDF
+          }
+        }
+
+        // Build content array for Claude
+        const contentArray: any[] = [
+          {
+            type: 'document',
+            source: {
+              type: 'base64',
+              media_type: 'application/pdf',
+              data: pdfBase64,
+            },
+            cache_control: { type: 'ephemeral' }
+          },
+        ];
+
+        // Add solutions PDF if available
+        if (solutionsPdfBase64) {
+          contentArray.push({
+            type: 'document',
+            source: {
+              type: 'base64',
+              media_type: 'application/pdf',
+              data: solutionsPdfBase64,
+            },
+            cache_control: { type: 'ephemeral' }
+          });
+        }
+
+        // Send PDF(s) to Claude with vision
         claudeMessages.push({
           role: 'user',
-          content: [
-            {
-              type: 'document',
-              source: {
-                type: 'base64',
-                media_type: 'application/pdf',
-                data: pdfBase64,
-              },
-            },
+          content: contentArray.concat([
             {
               type: 'text',
               text: extractPassageOnly ?
@@ -372,11 +423,11 @@ Return JSON in this format:
   "extractedText": "Raw text if no clear passage structure found"
 }` :
                 // Normal question extraction prompt
-                `Extract all questions from this ${testType} test PDF (${section} section).${pageStart && pageEnd ? `\n\n🎯 CRITICAL: Process ONLY pages ${pageStart} through ${pageEnd} of this PDF. Ignore all other pages.\n` : ''}
-
-🚨 IMPORTANT: This test contains exactly ${databaseAnswers?.length || 'UNKNOWN'} questions numbered 1 to ${databaseAnswers?.length || '?'}.
+                `Extract all questions from this ${testType} test PDF (${section} section).${pageStart && pageEnd ? `\n\n🎯 CRITICAL: Process ONLY pages ${pageStart} through ${pageEnd} of the FIRST PDF (test PDF). Ignore all other pages.\n` : ''}
+${solutionsPdfBase64 ? '\n📄 IMPORTANT: You have been provided with TWO PDFs:\n1. TEST PDF (first document) - contains the questions\n2. SOLUTIONS PDF (second document) - contains the answer key\n\nExtract the correct answers from the SOLUTIONS PDF and match them to the questions from the TEST PDF.\n' : ''}
+🚨 IMPORTANT: This test contains exactly ${databaseAnswers?.length || solutionsPdfBase64 ? 'UNKNOWN (extract from solutions PDF)' : 'UNKNOWN'} questions numbered 1 to ${databaseAnswers?.length || '?'}.
 ONLY extract questions with numbers 1-${databaseAnswers?.length || '?'}.
-IGNORE any content that appears to be answer keys, solutions, or questions with numbers higher than ${databaseAnswers?.length || '?'}.
+${solutionsPdfBase64 ? '' : 'IGNORE any content that appears to be answer keys, solutions, or questions with numbers higher than ' + (databaseAnswers?.length || '?') + '.'}
 
 ${pdfText ? `\nAdditional context from database:\n${pdfText}\n` : ''}
 
@@ -415,7 +466,7 @@ CRITICAL INSTRUCTIONS - READ CAREFULLY:
    - Are there nested exponents like (x^2)^3?
 
 7. Preserve question numbering exactly as in PDF
-8. Do NOT try to determine correct answers - just extract questions and options
+8. ${solutionsPdfBase64 ? 'EXTRACT CORRECT ANSWERS from the SOLUTIONS PDF (second document) and include in each question' : 'Do NOT try to determine correct answers - just extract questions and options'}
 9. Return ONLY valid JSON, no markdown, no explanations
 
 GENIUS GRAPH RECREATION FEATURE:
@@ -515,6 +566,7 @@ Return JSON in this exact format:
         "d": "Exact option D from PDF",
         "e": "Exact option E from PDF (if exists)"
       },
+      "correct_answer": "a",
       "section": "${section}",
       "has_image": false,
       "page_number": 1,
@@ -663,10 +715,10 @@ FINAL VERIFICATION BEFORE RETURNING:
 
 IMPORTANT:
 - Extract word-for-word from the PDF. Do NOT generate or infer content.
-- Correct answers will be provided separately from our database.
+${solutionsPdfBase64 ? '- Extract correct answers from the SOLUTIONS PDF (second document)' : '- Correct answers will be provided separately from our database'}
 - ACCURACY IS CRITICAL - These are test questions, errors are unacceptable.`,
             },
-          ],
+          ]),
         });
       } catch (fetchError) {
         console.error('PDF fetch error:', fetchError);
@@ -799,16 +851,31 @@ Return ONLY valid JSON with the questions array.`,
         databaseAnswers.map(item => [item.question_number, item.correct_answer])
       );
 
-      // Add correct answers to extracted questions
+      // Add correct answers to extracted questions (only if not already extracted from solutions PDF)
       extractedQuestions.questions.forEach(q => {
-        const dbAnswer = answerMap.get(q.question_number);
-        if (dbAnswer) {
-          q.correct_answer = dbAnswer.toLowerCase();
-          console.log(`Question ${q.question_number}: matched with DB answer '${dbAnswer}'`);
+        if (!q.correct_answer) {
+          const dbAnswer = answerMap.get(q.question_number);
+          if (dbAnswer) {
+            q.correct_answer = dbAnswer.toLowerCase();
+            console.log(`Question ${q.question_number}: matched with DB answer '${dbAnswer}'`);
+          } else {
+            // Default to 'a' if no database answer found
+            q.correct_answer = 'a';
+            console.warn(`Question ${q.question_number}: no DB answer found, defaulting to 'a'`);
+          }
         } else {
-          // Default to 'a' if no database answer found
+          console.log(`Question ${q.question_number}: using correct_answer '${q.correct_answer}' from solutions PDF`);
+        }
+      });
+    } else {
+      // No database answers provided - ensure all questions have correct_answer
+      console.log('No database answers provided - ensuring all questions have correct_answer field');
+      extractedQuestions.questions.forEach(q => {
+        if (!q.correct_answer) {
           q.correct_answer = 'a';
-          console.warn(`Question ${q.question_number}: no DB answer found, defaulting to 'a'`);
+          console.warn(`Question ${q.question_number}: no correct_answer extracted, defaulting to 'a'`);
+        } else {
+          console.log(`Question ${q.question_number}: using correct_answer '${q.correct_answer}' from solutions PDF`);
         }
       });
     }
@@ -819,11 +886,10 @@ Return ONLY valid JSON with the questions array.`,
     // Frontend will extract and upload images when saving questions.
 
     // Translate using Google Translate API (auto-detect language)
+    // Detect source language first
+    let sourceLang = 'it'; // Default to Italian
     if (GOOGLE_TRANSLATE_API_KEY && extractedQuestions.questions && extractedQuestions.questions.length > 0) {
-      console.log('Detecting language and translating questions...');
-
       try {
-        // Detect language from first question
         const detectResponse = await fetch(
           `${GOOGLE_TRANSLATE_URL}/detect?key=${GOOGLE_TRANSLATE_API_KEY}`,
           {
@@ -835,15 +901,32 @@ Return ONLY valid JSON with the questions array.`,
           }
         );
 
-        let sourceLang = 'it'; // Default to Italian
         if (detectResponse.ok) {
           const detectData = await detectResponse.json();
           sourceLang = detectData.data.detections[0][0].language;
-          console.log(`Detected language: ${sourceLang}`);
+          console.log(`Detected source language: ${sourceLang}`);
         }
+      } catch (error) {
+        console.error('Language detection error:', error);
+      }
+    }
 
-        const isEnglish = sourceLang === 'en';
-        const targetLang = isEnglish ? 'it' : 'en';
+    // Determine if translation is needed
+    const isSourceItalian = sourceLang === 'it';
+    const isSourceEnglish = sourceLang === 'en';
+
+    const needsTranslation =
+      (languages === 'BOTH') ||
+      (languages === 'ITA' && isSourceEnglish) ||  // English PDF, want Italian
+      (languages === 'ENG' && isSourceItalian);     // Italian PDF, want English
+
+    if (needsTranslation && GOOGLE_TRANSLATE_API_KEY && extractedQuestions.questions && extractedQuestions.questions.length > 0) {
+      console.log(`Language selection: ${languages}, Source: ${sourceLang}, Translation needed: true`);
+
+      try {
+        const targetLang = languages === 'BOTH'
+          ? (isSourceEnglish ? 'it' : 'en')  // For BOTH, translate to opposite language
+          : languages === 'ITA' ? 'it' : 'en'; // For single language, translate to that language
 
         console.log(`Translating from ${sourceLang} to ${targetLang}...`);
 
@@ -899,34 +982,55 @@ Return ONLY valid JSON with the questions array.`,
           const batchData = await batchResponse.json();
           const allTranslations = batchData.data.translations.map((t: any) => t.translatedText);
 
+          // For BOTH: keep both languages (source + translation)
+          // For ITA only: if source is English, replace with Italian translation; if source is Italian, no translation needed (already handled)
+          // For ENG only: if source is Italian, replace with English translation; if source is English, no translation needed (already handled)
+
+          const keepBothLanguages = languages === 'BOTH';
+          const replaceWithTranslation = languages === 'ITA' || languages === 'ENG';
+
           // Distribute translations back to passages
           if (extractedQuestions.passages && extractedQuestions.passages.length > 0) {
             extractedQuestions.passages.forEach((passage, pIdx) => {
               const passageTranslation = allTranslations[passageTextIndexes[pIdx]];
-              if (isEnglish) {
-                passage.passage_text_eng = passage.passage_text;
+
+              if (keepBothLanguages) {
+                // Keep both languages
+                if (isSourceEnglish) {
+                  passage.passage_text_eng = passage.passage_text;
+                  passage.passage_text = passageTranslation;
+                } else {
+                  passage.passage_text_eng = passageTranslation;
+                }
+              } else if (replaceWithTranslation) {
+                // Replace with translation only
                 passage.passage_text = passageTranslation;
-              } else {
-                passage.passage_text_eng = passageTranslation;
+                delete passage.passage_text_eng;
               }
             });
           }
 
           // Distribute translations back to questions
           extractedQuestions.questions.forEach((question, qIdx) => {
-            // Get question text translation
             const questionTextTranslation = allTranslations[questionTextIndexes[qIdx]];
 
-            if (isEnglish) {
-              question.question_text_eng = question.question_text;
+            if (keepBothLanguages) {
+              // Keep both languages
+              if (isSourceEnglish) {
+                question.question_text_eng = question.question_text;
+                question.question_text = questionTextTranslation;
+              } else {
+                question.question_text_eng = questionTextTranslation;
+              }
+            } else if (replaceWithTranslation) {
+              // Replace with translation only
               question.question_text = questionTextTranslation;
-            } else {
-              question.question_text_eng = questionTextTranslation;
+              delete question.question_text_eng;
             }
 
             // Get options translations
             const optionsInfo = questionOptionsIndexes[qIdx];
-            const baseIndex = questionTextIndexes[qIdx] + 1; // Options start after question text
+            const baseIndex = questionTextIndexes[qIdx] + 1;
             const translatedOptions: any = {};
 
             optionsInfo.optionKeys.forEach((key, idx) => {
@@ -934,11 +1038,18 @@ Return ONLY valid JSON with the questions array.`,
               translatedOptions[key] = allTranslations[translationIndex];
             });
 
-            if (isEnglish) {
-              question.options_eng = question.options;
+            if (keepBothLanguages) {
+              // Keep both languages
+              if (isSourceEnglish) {
+                question.options_eng = question.options;
+                question.options = translatedOptions;
+              } else {
+                question.options_eng = translatedOptions;
+              }
+            } else if (replaceWithTranslation) {
+              // Replace with translation only
               question.options = translatedOptions;
-            } else {
-              question.options_eng = translatedOptions;
+              delete question.options_eng;
             }
           });
 
@@ -951,7 +1062,7 @@ Return ONLY valid JSON with the questions array.`,
         // Continue without translations if error
       }
     } else {
-      console.warn('Google Translate API key not configured, skipping translation');
+      console.log(`Language selection: ${languages}, Source: ${sourceLang}, Translation needed: false - keeping original language`);
     }
 
     // Calculate cost based on Claude API pricing (as of 2025)
