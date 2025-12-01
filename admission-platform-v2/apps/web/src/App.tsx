@@ -23,6 +23,7 @@ import AdminDashboardPage from './pages/AdminDashboardPage';
 import PDFToLatexConverterPage from './pages/PDFToLatexConverterPage';
 import ReviewQuestionsPage from './pages/ReviewQuestionsPage';
 import AdminMigrateAnswersPage from './pages/AdminMigrateAnswersPage';
+import ManageAccountsPage from './pages/ManageAccountsPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 function App() {
@@ -211,6 +212,14 @@ function App() {
           element={
             <ProtectedRoute requiredRoles={['ADMIN']}>
               <AdminMigrateAnswersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/manage-accounts"
+          element={
+            <ProtectedRoute requiredRoles={['ADMIN']}>
+              <ManageAccountsPage />
             </ProtectedRoute>
           }
         />
