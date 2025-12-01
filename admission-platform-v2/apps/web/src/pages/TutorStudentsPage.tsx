@@ -524,8 +524,8 @@ export default function TutorStudentsPage() {
                     return name.includes(query) || email.includes(query);
                   })
                   .map((student, index) => {
-                  // Get unique test types for this student
-                  const testTypes = [...new Set(student.assignments.map(a => a.test_type || 'Other'))];
+                  // Use profile.tests as the source of truth for what tests are assigned
+                  const testTypes = student.tests || [];
 
                   return (
                   <div
@@ -580,9 +580,8 @@ export default function TutorStudentsPage() {
                           {/* Tests Button */}
                           <button
                             onClick={() => {
-                              // Get test types only from valid assignments
-                              const assignmentTests = student.assignments.map(a => a.test_type).filter(Boolean);
-                              const testTypes = [...new Set(assignmentTests)];
+                              // Get test types from profile
+                              const testTypes = student.tests || [];
 
                               if (testTypes.length === 1) {
                                 navigate(`/tutor/student/${student.id}/tests/${testTypes[0]}`);
@@ -617,9 +616,8 @@ export default function TutorStudentsPage() {
                         {/* Test Type Badges & Count */}
                         <div className="flex items-center gap-2">
                           {(() => {
-                            // Get unique test types only from valid assignments
-                            const assignmentTests = student.assignments.map(a => a.test_type).filter(Boolean);
-                            const testTypes = [...new Set(assignmentTests)];
+                            // Get test types from profile
+                            const testTypes = student.tests || [];
 
                             return (
                               <>
@@ -888,22 +886,15 @@ export default function TutorStudentsPage() {
                 </button>
               </div>
               <p className="text-white/90 text-sm">
-                {loadingCounts ? (
-                  'Loading...'
-                ) : (
-                  <>
-                    {Object.values(testTypeCounts).reduce((sum, count) => sum + count, 0) || selectedStudent.assignments.length} {' '}
-                    {(Object.values(testTypeCounts).reduce((sum, count) => sum + count, 0) || selectedStudent.assignments.length) === 1 ? 'test' : 'tests'} assigned
-                  </>
-                )}
+                {selectedStudent.tests?.length || 0} test type{(selectedStudent.tests?.length || 0) === 1 ? '' : 's'} assigned
               </p>
             </div>
 
             {/* Modal Content - Tests grouped by type */}
             <div className="p-6 overflow-y-auto max-h-[calc(80vh-180px)]">
               {(() => {
-                // Only show test types that have valid test assignments (counts > 0)
-                const testTypes = Object.keys(testTypeCounts).filter(type => testTypeCounts[type] > 0);
+                // Use test types from profile
+                const testTypes = selectedStudent.tests || [];
 
                 if (loadingCounts) {
                   return (
@@ -926,7 +917,7 @@ export default function TutorStudentsPage() {
                 return (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {testTypes.map((testType) => {
-                      // Get test count from loaded counts or fallback to assignments
+                      // Get test count from loaded counts (actual assignments that exist)
                       const testCount = testTypeCounts[testType] || 0;
 
                       return (
