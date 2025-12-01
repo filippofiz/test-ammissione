@@ -30,6 +30,7 @@ interface QuestionResponse {
   discrimination?: number;
   section_name?: string;
   points_value?: number; // Some tests have questions worth different points
+  options_count?: number; // Number of answer options (for option-based penalty calculation)
 }
 
 /**
@@ -43,7 +44,7 @@ interface ScoringConfig {
   scoring_method: 'raw_score' | 'scaled' | 'weighted' | 'irt_based' | 'custom';
 
   // Penalty Configuration
-  penalty_for_wrong?: number; // e.g., SAT has no penalty, some tests -0.25
+  penalty_for_wrong?: number | Record<string, number>; // e.g., SAT has no penalty (-0), some tests -0.25, or option-based: { "3": -0.33, "4": -0.2 }
   penalty_for_blank?: number; // Usually 0
 
   // Section Weights (for weighted scoring)
@@ -115,6 +116,73 @@ export class ScoringAlgorithm {
   }
 
   /**
+   * Get the penalty for a wrong answer based on the number of options
+   * Supports both fixed penalties and option-based penalties
+   */
+  private getPenaltyForWrong(optionsCount?: number): number {
+    const penaltyConfig = this.config.penalty_for_wrong;
+
+    // If no penalty configured, return 0
+    if (!penaltyConfig) return 0;
+
+    // If penalty is a simple number, return it
+    if (typeof penaltyConfig === 'number') {
+      return Math.abs(penaltyConfig);
+    }
+
+    // If penalty is an object with option-based rules, use options_count
+    if (typeof penaltyConfig === 'object' && optionsCount !== undefined) {
+      // Try exact match first (e.g., "3" for 3 options)
+      const exactPenalty = penaltyConfig[String(optionsCount)];
+      if (exactPenalty !== undefined) {
+        return Math.abs(Number(exactPenalty));
+      }
+
+      // Fall back to "default" key if provided
+      const defaultPenalty = penaltyConfig['default'];
+      if (defaultPenalty !== undefined) {
+        return Math.abs(Number(defaultPenalty));
+      }
+
+      // If we have option-based config but no match, try to find the closest
+      const optionKeys = Object.keys(penaltyConfig)
+        .filter(k => k !== 'default' && !isNaN(Number(k)))
+        .map(Number)
+        .sort((a, b) => a - b);
+
+      // Use the penalty for the highest option count that's <= optionsCount
+      for (let i = optionKeys.length - 1; i >= 0; i--) {
+        if (optionKeys[i] <= optionsCount) {
+          const penalty = penaltyConfig[String(optionKeys[i])];
+          return Math.abs(Number(penalty));
+        }
+      }
+
+      // If no match found, use the first available penalty
+      if (optionKeys.length > 0) {
+        const penalty = penaltyConfig[String(optionKeys[0])];
+        return Math.abs(Number(penalty));
+      }
+    }
+
+    // Fallback: if penalty is object but no optionsCount provided, use "default" or first value
+    if (typeof penaltyConfig === 'object') {
+      const defaultPenalty = penaltyConfig['default'];
+      if (defaultPenalty !== undefined) {
+        return Math.abs(Number(defaultPenalty));
+      }
+
+      // Use first available penalty value
+      const firstKey = Object.keys(penaltyConfig)[0];
+      if (firstKey) {
+        return Math.abs(Number(penaltyConfig[firstKey]));
+      }
+    }
+
+    return 0;
+  }
+
+  /**
    * Calculate total score based on configured scoring method
    */
   calculateScore(theta?: number): TotalScore {
@@ -147,7 +215,6 @@ export class ScoringAlgorithm {
    * Used by: Many standardized tests
    */
   private calculateRawScore(): TotalScore {
-    const penaltyWrong = this.config.penalty_for_wrong || 0;
     const penaltyBlank = this.config.penalty_for_blank || 0;
 
     // Group by section
@@ -173,6 +240,8 @@ export class ScoringAlgorithm {
           sectionRaw -= penaltyBlank * pointsValue;
           blankCount++;
         } else {
+          // Calculate penalty for wrong answer based on options count
+          const penaltyWrong = this.getPenaltyForWrong(response.options_count);
           sectionRaw -= penaltyWrong * pointsValue;
           wrongCount++;
         }

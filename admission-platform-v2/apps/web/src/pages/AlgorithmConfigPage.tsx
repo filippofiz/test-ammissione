@@ -39,7 +39,7 @@ interface AlgorithmConfig {
 
   // Scoring Algorithm Config
   scoring_method?: 'raw_score' | 'weighted' | 'irt_based';
-  penalty_for_wrong?: number;
+  penalty_for_wrong?: number | Record<string, number>; // Can be a fixed number or option-based object
   penalty_for_blank?: number;
   section_weights?: Record<string, number>;
 
@@ -620,21 +620,96 @@ export default function AlgorithmConfigPage() {
                   <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6 space-y-4">
                     <h4 className="font-semibold text-gray-900">Penalty Settings</h4>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Penalty for Wrong Answer
+                    {/* Penalty Type Selector */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Wrong Answer Penalty Type
+                      </label>
+                      <div className="flex gap-4">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="penalty_type"
+                            checked={typeof config.penalty_for_wrong !== 'object'}
+                            onChange={() => setConfig({ ...config, penalty_for_wrong: 0 })}
+                            className="w-4 h-4 text-brand-green focus:ring-brand-green"
+                          />
+                          <span className="text-sm text-gray-700">Fixed Penalty</span>
                         </label>
-                        <input
-                          type="number"
-                          value={config.penalty_for_wrong || 0}
-                          onChange={(e) => setConfig({ ...config, penalty_for_wrong: parseFloat(e.target.value) })}
-                          step="0.25"
-                          min="0"
-                          className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-brand-green focus:outline-none"
-                        />
-                        <p className="text-xs text-gray-600 mt-1">Points deducted for incorrect answers (0 = no penalty)</p>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="penalty_type"
+                            checked={typeof config.penalty_for_wrong === 'object'}
+                            onChange={() => setConfig({ ...config, penalty_for_wrong: { "3": -0.33, "4": -0.2 } })}
+                            className="w-4 h-4 text-brand-green focus:ring-brand-green"
+                          />
+                          <span className="text-sm text-gray-700">Option-based Penalty</span>
+                        </label>
                       </div>
+                      <p className="text-xs text-gray-600 mt-1">
+                        Option-based allows different penalties based on number of answer choices (e.g., Bocconi test)
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Fixed Penalty Input */}
+                      {typeof config.penalty_for_wrong !== 'object' && (
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Penalty for Wrong Answer
+                          </label>
+                          <input
+                            type="number"
+                            value={typeof config.penalty_for_wrong === 'number' ? Math.abs(config.penalty_for_wrong) : 0}
+                            onChange={(e) => setConfig({ ...config, penalty_for_wrong: parseFloat(e.target.value) })}
+                            step="0.01"
+                            min="0"
+                            className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-brand-green focus:outline-none"
+                          />
+                          <p className="text-xs text-gray-600 mt-1">Points deducted for incorrect answers (0 = no penalty)</p>
+                        </div>
+                      )}
+
+                      {/* Option-based Penalty Inputs */}
+                      {typeof config.penalty_for_wrong === 'object' && (
+                        <>
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                              Penalty for 3 Options
+                            </label>
+                            <input
+                              type="number"
+                              value={Math.abs(Number(config.penalty_for_wrong['3'] || 0))}
+                              onChange={(e) => setConfig({
+                                ...config,
+                                penalty_for_wrong: { ...(config.penalty_for_wrong as Record<string, number>), '3': parseFloat(e.target.value) }
+                              })}
+                              step="0.01"
+                              min="0"
+                              className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-brand-green focus:outline-none"
+                            />
+                            <p className="text-xs text-gray-600 mt-1">Penalty when question has 3 answer options</p>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                              Penalty for 4+ Options
+                            </label>
+                            <input
+                              type="number"
+                              value={Math.abs(Number(config.penalty_for_wrong['4'] || 0))}
+                              onChange={(e) => setConfig({
+                                ...config,
+                                penalty_for_wrong: { ...(config.penalty_for_wrong as Record<string, number>), '4': parseFloat(e.target.value) }
+                              })}
+                              step="0.01"
+                              min="0"
+                              className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-brand-green focus:outline-none"
+                            />
+                            <p className="text-xs text-gray-600 mt-1">Penalty when question has 4 or more answer options</p>
+                          </div>
+                        </>
+                      )}
 
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -644,7 +719,7 @@ export default function AlgorithmConfigPage() {
                           type="number"
                           value={config.penalty_for_blank || 0}
                           onChange={(e) => setConfig({ ...config, penalty_for_blank: parseFloat(e.target.value) })}
-                          step="0.25"
+                          step="0.01"
                           min="0"
                           className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-brand-green focus:outline-none"
                         />
