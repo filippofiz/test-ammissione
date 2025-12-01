@@ -1,6 +1,8 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faHome } from '@fortawesome/free-solid-svg-icons';
 import { getCurrentProfile, signOut } from '../lib/auth';
 import type { Profile } from '../lib/database.types';
 
@@ -70,6 +72,16 @@ export function Layout({ children, noScroll = false, pageTitle, pageSubtitle }: 
             <div className="hidden md:flex items-center gap-4">
               {profile && (
                 <>
+                  {/* Home Button */}
+                  <button
+                    onClick={() => navigate('/')}
+                    className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold transition-all flex items-center gap-2"
+                    title="Go to Home"
+                  >
+                    <FontAwesomeIcon icon={faHome} />
+                    <span>Home</span>
+                  </button>
+
                   {/* Language Selector */}
                   <div className="flex items-center gap-1 bg-gray-700 rounded-lg p-1">
                     <button
@@ -147,6 +159,20 @@ export function Layout({ children, noScroll = false, pageTitle, pageSubtitle }: 
           {menuOpen && (
             <div className="md:hidden py-4 border-t border-gray-700">
               <div className="space-y-4">
+                {/* Home Button */}
+                {profile && (
+                  <button
+                    onClick={() => {
+                      navigate('/');
+                      setMenuOpen(false);
+                    }}
+                    className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold transition-all text-left flex items-center gap-2"
+                  >
+                    <FontAwesomeIcon icon={faHome} />
+                    <span>Home</span>
+                  </button>
+                )}
+
                 {/* Language Selector */}
                 <div>
                   <p className="text-xs text-gray-400 mb-2">Language</p>
