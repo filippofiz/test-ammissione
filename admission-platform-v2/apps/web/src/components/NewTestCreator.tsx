@@ -191,6 +191,11 @@ export function NewTestCreator({ onConvert, converting, savedSections = [] }: Ne
     checkExistingTest();
   }, [metadata.test_type, metadata.exercise_type, metadata.test_number]);
 
+  // Clear processedSections when test metadata changes (so sections from Training 1 don't grey out Training 2)
+  useEffect(() => {
+    setProcessedSections([]);
+  }, [metadata.test_type, metadata.exercise_type, metadata.test_number]);
+
   // Helper: Get available sections from config
   const getConfigSections = (): string[] => {
     if (!currentConfig) return [];

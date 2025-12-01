@@ -475,6 +475,13 @@ export default function PDFToLatexConverterPage() {
   const [baseTestId, setBaseTestId] = useState<string | null>(null); // Shared test ID across sections
   const [savedSections, setSavedSections] = useState<string[]>([]); // Track which sections have been saved
 
+  // Clear savedSections when test metadata changes (so sections from Training 1 don't grey out Training 2)
+  useEffect(() => {
+    if (mode === 'new') {
+      setSavedSections([]);
+    }
+  }, [mode, newTestMetadata.test_type, newTestMetadata.exercise_type, newTestMetadata.test_number]);
+
   // Questions from old system
   const [oldQuestions, setOldQuestions] = useState<OldQuestion[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
@@ -1290,13 +1297,18 @@ export default function PDFToLatexConverterPage() {
           }
         }
 
-        // Check if test already exists
+        // Determine section: use "Multi-topic" for multi-section tests, otherwise use the specific section
+        const sectionValue = uploadedSections.length > 1 ? 'Multi-topic' : firstSection.section;
+
+        // Check if test already exists (including section to match unique constraint)
         const { data: existingTest } = await supabase
           .from('2V_tests')
           .select('id')
           .eq('test_type', newTestMetadata.test_type)
+          .eq('section', sectionValue)
           .eq('exercise_type', newTestMetadata.exercise_type)
           .eq('test_number', newTestMetadata.test_number)
+          .eq('format', 'interactive')
           .single();
 
         if (existingTest) {
@@ -1306,11 +1318,13 @@ export default function PDFToLatexConverterPage() {
         } else {
           // New test - create ONE entry in 2V_tests
           testId = crypto.randomUUID();
+
           const { error: testInsertError } = await supabase
             .from('2V_tests')
             .insert({
               id: testId,
               test_type: newTestMetadata.test_type,
+              section: sectionValue,
               exercise_type: newTestMetadata.exercise_type,
               test_number: newTestMetadata.test_number,
               format: 'interactive',
