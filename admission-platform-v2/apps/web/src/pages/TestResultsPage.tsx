@@ -859,13 +859,72 @@ export default function TestResultsPage() {
     // Check scoring method
     if (algorithmConfig.scoring_method === 'raw_score') {
       // RAW SCORE: +1 correct, penalty for wrong/blank
-      const penaltyWrong = parseFloat(algorithmConfig.penalty_for_wrong || '0');
       const penaltyBlank = parseFloat(algorithmConfig.penalty_for_blank || '0');
+
+      // Helper function to get penalty for wrong answer
+      const getPenaltyForWrong = (optionsCount?: number): number => {
+        const penaltyConfig = algorithmConfig.penalty_for_wrong;
+
+        // If no penalty configured, return 0
+        if (!penaltyConfig) return 0;
+
+        // If penalty is a simple number, return it
+        if (typeof penaltyConfig === 'number') {
+          return Math.abs(penaltyConfig);
+        }
+
+        // If penalty is a string (old format), parse it
+        if (typeof penaltyConfig === 'string') {
+          return Math.abs(parseFloat(penaltyConfig));
+        }
+
+        // If penalty is an object with option-based rules
+        if (typeof penaltyConfig === 'object' && optionsCount !== undefined) {
+          // Try exact match first (e.g., "3" for 3 options)
+          const exactPenalty = penaltyConfig[String(optionsCount)];
+          if (exactPenalty !== undefined) {
+            return Math.abs(Number(exactPenalty));
+          }
+
+          // Use the penalty for the highest option count that's <= optionsCount
+          const optionKeys = Object.keys(penaltyConfig)
+            .filter(k => !isNaN(Number(k)))
+            .map(Number)
+            .sort((a, b) => a - b);
+
+          for (let i = optionKeys.length - 1; i >= 0; i--) {
+            if (optionKeys[i] <= optionsCount) {
+              return Math.abs(Number(penaltyConfig[String(optionKeys[i])]));
+            }
+          }
+
+          // If no match, use first available
+          if (optionKeys.length > 0) {
+            return Math.abs(Number(penaltyConfig[String(optionKeys[0])]));
+          }
+        }
+
+        return 0;
+      };
+
+      // Helper to count options from question
+      const countOptions = (question: Question): number => {
+        const questionData = (question as any).question_data || {};
+        const options = questionData.options || questionData.options_eng || {};
+
+        // Count how many options exist (a, b, c, d, e, etc.)
+        const optionKeys = Object.keys(options).filter(k => k.length === 1 && k >= 'a' && k <= 'z');
+        return optionKeys.length;
+      };
 
       let totalCorrect = 0;
       let totalWrong = 0;
       let totalBlank = 0;
       let totalQuestions = 0;
+      let totalPenaltyPoints = 0;
+
+      // Track penalties by option count
+      const penaltyBreakdown: Record<number, { count: number; totalPenalty: number; penaltyPerQuestion: number }> = {};
 
       Object.keys(groupedResults).forEach(sectionName => {
         const sectionResults = groupedResults[sectionName];
@@ -882,7 +941,23 @@ export default function TestResultsPage() {
             sectionCorrect++;
             totalCorrect++;
           } else if (r.studentAnswer && !r.isCorrect) {
-            score += penaltyWrong; // This is negative (e.g., -0.2)
+            // Count options for this question
+            const optionsCount = countOptions(r.question);
+            const penalty = getPenaltyForWrong(optionsCount);
+            score -= penalty; // Apply penalty (subtract because it's a deduction)
+            totalPenaltyPoints += penalty;
+
+            // Track penalty breakdown by option count
+            if (!penaltyBreakdown[optionsCount]) {
+              penaltyBreakdown[optionsCount] = {
+                count: 0,
+                totalPenalty: 0,
+                penaltyPerQuestion: penalty
+              };
+            }
+            penaltyBreakdown[optionsCount].count++;
+            penaltyBreakdown[optionsCount].totalPenalty += penalty;
+
             sectionWrong++;
             totalWrong++;
           } else if (!r.studentAnswer) {
@@ -909,12 +984,18 @@ export default function TestResultsPage() {
           correct: totalCorrect,
           correctPoints: totalCorrect * 1,
           wrong: totalWrong,
-          wrongPoints: parseFloat((totalWrong * penaltyWrong).toFixed(2)),
+          wrongPoints: parseFloat((-totalPenaltyPoints).toFixed(2)), // Negative because it's a deduction
           blank: totalBlank,
           blankPoints: totalBlank * penaltyBlank,
           totalRawScore: parseFloat(totalRawScore.toFixed(2)),
           totalQuestions: totalQuestions,
-          scaledTo50: parseFloat(scaledTo50.toFixed(2))
+          scaledTo50: parseFloat(scaledTo50.toFixed(2)),
+          penaltyBreakdown: Object.keys(penaltyBreakdown).map(optCount => ({
+            optionCount: parseInt(optCount),
+            count: penaltyBreakdown[parseInt(optCount)].count,
+            totalPenalty: parseFloat(penaltyBreakdown[parseInt(optCount)].totalPenalty.toFixed(2)),
+            penaltyPerQuestion: parseFloat(penaltyBreakdown[parseInt(optCount)].penaltyPerQuestion.toFixed(2))
+          }))
         }
       };
     } else {
@@ -1110,10 +1191,30 @@ export default function TestResultsPage() {
                               <span className="text-green-700">✓ Correct ({scaledScores.rawScoreDetails.correct}):</span>
                               <span className="font-semibold text-green-700">+{scaledScores.rawScoreDetails.correctPoints}</span>
                             </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-red-700">✗ Wrong ({scaledScores.rawScoreDetails.wrong}):</span>
-                              <span className="font-semibold text-red-700">{scaledScores.rawScoreDetails.wrongPoints}</span>
-                            </div>
+
+                            {/* Show penalty breakdown if available */}
+                            {scaledScores.rawScoreDetails.penaltyBreakdown && scaledScores.rawScoreDetails.penaltyBreakdown.length > 0 ? (
+                              <>
+                                {scaledScores.rawScoreDetails.penaltyBreakdown
+                                  .sort((a, b) => a.optionCount - b.optionCount)
+                                  .map(pb => (
+                                    <div key={pb.optionCount} className="flex justify-between text-sm">
+                                      <span className="text-red-700">
+                                        ✗ Wrong - {pb.optionCount} options ({pb.count}):
+                                        <span className="text-xs ml-1">({pb.penaltyPerQuestion} each)</span>
+                                      </span>
+                                      <span className="font-semibold text-red-700">-{pb.totalPenalty}</span>
+                                    </div>
+                                  ))
+                                }
+                              </>
+                            ) : (
+                              <div className="flex justify-between text-sm">
+                                <span className="text-red-700">✗ Wrong ({scaledScores.rawScoreDetails.wrong}):</span>
+                                <span className="font-semibold text-red-700">{scaledScores.rawScoreDetails.wrongPoints}</span>
+                              </div>
+                            )}
+
                             {scaledScores.rawScoreDetails.blank > 0 && (
                               <div className="flex justify-between text-sm">
                                 <span className="text-gray-600">○ Blank ({scaledScores.rawScoreDetails.blank}):</span>
