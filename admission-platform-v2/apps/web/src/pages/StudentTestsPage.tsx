@@ -175,6 +175,8 @@ interface TestAssignment {
   start_time: string | null;
   completed_at: string | null;
   score: number | null;
+  percentage_score: number | null;
+  bocconi_score: number | null;
   current_attempt: number;
   total_attempts: number;
   test_name: string;
@@ -486,6 +488,7 @@ export default function StudentTestsPage() {
           completed_at,
           current_attempt,
           total_attempts,
+          completion_details,
           2V_tests!inner (
             test_type,
             section,
@@ -523,36 +526,178 @@ export default function StudentTestsPage() {
             }
           }
 
-          // Calculate score if test has been completed (total_attempts > 0)
-          let score: number | null = null;
-          if ((assignment.total_attempts || 0) > 0 && questions && questions.length > 0) {
-            console.log(`📊 Calculating score for assignment ${assignment.id}, total_attempts: ${assignment.total_attempts}`);
+          // Calculate both percentage and Bocconi score ONLY if test has been taken
+          let percentageScore: number | null = null;
+          let bocconiScore: number | null = null;
 
-            // Get student answers for the most recent attempt
-            const { data: studentAnswers, error: answersError } = await supabase
+          // Only calculate scores if completed_at is set (test has been finished)
+          if (assignment.completed_at && questions && questions.length > 0) {
+            // Find the most recent attempt that has answers (same logic as TestResultsPage)
+            const { data: allAnswers } = await supabase
               .from('2V_student_answers')
-              .select('question_id, answer, auto_score')
-              .eq('assignment_id', assignment.id)
-              .eq('attempt_number', assignment.total_attempts);
+              .select('attempt_number')
+              .eq('assignment_id', assignment.id);
 
-            console.log(`📊 Found ${studentAnswers?.length || 0} answers for attempt ${assignment.total_attempts}`, answersError);
+            if (allAnswers && allAnswers.length > 0) {
+              // Determine which attempts have answers
+              const attemptsSet = new Set(allAnswers.map(a => a.attempt_number));
 
-            if (studentAnswers && studentAnswers.length > 0) {
-              let correctCount = 0;
-
-              studentAnswers.forEach(sa => {
-                // Count based on auto_score (1 = correct, 0 = incorrect)
-                if (sa.auto_score !== null && sa.auto_score !== undefined && sa.auto_score > 0) {
-                  correctCount++;
+              // Find most recent attempt with answers (count down from current_attempt)
+              let attemptToLoad = null;
+              for (let i = assignment.current_attempt || 1; i >= 1; i--) {
+                if (attemptsSet.has(i)) {
+                  attemptToLoad = i;
+                  break;
                 }
-              });
+              }
 
-              score = Math.round((correctCount / studentAnswers.length) * 100);
-              console.log(`📊 Score calculated: ${score}% (${correctCount}/${studentAnswers.length} correct)`);
+              if (attemptToLoad !== null) {
+                // Get student answers for the found attempt
+                const { data: studentAnswers, error: answersError } = await supabase
+                  .from('2V_student_answers')
+                  .select('question_id, answer, auto_score')
+                  .eq('assignment_id', assignment.id)
+                  .eq('attempt_number', attemptToLoad);
+
+                // Only calculate if there are answers
+                if (studentAnswers && studentAnswers.length > 0) {
+                  console.log(`📊 Calculating scores for assignment ${assignment.id}, attempt ${attemptToLoad}, found ${studentAnswers.length} answers`);
+
+                  // Load questions (EXACT same way as TestResultsPage line 262-265)
+                  const questionIds = studentAnswers.map(sa => sa.question_id);
+                  const { data: questionsData } = await supabase
+                    .from('2V_questions')
+                    .select('*')
+                    .in('id', questionIds);
+
+                  if (questionsData) {
+                    const questionMap = new Map(questionsData.map(q => [q.id, q]));
+
+                    // checkIfCorrect function (EXACT copy from TestResultsPage line 351-448)
+                    const checkIfCorrect = (question: any, studentAnswer: any): boolean => {
+                      if (!studentAnswer || !studentAnswer.answer) return false;
+
+                      const studentAns = studentAnswer.answer;
+                      const answersData = typeof question.answers === 'string' ? JSON.parse(question.answers) : question.answers;
+                      const correctAns = answersData?.correct_answer;
+
+                      if (!studentAns || !correctAns) return false;
+
+                      const questionData = question.question_data || {};
+                      const diType = questionData.di_type;
+
+                      // Multiple Choice - student: {answer: "e"} or "e", correct: "e"
+                      if (question.question_type === 'multiple_choice') {
+                        const studentMC = studentAns.answer || studentAns;
+                        const correctMC = typeof correctAns === 'string' ? correctAns : correctAns;
+                        return String(studentMC || '').toLowerCase() === String(correctMC || '').toLowerCase();
+                      }
+
+                      return false;
+                    };
+
+                    // Build results array (EXACT same as TestResultsPage line 325-327)
+                    const results = studentAnswers.map(sa => {
+                      const question = questionMap.get(sa.question_id);
+                      return {
+                        question,
+                        studentAnswer: sa,
+                        isCorrect: question ? checkIfCorrect(question, sa) : false
+                      };
+                    });
+
+                    // For Bocconi tests, calculate with penalties
+                    const testType = assignment['2V_tests'].test_type;
+                    const isBocconi = testType.toUpperCase() === 'BOCCONI' || testType.toUpperCase() === 'BOCCONI LAW';
+
+                    if (isBocconi) {
+                      // Load algorithm config
+                      const exerciseType = assignment['2V_tests'].exercise_type;
+                      const { data: trackConfig } = await supabase
+                        .from('2V_test_track_config')
+                        .select('algorithm_id')
+                        .eq('test_type', testType)
+                        .eq('track_type', exerciseType)
+                        .maybeSingle();
+
+                      if (trackConfig?.algorithm_id) {
+                        const { data: algoConfig } = await supabase
+                          .from('2V_algorithm_config')
+                          .select('*')
+                          .eq('id', trackConfig.algorithm_id)
+                          .single();
+
+                        if (algoConfig && algoConfig.scoring_method === 'raw_score') {
+                          // EXACT logic from TestResultsPage calculateScaledScores (line 863-980)
+                          const penaltyBlank = parseFloat(algoConfig.penalty_for_blank || '0');
+                          let totalRawScore = 0;
+                          let totalQuestions = results.length;
+
+                          // Helper to count options (line 914-921)
+                          const countOptions = (question: any): number => {
+                            const questionData = question.question_data || {};
+                            const options = questionData.options || questionData.options_eng || {};
+                            const optionKeys = Object.keys(options).filter(k => k.length === 1 && k >= 'a' && k <= 'z');
+                            return optionKeys.length;
+                          };
+
+                          // Helper to get penalty (line 868-911)
+                          const getPenaltyForWrong = (optionsCount: number): number => {
+                            const penaltyConfig = algoConfig.penalty_for_wrong;
+                            if (!penaltyConfig) return 0;
+                            if (typeof penaltyConfig === 'number') return Math.abs(penaltyConfig);
+                            if (typeof penaltyConfig === 'object' && optionsCount) {
+                              return Math.abs(Number(penaltyConfig[String(optionsCount)] || 0));
+                            }
+                            return 0;
+                          };
+
+                          // Score calculation (line 941-970)
+                          results.forEach(r => {
+                            if (r.isCorrect) {
+                              totalRawScore += 1;
+                            } else if (r.studentAnswer.answer) {
+                              const optionsCount = countOptions(r.question);
+                              const penalty = getPenaltyForWrong(optionsCount);
+                              totalRawScore -= penalty;
+                            } else {
+                              totalRawScore += penaltyBlank;
+                            }
+                          });
+
+                          // Scale to 50 (line 980)
+                          bocconiScore = totalQuestions > 0
+                            ? parseFloat(((totalRawScore / totalQuestions) * 50).toFixed(2))
+                            : 0;
+
+                          console.log(`📊 Bocconi score: ${bocconiScore}/50 (raw: ${totalRawScore}, questions: ${totalQuestions})`);
+                        }
+                      }
+                    }
+
+                    // Simple percentage for all tests
+                    const correctCount = results.filter(r => r.isCorrect).length;
+                    percentageScore = Math.round((correctCount / results.length) * 100);
+                    console.log(`📊 Scores - Percentage: ${percentageScore}% (${correctCount}/${results.length}), Bocconi: ${bocconiScore}/50`);
+                  }
+                }
+              }
             }
           }
 
-          return { ...assignment, question_format: format, calculated_score: score };
+          console.log(`📊 Final scores for assignment ${assignment.id}:`, {
+            percentage_score: percentageScore,
+            bocconi_score: bocconiScore,
+            test_type: assignment['2V_tests'].test_type,
+            status: assignment.status
+          });
+
+          return {
+            ...assignment,
+            question_format: format,
+            percentage_score: percentageScore,
+            bocconi_score: bocconiScore
+          };
         })
       );
 
@@ -581,7 +726,9 @@ export default function StudentTestsPage() {
           assigned_at: row.assigned_at,
           start_time: row.start_time,
           completed_at: row.completed_at,
-          score: row.calculated_score,
+          score: row.percentage_score, // Simple percentage for backwards compatibility
+          percentage_score: row.percentage_score,
+          bocconi_score: row.bocconi_score,
           current_attempt: row.current_attempt || 1,
           total_attempts: row.total_attempts || 0,
           test_name: testName,
@@ -1101,17 +1248,26 @@ export default function StudentTestsPage() {
                         <div className="flex items-center gap-4">
                           {(() => {
                             // Calculate average score for completed tests in this section
-                            const completedTests = sectionTests.filter(t => t.score !== null);
+                            const isBocconi = testType.toUpperCase() === 'BOCCONI' || testType.toUpperCase() === 'BOCCONI LAW';
+                            const completedTests = sectionTests.filter(t => isBocconi ? t.bocconi_score !== null : t.score !== null);
                             const avgScore = completedTests.length > 0
-                              ? Math.round(completedTests.reduce((sum, t) => sum + (t.score || 0), 0) / completedTests.length)
+                              ? isBocconi
+                                ? (completedTests.reduce((sum, t) => sum + (t.bocconi_score || 0), 0) / completedTests.length).toFixed(1)
+                                : Math.round(completedTests.reduce((sum, t) => sum + (t.score || 0), 0) / completedTests.length)
                               : null;
 
                             return (
                               <>
                                 {avgScore !== null && (
                                   <span className="text-sm font-semibold text-brand-green flex items-center gap-1">
-                                    <FontAwesomeIcon icon={faPercent} className="text-xs" />
-                                    {avgScore}%
+                                    {isBocconi ? (
+                                      <span>{avgScore}/50</span>
+                                    ) : (
+                                      <>
+                                        <FontAwesomeIcon icon={faPercent} className="text-xs" />
+                                        {avgScore}%
+                                      </>
+                                    )}
                                   </span>
                                 )}
                                 <span className="text-sm text-gray-600">
@@ -1218,7 +1374,22 @@ export default function StudentTestsPage() {
                                           <span>{t('studentTests.completedAt')}: {formatDate(assignment.completed_at)}</span>
                                         </div>
                                       )}
-                                      {assignment.score !== null && (
+                                      {/* Show Bocconi score for Bocconi and Bocconi Law tests, percentage for others */}
+                                      {(assignment.test_type.toUpperCase() === 'BOCCONI' || assignment.test_type.toUpperCase() === 'BOCCONI LAW') && assignment.bocconi_score !== null && (
+                                        <div className="flex items-center gap-2">
+                                          <div className="font-bold text-brand-dark">
+                                            {t('studentTests.score')}: {assignment.bocconi_score}/50
+                                          </div>
+                                          <span className={`text-xs font-semibold px-2 py-1 rounded ${
+                                            assignment.bocconi_score >= 30
+                                              ? 'bg-green-100 text-green-700'
+                                              : 'bg-red-100 text-red-700'
+                                          }`}>
+                                            {assignment.bocconi_score >= 30 ? '✓ PASS' : '✗ FAIL'}
+                                          </span>
+                                        </div>
+                                      )}
+                                      {assignment.test_type.toUpperCase() !== 'BOCCONI' && assignment.test_type.toUpperCase() !== 'BOCCONI LAW' && assignment.score !== null && (
                                         <div className="flex items-center gap-2 font-bold text-brand-green">
                                           <FontAwesomeIcon icon={faPercent} />
                                           <span>{t('studentTests.score')}: {assignment.score}%</span>
