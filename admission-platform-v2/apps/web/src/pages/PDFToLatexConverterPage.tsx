@@ -704,22 +704,23 @@ export default function PDFToLatexConverterPage() {
     setShowLanguageModal(true);
   };
 
-  const handleLanguageConfirm = async (languages: 'ITA' | 'ENG' | 'BOTH') => {
+  const handleLanguageConfirm = async (languages: 'ITA' | 'ENG' | 'BOTH', useGoogleTranslate?: boolean) => {
+    console.log(`🟢 PDFToLatexConverterPage: handleLanguageConfirm called with languages=${languages}, useGoogleTranslate=${useGoogleTranslate}`);
     setSelectedLanguages(languages);
 
     if (!pendingConversion) return;
 
     if (pendingConversion.type === 'existing') {
-      await handleExtractAndConvertInternal(languages);
+      await handleExtractAndConvertInternal(languages, useGoogleTranslate);
     } else if (pendingConversion.type === 'new' && pendingConversion.data) {
       const { metadata, sections } = pendingConversion.data;
-      await handleConvertNewTestInternal(languages, metadata, sections);
+      await handleConvertNewTestInternal(languages, metadata, sections, useGoogleTranslate);
     }
 
     setPendingConversion(null);
   };
 
-  const handleExtractAndConvertInternal = async (languages: 'ITA' | 'ENG' | 'BOTH') => {
+  const handleExtractAndConvertInternal = async (languages: 'ITA' | 'ENG' | 'BOTH', useGoogleTranslate?: boolean) => {
     if (!selectedTest) {
       setError('No test selected');
       return;
@@ -826,9 +827,12 @@ export default function PDFToLatexConverterPage() {
               pageStart,
               pageEnd,
               languages: languages,
+              useGoogleTranslate: useGoogleTranslate || false,
             }),
           }
         );
+
+        console.log(`🟡 API Call (existing test): Sending useGoogleTranslate=${useGoogleTranslate || false}, languages=${languages}`);
 
         if (!response.ok) {
           const errorData = await response.json();
@@ -985,7 +989,7 @@ export default function PDFToLatexConverterPage() {
   ) => {
     // If languages is provided (from NewTestCreator after modal), use it directly
     if (metadata.languages) {
-      await handleConvertNewTestInternal(metadata.languages, metadata, sections);
+      await handleConvertNewTestInternal(metadata.languages, metadata, sections, metadata.useGoogleTranslate);
       return;
     }
 
@@ -1005,7 +1009,8 @@ export default function PDFToLatexConverterPage() {
       solutionsPdfUrl: string | null;
       correctAnswers: string;
       questionCount: number;
-    }[]
+    }[],
+    useGoogleTranslate?: boolean
   ) => {
     setConverting(true);
     setError(null);
@@ -1098,9 +1103,12 @@ export default function PDFToLatexConverterPage() {
                 pageStart,
                 pageEnd,
                 languages: languages,
+                useGoogleTranslate: useGoogleTranslate || false,
               }),
             }
           );
+
+          console.log(`🟡 API Call (new test): Sending useGoogleTranslate=${useGoogleTranslate || false}, languages=${languages} for section ${section.section}`);
 
           if (!response.ok) {
             const errorData = await response.json();

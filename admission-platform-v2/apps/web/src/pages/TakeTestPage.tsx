@@ -534,21 +534,48 @@ export default function TakeTestPage() {
   };
 
   // Helper to get localized question text based on language captured at test start
+  // Special case: "inglese" sections should always show English questions
   const getLocalizedQuestionText = (questionData: any): string => {
     if (!questionData) return '';
-    if (testLanguage === 'en' && questionData.question_text_eng) {
+
+    // Check if current section is an English section (for Cattolica's "inglese" section)
+    const isEnglishSection = currentSection && currentSection.toLowerCase().includes('inglese');
+
+    // Show English version if: test language is English OR current section is an English section
+    if ((testLanguage === 'en' || isEnglishSection) && questionData.question_text_eng) {
       return questionData.question_text_eng;
     }
     return questionData.question_text || questionData.question || '';
   };
 
   // Helper to get localized options based on language captured at test start
+  // Special case: "inglese" sections should always show English options
   const getLocalizedOptions = (questionData: any): Record<string, string> => {
     if (!questionData) return {};
-    if (testLanguage === 'en' && questionData.options_eng) {
+
+    // Check if current section is an English section (for Cattolica's "inglese" section)
+    const isEnglishSection = currentSection && currentSection.toLowerCase().includes('inglese');
+
+    // Show English version if: test language is English OR current section is an English section
+    if ((testLanguage === 'en' || isEnglishSection) && questionData.options_eng) {
       return questionData.options_eng;
     }
     return questionData.options || {};
+  };
+
+  // Helper to get localized passage text based on language captured at test start
+  // Special case: "inglese" sections should always show English passages
+  const getLocalizedPassageText = (questionData: any): string => {
+    if (!questionData) return '';
+
+    // Check if current section is an English section (for Cattolica's "inglese" section)
+    const isEnglishSection = currentSection && currentSection.toLowerCase().includes('inglese');
+
+    // Show English version if: test language is English OR current section is an English section
+    if ((testLanguage === 'en' || isEnglishSection) && questionData.passage_text_eng) {
+      return questionData.passage_text_eng;
+    }
+    return questionData.passage_text || '';
   };
 
   // Calculate expected total sections (for footer display)
@@ -3912,9 +3939,7 @@ export default function TakeTestPage() {
             return (
               <MultipleChoiceQuestion
                 questionText={getLocalizedQuestionText(currentQuestion.question_data)}
-                passageText={testLanguage === 'en' && currentQuestion.question_data.passage_text_eng
-                  ? currentQuestion.question_data.passage_text_eng
-                  : currentQuestion.question_data.passage_text}
+                passageText={getLocalizedPassageText(currentQuestion.question_data)}
                 passageTitle={currentQuestion.question_data.passage_title}
                 imageUrl={currentQuestion.question_data.image_url || undefined}
                 options={getLocalizedOptions(currentQuestion.question_data)}
@@ -3940,9 +3965,7 @@ export default function TakeTestPage() {
                     </h3>
                   )}
                   <div className="text-gray-700 whitespace-pre-wrap max-h-[650px] overflow-y-auto">
-                    {testLanguage === 'en' && currentQuestion.question_data.passage_text_eng
-                      ? currentQuestion.question_data.passage_text_eng
-                      : currentQuestion.question_data.passage_text}
+                    {getLocalizedPassageText(currentQuestion.question_data)}
                   </div>
                 </div>
 

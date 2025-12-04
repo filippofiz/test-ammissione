@@ -27,6 +27,7 @@ interface ExtractQuestionsRequest {
   targetQuestions?: number[];     // Which questions this passage is for
   // Language selection
   languages?: 'ITA' | 'ENG' | 'BOTH';  // Which language(s) to extract
+  useGoogleTranslate?: boolean;  // Whether to use Google Translate API for missing language
 }
 
 interface Passage {
@@ -212,9 +213,9 @@ serve(async (req) => {
     console.log('✓ Auth check passed for user:', user.email);
 
     // Parse request body
-    const { pdfUrl, pdfText, testType, section, testNumber, extractFromPdf, databaseAnswers, solutionsPdfUrl, pageStart, pageEnd, extractPassageOnly, targetQuestions, languages = 'BOTH' }: ExtractQuestionsRequest = await req.json();
+    const { pdfUrl, pdfText, testType, section, testNumber, extractFromPdf, databaseAnswers, solutionsPdfUrl, pageStart, pageEnd, extractPassageOnly, targetQuestions, languages = 'BOTH', useGoogleTranslate = false }: ExtractQuestionsRequest = await req.json();
 
-    console.log(`Language selection: ${languages}`);
+    console.log(`Language selection: ${languages}, Use Google Translate: ${useGoogleTranslate}`);
 
     if ((!pdfText && !pdfUrl) || !testType || !section) {
       return new Response(
@@ -915,13 +916,19 @@ Return ONLY valid JSON with the questions array.`,
     const isSourceItalian = sourceLang === 'it';
     const isSourceEnglish = sourceLang === 'en';
 
+    // Translation is needed when:
+    // 1. languages === 'BOTH' AND useGoogleTranslate is true (translate missing language)
+    // 2. languages === 'ITA' and source is English (need to translate to Italian)
+    // 3. languages === 'ENG' and source is Italian (need to translate to English)
     const needsTranslation =
-      (languages === 'BOTH') ||
+      (languages === 'BOTH' && useGoogleTranslate) ||
       (languages === 'ITA' && isSourceEnglish) ||  // English PDF, want Italian
       (languages === 'ENG' && isSourceItalian);     // Italian PDF, want English
 
+    console.log(`🔍 Translation Check: languages=${languages}, useGoogleTranslate=${useGoogleTranslate}, sourceLang=${sourceLang}, needsTranslation=${needsTranslation}`);
+
     if (needsTranslation && GOOGLE_TRANSLATE_API_KEY && extractedQuestions.questions && extractedQuestions.questions.length > 0) {
-      console.log(`Language selection: ${languages}, Source: ${sourceLang}, Translation needed: true`);
+      console.log(`✅ TRANSLATING: Language selection: ${languages}, Source: ${sourceLang}`);
 
       try {
         const targetLang = languages === 'BOTH'
@@ -1062,7 +1069,7 @@ Return ONLY valid JSON with the questions array.`,
         // Continue without translations if error
       }
     } else {
-      console.log(`Language selection: ${languages}, Source: ${sourceLang}, Translation needed: false - keeping original language`);
+      console.log(`❌ NOT TRANSLATING: Language selection: ${languages}, Source: ${sourceLang} - keeping original language only`);
     }
 
     // Calculate cost based on Claude API pricing (as of 2025)

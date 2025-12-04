@@ -32,6 +32,7 @@ interface NewTestMetadata {
   exercise_type: string;
   test_number: number;
   languages?: 'ITA' | 'ENG' | 'BOTH';
+  useGoogleTranslate?: boolean;
 }
 
 interface NewTestCreatorProps {
@@ -78,6 +79,9 @@ export function NewTestCreator({ onConvert, converting, savedSections = [] }: Ne
   const [testConfigs, setTestConfigs] = useState<any[]>([]);
   const [currentConfig, setCurrentConfig] = useState<any | null>(null);
 
+  // Section order configurations from 2V_section_order
+  const [sectionOrderConfigs, setSectionOrderConfigs] = useState<Map<string, string[]>>(new Map());
+
   // UI state for creating new items
   const [isCreatingNewTestType, setIsCreatingNewTestType] = useState(false);
   const [isCreatingNewSection, setIsCreatingNewSection] = useState(false);
@@ -100,6 +104,13 @@ export function NewTestCreator({ onConvert, converting, savedSections = [] }: Ne
           .select('*');
 
         if (configsError) throw configsError;
+
+        // Load section order configurations
+        const { data: sectionOrders, error: sectionOrdersError } = await supabase
+          .from('2V_section_order')
+          .select('*');
+
+        if (sectionOrdersError) throw sectionOrdersError;
 
         if (tests) {
           // Get unique test types
@@ -125,7 +136,32 @@ export function NewTestCreator({ onConvert, converting, savedSections = [] }: Ne
         }
 
         if (configs) {
+          console.log('📋 Loaded test configs:', configs);
+          configs.forEach(config => {
+            console.log(`Config: ${config.test_type} - ${config.track_type}`, {
+              section_order: config.section_order,
+              section_order_type: typeof config.section_order,
+              section_order_value: config.section_order
+            });
+          });
           setTestConfigs(configs);
+        }
+
+        if (sectionOrders) {
+          console.log('📋 Loaded section order configs:', sectionOrders);
+          const sectionOrderMap = new Map<string, string[]>();
+          sectionOrders.forEach(so => {
+            console.log(`Section Order: ${so.test_type}`, {
+              section_order: so.section_order,
+              type: typeof so.section_order,
+              is_array: Array.isArray(so.section_order)
+            });
+            if (so.section_order && Array.isArray(so.section_order)) {
+              sectionOrderMap.set(so.test_type, so.section_order);
+            }
+          });
+          setSectionOrderConfigs(sectionOrderMap);
+          console.log('✅ Section order map created:', sectionOrderMap);
         }
       } catch (err) {
         console.error('Error loading existing test data:', err);
@@ -140,9 +176,17 @@ export function NewTestCreator({ onConvert, converting, savedSections = [] }: Ne
   // Load config when test type + exercise type changes
   useEffect(() => {
     if (metadata.test_type && metadata.exercise_type) {
-      const config = testConfigs.find(
+      // Try to find exact match first
+      let config = testConfigs.find(
         c => c.test_type === metadata.test_type && c.track_type === metadata.exercise_type
       );
+
+      // For Training and Assessment Monotematico, if no exact match, use any config for this test_type
+      if (!config && (metadata.exercise_type === 'Training' || metadata.exercise_type === 'Assessment Monotematico')) {
+        config = testConfigs.find(c => c.test_type === metadata.test_type);
+        console.log('No exact match found, using first config for test_type:', metadata.test_type, config);
+      }
+
       setCurrentConfig(config || null);
       console.log('Loaded config for', metadata.test_type, metadata.exercise_type, ':', config);
     } else {
@@ -196,39 +240,95 @@ export function NewTestCreator({ onConvert, converting, savedSections = [] }: Ne
     setProcessedSections([]);
   }, [metadata.test_type, metadata.exercise_type, metadata.test_number]);
 
-  // Helper: Get available sections from config
+  // Helper: Get available sections from config or existing tests
   const getConfigSections = (): string[] => {
-    if (!currentConfig) return [];
+    console.log('🔍 getConfigSections called with:', {
+      exercise_type: metadata.exercise_type,
+      test_type: metadata.test_type,
+      has_currentConfig: !!currentConfig,
+      has_section_order_in_currentConfig: !!currentConfig?.section_order,
+      sectionOrderConfigs_has_test_type: sectionOrderConfigs.has(metadata.test_type)
+    });
 
-    // Check section_order first
-    if (currentConfig.section_order) {
-      try {
-        // section_order might be a JSON string or already an array
-        const sectionOrder = typeof currentConfig.section_order === 'string'
-          ? JSON.parse(currentConfig.section_order)
-          : currentConfig.section_order;
+    // For Training and Assessment Monotematico, prioritize 2V_section_order table
+    const isMonotematicoOrTraining = metadata.exercise_type === 'Training' ||
+                                      metadata.exercise_type === 'Assessment Monotematico';
 
-        if (Array.isArray(sectionOrder) && sectionOrder.length > 0) {
-          console.log('Extracted sections from section_order:', sectionOrder);
-          return sectionOrder;
+    if (isMonotematicoOrTraining && metadata.test_type) {
+      // Priority 1: Check 2V_section_order table
+      if (sectionOrderConfigs.has(metadata.test_type)) {
+        const allSections = sectionOrderConfigs.get(metadata.test_type)!;
+
+        // Filter out exercise types that shouldn't be sections
+        const excludedExerciseTypes = ['Assessment Iniziale', 'Simulazione'];
+        const sections = allSections.filter(s => !excludedExerciseTypes.includes(s));
+
+        console.log('✅ Using sections from 2V_section_order for Training/Monotematico (filtered):', sections);
+        console.log('   (Excluded exercise types:', excludedExerciseTypes, ')');
+        return sections;
+      }
+
+      // Priority 2: Check currentConfig.section_order
+      if (currentConfig?.section_order) {
+        try {
+          console.log('📝 Raw section_order from config:', currentConfig.section_order, 'Type:', typeof currentConfig.section_order);
+
+          // section_order might be a JSON string or already an array
+          const sectionOrder = typeof currentConfig.section_order === 'string'
+            ? JSON.parse(currentConfig.section_order)
+            : currentConfig.section_order;
+
+          console.log('📝 Parsed section_order:', sectionOrder, 'Is array?', Array.isArray(sectionOrder));
+
+          if (Array.isArray(sectionOrder) && sectionOrder.length > 0) {
+            // Filter out exercise types that shouldn't be sections
+            const excludedExerciseTypes = ['Assessment Iniziale', 'Simulazione'];
+            const filteredSections = sectionOrder.filter(s => !excludedExerciseTypes.includes(s));
+
+            console.log('✓ Using sections from config.section_order for Training/Monotematico (filtered):', filteredSections);
+            return filteredSections;
+          } else {
+            console.warn('⚠️ section_order is not a valid array:', sectionOrder);
+          }
+        } catch (e) {
+          console.error('Failed to parse section_order:', e);
         }
-      } catch (e) {
-        console.error('Failed to parse section_order:', e);
+      } else {
+        console.warn('⚠️ No section_order found in currentConfig for Training/Monotematico');
       }
     }
 
-    // Fallback: Check section_adaptivity_config
-    if (currentConfig.section_adaptivity_config) {
-      try {
-        const adaptivityConfig = typeof currentConfig.section_adaptivity_config === 'string'
-          ? JSON.parse(currentConfig.section_adaptivity_config)
-          : currentConfig.section_adaptivity_config;
+    // For other test types or if no section_order found
+    if (currentConfig) {
+      // Check section_order first
+      if (currentConfig.section_order) {
+        try {
+          const sectionOrder = typeof currentConfig.section_order === 'string'
+            ? JSON.parse(currentConfig.section_order)
+            : currentConfig.section_order;
 
-        const sections = Object.keys(adaptivityConfig);
-        console.log('Extracted sections from section_adaptivity_config:', sections);
-        return sections;
-      } catch (e) {
-        console.error('Failed to parse section_adaptivity_config:', e);
+          if (Array.isArray(sectionOrder) && sectionOrder.length > 0) {
+            console.log('Extracted sections from section_order:', sectionOrder);
+            return sectionOrder;
+          }
+        } catch (e) {
+          console.error('Failed to parse section_order:', e);
+        }
+      }
+
+      // Fallback: Check section_adaptivity_config
+      if (currentConfig.section_adaptivity_config) {
+        try {
+          const adaptivityConfig = typeof currentConfig.section_adaptivity_config === 'string'
+            ? JSON.parse(currentConfig.section_adaptivity_config)
+            : currentConfig.section_adaptivity_config;
+
+          const sections = Object.keys(adaptivityConfig);
+          console.log('Extracted sections from section_adaptivity_config:', sections);
+          return sections;
+        } catch (e) {
+          console.error('Failed to parse section_adaptivity_config:', e);
+        }
       }
     }
 
@@ -237,6 +337,10 @@ export function NewTestCreator({ onConvert, converting, savedSections = [] }: Ne
 
   // Helper: Check if config uses sections
   const configHasSections = (): boolean => {
+    // Always allow sections for Training and Assessment Monotematico
+    if (metadata.exercise_type === 'Training' || metadata.exercise_type === 'Assessment Monotematico') {
+      return true;
+    }
     if (!currentConfig) return true; // Default to allowing sections if no config
     return currentConfig.section_order_mode !== 'no_sections';
   };
@@ -375,9 +479,9 @@ export function NewTestCreator({ onConvert, converting, savedSections = [] }: Ne
     setShowLanguageModal(true);
   };
 
-  const handleLanguageConfirm = async (languages: 'ITA' | 'ENG' | 'BOTH') => {
+  const handleLanguageConfirm = async (languages: 'ITA' | 'ENG' | 'BOTH', useGoogleTranslate?: boolean) => {
     // Convert ONLY current section with selected languages
-    await onConvert({ ...metadata, languages }, [currentSection]);
+    await onConvert({ ...metadata, languages, useGoogleTranslate }, [currentSection]);
   };
 
   const handleAddAnotherSection = () => {
@@ -652,10 +756,14 @@ export function NewTestCreator({ onConvert, converting, savedSections = [] }: Ne
                   </select>
                   {(() => {
                     const configSections = getConfigSections();
+                    const isMonotematicoOrTraining = metadata.exercise_type === 'Training' ||
+                                                      metadata.exercise_type === 'Assessment Monotematico';
+
                     if (configSections.length > 0) {
                       return (
                         <p className="text-xs text-green-600 mt-1">
-                          ✓ {configSections.length} sections defined in config for {metadata.test_type} - {metadata.exercise_type}
+                          ✓ {configSections.length} sections from section_order for {metadata.test_type} - {metadata.exercise_type}
+                          {isMonotematicoOrTraining && ' (you can also create new sections)'}
                         </p>
                       );
                     }
@@ -663,6 +771,7 @@ export function NewTestCreator({ onConvert, converting, savedSections = [] }: Ne
                       return (
                         <p className="text-xs text-gray-500 mt-1">
                           {existingSectionsByType.get(metadata.test_type)!.length} existing sections for {metadata.test_type}
+                          {isMonotematicoOrTraining && ' (or create new sections)'}
                         </p>
                       );
                     }
