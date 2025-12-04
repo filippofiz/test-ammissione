@@ -599,9 +599,10 @@ export default function TestResultsPage() {
       return isEnglish && questionData[englishKey] ? questionData[englishKey] : questionData[italianKey];
     };
 
-    // Get localized question text and options
+    // Get localized question text, options, and passage text
     const localizedQuestionText = getLocalizedText('question_text', 'question_text_eng');
     const localizedOptions = isEnglish && questionData.options_eng ? questionData.options_eng : questionData.options;
+    const localizedPassageText = getLocalizedText('passage_text', 'passage_text_eng');
 
     // Dummy onChange - components are read-only
     const noOp = () => {};
@@ -761,6 +762,8 @@ export default function TestResultsPage() {
       component = (
         <MultipleChoiceQuestion
           questionText={localizedQuestionText || question.question_text || ''}
+          passageText={localizedPassageText || questionData.passage_text}
+          passageTitle={questionData.passage_title}
           imageUrl={questionData.image_url || question.image_url}
           options={localizedOptions}
           selectedAnswer={studentMCAnswer}
