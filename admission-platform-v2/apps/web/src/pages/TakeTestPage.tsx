@@ -2090,6 +2090,14 @@ export default function TakeTestPage() {
         .eq('status', 'unlocked');
 
       setIsSaving(false);
+
+      // Clear the start time to prevent reusing stale timestamps
+      setQuestionStartTimes(prev => {
+        const updated = { ...prev };
+        delete updated[questionId];
+        return updated;
+      });
+
       return true;
 
     } catch (error: any) {

@@ -94,6 +94,7 @@ export default function TestResultsPage() {
   const [togglingViewability, setTogglingViewability] = useState(false);
   const [algorithmConfig, setAlgorithmConfig] = useState<any>(null);
   const [showScoreReport, setShowScoreReport] = useState(false);
+  const [showTimeManagement, setShowTimeManagement] = useState(false);
 
   useEffect(() => {
     loadTestResults();
@@ -138,31 +139,17 @@ export default function TestResultsPage() {
 
       if (studentError) throw studentError;
 
-      // Load algorithm config for scoring via test_track_config
+      // Load test track config for adaptivity and section info
       const testType = assignmentData['2V_tests'].test_type;
       const exerciseType = assignmentData['2V_tests'].exercise_type;
 
-      console.log('🎯 TEST DATA:', {
-        testType,
-        exerciseType,
-        fullTest: assignmentData['2V_tests']
-      });
-
-      // First fetch the test track config to get the algorithm_id
+      // Load test_track_config for adaptivity, sections, and algorithm
       const { data: trackConfig, error: trackConfigError } = await supabase
         .from('2V_test_track_config')
         .select('*')
         .eq('test_type', testType)
         .eq('track_type', exerciseType)
         .maybeSingle();
-
-      console.log('🎯 TRACK CONFIG FETCH:', {
-        testType,
-        exerciseType_used_as_track_type: exerciseType,
-        error: trackConfigError,
-        trackConfig: trackConfig,
-        algorithmId: trackConfig?.algorithm_id
-      });
 
       // If there's an algorithm_id, fetch the algorithm config
       if (!trackConfigError && trackConfig?.algorithm_id) {
@@ -172,17 +159,9 @@ export default function TestResultsPage() {
           .eq('id', trackConfig.algorithm_id)
           .single();
 
-        console.log('🎯 ALGORITHM CONFIG FETCH:', {
-          algorithmId: trackConfig.algorithm_id,
-          error: algoError,
-          data: algoConfig,
-          testType: testType
-        });
-
         // Set algorithm config if found - score calculation works for any test type
         if (!algoError && algoConfig) {
           setAlgorithmConfig(algoConfig);
-          console.log('✅ Algorithm loaded - score report will be shown');
         }
       }
 
@@ -241,11 +220,28 @@ export default function TestResultsPage() {
         (a: any) => a.attempt_number === attemptToLoad
       );
 
-      // Get question IDs - use answers array ordered by updated_at
+      // Get question IDs - different strategies based on test configuration
       let questionIds: string[] = [];
 
-      if (answers.length > 0) {
-        // Use answers-based loading (ordered by updated_at DESC)
+      // Check if this is a non-adaptive test with no macro sections
+      const isNonAdaptive = trackConfig?.adaptivity_mode === 'non_adaptive';
+      const hasNoMacroSections = trackConfig?.section_order_mode !== 'macro_sections_mandatory';
+      const shouldShowAllQuestions = isNonAdaptive && hasNoMacroSections;
+
+      if (shouldShowAllQuestions) {
+        // Load ALL questions directly from 2V_questions table using test_id
+        const testId = assignmentData['2V_tests'].id;
+        const { data: allTestQuestions, error: allQuestionsError } = await supabase
+          .from('2V_questions')
+          .select('id')
+          .eq('test_id', testId)
+          .order('question_number');
+
+        if (allQuestionsError) throw allQuestionsError;
+
+        questionIds = (allTestQuestions || []).map(q => q.id);
+      } else if (answers.length > 0) {
+        // Fallback: Use answers-based loading (only seen questions)
         const seenQuestionIds = new Set<string>();
         const uniqueAnswers = answers.filter(a => {
           if (seenQuestionIds.has(a.question_id)) {
@@ -269,32 +265,55 @@ export default function TestResultsPage() {
       // Create a map for quick lookup
       const questionMap = new Map(questionsData?.map(q => [q.id, q]) || []);
 
-      // Order questions according to answer order (already sorted by question_order, created_at)
+      // Order questions according to test order
       // Map to get the actual question objects
       let questions: Question[] = questionIds
         .map(id => questionMap.get(id))
         .filter((q: any) => q !== undefined);
 
-      // Sort by question_order (primary), then created_at (secondary), then question_number (tertiary)
-      const answerOrderMap = new Map(answers.map((a, idx) => [a.question_id, idx]));
-      const answerCreatedAtMap = new Map(answers.map(a => [a.question_id, new Date(a.created_at).getTime()]));
+      // Sort questions based on the source
+      if (shouldShowAllQuestions) {
+        // Custom sort: answered questions first (by question_order), then never-viewed (by question_number)
+        const answerOrderMap = new Map(answers.map(a => [a.question_id, a.question_order ?? 999999]));
 
-      questions.sort((a, b) => {
-        // Primary: question_order from answer
-        const orderA = answerOrderMap.get(a.id) ?? 999999;
-        const orderB = answerOrderMap.get(b.id) ?? 999999;
-        if (orderA !== orderB) return orderA - orderB;
+        questions.sort((a, b) => {
+          const aHasAnswer = answerOrderMap.has(a.id);
+          const bHasAnswer = answerOrderMap.has(b.id);
 
-        // Secondary: created_at timestamp
-        const timeA = answerCreatedAtMap.get(a.id) ?? 999999999999999;
-        const timeB = answerCreatedAtMap.get(b.id) ?? 999999999999999;
-        if (timeA !== timeB) return timeA - timeB;
+          // Both answered: sort by question_order
+          if (aHasAnswer && bHasAnswer) {
+            return answerOrderMap.get(a.id)! - answerOrderMap.get(b.id)!;
+          }
 
-        // Tertiary: question number from question data
-        const numA = a.question_number || 0;
-        const numB = b.question_number || 0;
-        return numA - numB;
-      });
+          // One answered, one not: answered first
+          if (aHasAnswer && !bHasAnswer) return -1;
+          if (!aHasAnswer && bHasAnswer) return 1;
+
+          // Both not answered: sort by question_number
+          return (a.question_number || 0) - (b.question_number || 0);
+        });
+      } else {
+        // Sort by question_order (primary), then created_at (secondary), then question_number (tertiary)
+        const answerOrderMap = new Map(answers.map((a, idx) => [a.question_id, idx]));
+        const answerCreatedAtMap = new Map(answers.map(a => [a.question_id, new Date(a.created_at).getTime()]));
+
+        questions.sort((a, b) => {
+          // Primary: question_order from answer
+          const orderA = answerOrderMap.get(a.id) ?? 999999;
+          const orderB = answerOrderMap.get(b.id) ?? 999999;
+          if (orderA !== orderB) return orderA - orderB;
+
+          // Secondary: created_at timestamp
+          const timeA = answerCreatedAtMap.get(a.id) ?? 999999999999999;
+          const timeB = answerCreatedAtMap.get(b.id) ?? 999999999999999;
+          if (timeA !== timeB) return timeA - timeB;
+
+          // Tertiary: question number from question data
+          const numA = a.question_number || 0;
+          const numB = b.question_number || 0;
+          return numA - numB;
+        });
+      }
 
       // Create metadata map from completion_details (for difficulty info)
       const metadataMap = new Map<string, any>();
@@ -466,6 +485,9 @@ export default function TestResultsPage() {
         return;
       }
 
+      // Get completion details to extract start/end times for each attempt
+      const completionDetails = assignment.completion_details || { attempts: [] };
+
       // Process each attempt
       for (let attemptNum = 1; attemptNum <= assignment.total_attempts; attemptNum++) {
         // Filter answers for this specific attempt
@@ -498,14 +520,19 @@ export default function TestResultsPage() {
         let correct = 0;
         let wrong = 0;
         let unanswered = 0;
-        let totalTime = 0;
         const sectionStats: Record<string, { correct: number; total: number; time: number }> = {};
 
         questions.forEach((question: Question) => {
           const studentAnswer = answerMap.get(question.id);
           const isCorrect = checkIfCorrect(question, studentAnswer || null);
 
-          if (!studentAnswer) {
+          // Check if answer is actually provided (not null)
+          const hasAnswer = studentAnswer && studentAnswer.answer &&
+            (typeof studentAnswer.answer === 'object'
+              ? studentAnswer.answer.answer !== null && studentAnswer.answer.answer !== undefined
+              : true);
+
+          if (!hasAnswer) {
             unanswered++;
           } else if (isCorrect) {
             correct++;
@@ -513,11 +540,7 @@ export default function TestResultsPage() {
             wrong++;
           }
 
-          if (studentAnswer) {
-            totalTime += studentAnswer.time_spent_seconds || 0;
-          }
-
-          // Section stats
+          // Section stats (using individual answer times for section breakdown)
           if (!sectionStats[question.section]) {
             sectionStats[question.section] = { correct: 0, total: 0, time: 0 };
           }
@@ -525,6 +548,18 @@ export default function TestResultsPage() {
           if (isCorrect) sectionStats[question.section].correct++;
           if (studentAnswer) sectionStats[question.section].time += studentAnswer.time_spent_seconds || 0;
         });
+
+        // Calculate total time from completion_details start/end times
+        const attemptRecord = completionDetails.attempts?.find((a: any) => a.attempt_number === attemptNum);
+        let totalTime = 0;
+        if (attemptRecord?.started_at && attemptRecord?.completed_at) {
+          const startTime = new Date(attemptRecord.started_at).getTime();
+          const endTime = new Date(attemptRecord.completed_at).getTime();
+          totalTime = Math.floor((endTime - startTime) / 1000); // Convert to seconds
+        } else {
+          // Fallback: sum individual answer times if completion_details not available
+          totalTime = answers.reduce((sum, a) => sum + (a.time_spent_seconds || 0), 0);
+        }
 
         attempts.push({
           attemptNumber: attemptNum,
@@ -534,7 +569,7 @@ export default function TestResultsPage() {
           total: questions.length,
           score: questions.length > 0 ? Math.round((correct / questions.length) * 100) : 0,
           totalTime,
-          avgTimePerQuestion: answers && answers.length > 0 ? Math.round(totalTime / answers.length) : 0,
+          avgTimePerQuestion: totalTime > 0 && questions.length > 0 ? Math.round(totalTime / questions.length) : 0,
           sectionStats,
         });
       }
@@ -846,14 +881,6 @@ export default function TestResultsPage() {
 
   // Calculate scaled scores based on algorithm config
   function calculateScaledScores() {
-    console.log('🎯 SCORE REPORT DEBUG:', {
-      hasAlgorithmConfig: !!algorithmConfig,
-      algorithmConfig: algorithmConfig,
-      resultsLength: results.length,
-      testType: assignment?.['2V_tests']?.test_type,
-      scoringMethod: algorithmConfig?.scoring_method
-    });
-
     if (!algorithmConfig) return null;
 
     const groupedResults = groupBySection(results);
@@ -939,12 +966,15 @@ export default function TestResultsPage() {
         let sectionBlank = 0;
 
         sectionResults.forEach(r => {
+          // Check if question has an actual answer (not null)
+          const questionHasAnswer = hasActualAnswer(r);
+
           if (r.isCorrect) {
             score += 1;
             sectionCorrect++;
             totalCorrect++;
-          } else if (r.studentAnswer && !r.isCorrect) {
-            // Count options for this question
+          } else if (questionHasAnswer && !r.isCorrect) {
+            // Wrong answer (has answer but incorrect)
             const optionsCount = countOptions(r.question);
             const penalty = getPenaltyForWrong(optionsCount);
             score -= penalty; // Apply penalty (subtract because it's a deduction)
@@ -963,7 +993,8 @@ export default function TestResultsPage() {
 
             sectionWrong++;
             totalWrong++;
-          } else if (!r.studentAnswer) {
+          } else {
+            // Blank (no answer or null answer)
             score += penaltyBlank; // Usually 0
             sectionBlank++;
             totalBlank++;
@@ -1043,15 +1074,47 @@ export default function TestResultsPage() {
     }
   }
 
+  // Helper function to check if a question was actually answered (not null)
+  const hasActualAnswer = (result: TestResult): boolean => {
+    if (!result.studentAnswer) return false;
+    const answerData = result.studentAnswer.answer;
+    if (!answerData) return false;
+
+    // Check if answer is null or empty
+    if (typeof answerData === 'object') {
+      // Check for {answer: null} or {answers: {...}}
+      if (answerData.answer === null || answerData.answer === undefined) {
+        return false;
+      }
+      if (answerData.answers && typeof answerData.answers === 'object') {
+        return Object.keys(answerData.answers).length > 0;
+      }
+    }
+    return true;
+  };
+
+  // Calculate total time from assignment start_time and completed_at
+  const calculateTotalTime = (): number => {
+    if (!assignment?.start_time || !assignment?.completed_at) {
+      return 0;
+    }
+    const startTime = new Date(assignment.start_time).getTime();
+    const completedTime = new Date(assignment.completed_at).getTime();
+    return Math.floor((completedTime - startTime) / 1000); // Convert to seconds
+  };
+
   // Calculate statistics
+  const answeredResults = results.filter(r => hasActualAnswer(r));
+  const unansweredResults = results.filter(r => !hasActualAnswer(r));
+
   const stats = {
     total: results.length,
-    answered: results.filter(r => r.studentAnswer).length,
+    answered: answeredResults.length,
     correct: results.filter(r => r.isCorrect).length,
-    wrong: results.filter(r => r.studentAnswer && !r.isCorrect).length,
-    unanswered: results.filter(r => !r.studentAnswer).length,
+    wrong: results.filter(r => hasActualAnswer(r) && !r.isCorrect).length,
+    unanswered: unansweredResults.length,
     flagged: results.filter(r => r.studentAnswer?.is_flagged).length,
-    totalTime: results.reduce((sum, r) => sum + (r.studentAnswer?.time_spent_seconds || 0), 0),
+    totalTime: calculateTotalTime(),
     score: results.length > 0 ? Math.round((results.filter(r => r.isCorrect).length / results.length) * 100) : 0,
   };
 
@@ -1146,6 +1209,20 @@ export default function TestResultsPage() {
             <div className="text-2xl font-bold">{stats.score}%</div>
             <div className="text-sm opacity-90">{t('testResults.score')}</div>
           </div>
+        </div>
+
+        {/* Time Management Analysis Button */}
+        <div className="mb-6">
+          <button
+            onClick={() => setShowTimeManagement(true)}
+            className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-6 py-4 rounded-xl shadow-lg hover:from-blue-600 hover:to-indigo-700 transition-all flex items-center justify-center gap-3"
+          >
+            <FontAwesomeIcon icon={faClock} className="text-2xl" />
+            <div className="text-left">
+              <div className="text-lg font-bold">Time Management Analysis</div>
+              <div className="text-sm opacity-90">View pacing and time distribution</div>
+            </div>
+          </button>
         </div>
 
         {/* Score Report - Based on Algorithm Config */}
@@ -1676,9 +1753,12 @@ export default function TestResultsPage() {
             return sections.map(sectionName => {
               // Calculate section statistics
               const sectionQuestions = groupedResults[sectionName];
-              const sectionTime = sectionQuestions.reduce((sum, r) => sum + (r.studentAnswer?.time_spent_seconds || 0), 0);
+              // For single-section tests, use total time; otherwise sum individual answer times
+              const sectionTime = sections.length === 1
+                ? calculateTotalTime()
+                : sectionQuestions.reduce((sum, r) => sum + (r.studentAnswer?.time_spent_seconds || 0), 0);
               const sectionCorrect = sectionQuestions.filter(r => r.isCorrect).length;
-              const sectionAnswered = sectionQuestions.filter(r => r.studentAnswer).length;
+              const sectionAnswered = sectionQuestions.filter(r => hasActualAnswer(r)).length;
               const formatTime = (seconds: number) => {
                 const mins = Math.floor(seconds / 60);
                 const secs = seconds % 60;
@@ -1718,6 +1798,7 @@ export default function TestResultsPage() {
                     className={`bg-white rounded-xl shadow-md border-2 ${
                       result.isCorrect ? 'border-green-200 bg-green-50/30' :
                       result.studentAnswer && !result.isCorrect ? 'border-red-200 bg-red-50/30' :
+                      !result.studentAnswer ? 'border-purple-200 bg-purple-50/20' :
                       'border-gray-200'
                     }`}
                   >
@@ -1727,6 +1808,7 @@ export default function TestResultsPage() {
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${
                           result.isCorrect ? 'bg-green-600' :
                           result.studentAnswer && !result.isCorrect ? 'bg-red-600' :
+                          !result.studentAnswer ? 'bg-purple-600' :
                           'bg-gray-400'
                         }`}>
                           {index + 1}
@@ -1737,11 +1819,13 @@ export default function TestResultsPage() {
                               {result.question.materia}
                             </span>
                           )}
-                          {!result.studentAnswer && (
+                          {!result.studentAnswer ? (
+                            <FontAwesomeIcon icon={faEyeSlash} className="text-purple-600 text-lg" title="Never Viewed" />
+                          ) : !hasActualAnswer(result) ? (
                             <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded font-semibold">
-                              {t('testResults.notAnswered')}
+                              Not Answered
                             </span>
-                          )}
+                          ) : null}
                           {result.studentAnswer?.is_flagged && (
                             <span className="text-xs text-yellow-600 bg-yellow-50 px-2 py-1 rounded">
                               <FontAwesomeIcon icon={faFlag} /> {t('testResults.flagged')}
@@ -1750,6 +1834,19 @@ export default function TestResultsPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
+                        {result.studentAnswer?.time_spent_seconds !== undefined && result.studentAnswer.time_spent_seconds > 0 && (
+                          <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-lg">
+                            <FontAwesomeIcon icon={faClock} className="text-gray-500" />
+                            <span className="font-medium">
+                              {(() => {
+                                const seconds = result.studentAnswer.time_spent_seconds;
+                                const mins = Math.floor(seconds / 60);
+                                const secs = seconds % 60;
+                                return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+                              })()}
+                            </span>
+                          </div>
+                        )}
                         {result.isCorrect && (
                           <FontAwesomeIcon icon={faCheckCircle} className="text-2xl text-green-600" />
                         )}
@@ -1799,6 +1896,262 @@ export default function TestResultsPage() {
         {filteredResults.length === 0 && (
           <div className="bg-white rounded-xl shadow-md p-12 text-center">
             <p className="text-gray-500 text-lg">{t('testResults.noMatchingQuestions')}</p>
+          </div>
+        )}
+
+        {/* Time Management Modal */}
+        {showTimeManagement && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowTimeManagement(false)}>
+            <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+              {/* Modal Header */}
+              <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-6 py-4 rounded-t-2xl flex items-center justify-between z-10">
+                <div className="flex items-center gap-3">
+                  <FontAwesomeIcon icon={faClock} className="text-3xl" />
+                  <div>
+                    <h2 className="text-2xl font-bold">Time Management Analysis</h2>
+                    <p className="text-sm opacity-90">Pacing analysis and recommendations</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowTimeManagement(false)}
+                  className="text-white hover:bg-white hover:bg-opacity-20 rounded-full w-10 h-10 flex items-center justify-center transition-all"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-6 space-y-6">
+                {(() => {
+                  // Calculate expected time per question based on test config
+                  const testType = assignment?.['2V_tests']?.test_type;
+                  const totalTestTime = stats.totalTime;
+                  const totalQuestions = results.length;
+                  const averageTimePerQuestion = totalQuestions > 0 ? totalTestTime / totalQuestions : 0;
+
+                  // Define expected time ranges based on test type
+                  const getExpectedTimeRange = (testType: string) => {
+                    switch (testType) {
+                      case 'GMAT':
+                        return { min: 90, ideal: 120, max: 150 }; // 1.5-2.5 min per question
+                      case 'SAT':
+                        return { min: 45, ideal: 75, max: 105 }; // 45s-1.75min
+                      case 'BOCCONI':
+                      case 'CATTOLICA':
+                        return { min: 30, ideal: 60, max: 90 }; // 30s-1.5min
+                      default:
+                        return { min: averageTimePerQuestion * 0.7, ideal: averageTimePerQuestion, max: averageTimePerQuestion * 1.3 };
+                    }
+                  };
+
+                  const expectedRange = getExpectedTimeRange(testType);
+
+                  // Categorize questions by pacing
+                  const tooFast = results.filter(r => r.studentAnswer && r.studentAnswer.time_spent_seconds < expectedRange.min);
+                  const optimal = results.filter(r => r.studentAnswer && r.studentAnswer.time_spent_seconds >= expectedRange.min && r.studentAnswer.time_spent_seconds <= expectedRange.max);
+                  const tooSlow = results.filter(r => r.studentAnswer && r.studentAnswer.time_spent_seconds > expectedRange.max);
+                  const notViewed = results.filter(r => !r.studentAnswer);
+
+                  // Calculate pacing score (0-100)
+                  const pacingScore = Math.round((optimal.length / Math.max(1, results.length - notViewed.length)) * 100);
+
+                  // Section-wise analysis
+                  const sectionAnalysis = (() => {
+                    const grouped = groupBySection(results);
+                    return Object.entries(grouped).map(([section, questions]) => {
+                      const sectionTotal = questions.reduce((sum, q) => sum + (q.studentAnswer?.time_spent_seconds || 0), 0);
+                      const sectionAvg = sectionTotal / questions.length;
+                      return { section, total: sectionTotal, average: sectionAvg, count: questions.length };
+                    });
+                  })();
+
+                  return (
+                    <>
+                      {/* Overall Pacing Score */}
+                      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border-2 border-blue-300">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="text-xl font-bold text-blue-900 mb-2">Overall Pacing Score</h3>
+                            <p className="text-sm text-blue-700">Percentage of questions answered at optimal pace</p>
+                          </div>
+                          <div className={`text-6xl font-bold ${
+                            pacingScore >= 70 ? 'text-green-600' :
+                            pacingScore >= 50 ? 'text-yellow-600' :
+                            'text-red-600'
+                          }`}>
+                            {pacingScore}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Pacing Distribution */}
+                      <div className="bg-white rounded-xl border-2 border-gray-200 p-6">
+                        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                          <FontAwesomeIcon icon={faChartBar} className="text-blue-600" />
+                          Pacing Distribution
+                        </h3>
+                        <div className="grid grid-cols-4 gap-4">
+                          <div className="text-center p-4 bg-red-50 rounded-lg border-2 border-red-200">
+                            <div className="text-3xl font-bold text-red-600">{tooFast.length}</div>
+                            <div className="text-sm text-red-700 font-medium mt-1">Too Fast</div>
+                            <div className="text-xs text-gray-600 mt-1">&lt; {Math.floor(expectedRange.min)}s</div>
+                          </div>
+                          <div className="text-center p-4 bg-green-50 rounded-lg border-2 border-green-200">
+                            <div className="text-3xl font-bold text-green-600">{optimal.length}</div>
+                            <div className="text-sm text-green-700 font-medium mt-1">Optimal</div>
+                            <div className="text-xs text-gray-600 mt-1">{Math.floor(expectedRange.min)}-{Math.floor(expectedRange.max)}s</div>
+                          </div>
+                          <div className="text-center p-4 bg-orange-50 rounded-lg border-2 border-orange-200">
+                            <div className="text-3xl font-bold text-orange-600">{tooSlow.length}</div>
+                            <div className="text-sm text-orange-700 font-medium mt-1">Too Slow</div>
+                            <div className="text-xs text-gray-600 mt-1">&gt; {Math.floor(expectedRange.max)}s</div>
+                          </div>
+                          <div className="text-center p-4 bg-purple-50 rounded-lg border-2 border-purple-200">
+                            <div className="text-3xl font-bold text-purple-600">{notViewed.length}</div>
+                            <div className="text-sm text-purple-700 font-medium mt-1">Not Viewed</div>
+                            <div className="text-xs text-gray-600 mt-1">0s</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Section Analysis */}
+                      <div className="bg-white rounded-xl border-2 border-gray-200 p-6">
+                        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                          <FontAwesomeIcon icon={faChartLine} className="text-indigo-600" />
+                          Time by Section
+                        </h3>
+                        <div className="space-y-3">
+                          {sectionAnalysis.map(({ section, total, average, count }) => (
+                            <div key={section} className="flex items-center gap-4">
+                              <div className="w-32 text-sm font-medium text-gray-700 truncate">{section}</div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 bg-gray-200 rounded-full h-6 overflow-hidden">
+                                    <div
+                                      className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-end pr-2"
+                                      style={{ width: `${Math.min(100, (total / stats.totalTime) * 100)}%` }}
+                                    >
+                                      <span className="text-xs font-bold text-white">
+                                        {Math.floor(total / 60)}m {total % 60}s
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="w-24 text-sm text-gray-600">
+                                    ~{Math.floor(average)}s/q
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Question-by-Question Breakdown */}
+                      <div className="bg-white rounded-xl border-2 border-gray-200 p-6">
+                        <h3 className="text-xl font-bold text-gray-900 mb-4">Question-by-Question Analysis</h3>
+                        <div className="space-y-2 max-h-96 overflow-y-auto">
+                          {results.map((result, idx) => {
+                            const timeSpent = result.studentAnswer?.time_spent_seconds || 0;
+                            const status = !result.studentAnswer ? 'not-viewed' :
+                                          timeSpent < expectedRange.min ? 'too-fast' :
+                                          timeSpent > expectedRange.max ? 'too-slow' :
+                                          'optimal';
+                            const statusColor = {
+                              'not-viewed': 'bg-purple-50 border-purple-200',
+                              'too-fast': 'bg-red-50 border-red-200',
+                              'optimal': 'bg-green-50 border-green-200',
+                              'too-slow': 'bg-orange-50 border-orange-200'
+                            }[status];
+
+                            return (
+                              <div key={idx} className={`flex items-center gap-4 p-3 rounded-lg border-2 ${statusColor}`}>
+                                <div className="w-16 text-sm font-bold text-gray-700">Q{idx + 1}</div>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex-1 bg-gray-200 rounded-full h-4 overflow-hidden">
+                                      <div
+                                        className={`h-full ${
+                                          status === 'too-fast' ? 'bg-red-500' :
+                                          status === 'optimal' ? 'bg-green-500' :
+                                          status === 'too-slow' ? 'bg-orange-500' :
+                                          'bg-purple-500'
+                                        }`}
+                                        style={{ width: `${Math.min(100, (timeSpent / (expectedRange.max * 2)) * 100)}%` }}
+                                      />
+                                    </div>
+                                    <div className="w-20 text-sm font-medium text-gray-700">
+                                      {timeSpent > 0 ? `${Math.floor(timeSpent / 60)}:${(timeSpent % 60).toString().padStart(2, '0')}` : '-'}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="w-24 text-xs text-gray-600">
+                                  {result.question.section}
+                                </div>
+                                {result.isCorrect && <FontAwesomeIcon icon={faCheckCircle} className="text-green-600" />}
+                                {result.studentAnswer && !result.isCorrect && <FontAwesomeIcon icon={faTimesCircle} className="text-red-600" />}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Recommendations */}
+                      <div className="bg-gradient-to-br from-yellow-50 to-amber-50 rounded-xl p-6 border-2 border-yellow-300">
+                        <h3 className="text-xl font-bold text-yellow-900 mb-4 flex items-center gap-2">
+                          <FontAwesomeIcon icon={faBolt} className="text-yellow-600" />
+                          Recommendations
+                        </h3>
+                        <div className="space-y-3 text-sm">
+                          {tooFast.length > totalQuestions * 0.3 && (
+                            <div className="flex gap-3 bg-white rounded-lg p-4 border border-yellow-200">
+                              <div className="text-red-600 text-xl">⚠️</div>
+                              <div>
+                                <div className="font-bold text-red-700">Rushing detected</div>
+                                <div className="text-gray-700 mt-1">
+                                  You answered {tooFast.length} questions too quickly. Take more time to read carefully and avoid careless mistakes.
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          {tooSlow.length > totalQuestions * 0.3 && (
+                            <div className="flex gap-3 bg-white rounded-lg p-4 border border-yellow-200">
+                              <div className="text-orange-600 text-xl">⏱️</div>
+                              <div>
+                                <div className="font-bold text-orange-700">Pacing issues</div>
+                                <div className="text-gray-700 mt-1">
+                                  You spent too long on {tooSlow.length} questions. Practice identifying questions to skip and come back to later.
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          {pacingScore >= 70 && (
+                            <div className="flex gap-3 bg-white rounded-lg p-4 border border-green-200">
+                              <div className="text-green-600 text-xl">✅</div>
+                              <div>
+                                <div className="font-bold text-green-700">Excellent pacing!</div>
+                                <div className="text-gray-700 mt-1">
+                                  You maintained good time management on {optimal.length} questions. Keep up this balanced approach.
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          <div className="flex gap-3 bg-white rounded-lg p-4 border border-blue-200">
+                            <div className="text-blue-600 text-xl">💡</div>
+                            <div>
+                              <div className="font-bold text-blue-700">Target pace</div>
+                              <div className="text-gray-700 mt-1">
+                                Aim for {Math.floor(expectedRange.ideal / 60)}:{(expectedRange.ideal % 60).toString().padStart(2, '0')} per question
+                                on average ({Math.floor(expectedRange.min)}-{Math.floor(expectedRange.max)} seconds range).
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
           </div>
         )}
       </div>
