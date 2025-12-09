@@ -74,9 +74,9 @@ serve(async (req) => {
       );
     }
 
-    console.log(`🤖 Using Claude API to generate Python code for image recreation: ${width}x${height}px`);
+    console.log(`🤖 Using Claude API to analyze image and generate graph recreation code: ${width}x${height}px`);
 
-    // Call Claude API to analyze the image and generate Python code for enhancement
+    // Call Claude API to analyze the image
     const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -101,19 +101,24 @@ serve(async (req) => {
               },
               {
                 type: 'text',
-                text: `Analyze this image extracted from a PDF (likely a graph, chart, or mathematical diagram). Generate Python code using PIL (Pillow) and OpenCV to enhance and professionally recreate this image.
+                text: `Analyze this image extracted from a PDF test question.
 
-The Python code should:
-1. Take a base64 encoded image as input
-2. Decode and enhance it with appropriate techniques:
-   - Sharpness enhancement
-   - Contrast adjustment
-   - Noise reduction
-   - Upscaling if needed
-   - Any other improvements based on the image content
-3. Return the enhanced image as base64
+If this is a GRAPH/CHART/PLOT:
+1. Identify the type (line plot, bar chart, scatter plot, function graph, etc.)
+2. Extract key data points, axes labels, and any equations/functions shown
+3. Generate Python matplotlib code to recreate it
 
-Return ONLY the Python code, no explanations. The code should be a complete function called 'enhance_image(image_base64: str) -> str' that returns the enhanced image as base64.`,
+If this is NOT a graph (e.g., a diagram, table, text, photo):
+1. Return "NOT_A_GRAPH"
+
+Response format (JSON only):
+{
+  "is_graph": true/false,
+  "graph_type": "line|bar|scatter|function|other",
+  "python_code": "import matplotlib.pyplot as plt\\nimport numpy as np\\n..."
+}
+
+The Python code should create a clean, professional recreation using matplotlib and return the figure as base64 PNG.`,
               },
             ],
           },
@@ -128,22 +133,49 @@ Return ONLY the Python code, no explanations. The code should be a complete func
     }
 
     const claudeData = await claudeResponse.json();
-    const pythonCode = claudeData.content[0].text;
+    let claudeText = claudeData.content[0].text;
 
-    console.log('✅ Claude generated Python code');
-    console.log('Python code:', pythonCode);
+    // Extract JSON from markdown code blocks if present
+    if (claudeText.includes('```json')) {
+      claudeText = claudeText.split('```json')[1].split('```')[0].trim();
+    } else if (claudeText.includes('```')) {
+      claudeText = claudeText.split('```')[1].split('```')[0].trim();
+    }
 
-    // For now, return the generated code and original image
-    // TODO: Execute the Python code using Pyodide or similar
+    const analysis = JSON.parse(claudeText);
+
+    console.log('✅ Claude analysis:', { is_graph: analysis.is_graph, type: analysis.graph_type });
+
+    if (!analysis.is_graph || analysis.graph_type === 'NOT_A_GRAPH') {
+      console.log('ℹ️  Not a graph, returning original image');
+      return new Response(
+        JSON.stringify({
+          recreatedImageBase64: imageBase64,
+          width,
+          height,
+          format: 'png',
+          note: 'Not identified as a graph, returned original image.',
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Execute Python code using matplotlib
+    console.log('🐍 Executing Python matplotlib code...');
+
+    // TODO: Execute Python code via external service
+    // For now, return original image with analysis
     return new Response(
       JSON.stringify({
-        recreatedImageBase64: imageBase64, // For now, return original
+        recreatedImageBase64: imageBase64,
         width,
         height,
         format: 'png',
         quality: 'high',
-        generatedPythonCode: pythonCode, // Include the generated code for reference
-        note: 'Python code generated but not yet executed. Execution coming soon.',
+        is_graph: analysis.is_graph,
+        graph_type: analysis.graph_type,
+        python_code: analysis.python_code,
+        note: 'Graph detected and code generated. Python execution service needed.',
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

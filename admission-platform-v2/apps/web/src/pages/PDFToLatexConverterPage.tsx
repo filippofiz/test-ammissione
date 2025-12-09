@@ -326,7 +326,47 @@ async function extractAndUploadImages(
                 for (let i = 0; i < bytes.byteLength; i++) {
                   binary += String.fromCharCode(bytes[i]);
                 }
-                const imageBase64 = btoa(binary);
+                let imageBase64 = btoa(binary);
+
+                // Try to recreate graph using Python if it looks like a graph
+                try {
+                  console.log(`🐍 Attempting Python graph recreation for Q${question.question_number}...`);
+                  const { data: sessionData } = await supabase.auth.getSession();
+                  const token = sessionData?.session?.access_token;
+
+                  if (token) {
+                    const recreateResponse = await fetch(
+                      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/recreate-image-python`,
+                      {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          Authorization: `Bearer ${token}`,
+                        },
+                        body: JSON.stringify({
+                          imageBase64,
+                          width: image.width,
+                          height: image.height,
+                        }),
+                      }
+                    );
+
+                    if (recreateResponse.ok) {
+                      const recreateData = await recreateResponse.json();
+                      if (recreateData.recreatedImageBase64 && recreateData.recreatedImageBase64 !== imageBase64) {
+                        imageBase64 = recreateData.recreatedImageBase64;
+                        console.log(`✅ Graph recreated using Python for Q${question.question_number}`);
+                      } else {
+                        console.log(`ℹ️  Python recreation returned original image for Q${question.question_number}`);
+                      }
+                    } else {
+                      console.warn(`⚠️  Python recreation failed for Q${question.question_number}:`, await recreateResponse.text());
+                    }
+                  }
+                } catch (pythonError) {
+                  console.warn(`⚠️  Python recreation error for Q${question.question_number}:`, pythonError);
+                  // Continue with original image
+                }
 
                 // Upload to storage via edge function
                 const timestamp = Date.now();
@@ -583,18 +623,37 @@ export default function PDFToLatexConverterPage() {
 
       console.log(`Found ${testsData.length} PDF tests in 2V_tests`);
 
-      // Step 2: Get ALL questions for ALL tests in ONE query (optimization!)
+      // Step 2: Get ALL questions for ALL tests (with pagination to avoid 1000 row limit!)
       const testIds = testsData.map(t => t.id);
-      const { data: allQuestions, error: questionsError } = await supabase
-        .from('2V_questions')
-        .select('test_id, question_data')
-        .in('test_id', testIds)
-        .not('question_data->>pdf_url', 'is', null);
 
-      if (questionsError) {
-        console.error('Error fetching questions:', questionsError);
-        throw questionsError;
+      let allQuestions: any[] = [];
+      const pageSize = 1000;
+      let page = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data: pageQuestions, error: questionsError } = await supabase
+          .from('2V_questions')
+          .select('test_id, question_data')
+          .in('test_id', testIds)
+          .not('question_data->>pdf_url', 'is', null)
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+
+        if (questionsError) {
+          console.error('Error fetching questions:', questionsError);
+          throw questionsError;
+        }
+
+        if (pageQuestions && pageQuestions.length > 0) {
+          allQuestions = allQuestions.concat(pageQuestions);
+          hasMore = pageQuestions.length === pageSize;
+          page++;
+        } else {
+          hasMore = false;
+        }
       }
+
+      console.log(`Loaded ${allQuestions.length} questions across ${page} page(s)`);
 
       // Step 3: Group questions by test_id and count them
       const questionsByTestId = new Map<string, { pdfUrl: string; count: number }>();
@@ -618,9 +677,27 @@ export default function PDFToLatexConverterPage() {
       // Step 4: Build the tests list
       const testsList: PDFTest[] = [];
       for (const test of testsData) {
-        const questionData = questionsByTestId.get(test.id);
+        let questionData = questionsByTestId.get(test.id);
+
+        // If this test has no questions, look for a sibling test (same test_type, section, test_number)
+        // that DOES have questions and use its PDF URL (simulations share PDFs)
         if (!questionData) {
-          console.warn(`No PDF questions found for test ${test.id}`);
+          const sibling = testsData.find(t =>
+            t.id !== test.id &&
+            t.test_type === test.test_type &&
+            t.section === test.section &&
+            t.test_number === test.test_number &&
+            questionsByTestId.has(t.id)
+          );
+
+          if (sibling) {
+            questionData = questionsByTestId.get(sibling.id);
+            console.log(`Using PDF from sibling test for ${test.test_type} - ${test.section} #${test.test_number} (${test.exercise_type})`);
+          }
+        }
+
+        if (!questionData) {
+          console.warn(`No PDF questions found for test ${test.id} and no sibling test available`);
           continue;
         }
 
@@ -1450,18 +1527,21 @@ export default function PDFToLatexConverterPage() {
 
       console.log(`Preparing questions for ${allTestIds.length} test(s)`);
 
-      // Fetch existing question IDs (if questions already exist, we'll reuse their IDs)
+      // Fetch existing questions with ALL fields (if questions already exist, we'll reuse their data)
       // Skip this for new tests since they won't have existing questions
       const { data: existingQuestions } = mode === 'new'
         ? { data: null }
         : await supabase
             .from('2V_questions')
-            .select('id, test_id, question_number')
+            .select('*')
             .in('test_id', allTestIds);
 
       const existingIdMap = new Map<string, string>(); // "test_id:question_number" -> id
+      const existingQuestionMap = new Map<string, any>(); // "test_id:question_number" -> full question data
       (existingQuestions || []).forEach((q: any) => {
-        existingIdMap.set(`${q.test_id}:${q.question_number}`, q.id);
+        const key = `${q.test_id}:${q.question_number}`;
+        existingIdMap.set(key, q.id);
+        existingQuestionMap.set(key, q);
       });
 
       console.log(`Found ${existingIdMap.size} existing questions to reuse IDs from`);
@@ -1481,6 +1561,51 @@ export default function PDFToLatexConverterPage() {
         questionIdMap.set(q.question_number.toString(), ids);
       });
 
+      // Normalize option keys to a,b,c,d,e if they use wrong letters (f,g,h,i,j etc)
+      convertedQuestions.forEach((q: any) => {
+        if (q.options) {
+          const optionKeys = Object.keys(q.options);
+          const standardKeys = ['a', 'b', 'c', 'd', 'e'];
+
+          // Check if options use non-standard keys
+          const hasNonStandardKeys = optionKeys.some(key => !standardKeys.includes(key));
+
+          if (hasNonStandardKeys) {
+            console.log(`⚠️ Q${q.question_number}: Remapping option keys from [${optionKeys.join(',')}] to [a,b,c,d,e]`);
+
+            // Create mapping from old keys to new keys
+            const keyMap: Record<string, string> = {};
+            const sortedKeys = optionKeys.sort();
+            sortedKeys.forEach((oldKey, idx) => {
+              keyMap[oldKey] = standardKeys[idx];
+            });
+
+            // Remap options
+            const newOptions: Record<string, string> = {};
+            Object.entries(q.options).forEach(([oldKey, value]) => {
+              newOptions[keyMap[oldKey]] = value as string;
+            });
+            q.options = newOptions;
+
+            // Remap correct_answer
+            if (q.correct_answer && keyMap[q.correct_answer]) {
+              const oldAnswer = q.correct_answer;
+              q.correct_answer = keyMap[oldAnswer];
+              console.log(`  → Correct answer: ${oldAnswer} → ${q.correct_answer}`);
+            }
+
+            // Remap options_eng if exists
+            if (q.options_eng) {
+              const newOptionsEng: Record<string, string> = {};
+              Object.entries(q.options_eng).forEach(([oldKey, value]) => {
+                newOptionsEng[keyMap[oldKey]] = value as string;
+              });
+              q.options_eng = newOptionsEng;
+            }
+          }
+        }
+      });
+
       // Create questions for each test WITH duplicate_question_ids already set
       const allQuestionsToUpdate: any[] = [];
 
@@ -1495,18 +1620,40 @@ export default function PDFToLatexConverterPage() {
           // Get passage data if this question references one
           const passage = q.passage_id ? passageMap.get(q.passage_id) : null;
 
+          // Get existing question data to preserve fields like materia, difficulty, etc.
+          const existingKey = `${currentTestId}:${q.question_number}`;
+          const existingQuestion = existingQuestionMap.get(existingKey);
+
           return {
+            // Only preserve specific metadata fields from existing questions
+            ...(existingQuestion && {
+              materia: existingQuestion.materia,
+              difficulty: existingQuestion.difficulty,
+              difficulty_level: existingQuestion.difficulty_level,
+              irt_difficulty: existingQuestion.irt_difficulty,
+              irt_discrimination: existingQuestion.irt_discrimination,
+              irt_guessing: existingQuestion.irt_guessing,
+              macro_section: existingQuestion.macro_section,
+              review_info: existingQuestion.review_info,
+              created_by: existingQuestion.created_by,
+              created_at: existingQuestion.created_at,
+            }),
+
+            // Set/overwrite with new fields
             id: currentQuestionId, // Pre-generated UUID
             test_id: currentTestId,
             test_type: testType,
             question_number: q.question_number,
             question_type: 'multiple_choice',
-            section: q.section,
+            // For existing questions: old section → topic, new section → section
+            // For new questions: use converted section as section, no topic
+            section: q.section, // Always use the new converted section
+            topic: existingQuestion?.section || undefined, // Old section goes to topic for existing questions
             question_data: {
               question_text: q.question_text,
               question_text_eng: q.question_text_eng,
-              options: q.options,
-              options_eng: q.options_eng,
+              ...(q.options && { options: q.options }),
+              ...(q.options_eng && { options_eng: q.options_eng }),
               pdf_url: pdfUrl,
               page_number: q.page_number,
               has_image: q.has_image || false,
@@ -1579,14 +1726,17 @@ export default function PDFToLatexConverterPage() {
 
         if (q.question_type === 'multiple_choice') {
           if (!data.question_text || !data.options || !data.options.a || !data.options.b) {
-            console.error(`❌ INVALID Q${q.question_number} (${q.section}):`, {
+            console.error(`❌ INVALID Q${q.question_number} (${q.section}): Converting to open_ended due to missing options`, {
               question_type: q.question_type,
               question_text_length: data.question_text?.length || 0,
               options_keys: Object.keys(data.options || {}),
               option_a: data.options?.a,
               option_b: data.options?.b,
-              full_data: data
             });
+            // Force conversion to open_ended since validation failed
+            q.question_type = 'open_ended';
+            delete data.options;
+            q.answers = { correct_answer: q.answers?.correct_answer || 'a', wrong_answers: [] };
           }
         }
       });
@@ -1603,10 +1753,11 @@ export default function PDFToLatexConverterPage() {
       });
 
       // Insert ALL questions in ONE operation with duplicate_question_ids already set
+      // Use 'id' for conflict detection since we're including IDs in the data
       const { error: updateError } = await supabase
         .from('2V_questions')
         .upsert(allQuestionsToUpdate, {
-          onConflict: 'test_id,question_number,section',
+          onConflict: 'id',
         });
 
       if (updateError) {
