@@ -444,6 +444,17 @@ export class ComplexAdaptiveAlgorithm {
     availableQuestions: Question[],
     sectionId?: string
   ): Question {
+    console.log('🎯 [ADAPTIVE] selectBaseQuestion called:', {
+      availableCount: availableQuestions.length,
+      sectionId
+    });
+
+    // Guard: if no questions available, return undefined
+    if (availableQuestions.length === 0) {
+      console.error('❌ [ADAPTIVE] selectBaseQuestion: No questions available!');
+      return undefined as any;
+    }
+
     // For IRT, select questions near theta = 0 (average difficulty)
     const mediumDifficultyQuestions = availableQuestions.filter(
       (q) => {
@@ -452,16 +463,31 @@ export class ComplexAdaptiveAlgorithm {
       }
     );
 
+    console.log('🎯 [ADAPTIVE] Medium difficulty questions:', {
+      mediumCount: mediumDifficultyQuestions.length,
+      totalAvailable: availableQuestions.length
+    });
+
     if (mediumDifficultyQuestions.length > 0) {
       // Shuffle and select to ensure randomization
       const shuffled = [...mediumDifficultyQuestions].sort(() => Math.random() - 0.5);
-      return shuffled[0];
+      const selected = shuffled[0];
+      console.log('🎯 [ADAPTIVE] Base question selected (medium):', {
+        id: selected.id.substring(0, 8),
+        difficulty: normalizeDifficulty(selected.difficulty)
+      });
+      return selected;
     }
 
     // FALLBACK: No questions with target difficulty, use any question
     console.warn(`⚠️ No medium difficulty questions (2-4) found for base questions. Using random fallback.`);
     const randomIndex = Math.floor(Math.random() * availableQuestions.length);
-    return availableQuestions[randomIndex];
+    const fallback = availableQuestions[randomIndex];
+    console.log('🎯 [ADAPTIVE] Base question selected (fallback):', {
+      id: fallback.id.substring(0, 8),
+      difficulty: normalizeDifficulty(fallback.difficulty)
+    });
+    return fallback;
   }
 
   /**
@@ -618,16 +644,37 @@ export class ComplexAdaptiveAlgorithm {
     const previousTheta = this.state.theta;
     const numericDifficulty = normalizeDifficulty(question.difficulty);
 
-    // Add to response pattern
-    this.state.response_pattern.push({
-      question_id: question.id,
-      is_correct: isCorrect,
-      difficulty: numericDifficulty,
-      discrimination: question.discrimination,
-      guessing: question.guessing,
-    });
+    // Check if this is a new question or an answer change
+    const existingResponseIndex = this.state.response_pattern.findIndex(
+      (r) => r.question_id === question.id
+    );
 
-    this.state.questions_answered++;
+    if (existingResponseIndex >= 0) {
+      // Update existing response (answer changed)
+      this.state.response_pattern[existingResponseIndex] = {
+        question_id: question.id,
+        is_correct: isCorrect,
+        difficulty: numericDifficulty,
+        discrimination: question.discrimination,
+        guessing: question.guessing,
+      };
+      console.log('🔄 [ADAPTIVE] Answer changed for question:', {
+        questionId: question.id.substring(0, 8),
+        newAnswer: isCorrect ? 'correct' : 'incorrect',
+        questionsAnswered: this.state.questions_answered
+      });
+    } else {
+      // New question - add to response pattern
+      this.state.response_pattern.push({
+        question_id: question.id,
+        is_correct: isCorrect,
+        difficulty: numericDifficulty,
+        discrimination: question.discrimination,
+        guessing: question.guessing,
+      });
+
+      this.state.questions_answered++;  // Only increment for NEW questions
+    }
 
     // Skip theta estimation during base questions phase
     if (

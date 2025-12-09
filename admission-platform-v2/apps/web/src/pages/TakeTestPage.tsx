@@ -278,6 +278,7 @@ export default function TakeTestPage() {
   const [allQuestions, setAllQuestions] = useState<Question[]>([]);
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [globalQuestionOrder, setGlobalQuestionOrder] = useState(0); // Global question counter across all sections
   const [answers, setAnswers] = useState<Record<string, StudentAnswer>>({});
   const [isPDFTest, setIsPDFTest] = useState(false); // PDF test format
   const [currentPageGroup, setCurrentPageGroup] = useState(0); // For PDF tests: current page group
@@ -505,6 +506,8 @@ export default function TakeTestPage() {
   const pausesUsedRef = useRef(pausesUsed); // Ref for pauses used to avoid stale closures in timer
   const isInReviewModeRef = useRef(false); // Ref for review mode to avoid stale closures in timer
   const showReviewScreenRef = useRef(false); // Ref for review screen to avoid stale closures in timer
+  const savingInProgressRef = useRef<Map<string, Promise<boolean>>>(new Map()); // Track ongoing save operations per question
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Track auto-save timeout for cancellation
 
   // Helper function to get the correct section field based on config
   const getSectionField = (question: Question): string => {
@@ -650,13 +653,26 @@ export default function TakeTestPage() {
     const currentAnswer = answers[currentQuestion.id];
     if (!currentAnswer) return;
 
+    // Clear any existing auto-save timeout
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+
     // Debounce saving to avoid too many requests
     const timeoutId = setTimeout(() => {
       const flaggedStatus = currentAnswer.flagged || false;
-      saveAnswer(currentQuestion.id, currentAnswer, flaggedStatus, 0, currentQuestionIndex + 1);
+      saveAnswer(currentQuestion.id, currentAnswer, flaggedStatus, 0, globalQuestionOrder + 1);
+      autoSaveTimeoutRef.current = null; // Clear ref after save
     }, 1000); // Save 1 second after last change
 
-    return () => clearTimeout(timeoutId);
+    autoSaveTimeoutRef.current = timeoutId; // Store timeout for potential cancellation
+
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+        autoSaveTimeoutRef.current = null;
+      }
+    };
   }, [answers, currentQuestion?.id]);
 
   // Track section times
@@ -686,6 +702,13 @@ export default function TakeTestPage() {
   // Keep pausesUsedRef in sync with state (for use in timer callbacks to avoid stale closures)
   useEffect(() => {
     pausesUsedRef.current = pausesUsed;
+    if (pausesUsed > 0) {
+      console.log('⏸️ [PAUSE] Pauses used updated', {
+        pausesUsed,
+        pausesRemaining: (config?.max_pauses || 0) - pausesUsed,
+        maxPauses: config?.max_pauses
+      });
+    }
   }, [pausesUsed]);
 
   // Save answers and clean up session before page unload (browser close, refresh, etc.)
@@ -788,6 +811,15 @@ export default function TakeTestPage() {
   // Pause timer countdown
   useEffect(() => {
     if (pauseTimeRemaining !== null && pauseTimeRemaining > 0) {
+      // Log every 30 seconds to track progress without spam
+      if (pauseTimeRemaining % 30 === 0) {
+        console.log('⏸️ [PAUSE] Pause timer countdown', {
+          remainingSeconds: pauseTimeRemaining,
+          remainingMinutes: Math.floor(pauseTimeRemaining / 60),
+          remainingFormatted: `${Math.floor(pauseTimeRemaining / 60)}:${(pauseTimeRemaining % 60).toString().padStart(2, '0')}`
+        });
+      }
+
       const interval = setInterval(() => {
         setPauseTimeRemaining(prev => {
           if (prev === null || prev <= 1) {
@@ -888,16 +920,28 @@ export default function TakeTestPage() {
       // Check ref inside useEffect to get current value
       const isPauseChoiceVisible = showPauseChoiceScreen || showPauseChoiceRef.current;
       if (isPauseChoiceVisible && pauseChoiceCountdown > 0) {
+        console.log('⏸️ [PAUSE] Choice countdown', {
+          countdown: pauseChoiceCountdown,
+          isPauseChoiceVisible,
+          showPauseChoiceScreen,
+          pausesUsed,
+          pausesRemaining: (config?.max_pauses || 0) - pausesUsed
+        });
         const timer = setTimeout(() => {
           setPauseChoiceCountdown(prev => prev - 1);
         }, 1000);
         return () => clearTimeout(timer);
       } else if (isPauseChoiceVisible && pauseChoiceCountdown === 0 && !pauseChoiceMadeRef.current) {
         // Time's up - continue without pause (only if no choice was made)
+        console.log('⏰ [PAUSE] Choice countdown expired - auto-skipping', {
+          section: currentSection,
+          pauseChoiceCountdown,
+          choiceMade: pauseChoiceMadeRef.current
+        });
         handleSkipPause(true); // true = auto-skip
       }
     } catch (error) {
-      // Error in pause choice countdown
+      console.error('❌ [PAUSE] Error in pause choice countdown', error);
     }
   }, [showPauseChoiceScreen, pauseChoiceCountdown, pauseChoiceTrigger]);
 
@@ -1158,18 +1202,9 @@ export default function TakeTestPage() {
 
       if (assignmentError) throw assignmentError;
 
-      console.log('📊 [STATUS] Loaded assignment:', {
-        assignmentId,
-        status: assignment.status,
-        currentAttempt: assignment.current_attempt,
-        totalAttempts: assignment.total_attempts,
-        startTime: assignment.start_time,
-        completedAt: assignment.completed_at
-      });
 
       // Check if test is locked (completed tests are auto-locked)
       if (assignment.status === 'locked') {
-        console.log('🔒 [STATUS] Test is locked - showing locked screen');
         setIsLocked(true);
         setShowStartScreen(false); // Don't show start screen
         setLoading(false);
@@ -1295,7 +1330,6 @@ export default function TakeTestPage() {
         .eq('test_type', testType);
 
       if (configsError) {
-        console.error('❌ [CONFIG ERROR] Failed to load configs:', configsError);
         throw configsError;
       }
 
@@ -1305,17 +1339,23 @@ export default function TakeTestPage() {
       );
 
       if (!configData) {
-        console.error('❌ [CONFIG MISSING] No config found for:', {
-          testType,
-          exerciseType,
-          availableConfigs: configsData?.map(c => ({ track_type: c.track_type, normalized: normalize(c.track_type) }))
-        });
         alert('Test configuration not found. Please contact your instructor.');
         navigate(-1);
         return;
       }
 
       setConfig(configData);
+
+      // Log pause configuration
+      console.log('⏸️ [PAUSE] Configuration loaded', {
+        pauseMode: configData.pause_mode,
+        pauseSections: configData.pause_sections,
+        pauseDurationMinutes: configData.pause_duration_minutes,
+        maxPauses: configData.max_pauses,
+        isPauseEnabled: configData.pause_mode !== 'no_pause',
+        isMandatoryPause: configData.pause_mode === 'between_sections',
+        isUserChoicePause: configData.pause_mode === 'user_choice'
+      });
 
       // Load algorithm configuration if adaptive mode is enabled
       let algorithmConfigData = null;
@@ -1331,7 +1371,6 @@ export default function TakeTestPage() {
           algorithmConfigData = algConfig;
           setAlgorithmConfig(algConfig);
         } else {
-          console.warn('Algorithm not found for id:', configData.algorithm_id);
         }
       }
 
@@ -1487,6 +1526,12 @@ export default function TakeTestPage() {
           });
 
           setAnswers(loadedAnswers);
+
+          // Initialize globalQuestionOrder based on the highest question_order in existing answers
+          const maxQuestionOrder = existingAnswers.reduce((max, answer) => {
+            return Math.max(max, answer.question_order || 0);
+          }, 0);
+          setGlobalQuestionOrder(maxQuestionOrder);
         }
       }
 
@@ -1522,15 +1567,6 @@ export default function TakeTestPage() {
       const newAttempt = (assignment.current_attempt || 1) + 1;
       const newTotalAttempts = assignment.total_attempts || (assignment.current_attempt || 1);
 
-      console.log(`🔄 [STATUS] ${assignment.status} → in_progress (attempt ${assignment.current_attempt} → ${newAttempt})`, {
-        assignmentId,
-        previousStatus: assignment.status,
-        newStatus: 'in_progress',
-        completion_status: 'in_progress',
-        previousAttempt: assignment.current_attempt,
-        newAttempt,
-        totalAttempts: newTotalAttempts
-      });
 
       const { error: updateError } = await supabase
         .from('2V_test_assignments')
@@ -1544,20 +1580,12 @@ export default function TakeTestPage() {
         .eq('id', assignmentId);
 
       if (updateError) {
-        console.error('❌ [STATUS ERROR] Failed to update status to in_progress:', updateError);
         return;
       }
 
-      console.log('✅ [STATUS] Successfully updated to in_progress');
       setCurrentAttempt(newAttempt);
     } else if (assignment.status === 'unlocked') {
       // First time starting this test
-      console.log(`🔄 [STATUS] unlocked → in_progress (first attempt)`, {
-        assignmentId,
-        previousStatus: 'unlocked',
-        newStatus: 'in_progress',
-        completion_status: 'in_progress'
-      });
 
       const { error: updateError } = await supabase
         .from('2V_test_assignments')
@@ -1569,11 +1597,9 @@ export default function TakeTestPage() {
         .eq('id', assignmentId);
 
       if (updateError) {
-        console.error('❌ [STATUS ERROR] Failed to update status to in_progress:', updateError);
         return;
       }
 
-      console.log('✅ [STATUS] Successfully updated to in_progress');
     }
 
 
@@ -1819,9 +1845,21 @@ export default function TakeTestPage() {
     if (config?.pause_mode === 'between_sections' &&
         config.pause_sections?.includes(actualCurrentSection)) {
       const pauseDuration = (config.pause_duration_minutes || 5) * 60;
+      console.log('⏸️ [PAUSE] Mandatory pause triggered', {
+        section: actualCurrentSection,
+        sectionIndex: actualCurrentSectionIndex,
+        pauseDurationMinutes: config.pause_duration_minutes,
+        pauseDurationSeconds: pauseDuration,
+        pauseMode: config.pause_mode,
+        pauseSections: config.pause_sections
+      });
       setPauseTimeRemaining(pauseDuration);
       setShowPauseScreen(true);
       setTimeout(() => {
+        console.log('▶️ [PAUSE] Mandatory pause ended, resuming test', {
+          section: actualCurrentSection,
+          nextSectionIndex: actualCurrentSectionIndex + 1
+        });
         setShowPauseScreen(false);
         setPauseTimeRemaining(null);
         setIsCompletingSection(false);
@@ -1835,6 +1873,15 @@ export default function TakeTestPage() {
     if (config?.pause_mode === 'user_choice' &&
         actualCurrentSectionIndex < sections.length - 1 &&
         actualPausesUsed < (config?.max_pauses || 0)) {
+      console.log('⏸️ [PAUSE] User choice pause screen shown', {
+        section: actualCurrentSection,
+        sectionIndex: actualCurrentSectionIndex,
+        pausesUsed: actualPausesUsed,
+        pausesRemaining: (config?.max_pauses || 0) - actualPausesUsed,
+        maxPauses: config?.max_pauses,
+        countdownSeconds: 5,
+        pauseMode: config.pause_mode
+      });
       // IMPORTANT: Reset countdown and ref BEFORE showing the screen
       pauseChoiceMadeRef.current = false;
       showPauseChoiceRef.current = true;
@@ -1850,6 +1897,12 @@ export default function TakeTestPage() {
 
     // No pause - show transition message (if not the last section)
     if (actualCurrentSectionIndex < expectedTotalSections - 1) {
+      console.log('⏭️ [PAUSE] No pause configured - showing section transition', {
+        section: actualCurrentSection,
+        sectionIndex: actualCurrentSectionIndex,
+        nextSectionIndex: actualCurrentSectionIndex + 1,
+        pauseMode: config?.pause_mode
+      });
       setShowSectionTransition(true);
       setTimeout(() => {
         setIsCompletingSection(false);
@@ -1859,6 +1912,11 @@ export default function TakeTestPage() {
     }
 
     // Last section - move to completion
+    console.log('⏭️ [PAUSE] Last section - no pause, moving to completion', {
+      section: actualCurrentSection,
+      sectionIndex: actualCurrentSectionIndex,
+      pauseMode: config?.pause_mode
+    });
     moveToNextSection(actualCurrentSectionIndex);
   }
 
@@ -1867,6 +1925,11 @@ export default function TakeTestPage() {
 
     // Extra safety: reject if time has expired
     if (timeRemaining !== null && timeRemaining <= 0) {
+      return;
+    }
+
+    // Prevent answer selection during navigation transitions
+    if (isTransitioning) {
       return;
     }
 
@@ -1895,6 +1958,93 @@ export default function TakeTestPage() {
 
       adaptiveAlgorithm.recordResponse(currentQuestion, isCorrect);
     }
+  }
+
+  // Helper function to check MSR answer correctness and record response
+  function checkAndRecordMSRResponse(msrAnswers: string[], correctAnswers: string[]) {
+    if (!currentQuestion || !adaptiveAlgorithm || config?.adaptivity_mode !== 'adaptive') return;
+
+    // Check if all answers match (case-insensitive)
+    const allCorrect = msrAnswers.length === correctAnswers.length &&
+      msrAnswers.every((ans, idx) =>
+        ans?.toUpperCase() === correctAnswers[idx]?.toUpperCase()
+      );
+
+    console.log('🔍 [MSR] Checking answer correctness', {
+      questionId: currentQuestion.id.substring(0, 8),
+      studentAnswers: msrAnswers,
+      correctAnswers,
+      isCorrect: allCorrect
+    });
+
+    adaptiveAlgorithm.recordResponse(currentQuestion, allCorrect);
+  }
+
+  // Helper function to check GI answer correctness and record response
+  function checkAndRecordGIResponse(blank1: string | undefined, blank2: string | undefined, correctAnswerData: any) {
+    if (!currentQuestion || !adaptiveAlgorithm || config?.adaptivity_mode !== 'adaptive') return;
+
+    // For GI, correctAnswerData might be an object with blank1 and blank2, or an array
+    const correctBlank1 = correctAnswerData?.blank1 || (Array.isArray(correctAnswerData) ? correctAnswerData[0] : null);
+    const correctBlank2 = correctAnswerData?.blank2 || (Array.isArray(correctAnswerData) ? correctAnswerData[1] : null);
+
+    // Check if both blanks match (case-insensitive)
+    const isCorrect = blank1?.toUpperCase() === correctBlank1?.toUpperCase() &&
+      blank2?.toUpperCase() === correctBlank2?.toUpperCase();
+
+    console.log('🔍 [GI] Checking answer correctness', {
+      questionId: currentQuestion.id.substring(0, 8),
+      studentBlank1: blank1,
+      studentBlank2: blank2,
+      correctBlank1,
+      correctBlank2,
+      isCorrect
+    });
+
+    adaptiveAlgorithm.recordResponse(currentQuestion, isCorrect);
+  }
+
+  // Helper function to check TA answer correctness and record response
+  function checkAndRecordTAResponse(taAnswers: Record<number, string>, correctAnswers: Record<number, string>) {
+    if (!currentQuestion || !adaptiveAlgorithm || config?.adaptivity_mode !== 'adaptive') return;
+
+    // Check if all statement answers match (case-insensitive)
+    const allCorrect = Object.keys(correctAnswers).every(key =>
+      taAnswers[Number(key)]?.toUpperCase() === correctAnswers[Number(key)]?.toUpperCase()
+    );
+
+    console.log('🔍 [TA] Checking answer correctness', {
+      questionId: currentQuestion.id.substring(0, 8),
+      studentAnswers: taAnswers,
+      correctAnswers,
+      isCorrect: allCorrect
+    });
+
+    adaptiveAlgorithm.recordResponse(currentQuestion, allCorrect);
+  }
+
+  // Helper function to check TPA answer correctness and record response
+  function checkAndRecordTPAResponse(column1: string | undefined, column2: string | undefined, correctAnswerData: any) {
+    if (!currentQuestion || !adaptiveAlgorithm || config?.adaptivity_mode !== 'adaptive') return;
+
+    // For TPA, correctAnswerData should have column1 and column2
+    const correctColumn1 = correctAnswerData?.column1;
+    const correctColumn2 = correctAnswerData?.column2;
+
+    // Check if both columns match (case-insensitive)
+    const isCorrect = column1?.toUpperCase() === correctColumn1?.toUpperCase() &&
+      column2?.toUpperCase() === correctColumn2?.toUpperCase();
+
+    console.log('🔍 [TPA] Checking answer correctness', {
+      questionId: currentQuestion.id.substring(0, 8),
+      studentColumn1: column1,
+      studentColumn2: column2,
+      correctColumn1,
+      correctColumn2,
+      isCorrect
+    });
+
+    adaptiveAlgorithm.recordResponse(currentQuestion, isCorrect);
   }
 
   function toggleFlag() {
@@ -1949,28 +2099,45 @@ export default function TakeTestPage() {
       return;
     }
 
+    // Prevent race condition: if already navigating, ignore this call
+    if (isTransitioning) {
+      return;
+    }
+
     if (!canGoBack()) return;
 
-    // Save current answer before navigating back (or save empty answer to track question order)
-    if (currentQuestion?.id) {
+    setIsTransitioning(true);
+
+    try {
+      // Cancel any pending auto-save since we're doing an immediate save
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+        autoSaveTimeoutRef.current = null;
+      }
+
+      // Save current answer before navigating back (or save empty answer to track question order)
+      if (currentQuestion?.id) {
       await saveAnswer(
         currentQuestion.id,
         answers[currentQuestion.id] || { answer: null },
         answers[currentQuestion.id]?.flagged || false,
         0,
-        currentQuestionIndex + 1
+        globalQuestionOrder + 1
       );
     }
 
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(currentQuestionIndex - 1);
-    } else if (currentSectionIndex > 0) {
-      // Move to previous section's last question
-      setCurrentSectionIndex(currentSectionIndex - 1);
-      const prevSectionQuestions = allQuestions.filter(
-        q => getSectionField(q) === sections[currentSectionIndex - 1]
-      );
-      setCurrentQuestionIndex(prevSectionQuestions.length - 1);
+      if (currentQuestionIndex > 0) {
+        setCurrentQuestionIndex(currentQuestionIndex - 1);
+      } else if (currentSectionIndex > 0) {
+        // Move to previous section's last question
+        setCurrentSectionIndex(currentSectionIndex - 1);
+        const prevSectionQuestions = allQuestions.filter(
+          q => getSectionField(q) === sections[currentSectionIndex - 1]
+        );
+        setCurrentQuestionIndex(prevSectionQuestions.length - 1);
+      }
+    } finally {
+      setIsTransitioning(false);
     }
   }
 
@@ -1989,9 +2156,21 @@ export default function TakeTestPage() {
       return false;
     }
 
-    try {
-      setIsSaving(true);
-      setSaveError(null);
+    // SAFETY: If a save is already in progress for this question, wait for it
+    const existingSave = savingInProgressRef.current.get(questionId);
+    if (existingSave) {
+      try {
+        await existingSave; // Wait for existing save to complete
+      } catch (error) {
+        // Ignore errors from previous save, we'll try again
+      }
+    }
+
+    // Create a promise for this save operation
+    const savePromise = (async () => {
+      try {
+        setIsSaving(true);
+        setSaveError(null);
 
       // Check if answer already exists (to preserve question_order and accumulate time)
       const tableSuffix = isTestMode ? '_test' : '';
@@ -2098,38 +2277,72 @@ export default function TakeTestPage() {
         return updated;
       });
 
-      return true;
+        return true;
 
-    } catch (error: any) {
-      // Retry logic with exponential backoff
-      if (retryCount < 2) {
-        const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s
+      } catch (error: any) {
+        // Retry logic with exponential backoff
+        if (retryCount < 2) {
+          const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s
 
-        await new Promise(resolve => setTimeout(resolve, delay));
-        return saveAnswer(questionId, answerData, isFlagged, retryCount + 1, questionOrder);
-      } else {
-        // Final failure after 3 attempts
-        setSaveError('Failed to save answer. Your progress may not be saved.');
-        setIsSaving(false);
-        return false;
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return saveAnswer(questionId, answerData, isFlagged, retryCount + 1, questionOrder);
+        } else {
+          // Final failure after 3 attempts
+          setSaveError('Failed to save answer. Your progress may not be saved.');
+          setIsSaving(false);
+          return false;
+        }
+      } finally {
+        // Remove from in-progress map
+        savingInProgressRef.current.delete(questionId);
       }
-    }
+    })();
+
+    // Store the promise in the ref
+    savingInProgressRef.current.set(questionId, savePromise);
+
+    // Return the result
+    return savePromise;
   }
 
   async function goToNextQuestion() {
+    console.log('🔍 [NAVIGATION] goToNextQuestion called', {
+      currentQuestionIndex,
+      currentSection,
+      isTransitioning,
+      timeRemaining
+    });
+
     // Extra safety: reject if time has expired
     if (timeRemaining !== null && timeRemaining <= 0) {
+      console.log('⚠️ [NAVIGATION] Rejected - time expired');
       return;
     }
 
-    // Save current answer immediately before navigating (or save empty answer to track question order)
-    if (currentQuestion?.id) {
+    // Prevent race condition: if already navigating, ignore this call
+    if (isTransitioning) {
+      console.log('⚠️ [NAVIGATION] Rejected - already transitioning');
+      return;
+    }
+
+    console.log('✅ [NAVIGATION] Starting navigation');
+    setIsTransitioning(true);
+
+    try {
+      // Cancel any pending auto-save since we're doing an immediate save
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+        autoSaveTimeoutRef.current = null;
+      }
+
+      // Save current answer immediately before navigating (or save empty answer to track question order)
+      if (currentQuestion?.id) {
       await saveAnswer(
         currentQuestion.id,
         answers[currentQuestion.id] || { answer: null },
         answers[currentQuestion.id]?.flagged || false,
         0,
-        currentQuestionIndex + 1
+        globalQuestionOrder + 1
       );
     }
 
@@ -2264,12 +2477,22 @@ export default function TakeTestPage() {
         if (availableQuestions.length > 0) {
           let nextQuestion;
 
+          console.log('🔍 [NAVIGATION] Selecting next adaptive question', {
+            availableCount: availableQuestions.length,
+            section: currentSection,
+            baseQuestionsCompleted: baseQuestionsCompletedForSection
+          });
+
           if (adaptiveAlgorithm) {
             // Use adaptive algorithm to select next question
             nextQuestion = await adaptiveAlgorithm.selectNextQuestion(
               availableQuestions,
               currentSection
             );
+            console.log('🔍 [NAVIGATION] Algorithm returned:', {
+              hasQuestion: !!nextQuestion,
+              questionId: nextQuestion?.id?.substring(0, 8)
+            });
           } else {
             // No algorithm configured - respect question_order config
             if (config.question_order === 'random') {
@@ -2283,6 +2506,11 @@ export default function TakeTestPage() {
           }
 
           if (nextQuestion) {
+            console.log('✅ [NAVIGATION] Adding adaptive question to selection', {
+              questionId: nextQuestion.id.substring(0, 8),
+              section: currentSection,
+              newQuestionIndex: currentQuestionIndex + 1
+            });
             // Explicitly mark as NOT baseline (adaptive question)
             nextQuestion.is_base = false;
 
@@ -2291,9 +2519,15 @@ export default function TakeTestPage() {
 
             // Move to the new question
             setCurrentQuestionIndex(currentQuestionIndex + 1);
+            setGlobalQuestionOrder(globalQuestionOrder + 1);
             return;
+          } else {
+            console.warn('⚠️ [NAVIGATION] No question returned from algorithm, will fall through to standard navigation');
           }
         } else {
+          console.log('🏁 [NAVIGATION] No more questions available in section, completing section', {
+            section: currentSection
+          });
           // No more questions available in this section - complete section
           completeSection();
           return;
@@ -2307,6 +2541,7 @@ export default function TakeTestPage() {
       // Check if we're at the last question currently in selectedQuestions
       if (currentQuestionIndex < totalQuestionsInSection - 1) {
         setCurrentQuestionIndex(currentQuestionIndex + 1);
+        setGlobalQuestionOrder(globalQuestionOrder + 1);
       } else {
         // We're at the last selected question
         // The adaptive logic above should have added a new question if base questions are complete
@@ -2317,9 +2552,13 @@ export default function TakeTestPage() {
       // Non-adaptive mode: check if we're at the end of section
       if (currentQuestionIndex < totalQuestionsInSection - 1) {
         setCurrentQuestionIndex(currentQuestionIndex + 1);
+        setGlobalQuestionOrder(globalQuestionOrder + 1);
       } else {
         completeSection();
       }
+    }
+    } finally {
+      setIsTransitioning(false);
     }
   }
 
@@ -2355,9 +2594,21 @@ export default function TakeTestPage() {
     if (config?.pause_mode === 'between_sections' &&
         config.pause_sections?.includes(actualCurrentSection)) {
       const pauseDuration = (config.pause_duration_minutes || 5) * 60;
+      console.log('⏸️ [PAUSE] Mandatory pause triggered', {
+        section: actualCurrentSection,
+        sectionIndex: actualCurrentSectionIndex,
+        pauseDurationMinutes: config.pause_duration_minutes,
+        pauseDurationSeconds: pauseDuration,
+        pauseMode: config.pause_mode,
+        pauseSections: config.pause_sections
+      });
       setPauseTimeRemaining(pauseDuration);
       setShowPauseScreen(true);
       setTimeout(() => {
+        console.log('▶️ [PAUSE] Mandatory pause ended, resuming test', {
+          section: actualCurrentSection,
+          nextSectionIndex: actualCurrentSectionIndex + 1
+        });
         setShowPauseScreen(false);
         setPauseTimeRemaining(null);
         setIsCompletingSection(false);
@@ -2421,7 +2672,20 @@ export default function TakeTestPage() {
   }
 
   async function savePauseEventToDatabase(action: 'pause_taken' | 'pause_skipped' | 'pause_auto_skipped') {
-    if (!assignmentId || !currentAttempt) return;
+    if (!assignmentId || !currentAttempt) {
+      console.log('⚠️ [PAUSE] Cannot save pause event - missing assignment or attempt', {
+        assignmentId,
+        currentAttempt
+      });
+      return;
+    }
+
+    console.log('💾 [PAUSE] Saving pause event to database', {
+      action,
+      section: currentSection,
+      attemptNumber: currentAttempt,
+      assignmentId
+    });
 
     try {
       // Get current completion_details
@@ -2432,6 +2696,10 @@ export default function TakeTestPage() {
         .single();
 
       if (fetchError) {
+        console.error('❌ [PAUSE] Failed to fetch completion_details for pause event', {
+          error: fetchError,
+          assignmentId
+        });
         return;
       }
 
@@ -2458,6 +2726,12 @@ export default function TakeTestPage() {
         if (action === 'pause_taken') {
           attempts[attemptIndex].pauses_used = (attempts[attemptIndex].pauses_used || 0) + 1;
         }
+        console.log('✅ [PAUSE] Updated existing attempt with pause event', {
+          attemptIndex,
+          attemptNumber: currentAttempt,
+          totalPauseEvents: attempts[attemptIndex].pause_events.length,
+          pausesUsed: attempts[attemptIndex].pauses_used
+        });
       } else {
         // Create new attempt record with pause event
         attempts.push({
@@ -2465,6 +2739,11 @@ export default function TakeTestPage() {
           pause_events: [pauseEvent],
           pauses_used: action === 'pause_taken' ? 1 : 0,
           pauses_available: config?.max_pauses || 0
+        });
+        console.log('✅ [PAUSE] Created new attempt with pause event', {
+          attemptNumber: currentAttempt,
+          pausesUsed: action === 'pause_taken' ? 1 : 0,
+          pausesAvailable: config?.max_pauses || 0
         });
       }
 
@@ -2474,16 +2753,51 @@ export default function TakeTestPage() {
         .update({ completion_details: { attempts } })
         .eq('id', assignmentId);
 
+      if (updateError) {
+        console.error('❌ [PAUSE] Failed to save pause event to database', {
+          error: updateError,
+          assignmentId,
+          attemptNumber: currentAttempt,
+          action
+        });
+      } else {
+        console.log('✅ [PAUSE] Successfully saved pause event to database', {
+          assignmentId,
+          attemptNumber: currentAttempt,
+          action,
+          totalAttempts: attempts.length
+        });
+      }
+
     } catch (err) {
-      // Error in savePauseEventToDatabase
+      console.error('❌ [PAUSE] Exception in savePauseEventToDatabase', {
+        error: err,
+        action,
+        section: currentSection,
+        attemptNumber: currentAttempt
+      });
     }
   }
 
   function handleTakePause() {
     // Extra safety: reject if countdown has expired or choice already made
     if (pauseChoiceCountdown <= 0 || pauseChoiceMadeRef.current) {
+      console.log('⚠️ [PAUSE] Take pause rejected - countdown expired or choice already made', {
+        pauseChoiceCountdown,
+        choiceAlreadyMade: pauseChoiceMadeRef.current
+      });
       return;
     }
+
+    console.log('✅ [PAUSE] User chose to take pause', {
+      section: currentSection,
+      sectionIndex: currentSectionIndexRef.current,
+      previousPausesUsed: pausesUsed,
+      newPausesUsed: pausesUsed + 1,
+      pausesRemaining: (config?.max_pauses || 0) - pausesUsed - 1,
+      pauseDurationMinutes: config?.pause_duration_minutes,
+      countdownRemaining: pauseChoiceCountdown
+    });
 
     // Mark choice as made immediately
     pauseChoiceMadeRef.current = true;
@@ -2505,7 +2819,16 @@ export default function TakeTestPage() {
     const pauseDuration = (config?.pause_duration_minutes || 5) * 60;
     setPauseTimeRemaining(pauseDuration);
     setShowPauseScreen(true);
+    console.log('⏸️ [PAUSE] Pause started', {
+      pauseDurationSeconds: pauseDuration,
+      pauseDurationMinutes: config?.pause_duration_minutes,
+      willResumeAt: new Date(Date.now() + pauseDuration * 1000).toISOString()
+    });
     setTimeout(() => {
+      console.log('▶️ [PAUSE] User choice pause ended, resuming test', {
+        section: currentSection,
+        nextSectionIndex: currentSectionIndexRef.current + 1
+      });
       setShowPauseScreen(false);
       setPauseTimeRemaining(null);
       moveToNextSection(currentSectionIndexRef.current);
@@ -2515,9 +2838,16 @@ export default function TakeTestPage() {
   function handleSkipPause(isAutoSkip = false) {
     // Extra safety: reject if choice already made or countdown expired (for manual clicks)
     if (pauseChoiceMadeRef.current) {
+      console.log('⚠️ [PAUSE] Skip pause rejected - choice already made', {
+        choiceAlreadyMade: pauseChoiceMadeRef.current
+      });
       return;
     }
     if (!isAutoSkip && pauseChoiceCountdown <= 0) {
+      console.log('⚠️ [PAUSE] Skip pause rejected - countdown expired', {
+        pauseChoiceCountdown,
+        isAutoSkip
+      });
       return;
     }
 
@@ -2525,6 +2855,16 @@ export default function TakeTestPage() {
     pauseChoiceMadeRef.current = true;
 
     const action = isAutoSkip ? 'pause_auto_skipped' : 'pause_skipped';
+
+    console.log(`⏭️ [PAUSE] Pause ${isAutoSkip ? 'auto-skipped (timeout)' : 'skipped by user'}`, {
+      section: currentSection,
+      sectionIndex: currentSectionIndexRef.current,
+      action,
+      pausesUsed,
+      pausesRemaining: (config?.max_pauses || 0) - pausesUsed,
+      countdownRemaining: pauseChoiceCountdown,
+      isAutoSkip
+    });
 
     // Record pause skip event in state
     const pauseEvent = {
@@ -2541,6 +2881,9 @@ export default function TakeTestPage() {
     setPauseChoiceCountdown(5);
     showPauseChoiceRef.current = false; // Clear ref
     setShowPauseChoiceScreen(false);
+    console.log('▶️ [PAUSE] Continuing without pause', {
+      nextSectionIndex: currentSectionIndexRef.current + 1
+    });
     moveToNextSection(currentSectionIndexRef.current);
   }
 
@@ -2577,7 +2920,6 @@ export default function TakeTestPage() {
           ? (correctAnswers.length / answeredQuestions.length) * 100
           : 0;
 
-        console.log(`Base section "${currentSection}" performance: ${percentCorrect.toFixed(1)}% correct (${correctAnswers.length}/${answeredQuestions.length})`);
 
         // Find the next adaptive group in the original config order
         // Look through config.section_order to find the next adaptive group after current base section
@@ -2607,7 +2949,6 @@ export default function TakeTestPage() {
                 adaptiveSectionToAdd = `${groupPrefix}-Easy`;
               }
 
-              console.log(`Adding adaptive section: ${adaptiveSectionToAdd} (threshold: 65%, actual: ${percentCorrect.toFixed(1)}%)`);
               break;
             }
           }
@@ -2635,6 +2976,8 @@ export default function TakeTestPage() {
           // Move to the newly added adaptive section immediately
           setCurrentSectionIndex(insertIndex);
           setCurrentQuestionIndex(0);
+          // Increment globalQuestionOrder since we're moving to a new question
+          setGlobalQuestionOrder(prev => prev + 1);
           setSectionStartTime(new Date());
 
           // Restart timer for the new adaptive section
@@ -2650,6 +2993,8 @@ export default function TakeTestPage() {
 
       setCurrentSectionIndex(nextSectionIndex);
       setCurrentQuestionIndex(0);
+      // Increment globalQuestionOrder since we're moving to a new question (first of next section)
+      setGlobalQuestionOrder(prev => prev + 1);
       setSectionStartTime(new Date());
 
 
@@ -2749,15 +3094,9 @@ export default function TakeTestPage() {
   async function submitTest() {
     // Prevent double submission
     if (submitting) {
-      console.warn('⚠️ [STATUS] Submit prevented - already submitting');
       return;
     }
 
-    console.log('🚀 [STATUS] Test submission started', {
-      assignmentId,
-      currentAttempt,
-      answersCount: Object.keys(answers).length
-    });
 
     setSubmitting(true);
 
@@ -2770,13 +3109,12 @@ export default function TakeTestPage() {
         answers[currentQuestion.id] || { answer: null },
         answers[currentQuestion.id]?.flagged || false,
         0,
-        currentQuestionIndex + 1
+        globalQuestionOrder + 1
       );
     }
 
     // Mark test as completed in database with completion_details
     try {
-      console.log('💾 [STATUS] Saving completion details...');
       // Save completion details
       const success = await saveCompletionDetails('completed', 'submitted');
 
@@ -2784,12 +3122,10 @@ export default function TakeTestPage() {
         throw new Error('Failed to save completion details');
       }
 
-      console.log('✅ [STATUS] Test submitted successfully - status="locked", completion_status="completed YYYY-MM-DD at HH:MM"');
       // Show completion screen
       setShowCompletionScreen(true);
       setSubmitting(false);
     } catch (err) {
-      console.error('❌ [STATUS] Test submission failed:', err);
       setSubmitting(false);
       alert('Error submitting test. Please contact your instructor.');
     }
@@ -2961,16 +3297,6 @@ export default function TakeTestPage() {
       // Auto-lock when completed (tutor must unlock to allow retake)
       const finalStatus = status === 'completed' ? 'locked' : status;
 
-      console.log(`🔄 [STATUS] Completing test: in_progress → ${finalStatus}`, {
-        assignmentId,
-        status,
-        finalStatus,
-        completion_status: completionStatusText,
-        reason,
-        currentAttempt,
-        newTotalAttempts
-      });
-
       const updateData = {
         status: finalStatus,
         completion_status: completionStatusText,
@@ -2982,11 +3308,6 @@ export default function TakeTestPage() {
         results_viewable_by_student: false
       };
 
-      console.log('📝 [STATUS] Update data:', {
-        ...updateData,
-        completion_details: `${attempts.length} attempt(s)`
-      });
-
       const { data: updateResult, error } = await supabase
         .from('2V_test_assignments')
         .update(updateData)
@@ -2994,16 +3315,8 @@ export default function TakeTestPage() {
         .select();
 
       if (error) {
-        console.error('❌ [STATUS ERROR] Failed to save completion:', error);
         throw error;
       }
-
-      console.log('✅ [STATUS] Test completion saved successfully', {
-        assignmentId,
-        finalStatus,
-        completion_status: completionStatusText,
-        updateResult: updateResult?.[0]
-      });
 
       return true;
     } catch (err) {
@@ -3801,6 +4114,12 @@ export default function TakeTestPage() {
                     timeSpent: prev?.timeSpent || 0,
                     flagged: prev?.flagged || false,
                   }));
+
+                  // Check if all parts are answered, then record response
+                  const numQuestions = currentQuestion.question_data.questions?.length || 0;
+                  if (newMSRAnswers.filter(a => a).length === numQuestions) {
+                    checkAndRecordMSRResponse(newMSRAnswers, correctMSRAnswers);
+                  }
                 }}
                 correctAnswers={correctMSRAnswers}
                 showResults={isGuidedMode && showCorrectAnswers}
@@ -3825,6 +4144,7 @@ export default function TakeTestPage() {
                 selectedBlank1={answers[currentQuestion.id]?.blank1}
                 selectedBlank2={answers[currentQuestion.id]?.blank2}
                 onBlank1Change={(value) => {
+                  const currentBlank2 = answers[currentQuestion.id]?.blank2;
                   updateAnswer(currentQuestion.id, (prev) => ({
                     ...prev,
                     questionId: currentQuestion.id,
@@ -3834,8 +4154,14 @@ export default function TakeTestPage() {
                     timeSpent: prev?.timeSpent || 0,
                     flagged: prev?.flagged || false,
                   }));
+
+                  // Check if both blanks are filled, then record response
+                  if (value && currentBlank2) {
+                    checkAndRecordGIResponse(value, currentBlank2, correctAnswerData);
+                  }
                 }}
                 onBlank2Change={(value) => {
+                  const currentBlank1 = answers[currentQuestion.id]?.blank1;
                   updateAnswer(currentQuestion.id, (prev) => ({
                     ...prev,
                     questionId: currentQuestion.id,
@@ -3845,6 +4171,11 @@ export default function TakeTestPage() {
                     timeSpent: prev?.timeSpent || 0,
                     flagged: prev?.flagged || false,
                   }));
+
+                  // Check if both blanks are filled, then record response
+                  if (currentBlank1 && value) {
+                    checkAndRecordGIResponse(currentBlank1, value, correctAnswerData);
+                  }
                 }}
                 correctBlank1={correctAnswerData}
                 correctBlank2={correctAnswerData}
@@ -3880,6 +4211,12 @@ export default function TakeTestPage() {
                     timeSpent: prev?.timeSpent || 0,
                     flagged: prev?.flagged || false,
                   }));
+
+                  // Check if all statements are answered, then record response
+                  const numStatements = currentQuestion.question_data.statements?.length || 0;
+                  if (Object.keys(newTAAnswers).length === numStatements) {
+                    checkAndRecordTAResponse(newTAAnswers, correctTAAnswers);
+                  }
                 }}
                 correctAnswers={correctTAAnswers}
                 showResults={isGuidedMode && showCorrectAnswers}
@@ -3905,6 +4242,7 @@ export default function TakeTestPage() {
                 selectedColumn1={answers[currentQuestion.id]?.column1}
                 selectedColumn2={answers[currentQuestion.id]?.column2}
                 onColumn1Change={(value) => {
+                  const currentColumn2 = answers[currentQuestion.id]?.column2;
                   updateAnswer(currentQuestion.id, (prev) => ({
                     ...prev,
                     questionId: currentQuestion.id,
@@ -3914,8 +4252,14 @@ export default function TakeTestPage() {
                     timeSpent: prev?.timeSpent || 0,
                     flagged: prev?.flagged || false,
                   }));
+
+                  // Check if both columns are filled, then record response
+                  if (value && currentColumn2) {
+                    checkAndRecordTPAResponse(value, currentColumn2, correctTPAAnswers);
+                  }
                 }}
                 onColumn2Change={(value) => {
+                  const currentColumn1 = answers[currentQuestion.id]?.column1;
                   updateAnswer(currentQuestion.id, (prev) => ({
                     ...prev,
                     questionId: currentQuestion.id,
@@ -3925,6 +4269,11 @@ export default function TakeTestPage() {
                     timeSpent: prev?.timeSpent || 0,
                     flagged: prev?.flagged || false,
                   }));
+
+                  // Check if both columns are filled, then record response
+                  if (currentColumn1 && value) {
+                    checkAndRecordTPAResponse(currentColumn1, value, correctTPAAnswers);
+                  }
                 }}
                 correctColumn1={correctTPAAnswers}
                 correctColumn2={correctTPAAnswers}
@@ -4165,7 +4514,7 @@ export default function TakeTestPage() {
           {!isInReviewMode && (
             <button
               onClick={goToPreviousQuestion}
-              disabled={!canGoBack() || (timeRemaining !== null && timeRemaining <= 1)}
+              disabled={!canGoBack() || isTransitioning || (timeRemaining !== null && timeRemaining <= 1)}
               className="px-6 py-3 rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-gray-200 text-gray-700 hover:bg-gray-300 disabled:hover:bg-gray-200"
             >
               <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
@@ -4202,7 +4551,7 @@ export default function TakeTestPage() {
         ) : (
           <button
             onClick={goToNextQuestion}
-            disabled={submitting || (timeRemaining !== null && timeRemaining <= 1)}
+            disabled={submitting || isTransitioning || (timeRemaining !== null && timeRemaining <= 1)}
           className="px-6 py-3 rounded-xl font-semibold transition-all bg-brand-green text-white hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {submitting ? (
