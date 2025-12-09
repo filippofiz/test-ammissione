@@ -383,15 +383,6 @@ export default function TestResultsPage() {
     const questionData = (question as any).question_data || {};
     const diType = questionData.di_type;
 
-    // Debug logging for Data Insights questions
-    if (diType) {
-      console.log(`🔍 [RESULTS] Checking ${diType} question:`,
-        '\nQuestion ID:', question.id,
-        '\nStudent Answer:', JSON.stringify(studentAns, null, 2),
-        '\nCorrect Answer:', JSON.stringify(correctAns, null, 2)
-      );
-    }
-
     // GI (Graphical Interpretation) - student: {part1, part2}, correct: ["val1", "val2"]
     if (diType === 'GI' && studentAns.answers && Array.isArray(correctAns)) {
       const studentGI = studentAns.answers;
