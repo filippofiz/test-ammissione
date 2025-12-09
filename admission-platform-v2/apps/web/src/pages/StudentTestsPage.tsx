@@ -573,7 +573,7 @@ export default function StudentTestsPage() {
                   if (questionsData) {
                     const questionMap = new Map(questionsData.map(q => [q.id, q]));
 
-                    // checkIfCorrect function (EXACT copy from TestResultsPage line 351-448)
+                    // checkIfCorrect function (EXACT copy from TestResultsPage line 370-450)
                     const checkIfCorrect = (question: any, studentAnswer: any): boolean => {
                       if (!studentAnswer || !studentAnswer.answer) return false;
 
@@ -585,6 +585,63 @@ export default function StudentTestsPage() {
 
                       const questionData = question.question_data || {};
                       const diType = questionData.di_type;
+
+                      // GI (Graphical Interpretation) - student: {part1, part2}, correct: ["val1", "val2"]
+                      if (diType === 'GI' && studentAns.answers && Array.isArray(correctAns)) {
+                        const studentGI = studentAns.answers;
+                        const match1 = String(studentGI.part1 || '').trim() === String(correctAns[0] || '').trim();
+                        const match2 = String(studentGI.part2 || '').trim() === String(correctAns[1] || '').trim();
+                        return match1 && match2;
+                      }
+
+                      // TA (Table Analysis) - student: {0: "true", 1: "false"}, correct: [{stmt0: "col1", stmt1: "col2"}]
+                      if (diType === 'TA' && studentAns.answers) {
+                        const correctTA = Array.isArray(correctAns) && correctAns.length > 0 ? correctAns[0] : correctAns || {};
+                        const studentTA = studentAns.answers;
+
+                        // Check all statements
+                        const result = Object.entries(correctTA).every(([key, value]) => {
+                          const match = key.match(/stmt(\d+)/);
+                          if (match) {
+                            const index = parseInt(match[1], 10);
+                            const expectedAnswer = value === 'col1' ? 'true' : 'false';
+                            const studentValue = String(studentTA[index] || studentTA[String(index)] || '').toLowerCase();
+                            const isMatch = studentValue === expectedAnswer || studentValue === String(expectedAnswer === 'true');
+                            return isMatch;
+                          }
+                          return true;
+                        });
+                        return result;
+                      }
+
+                      // TPA (Two-Part Analysis) - student: {part1, part2}, correct: [{col1: "...", col2: "..."}]
+                      if (diType === 'TPA' && studentAns.answers) {
+                        const correctTPA = Array.isArray(correctAns) && correctAns.length > 0 ? correctAns[0] : correctAns || {};
+                        const studentTPA = studentAns.answers;
+                        const match1 = String(studentTPA.part1 || '').trim() === String(correctTPA.col1 || '').trim();
+                        const match2 = String(studentTPA.part2 || '').trim() === String(correctTPA.col2 || '').trim();
+                        return match1 && match2;
+                      }
+
+                      // MSR (Multi-Source Reasoning) - array of answers
+                      if (diType === 'MSR' && studentAns.answers && Array.isArray(correctAns)) {
+                        const studentMSR = Array.isArray(studentAns.answers) ? studentAns.answers : [];
+                        if (studentMSR.length !== correctAns.length) {
+                          return false;
+                        }
+                        const result = studentMSR.every((ans: any, idx: number) =>
+                          String(ans || '').toLowerCase() === String(correctAns[idx] || '').toLowerCase()
+                        );
+                        return result;
+                      }
+
+                      // DS (Data Sufficiency) - simple string answer
+                      if (diType === 'DS') {
+                        const studentDS = typeof studentAns === 'string' ? studentAns : studentAns.answer;
+                        const correctDS = Array.isArray(correctAns) ? correctAns[0] : correctAns;
+                        const result = String(studentDS || '').toUpperCase() === String(correctDS || '').toUpperCase();
+                        return result;
+                      }
 
                       // Multiple Choice - student: {answer: "e"} or "e", correct: "e"
                       if (question.question_type === 'multiple_choice') {
