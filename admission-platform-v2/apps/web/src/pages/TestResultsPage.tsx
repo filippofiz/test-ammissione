@@ -35,6 +35,7 @@ import { GIQuestion } from '../components/questions/GIQuestion';
 import { TAQuestion } from '../components/questions/TAQuestion';
 import { TPAQuestion } from '../components/questions/TPAQuestion';
 import { MultipleChoiceQuestion } from '../components/questions/MultipleChoiceQuestion';
+import { LaTeX } from '../components/LaTeX';
 
 interface Question {
   id: string;
@@ -367,6 +368,63 @@ export default function TestResultsPage() {
     }
   }
 
+  // Helper function to compare answers flexibly (handles numeric equivalence)
+  function compareAnswersFlexibly(studentValue: any, correctValue: any): boolean {
+    const studentStr = String(studentValue || '').trim();
+    const correctStr = String(correctValue || '').trim();
+
+    // Exact match (case-insensitive)
+    if (studentStr.toLowerCase() === correctStr.toLowerCase()) {
+      return true;
+    }
+
+    // Try numeric comparison (handles 0.5 = 1/2, etc.)
+    const studentNum = parseFloat(studentStr);
+    const correctNum = parseFloat(correctStr);
+
+    if (!isNaN(studentNum) && !isNaN(correctNum)) {
+      // Check if values are approximately equal (within small tolerance for floating point)
+      return Math.abs(studentNum - correctNum) < 0.0001;
+    }
+
+    // Try evaluating as fractions (1/2 = 0.5)
+    const evalFraction = (str: string): number | null => {
+      const match = str.match(/^(-?\d+)\/(-?\d+)$/);
+      if (match) {
+        const num = parseFloat(match[1]);
+        const den = parseFloat(match[2]);
+        return den !== 0 ? num / den : null;
+      }
+      return null;
+    };
+
+    // Try evaluating as percentages (50% = 0.5)
+    const evalPercentage = (str: string): number | null => {
+      const match = str.match(/^(-?\d+(?:\.\d+)?)%$/);
+      if (match) {
+        const num = parseFloat(match[1]);
+        return num / 100;
+      }
+      return null;
+    };
+
+    const studentFraction = evalFraction(studentStr);
+    const correctFraction = evalFraction(correctStr);
+    const studentPercentage = evalPercentage(studentStr);
+    const correctPercentage = evalPercentage(correctStr);
+
+    // Build normalized values for comparison
+    const studentNormalized = studentPercentage ?? studentFraction ?? (!isNaN(studentNum) ? studentNum : null);
+    const correctNormalized = correctPercentage ?? correctFraction ?? (!isNaN(correctNum) ? correctNum : null);
+
+    // Compare normalized values
+    if (studentNormalized !== null && correctNormalized !== null) {
+      return Math.abs(studentNormalized - correctNormalized) < 0.0001;
+    }
+
+    return false;
+  }
+
   function checkIfCorrect(question: Question, studentAnswer: StudentAnswer | null): boolean {
     if (!studentAnswer || !studentAnswer.answer) return false;
 
@@ -448,9 +506,19 @@ export default function TestResultsPage() {
       return result;
     }
 
-    // Simple answer comparison (for backward compatibility)
-    if (studentAns.answer && correctAns.answer) {
-      return studentAns.answer === correctAns.answer;
+    // Open-ended/text input questions - use flexible comparison
+    if (studentAns.answer !== undefined && correctAns) {
+      const correctValue = typeof correctAns === 'string' ? correctAns : correctAns.answer || correctAns;
+      const studentValue = studentAns.answer;
+
+      console.log('🔍 [RESULTS] Flexible comparison for open-ended:', {
+        questionId: question.id,
+        studentValue,
+        correctValue,
+        result: compareAnswersFlexibly(studentValue, correctValue)
+      });
+
+      return compareAnswersFlexibly(studentValue, correctValue);
     }
 
     // Multiple answers comparison (for backward compatibility)
@@ -460,7 +528,7 @@ export default function TestResultsPage() {
 
       if (studentAnswers.length !== correctAnswers.length) return false;
 
-      return studentAnswers.every((ans: any, idx: number) => ans === correctAnswers[idx]);
+      return studentAnswers.every((ans: any, idx: number) => compareAnswersFlexibly(ans, correctAnswers[idx]));
     }
 
     return false;
@@ -811,12 +879,34 @@ export default function TestResultsPage() {
     }
     // Fallback for other question types
     else {
+      // Extract correct answer from answers JSONB field (new structure)
+      const answersData = typeof question.answers === 'string' ? JSON.parse(question.answers) : question.answers;
+      const correctAnswerFromAnswers = answersData?.correct_answer;
+
+      // Preprocess question text to fix LaTeX escaping issues from database
+      const rawQuestionText = localizedQuestionText || question.question_text;
+      const questionTextToRender = rawQuestionText
+        ? rawQuestionText.replace(/\\([\\${}^_])/g, '$1') // Unescape: \\ → \, \$ → $, etc.
+        : rawQuestionText;
+
+      console.log('🔍 [RESULTS] Fallback question rendering:', '\n' +
+        'Question ID: ' + question.id + '\n' +
+        'Question Type: ' + question.question_type + '\n' +
+        'Raw Question Text: ' + JSON.stringify(rawQuestionText, null, 2) + '\n' +
+        'Processed Question Text: ' + JSON.stringify(questionTextToRender, null, 2) + '\n' +
+        'Has Old Correct Answer: ' + !!question.correct_answer + '\n' +
+        'Has Answers Field: ' + !!question.answers + '\n' +
+        'Answers Data: ' + JSON.stringify(answersData, null, 2) + '\n' +
+        'Correct Answer From Answers: ' + JSON.stringify(correctAnswerFromAnswers, null, 2) + '\n' +
+        'Student Answer: ' + JSON.stringify(studentAnswer?.answer, null, 2)
+      );
+
       component = (
           <div className="space-y-4">
             <div className="border-2 border-gray-200 rounded-xl p-6 bg-white">
               {(localizedQuestionText || question.question_text) ? (
                 <div className="text-gray-800 text-lg whitespace-pre-wrap">
-                  {localizedQuestionText || question.question_text}
+                  <LaTeX>{questionTextToRender}</LaTeX>
                 </div>
               ) : (
                 <div className="text-gray-400 italic">
@@ -836,20 +926,28 @@ export default function TestResultsPage() {
                   result.isCorrect ? (
                     <div className="flex items-center gap-2">
                       <FontAwesomeIcon icon={faCheckCircle} className="text-green-600" />
-                      <span className="font-semibold text-green-700">{formatAnswer(studentAnswer.answer)}</span>
+                      <span className="font-semibold text-green-700">
+                        <LaTeX>{formatAnswer(studentAnswer.answer)}</LaTeX>
+                      </span>
                     </div>
                   ) : (
                     <>
                       <div className="flex items-center gap-2">
                         <FontAwesomeIcon icon={faTimesCircle} className="text-red-600" />
                         <span className="text-sm text-gray-600">{t('testResults.yourAnswer')}</span>
-                        <span className="font-semibold text-red-700">{formatAnswer(studentAnswer.answer)}</span>
+                        <span className="font-semibold text-red-700">
+                          <LaTeX>{formatAnswer(studentAnswer.answer)}</LaTeX>
+                        </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <FontAwesomeIcon icon={faCheckCircle} className="text-green-600" />
                         <span className="text-sm text-gray-600">{t('testResults.correctAnswer')}</span>
                         <span className="font-semibold text-green-700">
-                          {question.correct_answer ? formatAnswer(question.correct_answer) : t('testResults.noAnswerProvided')}
+                          <LaTeX>
+                            {correctAnswerFromAnswers ? formatAnswer(correctAnswerFromAnswers) :
+                             question.correct_answer ? formatAnswer(question.correct_answer) :
+                             t('testResults.noAnswerProvided')}
+                          </LaTeX>
                         </span>
                       </div>
                     </>
