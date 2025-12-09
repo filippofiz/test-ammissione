@@ -101,9 +101,7 @@
       "WebFetch(domain:gmatclub.com)",
       "Bash(npx expo export:*)",
       "Bash(npx eas update --branch production --message \"Fix correct_answer extraction and database constraint issues\")",
-      "Bash(npx eas update --auto)",
-      "Bash(grep:*)",
-      "Bash(cd /c/App UpToTen/admission-test)"
+      "Bash(npx eas update --auto)"
     ],
     "deny": [],
     "ask": []
