@@ -499,6 +499,7 @@ export default function TakeTestPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerEndTimeRef = useRef<number | null>(null); // Timestamp when timer should end (for accuracy when tab is hidden)
   const isCompletingSectionRef = useRef(false); // Synchronous guard for race condition
   const pauseChoiceMadeRef = useRef(false); // Prevent double pause choice handling
   const showPauseChoiceRef = useRef(false); // Ref to track pause choice screen state for StrictMode
@@ -881,6 +882,26 @@ export default function TakeTestPage() {
       annulTest();
     }
   }, [showExitWarning, exitCountdown]);
+
+  // Sync timer when tab becomes visible (fixes timer drift when tab is hidden)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && timerEndTimeRef.current !== null) {
+        // Tab just became visible - immediately sync timer with actual remaining time
+        const now = Date.now();
+        const remaining = Math.max(0, Math.ceil((timerEndTimeRef.current - now) / 1000));
+        setTimeRemaining(remaining);
+
+        // If time expired while tab was hidden, trigger time up
+        if (remaining === 0) {
+          handleTimeUp();
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
 
   // Check for multiple screens on start and periodically during test
   useEffect(() => {
@@ -1780,17 +1801,27 @@ export default function TakeTestPage() {
     }
 
     if (sectionTime) {
-      setTimeRemaining(sectionTime * 60); // Convert to seconds
+      const seconds = sectionTime * 60; // Convert to seconds
+      const endTime = Date.now() + (seconds * 1000); // Calculate end timestamp
+
+      setTimeRemaining(seconds);
+      timerEndTimeRef.current = endTime;
+
+      // Use timestamp-based timer to avoid browser throttling when tab is hidden
       timerRef.current = setInterval(() => {
-        setTimeRemaining(prev => {
-          if (prev === null) return prev;
-          if (prev <= 0) return 0; // Already at 0, don't call handleTimeUp again
-          if (prev === 1) {
-            // Transitioning to 0 - call handleTimeUp once
+        const now = Date.now();
+        const remaining = Math.max(0, Math.ceil((timerEndTimeRef.current! - now) / 1000));
+
+        setTimeRemaining(prevTime => {
+          // If time hasn't changed, return previous value to avoid unnecessary re-renders
+          if (prevTime === remaining) return prevTime;
+
+          // Check if we just hit 0
+          if (remaining === 0 && prevTime !== null && prevTime > 0) {
             handleTimeUp();
-            return 0;
           }
-          return prev - 1;
+
+          return remaining;
         });
       }, 1000);
     }

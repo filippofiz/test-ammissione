@@ -515,12 +515,44 @@ export default function PDFToLatexConverterPage() {
   const [baseTestId, setBaseTestId] = useState<string | null>(null); // Shared test ID across sections
   const [savedSections, setSavedSections] = useState<string[]>([]); // Track which sections have been saved
 
-  // Clear savedSections when test metadata changes (so sections from Training 1 don't grey out Training 2)
+  // Clear savedSections and baseTestId when test metadata changes (so sections from Training 1 don't grey out Training 2)
   useEffect(() => {
     if (mode === 'new') {
       setSavedSections([]);
+      setBaseTestId(null);
     }
   }, [mode, newTestMetadata.test_type, newTestMetadata.exercise_type, newTestMetadata.test_number]);
+
+  // Load existing sections from questions table when baseTestId is set
+  useEffect(() => {
+    const loadExistingSections = async () => {
+      if (!baseTestId || mode !== 'new') return;
+
+      try {
+        // Query questions table to find which sections already have questions
+        const { data: questions, error } = await supabase
+          .from('2V_questions')
+          .select('section')
+          .eq('test_id', baseTestId);
+
+        if (error) {
+          console.error('Error loading existing sections:', error);
+          return;
+        }
+
+        if (questions && questions.length > 0) {
+          // Get unique sections
+          const uniqueSections = [...new Set(questions.map(q => q.section))];
+          setSavedSections(uniqueSections);
+          console.log(`✓ Loaded ${uniqueSections.length} existing sections:`, uniqueSections);
+        }
+      } catch (error) {
+        console.error('Error loading existing sections:', error);
+      }
+    };
+
+    loadExistingSections();
+  }, [baseTestId, mode]);
 
   // Questions from old system
   const [oldQuestions, setOldQuestions] = useState<OldQuestion[]>([]);
@@ -1382,46 +1414,70 @@ export default function PDFToLatexConverterPage() {
           }
         }
 
-        // Determine section: use "Multi-topic" for multi-section tests, otherwise use the specific section
-        const sectionValue = uploadedSections.length > 1 ? 'Multi-topic' : firstSection.section;
+        // If we already have a baseTestId from a previous section, reuse it
+        if (baseTestId) {
+          testId = baseTestId;
+          console.log(`✓ Reusing test_id from previous section: ${testId}`);
 
-        // Check if test already exists (including section to match unique constraint)
-        const { data: existingTest } = await supabase
-          .from('2V_tests')
-          .select('id')
-          .eq('test_type', newTestMetadata.test_type)
-          .eq('section', sectionValue)
-          .eq('exercise_type', newTestMetadata.exercise_type)
-          .eq('test_number', newTestMetadata.test_number)
-          .eq('format', 'interactive')
-          .single();
+          // Update the test to "Multi-topic" since we now have multiple sections
+          if (uploadedSections.length > 1) {
+            const { error: updateError } = await supabase
+              .from('2V_tests')
+              .update({ section: 'Multi-topic' })
+              .eq('id', testId);
 
-        if (existingTest) {
-          // Test exists - reuse it, don't create new entry
-          testId = existingTest.id;
-          console.log(`✓ Test already exists, reusing test_id: ${testId}`);
-        } else {
-          // New test - create ONE entry in 2V_tests
-          testId = crypto.randomUUID();
-
-          const { error: testInsertError } = await supabase
-            .from('2V_tests')
-            .insert({
-              id: testId,
-              test_type: newTestMetadata.test_type,
-              section: sectionValue,
-              exercise_type: newTestMetadata.exercise_type,
-              test_number: newTestMetadata.test_number,
-              format: 'interactive',
-              is_active: true,
-              created_by: profileId,
-            });
-
-          if (testInsertError) {
-            console.error('Error inserting test:', testInsertError);
-            throw new Error(`Failed to create test: ${testInsertError.message}`);
+            if (updateError) {
+              console.warn('Could not update section to Multi-topic:', updateError);
+            } else {
+              console.log(`✓ Updated test section to "Multi-topic"`);
+            }
           }
-          console.log(`✓ Created new test in 2V_tests with id: ${testId}`);
+        } else {
+          // First section - determine section value and check if test exists
+          const sectionValue = firstSection.section;
+
+          // Check if test already exists (look for same test_type, exercise_type, test_number)
+          // Don't filter by section because we want to find any matching test
+          const { data: existingTests } = await supabase
+            .from('2V_tests')
+            .select('id, section')
+            .eq('test_type', newTestMetadata.test_type)
+            .eq('exercise_type', newTestMetadata.exercise_type)
+            .eq('test_number', newTestMetadata.test_number)
+            .eq('format', 'interactive')
+            .limit(1);
+
+          if (existingTests && existingTests.length > 0) {
+            // Test exists - reuse it, don't create new entry
+            testId = existingTests[0].id;
+            console.log(`✓ Test already exists, reusing test_id: ${testId}`);
+          } else {
+            // New test - create ONE entry in 2V_tests
+            testId = crypto.randomUUID();
+
+            const { error: testInsertError } = await supabase
+              .from('2V_tests')
+              .insert({
+                id: testId,
+                test_type: newTestMetadata.test_type,
+                section: sectionValue,
+                exercise_type: newTestMetadata.exercise_type,
+                test_number: newTestMetadata.test_number,
+                format: 'interactive',
+                is_active: true,
+                created_by: profileId,
+              });
+
+            if (testInsertError) {
+              console.error('Error inserting test:', testInsertError);
+              throw new Error(`Failed to create test: ${testInsertError.message}`);
+            }
+            console.log(`✓ Created new test in 2V_tests with id: ${testId}`);
+          }
+
+          // Save the baseTestId so subsequent sections can reuse it
+          setBaseTestId(testId);
+          console.log(`✓ Set baseTestId: ${testId}`);
         }
         testType = newTestMetadata.test_type;
         pdfUrl = firstSection.testPdfUrl;
@@ -1458,26 +1514,13 @@ export default function PDFToLatexConverterPage() {
       // Create a map of passages by ID for easy lookup
       const passageMap = new Map(passages.map(p => [p.passage_id, p]));
 
-      // For new tests, we need to assign questions to their respective test sections
-      const testIdsBySection = new Map<string, string>();
-      if (mode === 'new') {
-        uploadedSections.forEach(section => {
-          testIdsBySection.set(section.section, `${testId}_${section.section}`);
-        });
-      }
-
       // Transform to new format and UPDATE/INSERT questions
       const questionsToUpdate = convertedQuestions.map((q: any) => {
         // Get passage data if this question references one
         const passage = q.passage_id ? passageMap.get(q.passage_id) : null;
 
-        // For new tests, use the section-specific test ID
-        const questionTestId = mode === 'new' && testIdsBySection.has(q.section)
-          ? testIdsBySection.get(q.section)!
-          : testId;
-
         return {
-          test_id: questionTestId,
+          test_id: testId,
           test_type: testType,
           question_number: q.question_number,
           question_type: 'multiple_choice',
