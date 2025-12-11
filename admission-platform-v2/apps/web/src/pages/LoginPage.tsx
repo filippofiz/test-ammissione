@@ -214,9 +214,6 @@ export function LoginPage() {
                   />
                   <span className="text-gray-700">{t('login.rememberMe')}</span>
                 </label>
-                <a href="#" className="text-blue-600 hover:text-blue-700 font-medium">
-                  {t('login.forgotPassword')}
-                </a>
               </div>
 
               <Button
