@@ -16,6 +16,7 @@ import {
   faSearch,
   faEye,
   faEyeSlash,
+  faKey,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import { supabase } from '../lib/supabase';
@@ -203,6 +204,78 @@ export default function ManageAccountsPage() {
     } catch (err: any) {
       console.error('Error deleting user:', err);
       alert(`Failed to delete user: ${err.message}`);
+    }
+  };
+
+  const handleResetPassword = async (userId: string, authUid: string | null, userEmail: string) => {
+    console.log('=== RESET PASSWORD CLICKED ===');
+    console.log('User ID:', userId);
+    console.log('Auth UID:', authUid);
+    console.log('Email:', userEmail);
+
+    if (!authUid) {
+      console.error('ERROR: No auth_uid for user');
+      alert('Cannot reset password: User has no auth account');
+      return;
+    }
+
+    if (!confirm(`Reset password for ${userEmail}?\n\nThis will:\n- Reset the password to: 123456\n- Require the user to change their password on next login\n\nPlease confirm.`)) {
+      console.log('User cancelled password reset');
+      return;
+    }
+
+    try {
+      console.log('Getting session...');
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        console.error('ERROR: No active session');
+        alert('You must be logged in to reset passwords');
+        return;
+      }
+
+      console.log('Session found, calling Edge Function...');
+
+      // Call Edge Function to reset password
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const url = `${supabaseUrl}/functions/v1/admin-reset-password`;
+      console.log('Edge Function URL:', url);
+
+      const requestBody = {
+        user_auth_uid: authUid,
+        new_password: '123456'
+      };
+      console.log('Request body:', requestBody);
+
+      console.log('Making fetch request...');
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      console.log('Response status:', response.status);
+      console.log('Response OK:', response.ok);
+
+      const result = await response.json();
+      console.log('Response body:', result);
+
+      if (!response.ok) {
+        console.error('ERROR: Response not OK');
+        throw new Error(result.error || 'Failed to reset password');
+      }
+
+      console.log('SUCCESS: Password reset completed');
+      alert(`✅ Password reset successfully!\n\nNew password: 123456\n\nThe user will be required to change this password on next login.`);
+      loadUsers();
+    } catch (err: any) {
+      console.error('=== ERROR RESETTING PASSWORD ===');
+      console.error('Error:', err);
+      console.error('Error message:', err.message);
+      alert(`Failed to reset password: ${err.message}`);
     }
   };
 
@@ -401,6 +474,13 @@ export default function ManageAccountsPage() {
                           )}
                         </td>
                         <td className="px-6 py-4 text-right">
+                          <button
+                            onClick={() => handleResetPassword(user.id, user.auth_uid, user.email)}
+                            className="text-blue-600 hover:text-blue-800 transition-colors"
+                            title="Reset password to 123456"
+                          >
+                            <FontAwesomeIcon icon={faKey} />
+                          </button>
                           <button
                             onClick={() => handleDeleteUser(user.id, user.email)}
                             className="text-red-600 hover:text-red-800 transition-colors ml-3"
