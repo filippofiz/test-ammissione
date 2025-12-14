@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(typst compile:*)",
+      "Bash(cat:*)",
+      "Bash(git checkout:*)",
+      "Bash(if not exist \"c:\\Users\\kappa\\Desktop\\UpToTen\\test-platform-uptoten\\GMAT\\.vscode\" mkdir \"c:\\Users\\kappa\\Desktop\\UpToTen\\test-platform-uptoten\\GMAT\\.vscode\")",
+      "Bash(wc:*)",
+      "Bash(if not exist \"c:\\Users\\kappa\\Desktop\\UpToTen\\test-platform-uptoten\\GMAT\\material\\archive\\lessons\\slides\" mkdir \"c:\\Users\\kappa\\Desktop\\UpToTen\\test-platform-uptoten\\GMAT\\material\\archive\\lessons\\slides\")",
+      "Bash(find:*)",
+      "Bash(tree:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

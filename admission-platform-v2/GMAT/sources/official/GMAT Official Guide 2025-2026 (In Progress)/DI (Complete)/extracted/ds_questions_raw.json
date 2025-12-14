@@ -1,0 +1,824 @@
+[
+  {
+    "question_number": 273,
+    "problem": "What is the number of pages of a certain journal article?",
+    "statement1": "The size of each page is $5\\frac{1}{2}$ inches by 8 inches.",
+    "statement2": "The average (arithmetic mean) number of words per page is 250."
+  },
+  {
+    "question_number": 274,
+    "problem": "If a certain vase contains only roses and tulips, how many tulips are there in the vase?",
+    "statement1": "The number of roses in the vase is 4 times the number of tulips in the vase.",
+    "statement2": "There is a total of 20 flowers in the vase."
+  },
+  {
+    "question_number": 275,
+    "problem": "The cost of 10 pounds of apples and 2 pounds of grapes was $12. What was the cost per pound of apples?",
+    "statement1": "The cost per pound of grapes was $2.",
+    "statement2": "The cost of 2 pounds of apples was less than the cost of 1 pound of grapes."
+  },
+  {
+    "question_number": 276,
+    "problem": "What was the median annual salary for the employees at Company X last year?",
+    "statement1": "Last year, there were 29 employees at Company X.",
+    "statement2": "Last year, 12 employees at Company X had an annual salary of $24,000."
+  },
+  {
+    "question_number": 277,
+    "problem": "How many basic units of Currency X are equivalent to 250 basic units of Currency Y?",
+    "statement1": "100 basic units of Currency X are equivalent to 625 basic units of Currency Y.",
+    "statement2": "2,000 basic units of Currency X are equivalent to 12,500 basic units of Currency Y."
+  },
+  {
+    "question_number": 278,
+    "problem": "A company bought 3 printers and 1 scanner. What was the price of the scanner?",
+    "statement1": "The total price of the printers and the scanner was $1,300.",
+    "statement2": "The price of each printer was 4 times the price of the scanner."
+  },
+  {
+    "question_number": 279,
+    "problem": "Each of the 256 solid-colored marbles in a box is either blue, green, or purple. What is the ratio of the number of blue marbles to the number of purple marbles in the box?",
+    "statement1": "The number of green marbles in the box is 4 times the number of blue marbles in the box.",
+    "statement2": "There are 192 green marbles in the box."
+  },
+  {
+    "question_number": 280,
+    "problem": "A certain mixture of paint requires blue, yellow, and red paints in ratios of 2:3:1, respectively, and no other ingredients. If there are ample quantities of the blue and red paints available, is there enough of the yellow paint available to make the desired amount of the mixture?",
+    "statement1": "Exactly 20 quarts of the mixture are needed.",
+    "statement2": "Exactly 10 quarts of the yellow paint are available."
+  },
+  {
+    "question_number": 281,
+    "problem": "There are 2 groups of students who took a history test. Was the average (arithmetic mean) score of the students in Group A higher than the average score of the students in Group B who took the test?",
+    "statement1": "Of the students who took the test, 10 were in Group A and 12 were in Group B.",
+    "statement2": "On the test, the highest score achieved was achieved by a Group B student, and the lowest score achieved was achieved by a Group A student."
+  },
+  {
+    "question_number": 282,
+    "problem": "The research funds of a certain company were divided among three departments, X, Y, and Z. Which one of the three departments received the greatest proportion of the research funds?",
+    "statement1": "The research funds received by Departments X and Y were in the ratio 3 to 5, respectively.",
+    "statement2": "The research funds received by Departments X and Z were in the ratio 2 to 1, respectively."
+  },
+  {
+    "question_number": 283,
+    "problem": "In a certain class, some students donated cans of food to a local food bank. What was the average (arithmetic mean) number of cans donated per student in the class?",
+    "statement1": "The students donated a total of 56 cans of food.",
+    "statement2": "The total number of cans donated was 40 greater than the total number of students in the class."
+  },
+  {
+    "question_number": 284,
+    "problem": "Each of the $n$ employees at a certain company has a different annual salary. What is the median of the annual salaries of the $n$ employees?",
+    "statement1": "When the annual salaries of the $n$ employees are listed in increasing order, the median is the 15th salary.",
+    "statement2": "The sum of the annual salaries of the $n$ employees is $913,500."
+  },
+  {
+    "question_number": 285,
+    "problem": "In a recent town election, what was the ratio of the number of votes in favor of a certain proposal to the number of votes against the proposal?",
+    "statement1": "There were 60 more votes in favor of the proposal than against the proposal.",
+    "statement2": "There were 240 votes in favor of the proposal."
+  },
+  {
+    "question_number": 286,
+    "problem": "How many men are in a certain company's vanpool program?",
+    "statement1": "The ratio of men to women in the program is 3 to 2.",
+    "statement2": "The men and women in the program fill 6 vans."
+  },
+  {
+    "question_number": 287,
+    "problem": "Last semester, Professor K taught two classes, A and B. Each student in Class A handed in 7 assignments, and each student in Class B handed in 5 assignments. How many students were in Class A?",
+    "statement1": "The students in both classes combined handed in a total of 85 assignments.",
+    "statement2": "There were 10 students in Class B."
+  },
+  {
+    "question_number": 288,
+    "problem": "Was the amount of John's heating bill for February greater than it was for January?",
+    "statement1": "The ratio of the amount of John's heating bill for February to that for January was $\\frac{26}{25}$.",
+    "statement2": "The sum of the amounts of John's heating bills for January and February was $183.60."
+  },
+  {
+    "question_number": 289,
+    "problem": "Machine R and Machine S work at their respective constant rates. How much time does it take Machine R, working alone, to complete a certain job?",
+    "statement1": "The amount of time that it takes Machine S, working alone, to complete the job is $\\frac{3}{4}$ the amount of time that it takes Machine R, working alone, to complete the job.",
+    "statement2": "Machine R and Machine S, working together, take 12 minutes to complete the job."
+  },
+  {
+    "question_number": 290,
+    "problem": "Beth's bank charges a service fee on a regular checking account for each month in which the balance on the account falls below $100 at any time during the month. Did the bank charge a service fee on Beth's regular checking account last month?",
+    "statement1": "During last month, a total of $1,000 was withdrawn from Beth's regular checking account.",
+    "statement2": "At the beginning of last month, Beth's regular checking account balance was $500."
+  },
+  {
+    "question_number": 291,
+    "problem": "Three houses are being sold through a real estate agent. What is the asking price for the house with the second-largest asking price?",
+    "statement1": "The difference between the greatest and the least asking price is $130,000.",
+    "statement2": "The difference between the two greater asking prices is $85,000."
+  },
+  {
+    "question_number": 292,
+    "problem": "How many people in a group of 50 own neither a fax machine nor a laser printer?",
+    "statement1": "The total number of people in the group who own a fax machine or a laser printer or both is less than 50.",
+    "statement2": "The total number of people in the group who own both a fax machine and a laser printer is 15."
+  },
+  {
+    "question_number": 293,
+    "problem": "A state legislature had a total of 96 members. The members who did not vote on a certain bill consisted of 25 who were absent and 3 who abstained. How many of those voting voted for the bill?",
+    "statement1": "Exactly $\\frac{1}{3}$ of the total membership of the legislature voted against the bill.",
+    "statement2": "The number of legislators who voted for the bill was 8 more than the total number who were absent or abstained."
+  },
+  {
+    "question_number": 294,
+    "problem": "What is the average (arithmetic mean) of the first 90 measurements in a certain list of 92 measurements?",
+    "statement1": "The average of the 92 measurements is 7.0 centimeters.",
+    "statement2": "The average of the last 2 measurements is 7.2 centimeters."
+  },
+  {
+    "question_number": 295,
+    "problem": "How many of the employees of a certain company use both a tablet and an iPhone?",
+    "statement1": "60 of the employees use a tablet.",
+    "statement2": "45 of the employees use an iPhone."
+  },
+  {
+    "question_number": 296,
+    "problem": "What is the standard deviation of the weights of the 30 samples in a certain experiment?",
+    "statement1": "The total weight of the 30 samples is 360 grams.",
+    "statement2": "Each of the 30 samples weighs 12 grams."
+  },
+  {
+    "question_number": 297,
+    "problem": "The people in a line waiting to buy tickets to a show are standing one behind the other. Adam and Beth are among the people in the line, and Beth is standing behind Adam with a number of people between them. If the number of people in front of Adam plus the number of people behind Beth is 18, how many people in the line are behind Beth?",
+    "statement1": "There are a total of 32 people in the line.",
+    "statement2": "23 people in the line are behind Adam."
+  },
+  {
+    "question_number": 298,
+    "problem": "In a certain group of 50 people, how many are doctors who have a law degree?",
+    "statement1": "In the group, 36 people are doctors.",
+    "statement2": "In the group, 18 people have a law degree."
+  },
+  {
+    "question_number": 299,
+    "problem": "Of a group of 50 households, how many have at least one cat or at least one dog, but not both?",
+    "statement1": "The number of households that have at least one cat and at least one dog is 4.",
+    "statement2": "The number of households that have no cats and no dogs is 14."
+  },
+  {
+    "question_number": 300,
+    "problem": "Robin invested a total of $12,000 in two investments, X and Y, so that the investments earned the same amount of simple annual interest. How many dollars did Robin invest in Investment Y?",
+    "statement1": "Investment X paid 3 percent simple annual interest, and Investment Y paid 6 percent simple annual interest.",
+    "statement2": "Robin invested more than $1,000 in Investment X."
+  },
+  {
+    "question_number": 301,
+    "problem": "In a real estate office that employs $n$ salespeople, $f$ of them are females and $x$ of the females are new employees. What is the value of $n$?",
+    "statement1": "If an employee were randomly selected from the $n$ employees, the probability of selecting a female would be $\\frac{2}{3}$.",
+    "statement2": "If an employee were randomly selected from the $f$ female employees, the probability of selecting a new employee would be $\\frac{1}{2}$."
+  },
+  {
+    "question_number": 302,
+    "problem": "Is the total price of the items in Andrea's shopping cart less than $25.00?",
+    "statement1": "There are 5 items in Andrea's shopping cart.",
+    "statement2": "The price of the most expensive item in Andrea's shopping cart is $4.99."
+  },
+  {
+    "question_number": 303,
+    "problem": "A certain plumber charges $92 for each job completed in 4 hours or less and $23 per hour for each job completed in more than 4 hours. If it took the plumber a total of 7 hours to complete two separate jobs, what was the total amount charged by the plumber for the two jobs?",
+    "statement1": "The plumber charged $92 for one of the two jobs.",
+    "statement2": "The plumber charged $138 for one of the two jobs."
+  },
+  {
+    "question_number": 304,
+    "problem": "If $x$ and $y$ are positive numbers, is $\\frac{x+1}{y+1} > \\frac{x}{y}$?",
+    "statement1": "$x > 1$",
+    "statement2": "$x < y$"
+  },
+  {
+    "question_number": 305,
+    "problem": "If a school district paid a total of $35 per desk for $x$ desks and a total of $30 per table for $y$ tables, what was the total amount that the district paid for these desks and tables?",
+    "statement1": "The total amount the district paid for the $y$ tables was $900.",
+    "statement2": "$x = 90$, and the total amount the district paid for the $x$ desks was 3.5 times the total amount the district paid for the $y$ tables."
+  },
+  {
+    "question_number": 306,
+    "problem": "Three children inherited a total of $X$ dollars. If the oldest child inherited $7,000 more than the youngest child, and the youngest child inherited $9,000 less than the middle child, what is the value of $X$?",
+    "statement1": "The middle child inherited $27,000.",
+    "statement2": "The youngest child and the middle child together inherited a total of $45,000."
+  },
+  {
+    "question_number": 307,
+    "problem": "If a building has 6,000 square meters of floor space, how many offices are in the building?",
+    "statement1": "Exactly $\\frac{1}{4}$ of the floor space is not used for offices.",
+    "statement2": "There are exactly 20 executive offices, and each of these occupies 3 times as much floor space as the average for all of the remaining offices."
+  },
+  {
+    "question_number": 308,
+    "problem": "For which type of investment, J or K, is the annual rate of return greater?",
+    "statement1": "Type J returns $115 per $1,000 invested for any one-year period, and Type K returns $300 per $2,500 invested for any one-year period.",
+    "statement2": "The annual rate of return for an investment of Type K is 12%."
+  },
+  {
+    "question_number": 309,
+    "problem": "If Car X followed Car Y across a certain bridge that is $\\frac{1}{2}$ mile long, how many seconds did it take Car X to travel across the bridge?",
+    "statement1": "Car X drove onto the bridge exactly 3 seconds after Car Y drove onto the bridge and drove off the bridge exactly 2 seconds after Car Y drove off the bridge.",
+    "statement2": "Car Y traveled across the bridge at a constant speed of 30 miles per hour."
+  },
+  {
+    "question_number": 310,
+    "problem": "Will Candidate A win the most votes of any of the competing candidates in the upcoming election?",
+    "statement1": "An opinion poll, Poll P, indicates that 60% of respondents prefer Candidate A over other candidates competing in the upcoming election.",
+    "statement2": "An election-forecasting opinion poll is a method to estimate election outcomes based on a sample that is representative of the population of all of those legally entitled to vote."
+  },
+  {
+    "question_number": 311,
+    "problem": "The government of Nation X makes policy decisions intended to advance the public interest, such as policy decisions aiming to promote employment, economic prosperity, environmental protection, and good health care. A policy decision can involve a significant trade-off, i.e., it can entail foreseeably giving up part or all of one valued outcome in the pursuit of another valued outcome. Does a policy decision by Nation X to permit extensive clearcutting of forests provide a valued outcome at the expense of another valued outcome?",
+    "statement1": "Extensive clearcutting of forests is permitted in Nation X because it provides immediate economic gains by enabling businesses such as farming and lumbering to flourish and provide employment.",
+    "statement2": "Extensive clearcutting of forests is permitted in Nation X even though it reduces forests' absorption of carbon dioxide, and this indirectly contributes to global warming, resulting in adverse climate changes that are certain to be very costly for Nation X to manage."
+  },
+  {
+    "question_number": 312,
+    "problem": "Is Sarah's mathematics test score higher than the class average?",
+    "statement1": "Sarah scored 90% on her mathematics test, answering 45 out of 50 questions correctly.",
+    "statement2": "Sarah's high percentage score indicates that she performed exceptionally well, with only a few questions answered incorrectly."
+  },
+  {
+    "question_number": 313,
+    "problem": "On Day X, was the forecast temperature 36°C at noon?",
+    "statement1": "On Day X, the forecast temperature was 30°C at 9:00 a.m. and 40°C at 2:00 p.m.",
+    "statement2": "On Day X, every half hour, the forecast temperature increased by 1°C."
+  },
+  {
+    "question_number": 314,
+    "problem": "Benjamin is a salesman working for commission at a shoe store. For the first $1,000 worth of sales in a given month, he earns a commission of 2%. For any sales he makes after the first $1,000 in that month, he earns a commission of 4%. What is the total dollar value of sales made by Benjamin in the month of March?",
+    "statement1": "Benjamin earned a commission of $120 in March.",
+    "statement2": "Benjamin doubled the dollar value of his sales in March compared to his sales in February."
+  },
+  {
+    "question_number": 315,
+    "problem": "What is the length of Train A if it crosses Bridge X in 30 seconds from the moment it enters the bridge to the moment its final carriage exits the bridge?",
+    "statement1": "Train B, which is 200 meters long, traveling at a constant speed of 20 meters per second, crosses Bridge X in 40 seconds.",
+    "statement2": "The end of Train A, which is traveling at a constant speed, passes a pole in 10 seconds from the moment the train meets the pole."
+  },
+  {
+    "question_number": 316,
+    "problem": "Solomon leases space for his barber shop, and his landlord has recently increased the rent by 40%. Solomon wants to increase his monthly revenue to pay the increased rent without affecting his net income. By what percentage must he increase his revenue?",
+    "statement1": "20% of his previous monthly revenue was used to pay the rent before the landlord increased it.",
+    "statement2": "The new rent is $50 more than the previous rent."
+  },
+  {
+    "question_number": 317,
+    "problem": "What is the ratio of the amount, by weight, of Metal A to Metal B in Alloy K?",
+    "statement1": "The ratio of Metal A to Metal B in Alloy K becomes 5:6 when 40 pounds of Metal A is added to the alloy.",
+    "statement2": "The ratio of Metal A to Metal B in Alloy K becomes 7:6 when 60 pounds of Metal A is added to the alloy."
+  },
+  {
+    "question_number": 318,
+    "problem": "Train A started from Station X toward Station Y traveling at a constant speed, and on the same day, on a parallel track, Train B started from Station Y toward Station X at a constant speed. At what time did Train A reach Station Y?",
+    "statement1": "The two trains met at 3:00 p.m. The distance traveled by Train A was twice the distance traveled by Train B by the time they met.",
+    "statement2": "The ratio between the speeds of Trains A and B is 3:5. Train B started from Station Y at 6:00 a.m."
+  },
+  {
+    "question_number": 319,
+    "problem": "Pipes A and B are the pipes that fill a tank. Pipes C and D are the pipes that empty the same tank. What is the capacity of the tank?",
+    "statement1": "Pipe A is twice as efficient as Pipe C, that is, the volume of water per hour that Pipe A moves is twice the volume per hour that Pipe C moves. Pipe A and Pipe B are equally efficient. When Pipes C and D are closed, Pipes A and B together fill the empty tank in 5 hours. Pipe C empties 6,000 liters per hour.",
+    "statement2": "Pipe B is three times as efficient as Pipe D."
+  },
+  {
+    "question_number": 320,
+    "problem": "What is the total number of executives at Company P?",
+    "statement1": "The number of male executives is $\\frac{3}{5}$ the number of female executives.",
+    "statement2": "There are 4 more female executives than male executives."
+  },
+  {
+    "question_number": 321,
+    "problem": "Jack picked 76 apples. Of these, he sold $4y$ apples to Juanita and $3x$ apples to Sylvia. If he kept the remaining apples, how many apples did he keep? ($t$ and $y$ are positive integers.)",
+    "statement1": "$y \\geq 15$ and $t = 2$",
+    "statement2": "$y = 17$"
+  },
+  {
+    "question_number": 322,
+    "problem": "The total price of 5 pounds of regular coffee and 3 pounds of decaffeinated coffee was $21.50. What was the price of the 5 pounds of regular coffee?",
+    "statement1": "If the price of the 5 pounds of regular coffee had been reduced 10 percent and the price of the 3 pounds of decaffeinated coffee had been reduced 20 percent, the total price would have been $18.45.",
+    "statement2": "The price of the 5 pounds of regular coffee was $3.50 more than the price of the 3 pounds of decaffeinated coffee."
+  },
+  {
+    "question_number": 323,
+    "problem": "A certain painting job requires a mixture of yellow, green, and white paint. If 12 quarts of paint are needed for the job, how many quarts of green paint are needed?",
+    "statement1": "The ratio of the amount of green paint to the amount of yellow and white paint combined needs to be 1 to 3.",
+    "statement2": "The ratio of the amount of yellow paint to the amount of green paint needs to be 3 to 2."
+  },
+  {
+    "question_number": 324,
+    "problem": "A company produces a certain toy in only 2 sizes, small or large, and in only 2 colors, red or green. If, for each size, there are equal numbers of red and green toys in a certain production lot, what fraction of the total number of green toys is large?",
+    "statement1": "In the production lot, 400 of the small toys are green.",
+    "statement2": "In the production lot, $\\frac{2}{3}$ of the toys produced are small."
+  },
+  {
+    "question_number": 325,
+    "problem": "Jones has worked at Firm X twice as many years as Green, and Green has worked at Firm X four years longer than Smith. How many years has Green worked at Firm X?",
+    "statement1": "Jones has worked at Firm X 9 years longer than Smith.",
+    "statement2": "Green has worked at Firm X 5 years less than Jones."
+  },
+  {
+    "question_number": 326,
+    "problem": "On June 1, Mary paid Omar $360 for rent and utilities for the month of June. Mary moved out early, and Omar refunded the money she paid for utilities, but not for rent, for the days in June after she moved out. How many dollars did Omar refund to Mary?",
+    "statement1": "Mary moved out on June 24.",
+    "statement2": "The amount Mary paid for utilities was less than $\\frac{1}{5}$ the amount Mary paid for rent."
+  },
+  {
+    "question_number": 327,
+    "problem": "A collection of 36 cards consists of 4 sets of 9 cards each. The 9 cards in each set are numbered 1 through 9. If one card has been removed from the collection, what is the number on that card?",
+    "statement1": "The units digit of the sum of the numbers on the remaining 35 cards is 6.",
+    "statement2": "The sum of the numbers on the remaining 35 cards is 176."
+  },
+  {
+    "question_number": 328,
+    "problem": "What is the ratio of the number of cups of flour to the number of cups of sugar required in a certain cake recipe?",
+    "statement1": "The number of cups of flour required in the recipe is 250 percent of the number of cups of sugar required in the recipe.",
+    "statement2": "$1\\frac{1}{2}$ more cups of flour than cups of sugar are required in the recipe."
+  },
+  {
+    "question_number": 329,
+    "problem": "A clothing manufacturer makes jackets that are wool or cotton or a combination of wool and cotton. The manufacturer has 3,000 pounds of wool and 2,000 pounds of cotton on hand. Is this enough wool and cotton to make at least 1,000 jackets?",
+    "statement1": "Each wool jacket requires 4 pounds of wool, and no cotton.",
+    "statement2": "Each cotton jacket requires 6 pounds of cotton, and no wool."
+  },
+  {
+    "question_number": 330,
+    "problem": "Are at least 10 percent of the people in Country X who are 65 years old or older employed?",
+    "statement1": "In Country X, 11.3 percent of the population is 65 years old or older.",
+    "statement2": "In Country X, of the population 65 years old or older, 20 percent of those with a college degree and 10 percent of those without a college degree are employed."
+  },
+  {
+    "question_number": 331,
+    "problem": "A scientist recorded the number of eggs in each of 10 birds' nests. What was the standard deviation of the numbers of eggs in the 10 nests?",
+    "statement1": "The average (arithmetic mean) number of eggs for the 10 nests was 4.",
+    "statement2": "Each of the 10 nests contained the same number of eggs."
+  },
+  {
+    "question_number": 332,
+    "problem": "A paint mixture was formed by mixing exactly 3 colors of paint. By volume, the mixture was $x$% blue paint, $y$% green paint, and $z$% red paint. If exactly 1 gallon of blue paint and 3 gallons of red paint were used, how many gallons of green paint were used?",
+    "statement1": "$x = y$",
+    "statement2": "$z = 60$"
+  },
+  {
+    "question_number": 333,
+    "problem": "For a basic monthly fee of $F$ yen ($¥F$), Naoko's first cell phone plan allowed him to use a maximum of 420 minutes on calls each month. Then, for each of $x$ additional minutes he used on calls, he was charged $¥M$, making his total charge for the month $¥T$, where $T = F + xM$. What is the value of $F$?",
+    "statement1": "Naoko used 450 minutes on calls the first month, and the total charge for the month was ¥13,755.",
+    "statement2": "Naoko used 400 minutes on calls the second month, and the total charge for the month was ¥13,125."
+  },
+  {
+    "question_number": 334,
+    "problem": "Is the sum of the prices of the 3 books that Shana bought less than $48?",
+    "statement1": "The price of the most expensive of the 3 books that Shana bought is less than $17.",
+    "statement2": "The price of the least expensive of the 3 books that Shana bought is exactly $3 less than the price of the second most expensive book."
+  },
+  {
+    "question_number": 335,
+    "problem": "If Elena spent a total of $720 on newspapers, magazines, and books last year, what amount did she spend on newspapers?",
+    "statement1": "Last year, the amount that Elena spent on magazines was 80 percent of the amount that she spent on books.",
+    "statement2": "Last year, the amount that Elena spent on newspapers was 60 percent of the total amount that she spent on magazines and books."
+  },
+  {
+    "question_number": 336,
+    "problem": "Of the 800 sweaters at a certain store, 150 are red. How many of the red sweaters at the store are made of pure wool?",
+    "statement1": "320 of the sweaters at the store are neither red nor made of pure wool.",
+    "statement2": "100 of the red sweaters at the store are not made of pure wool."
+  },
+  {
+    "question_number": 337,
+    "problem": "A certain computer company produces two different monitors, P and Q. In 2010, what was the net profit from the sale of the two monitors?",
+    "statement1": "Of the company's expenses in 2010, rent and utilities totaled $500,000.",
+    "statement2": "In 2010, the company sold 50,000 units of Monitor P at $300 per unit and 30,000 units of Monitor Q at $650 per unit."
+  },
+  {
+    "question_number": 338,
+    "problem": "A conveyor belt moves bottles at a constant speed of 120 centimeters per second. If the conveyor belt moves a bottle from a loading dock to an unloading dock, is the distance that the conveyor belt moves the bottle less than 90 meters? (1 meter = 100 centimeters)",
+    "statement1": "It takes the conveyor belt less than 1.2 minutes to move the bottle from the loading dock to the unloading dock.",
+    "statement2": "It takes the conveyor belt more than 1.1 minutes to move the bottle from the loading dock to the unloading dock."
+  },
+  {
+    "question_number": 339,
+    "problem": "In a product test of a common cold remedy, $x$ percent of the patients tested experienced side effects from the use of the drug and $y$ percent experienced relief of cold symptoms. What percent of the patients tested experienced both side effects and relief of cold symptoms?",
+    "statement1": "Of the 1,000 patients tested, 15 percent experienced neither side effects nor relief of cold symptoms.",
+    "statement2": "Of the patients tested, 30 percent experienced relief of cold symptoms without side effects."
+  },
+  {
+    "question_number": 340,
+    "problem": "Three roommates—Bela, Gyorgy, and Janos—together saved money for a trip. The amount that Bela saved was equal to 8% of his monthly income. The amount that Gyorgy saved was exactly $\\frac{1}{3}$ of the total amount saved by all 3 roommates. What was the total amount saved for the trip by all 3 roommates?",
+    "statement1": "Bela had a monthly income of $2,000.",
+    "statement2": "Janos saved 1.5 times as much for the trip as Bela."
+  },
+  {
+    "question_number": 341,
+    "problem": "In each game of a certain tournament, a contestant either loses 3 points or gains 2 points. If Pat had 100 points at the beginning of the tournament, how many games did Pat play in the tournament?",
+    "statement1": "At the end of the tournament, Pat had 104 points.",
+    "statement2": "Pat played fewer than 10 games."
+  },
+  {
+    "question_number": 342,
+    "problem": "At the beginning of the year, the Finance Committee and the Planning Committee of a certain company each had $n$ members, and no one was a member of both committees. At the end of the year, 5 members left the Finance Committee and 3 members left the Planning Committee. How many members did the Finance Committee have at the beginning of the year?",
+    "statement1": "The ratio of the total number of members who left at the end of the year to the total number of members at the beginning of the year was 1:6.",
+    "statement2": "At the end of the year, 21 members remained on the Planning Committee."
+  },
+  {
+    "question_number": 343,
+    "problem": "Some computers at a certain company are Brand X and the rest are Brand Y. If the ratio of the number of Brand Y computers to the number of Brand X computers at the company is 5 to 6, how many of the computers are Brand Y?",
+    "statement1": "There are 80 more Brand X computers than Brand Y computers at the company.",
+    "statement2": "There is a total of 880 computers at the company."
+  },
+  {
+    "question_number": 344,
+    "problem": "Was the number of books sold at Bookstore X last week greater than the number of books sold at Bookstore Y last week?",
+    "statement1": "Last week, more than 1,000 books were sold at Bookstore X on Saturday and fewer than 1,000 books were sold at Bookstore Y on Saturday.",
+    "statement2": "Last week, less than 20 percent of the books sold at Bookstore X were sold on Saturday and more than 20 percent of the books sold at Bookstore Y were sold on Saturday."
+  },
+  {
+    "question_number": 345,
+    "problem": "From May 1 to May 30 in the same year, the balance in a checking account increased. What was the balance in the checking account on May 30?",
+    "statement1": "If, during this period of time, the increase in the balance in the checking account had been 12 percent, then the balance in the account on May 30 would have been $504.",
+    "statement2": "During this period of time, the increase in the balance in the checking account was 8 percent."
+  },
+  {
+    "question_number": 346,
+    "problem": "A merchant discounted the sale price of a coat and the sale price of a sweater. Which of the two articles of clothing was discounted by the greater dollar amount?",
+    "statement1": "The percent discount on the coat was 2 percentage points greater than the percent discount on the sweater.",
+    "statement2": "Before the discounts, the sale price of the coat was $10 less than the sale price of the sweater."
+  },
+  {
+    "question_number": 347,
+    "problem": "If the positive integer $n$ is added to each of the integers 69, 94, and 121, what is the value of $n$?",
+    "statement1": "$69 + n$ and $94 + n$ are the squares of two consecutive integers.",
+    "statement2": "$94 + n$ and $121 + n$ are the squares of two consecutive integers."
+  },
+  {
+    "question_number": 348,
+    "problem": "If a merchant purchased a sofa from a manufacturer for $400 and then sold it, what was the selling price of the sofa?",
+    "statement1": "The selling price of the sofa was greater than 140 percent of the purchase price.",
+    "statement2": "The merchant's gross profit from the purchase and sale of the sofa was $\\frac{1}{3}$ of the selling price."
+  },
+  {
+    "question_number": 349,
+    "problem": "Last year, in a certain housing development, the average (arithmetic mean) price of 20 new houses was $160,000. Did more than 9 of the 20 houses have prices that were less than the average price last year?",
+    "statement1": "Last year, the greatest price of one of the 20 houses was $219,000.",
+    "statement2": "Last year, the median of the prices of the 20 houses was $150,000."
+  },
+  {
+    "question_number": 350,
+    "problem": "For a certain city's library, the average cost of purchasing each new book is $28. The library receives $15,000 from the city each year; the library also receives a bonus of $2,000 if the total number of items checked out over the course of the year exceeds 5,000. Did the library receive the bonus last year?",
+    "statement1": "The library purchased an average of 50 new books each month last year and received enough money from the city to cover this cost.",
+    "statement2": "The lowest number of items checked out in one month was 459."
+  },
+  {
+    "question_number": 351,
+    "problem": "If $x$ is a number in the list above, what is the median of the list? 7, 9, 6, 4, 5, $x$",
+    "statement1": "$x > 7$",
+    "statement2": "The median of the list equals the arithmetic mean of the list."
+  },
+  {
+    "question_number": 352,
+    "problem": "Three dice, each of which has its 6 sides numbered 1 through 6, are tossed. The sum of the 3 numbers that are facing up is 12. Is at least 1 of these numbers 5?",
+    "statement1": "None of the 3 numbers that are facing up is divisible by 3.",
+    "statement2": "Of the numbers that are facing up, 2, but not all 3, are equal."
+  },
+  {
+    "question_number": 353,
+    "problem": "Mohit went cycling on 10 consecutive days. Every day he started from Point X, cycled a certain distance in an easterly direction, and then returned to Point X. What is the total distance he covered in those 10 days?",
+    "statement1": "From the second day onward, Mohit covered twice the distance he covered the previous day. On the fifth day, he covered 3.2 km from Point X east, and then back to Point X.",
+    "statement2": "On the first day, Mohit cycled less than 0.3 km."
+  },
+  {
+    "question_number": 354,
+    "problem": "Candidates A, B, and C competed in an election. This election usually comprises two rounds. In the first round, all three candidates compete. A candidate qualifies for the final round if he/she receives at least 20% of the votes cast in the first round. If two candidates receive less than 20% of the votes cast, the other candidate wins the election by default. If a candidate receives more than 60% of the votes in the first round, he/she wins the election without the second round. Was there a second round of election?",
+    "statement1": "The votes received by Candidates A and B together is 82% of the total votes cast.",
+    "statement2": "The votes received by Candidates C and B together is 42% of the total votes cast."
+  },
+  {
+    "question_number": 355,
+    "problem": "There are a certain number of male and female students in a classroom. The weights of the male students range from 80 kg to 85 kg. The weights of the female students range from 70 kg to 75 kg. What is the average (arithmetic mean) weight of all the students in the classroom? All weights are rounded to the nearest 1 kg.",
+    "statement1": "No two students weigh the same.",
+    "statement2": "The number of male students is equal to the number of female students."
+  },
+  {
+    "question_number": 356,
+    "problem": "An alloy, Alloy K, is made by mixing certain quantities of iron and lead. The total weight of the alloy is 50 kg. What is the ratio of the weight of iron to the weight of lead in Alloy K?",
+    "statement1": "If 4 kg of iron were to be replaced with 4 kg of lead, the percentage of lead, by weight, in Alloy K would become 40%.",
+    "statement2": "The weight of iron per 100 cc is 0.7 times the weight of lead per 100 cc."
+  },
+  {
+    "question_number": 357,
+    "problem": "A box contains exactly 40 bottles, each of which contains only one of three types of soda—orange, lemon, and ginger. What is the probability of randomly selecting a ginger soda, without any replacement in the box, on each of 3 consecutive attempts?",
+    "statement1": "The number of orange sodas is 5 more than the number of ginger sodas.",
+    "statement2": "The number of ginger sodas is 10 more than the number of lemon sodas."
+  },
+  {
+    "question_number": 358,
+    "problem": "Workers A, B, and C, working at their individual constant rates, can work together and complete a piece of work in 6 days. How long will it take for B and C alone to complete the work?",
+    "statement1": "A is twice as efficient as B. B is three times as efficient as C.",
+    "statement2": "The time taken by A to do 9 units of work is the same as the time taken by B and C together to do 6 units of work."
+  },
+  {
+    "question_number": 359,
+    "problem": "The students in College X must take two, and no more, of these five subjects: computing, electronics, mechanics, architecture, and psychology. Students who take computing cannot take psychology. Students who take electronics cannot take architecture. Students who take mechanics cannot take electronics. Is Student G, a student at College X, taking psychology?",
+    "statement1": "Student G is taking architecture as one of her two subjects.",
+    "statement2": "Student G is taking neither electronics nor computing."
+  },
+  {
+    "question_number": 360,
+    "problem": "A candy shop owner must mix three types of sweeteners—A, B, and C—in a certain ratio to get the desired mixture in his candies. What is the ratio of the weights of Sweetener A to Sweetener B to Sweetener C in the final mixture?",
+    "statement1": "Sweeteners A, B, and C cost $40, $50, and $60 per pound. The average (arithmetic mean) cost of the final mixture is $50 per pound.",
+    "statement2": "In the final mixture, the average (arithmetic mean) price of Sweeteners A and B together is $45, and the average (arithmetic mean) price of Sweeteners B and C together is $55."
+  },
+  {
+    "question_number": 361,
+    "problem": "A movie theater increased the ticket price for evening shows by 10% and decreased the ticket price for morning shows by 40%. The average number of tickets sold for the morning shows increased by 30%, and the average number of tickets sold for the evening shows decreased by 5%. What was the percentage change in total revenue?",
+    "statement1": "Prior to the changes in ticket prices, the ticket prices for the morning shows and the evening shows were the same.",
+    "statement2": "Prior to the changes in ticket prices, the ratio between the number of tickets sold for the morning shows and the evening shows was 5:8."
+  },
+  {
+    "question_number": 362,
+    "problem": "George is an employee at a firm. For each day that he is absent, he forfeits 4% of his monthly salary. For every hour of overtime he does, he receives 1% added to his monthly salary. His salary reduced for the month of June by 5%. How many hours of overtime did George do in that month?",
+    "statement1": "George was absent for 3 days in the month of June.",
+    "statement2": "George received 7% of his monthly salary for doing overtime in the month of June."
+  },
+  {
+    "question_number": 363,
+    "problem": "Did the population of Town C increase by at least 100 percent from the year 2000 to the year 2010?",
+    "statement1": "The population of Town C in 2000 was $\\frac{2}{3}$ of the population in 2005.",
+    "statement2": "The population of Town C increased by a greater number of people from 2005 to 2010 than it did from 2000 to 2005."
+  },
+  {
+    "question_number": 364,
+    "problem": "In a survey of 200 college graduates, 30% said they had received student loans during their college careers, and 40% said they had received scholarships. What percent of those surveyed said that they had received neither student loans nor scholarships during their college careers?",
+    "statement1": "25% of those surveyed said that they had received scholarships but no loans.",
+    "statement2": "50% of those surveyed who said that they had received loans also said that they had received scholarships."
+  },
+  {
+    "question_number": 365,
+    "problem": "Stores L and M each sell a certain product at a different regular price. If both stores discount their regular price of the product, is the discount price at Store M less than the discount price at Store L?",
+    "statement1": "At Store L, the discount price is 10 percent less than the regular price; at Store M, the discount price is 15 percent less than the regular price.",
+    "statement2": "At Store L, the discount price is $5 less than the regular store price; at Store M, the discount price is $6 less than the regular price."
+  },
+  {
+    "question_number": 366,
+    "problem": "A box contains only red chips, white chips, and blue chips. If a chip is randomly selected from the box, what is the probability that the chip will be either white or blue?",
+    "statement1": "The probability that the chip will be blue is $\\frac{1}{5}$.",
+    "statement2": "The probability that the chip will be red is $\\frac{1}{3}$."
+  },
+  {
+    "question_number": 367,
+    "problem": "Did the sum of the prices of three shirts exceed $60?",
+    "statement1": "The price of the most expensive of the shirts exceeded $30.",
+    "statement2": "The price of the least expensive of the shirts exceeded $20."
+  },
+  {
+    "question_number": 368,
+    "problem": "What is the total number of coins that Bert and Claire have?",
+    "statement1": "Bert has 50 percent more coins than Claire.",
+    "statement2": "The total number of coins that Bert and Claire have is between 21 and 28."
+  },
+  {
+    "question_number": 369,
+    "problem": "A telephone station has $x$ processors, each of which can process a maximum of $y$ calls at any particular time, where $x$ and $y$ are positive integers. If 500 calls are sent to the station at a particular time, can the station process all of the calls?",
+    "statement1": "$x = 600$",
+    "statement2": "$100 < y < 200$"
+  },
+  {
+    "question_number": 370,
+    "problem": "Kim and Sue each bought some roses and some daisies at the prices shown above. If Kim bought the same total number of roses and daisies as Sue, was the price of Kim's purchase of roses and daisies higher than the price of Sue's purchase of roses and daisies?",
+    "statement1": "Kim bought twice as many daisies as roses.",
+    "statement2": "Kim bought 4 more roses than Sue bought."
+  },
+  {
+    "question_number": 371,
+    "problem": "Jazz and blues recordings accounted for 6 percent of the $840 million revenue from the sales of recordings in Country Y in 1998. What was the revenue from the sales of jazz and blues recordings in Country Y in 1998?",
+    "statement1": "Jazz and blues recordings accounted for 5 percent of the revenue from the sales of recordings in Country Y in 1998.",
+    "statement2": "The revenue from the sales of jazz and blues recordings in Country Y increased by 40 percent from 1998 to 2000."
+  },
+  {
+    "question_number": 372,
+    "problem": "On a certain nonstop trip, Marta averaged $x$ miles per hour for 2 hours and $y$ miles per hour for the remaining 3 hours. What was her average speed, in miles per hour, for the entire trip?",
+    "statement1": "$2x + 3y = 280$",
+    "statement2": "$y = x + 10$"
+  },
+  {
+    "question_number": 373,
+    "problem": "A group consisting of several families visited an amusement park where the regular admission fees were ¥5,500 for each adult and ¥4,800 for each child. Because there were at least 10 people in the group, each paid an admission fee that was 10% less than the regular admission fee. How many children were in the group?",
+    "statement1": "The total of the admission fees paid for the adults in the group was ¥29,700.",
+    "statement2": "The total of the admission fees paid for the children in the group was ¥4,860 more than the total of the admission fees paid for the adults in the group."
+  },
+  {
+    "question_number": 374,
+    "problem": "What is the ratio of the average (arithmetic mean) height of students in Class X to the average height of students in Class Y?",
+    "statement1": "The average height of the students in Class X is 120 centimeters.",
+    "statement2": "The average height of the students in Class X and Class Y combined is 126 centimeters."
+  },
+  {
+    "question_number": 375,
+    "problem": "Max has $125 consisting of bills each worth either $5 or $20. How many bills worth $5 does Max have?",
+    "statement1": "Max has fewer than 5 bills worth $5 each.",
+    "statement2": "Max has more than 5 bills worth $20 each."
+  },
+  {
+    "question_number": 376,
+    "problem": "At a bakery, all donuts are priced equally and all bagels are priced equally. What is the total price of 5 donuts and 3 bagels at the bakery?",
+    "statement1": "At the bakery, the total price of 10 donuts and 6 bagels is $12.90.",
+    "statement2": "At the bakery, the price of a donut is $0.15 less than the price of a bagel."
+  },
+  {
+    "question_number": 377,
+    "problem": "Last year, if Arturo spent a total of $12,000 on his mortgage payments, real estate taxes, and home insurance, how much did he spend on his real estate taxes?",
+    "statement1": "Last year, the total amount that Arturo spent on his real estate taxes and home insurance was $3\\frac{1}{3}$ percent of the amount that he spent on his mortgage payments.",
+    "statement2": "Last year, the amount that Arturo spent on his real estate taxes was 20 percent of the total amount he spent on his mortgage payments and home insurance."
+  },
+  {
+    "question_number": 378,
+    "problem": "Is the number of members of Club X greater than the number of members of Club Y?",
+    "statement1": "Of the members of Club X, 20 percent are also members of Club Y.",
+    "statement2": "Of the members of Club Y, 30 percent are also members of Club X."
+  },
+  {
+    "question_number": 379,
+    "problem": "The only articles of clothing in a certain closet are shirts, dresses, and jackets. The ratio of the number of shirts to the number of dresses to the number of jackets in the closet is 9:4:5, respectively. If there are more than 7 dresses in the closet, what is the total number of articles of clothing in the closet?",
+    "statement1": "The total number of shirts and jackets in the closet is less than 30.",
+    "statement2": "The total number of shirts and dresses in the closet is 26."
+  },
+  {
+    "question_number": 380,
+    "problem": "Material A costs $3 per kilogram, and Material B costs $5 per kilogram. If 10 kilograms of Material K consists of $x$ kilograms of Material A and $y$ kilograms of Material B, is $x > y$?",
+    "statement1": "$y > 4$",
+    "statement2": "The cost of the 10 kilograms of Material K is less than $40."
+  },
+  {
+    "question_number": 381,
+    "problem": "At what speed was a train traveling on a trip when it had completed half of the total distance of the trip?",
+    "statement1": "The trip was 460 miles long and took 4 hours to complete.",
+    "statement2": "The train traveled at an average rate of 115 miles per hour on the trip."
+  },
+  {
+    "question_number": 382,
+    "problem": "Tom, Jane, and Sue each purchased a new house. The average (arithmetic mean) price of the three houses was $120,000. What was the median price of the three houses?",
+    "statement1": "The price of Tom's house was $110,000.",
+    "statement2": "The price of Jane's house was $120,000."
+  },
+  {
+    "question_number": 383,
+    "problem": "A certain bookcase has 2 shelves of books. On the upper shelf, the book with the greatest number of pages has 400 pages. On the lower shelf, the book with the least number of pages has 475 pages. What is the median number of pages for all of the books on the 2 shelves?",
+    "statement1": "There are 25 books on the upper shelf.",
+    "statement2": "There are 24 books on the lower shelf."
+  },
+  {
+    "question_number": 384,
+    "problem": "In planning for a car trip, Joan estimated both the distance of the trip, in miles, and her average speed, in miles per hour. She accurately divided her estimated distance by her estimated average speed to obtain an estimate for the time, in hours, that the trip would take. Was her estimate within 0.5 hours of the actual time that the trip took?",
+    "statement1": "Joan's estimate for the distance was within 5 miles of the actual distance.",
+    "statement2": "Joan's estimate for her average speed was within 10 miles per hour of her actual average speed."
+  },
+  {
+    "question_number": 385,
+    "problem": "Six shipments of machine parts were shipped from a factory on two trucks, with each shipment entirely on one of the trucks. Each shipment was labeled either S1, S2, S3, S4, S5, or S6. The table shows the value of each shipment as a fraction of the total value of the six shipments. If the shipments on the first truck had a value greater than $\\frac{1}{2}$ of the total value of the six shipments, was S3 shipped on the first truck?",
+    "statement1": "S2 and S4 were shipped on the first truck.",
+    "statement2": "S1 and S6 were shipped on the second truck."
+  },
+  {
+    "question_number": 386,
+    "problem": "The table above shows the results of a survey of 100 voters who each responded \"Favorable\" or \"Unfavorable\" or \"Not Sure\" when asked about their impressions of Candidate M and of Candidate N. What was the number of voters who responded \"Favorable\" for both candidates?",
+    "statement1": "The number of voters who did not respond \"Favorable\" for either candidate was 40.",
+    "statement2": "The number of voters who responded \"Unfavorable\" for both candidates was 10."
+  },
+  {
+    "question_number": 387,
+    "problem": "A school administrator will assign each student in a group of $n$ students to one of $m$ classrooms. If $3 < m < 13 < n$, is it possible to assign each of the $n$ students to one of the $m$ classrooms so that each classroom has the same number of students assigned to it?",
+    "statement1": "It is possible to assign each of $3n$ students to one of $m$ classrooms so that each classroom has the same number of students assigned to it.",
+    "statement2": "It is possible to assign each of $13n$ students to one of $m$ classrooms so that each classroom has the same number of students assigned to it."
+  },
+  {
+    "question_number": 388,
+    "problem": "At a certain clothing store, customers who buy 2 shirts pay the regular price for the first shirt and a discounted price for the second shirt. The store makes the same profit from the sale of 2 shirts that it makes from the sale of 1 shirt at the regular price. For a customer who buys 2 shirts, what is the discounted price of the second shirt?",
+    "statement1": "The regular price of each of the 2 shirts the customer buys at the clothing store is $16.",
+    "statement2": "The cost to the clothing store of each of the 2 shirts the customer buys is $12."
+  },
+  {
+    "question_number": 389,
+    "problem": "What is the median number of employees assigned per project for the projects at Company Z?",
+    "statement1": "25 percent of the projects at Company Z have 4 or more employees assigned to each project.",
+    "statement2": "35 percent of the projects at Company Z have 2 or fewer employees assigned to each project."
+  },
+  {
+    "question_number": 390,
+    "problem": "Last year, a certain company began manufacturing Product X and sold every unit of Product X that it produced. Last year, the company's total expenses for manufacturing Product X were equal to $100,000 plus 5 percent of the company's total revenue from all units of Product X sold. If the company made a profit on Product X last year, did the company sell more than 21,000 units of Product X last year?",
+    "statement1": "The company's total revenue from the sale of Product X last year was greater than $110,000.",
+    "statement2": "For each unit of Product X sold last year, the company's revenue was $5."
+  },
+  {
+    "question_number": 391,
+    "problem": "Beginning in January of last year, Carl made deposits of $120 into his account on the 15th of each month for several consecutive months and then made withdrawals of $50 from the account on the 15th of each of the remaining months of last year. There were no other transactions in the account last year. If the closing balance of Carl's account for May of last year was $2,600, what was the range of the monthly closing balances of Carl's account last year?",
+    "statement1": "Last year, the closing balance of Carl's account for April was less than $2,625.",
+    "statement2": "Last year, the closing balance of Carl's account for June was less than $2,675."
+  },
+  {
+    "question_number": 392,
+    "problem": "What amount did Jean earn from the commission on her sales in the first half of 1988?",
+    "statement1": "In 1988, Jean's commission was 5 percent of the total amount of her sales.",
+    "statement2": "The amount of Jean's sales in the second half of 1988 averaged $10,000 per month more than in the first half."
+  },
+  {
+    "question_number": 393,
+    "problem": "In a certain business, production index $p$ is directly proportional to efficiency index $e$, which is in turn directly proportional to investment index $i$. What is $p$ if $i = 70$?",
+    "statement1": "$e = 0.5$ whenever $i = 60$.",
+    "statement2": "$p = 2.0$ whenever $i = 50$."
+  },
+  {
+    "question_number": 394,
+    "problem": "The annual rainfall in a city over the past 50 years is its historical average rainfall (HAR). The graph above shows the annual rainfall in City X over a seven-year period. All figures are rounded to the nearest integer. Is it true that the rounded HAR for City X is 47 mm or greater?",
+    "statement1": "In the seven-year period in City X, the annual rainfall was greater than the HAR in exactly two of the consecutive years.",
+    "statement2": "In the seven-year period in City X, the annual rainfall was less than the HAR in exactly four of the years."
+  },
+  {
+    "question_number": 395,
+    "problem": "Five coffee-chicory blends—J, K, L, M, and N—are all priced differently. The blends are such that the greater the proportion of coffee, the more expensive the blend, and the greater the proportion of chicory, the stronger the flavor of the blend. If the five blends were ranked in order of cost per kilogram, which would fall in the middle?",
+    "statement1": "Blend L has a higher proportion of coffee than the other blends except for Blend M.",
+    "statement2": "Blend K and Blend N both have a stronger flavor than Blend J."
+  },
+  {
+    "question_number": 396,
+    "problem": "Last summer, as with every summer, Oshin and Reena made exactly one long trip together to a town neither of them had visited before. For their long summer trips, Oshin and Reena have always chosen to visit a town that Reena would have liked to visit—unless Oshin had been to that town before. Reena had visited Town F and Town G before, and Oshin had never visited Town J or Town K. Did Oshin and Reena visit one of these four towns last summer?",
+    "statement1": "Reena had never visited Town J, and Oshin had never visited Town F.",
+    "statement2": "Oshin would have liked to visit either Town G or Town K."
+  },
+  {
+    "question_number": 397,
+    "problem": "For a new project, an organization is creating a three-member team from among its employees. Selection of members for the team conforms to exactly two rules: no selected member can be working on more than one other project at the time of the selection, and at least one of the selected members must have an MBA degree. The organization has selected Paula and Quincy for the team. Neither of these will be replaced before the third member is selected. The organization is about to make the third selection. If the organization adheres to the selection rules for committee membership, is it possible that Rubin will be selected for the team?",
+    "statement1": "Quincy has an MBA degree, and Rubin is currently working on only one other project.",
+    "statement2": "Rubin is one of only two employees in the organization who have an MBA degree."
+  },
+  {
+    "question_number": 398,
+    "problem": "All the T-shirts a clothing store stocks are plain, and they are all in one of exactly four colors: blue, green, red, and yellow. On any given day, the store sells about twice as many blue T-shirts as it does green T-shirts. Last week, did the store sell more blue T-shirts than red T-shirts?",
+    "statement1": "Last week, the store sold fewer blue T-shirts than red T-shirts and green T-shirts combined.",
+    "statement2": "Last week, the store sold more blue T-shirts than half the total number of red T-shirts and yellow T-shirts combined."
+  },
+  {
+    "question_number": 399,
+    "problem": "The table above shows the sales forecast from January to June of last year, by the sales team of Company X, for the number of units of Product Z each month. Was the actual number of units of Product Z sold in March less than the number sold in April?",
+    "statement1": "Twelve units of Product Z were sold in March.",
+    "statement2": "From January through June of last year, there was a constant, linear relationship between the forecast and actual number of units of Product Z sold."
+  },
+  {
+    "question_number": 400,
+    "problem": "Chris was in an electronic appliances store to buy an LED computer monitor. Chris's purchase criteria included screen size, which must be at least 32 inches, and price, which must not exceed $400. A friend made two recommendations: Monitor A and Monitor B. Chris liked both monitors. Did Chris more likely buy Monitor A, Monitor B, or neither?",
+    "statement1": "Monitor A's screen size was more than 32 inches and it cost less than Monitor B.",
+    "statement2": "Monitor B cost $390 and its screen size was less than that of Monitor A."
+  },
+  {
+    "question_number": 401,
+    "problem": "A certain pizzeria has more than fifty types of pizza on its menu. The chart above shows the revenue share, in the pizzeria's total revenue in the last month, of its four most popular pizza types. Each pizza type has only a single size and a single price. Which was their best-selling pizza last month in terms of number of pizzas sold?",
+    "statement1": "The number of customers who ordered at least one Pep-Peroni pizza last month was greater than the number of customers who ordered at least one of any other pizza type last month.",
+    "statement2": "The lowest-priced pizza type on the pizzeria's menu is Tomato Blast, followed by VegCheese."
+  },
+  {
+    "question_number": 402,
+    "problem": "In any twenty-four-hour period, a certain faulty clock gains anywhere from one second to a maximum of three minutes. The clock did not stop or lose time since noon the day before yesterday. At exactly noon today, did the clock show the correct time to an accuracy of five minutes?",
+    "statement1": "The clock was set to the correct time the day before yesterday at exactly noon.",
+    "statement2": "At exactly noon yesterday, the clock was set back by one minute."
+  },
+  {
+    "question_number": 403,
+    "problem": "The couple decide one day that they will definitely go to the beach the next evening if it is sunny without rain at the time they plan to go, and that they will definitely not go if such is not the case. The next morning, the hour-by-hour weather forecast says that in the evening, it will be sunny without rain. Will the couple go to the beach that evening?",
+    "statement1": "It is raining on the morning and in the afternoon of the day of their planned beach outing.",
+    "statement2": "The couple always believe that the weather forecast is likely to be accurate."
+  },
+  {
+    "question_number": 404,
+    "problem": "A small library has books on twenty different subjects including, most prominently, history. One afternoon, a librarian arbitrarily picks up 100 books for reshelving from among the books returned that day. All the books returned that day were borrowed during the past three weeks. Are fewer than 20 percent of the books the librarian picks up on history?",
+    "statement1": "Fewer than 20 percent of the books in the library are on history.",
+    "statement2": "During the past three weeks, exactly 15 books on history were borrowed from the library."
+  },
+  {
+    "question_number": 405,
+    "problem": "Four book lovers have recently met and are not sure of the topics that interest the others. The table above indicates the topics that interest each of them with check marks and those that do not with cross marks (Xs). One of these persons will gift another of these persons two books, each on a different one of the listed topics. Will at least one of the two books fall under the recipient's broad topic of interest?",
+    "statement1": "One topic is science fiction and the other is humor.",
+    "statement2": "The intended recipient is Carlos."
+  },
+  {
+    "question_number": 406,
+    "problem": "In a gas sample, there are, rounded to the nearest order of magnitude (that is, to the nearest power of 10), approximately $10^{21}$ molecules of $\\text{H}_2$ and also $10^{21}$ molecules of $\\text{O}_2$. What is the combined number of $\\text{H}_2$ and $\\text{O}_2$ molecules in the gas sample, rounded to the nearest order of magnitude?",
+    "statement1": "The number of $\\text{H}_2$ molecules and the number of $\\text{O}_2$ molecules are each less than $3 \\times 10^{21}$.",
+    "statement2": "The number of $\\text{H}_2$ molecules is more than twice the number of $\\text{O}_2$ molecules."
+  },
+  {
+    "question_number": 407,
+    "problem": "On Jane's credit card account, the average daily balance for a 30-day billing cycle is the average (arithmetic mean) of the daily balances at the end of each of the 30 days. At the beginning of a certain 30-day billing cycle, Jane's credit card account had a balance of $600. Jane made a payment of $300 on the account during the billing cycle. If no other amounts were added to or subtracted from the account during the billing cycle, what was the average daily balance on Jane's account for the billing cycle?",
+    "statement1": "Jane's payment was credited on the 21st day of the billing cycle.",
+    "statement2": "The average daily balance through the 25th day of the billing cycle was $540."
+  },
+  {
+    "question_number": 408,
+    "problem": "The annual rent collected by a corporation from a certain building was $x$ percent more in 1998 than in 1997 and $y$ percent less in 1999 than in 1998. Was the annual rent collected by the corporation from the building more in 1999 than in 1997?",
+    "statement1": "$x > y$",
+    "statement2": "$\\frac{xy}{100} < x - y$"
+  },
+  {
+    "question_number": 409,
+    "problem": "During an experiment, some water was removed from each of 6 water tanks. If the standard deviation of the volumes of water in the tanks at the beginning of the experiment was 10 gallons, what was the standard deviation of the volumes of water in the tanks at the end of the experiment?",
+    "statement1": "For each tank, 30 percent of the volume of water that was in the tank at the beginning of the experiment was removed during the experiment.",
+    "statement2": "The average (arithmetic mean) volume of water in the tanks at the end of the experiment was 63 gallons."
+  }
+]
