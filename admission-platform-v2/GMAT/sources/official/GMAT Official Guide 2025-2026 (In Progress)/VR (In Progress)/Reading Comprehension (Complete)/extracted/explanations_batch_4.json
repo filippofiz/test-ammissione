@@ -1,0 +1,117 @@
+{
+  "587": {
+    "correct_answer": "a",
+    "explanation": "This question depends on recognizing what the passage states about the factors affecting P. ochraceus's role as a keystone species, which is different in different habitats. According to the passage, P. ochraceus consumes and suppresses mussel populations in some habitats—specifically, those that are wave-exposed—making it a keystone predator in those habitats. But in wave-sheltered habitats, P. ochraceus does not play the same role in suppressing mussel populations. The passage clearly states that P. ochraceus's role in wave-exposed habitats differs from its role in wave-sheltered habitats.",
+    "difficulty": null
+  },
+  "588": {
+    "correct_answer": "c",
+    "explanation": "Answering this question depends on recognizing what the author says about identifying species' roles in habitats and then extending that to another situation. The author considers a particular method of studying keystone species problematic: removing a suspected keystone species from its habitat and observing what happens to the ecosystem. The author finds this problematic because interactions among species are complex. The author states explicitly that removing a species from a habitat in order to determine its keystone status is problematic. Removing the monkeys from their habitat is a clear example of this problematic practice.",
+    "difficulty": null
+  },
+  "589": {
+    "correct_answer": "b",
+    "explanation": "To answer this question, focus on the argument advanced in the last sentence of the passage and identify what information would support that argument. In the last sentence of the passage, the author claims that keystone status depends on context. The author then offers three contextual factors that may affect a species' keystone status: geography, community diversity (i.e., the number of species in a given habitat), and length of species interaction. Evidence supporting this argument would show that context is important to a species' keystone status. That the iguana is a keystone species in a location that has limited species diversity but not a keystone species in a location that has greater species diversity suggests that keystone status does indeed depend on context. Thus, this example supports the author's argument in the last sentence of the passage.",
+    "difficulty": null
+  },
+  "590": {
+    "correct_answer": "d",
+    "explanation": "Answering this question requires identifying how the passage suggests that keystone species should be identified. The passage identifies a particular way in which keystone status should not be determined: removing a species and observing what happens to the ecosystem. The passage also argues that keystone status depends strongly on context: that is, an ecosystem's characteristics, including its geography and inhabitants, determining its keystone species. If, as the passage suggests, keystone status for any given species depends on the context of the ecosystem in which it lives, then it is likely that identifying keystone species depends strongly on understanding what factors of the ecosystem contribute to creating keystone status. The passage lists such factors as geography, community diversity, and species interaction.",
+    "difficulty": null
+  },
+  "591": {
+    "correct_answer": "d",
+    "explanation": "This question depends on understanding how a particular type of evidence—the preserved soft bodies of conodonts—supports a particular conclusion stated in the passage. The third paragraph makes this relationship explicit, explaining that certain features of conodonts show them to be more primitive than other vertebrates. Further, those features indicate that they came before ostracoderms and other armored jawless fishes. These remains support the conclusion stated in the second paragraph regarding teeth being more primitive than external armor. The third paragraph explains how conodonts' remains support the conclusion that teeth were more primitive than external armor.",
+    "difficulty": null
+  },
+  "592": {
+    "correct_answer": "e",
+    "explanation": "This question depends on understanding the second paragraph in the context of the passage as a whole. The second paragraph begins by noting the traditional view of the vertebrate skeleton—that it was a defense against predators—and then goes on to explain that other paleontologists argued against this idea, claiming instead that vertebrates began as predators and that teeth were a more primary feature than external armor. According to the passage, the debate concerning the development of the vertebrate skeleton hinges on whether vertebrates began as predators, with teeth, or whether skeletal defenses such as external armor evolved first. The primary purpose of the second paragraph is to distinguish these two sides.",
+    "difficulty": null
+  },
+  "593": {
+    "correct_answer": "b",
+    "explanation": "What could paleontologists conclude, based on the 1981 discovery of conodont remains? That discovery, according to the passage, supported the view of certain paleontologists that the earliest vertebrates were predators with teeth—unlike the ostracoderms, which had no jaws. According to the third paragraph, the conodonts' body structures indicated that they were more primitive than the ostracoderms, so the ostracoderms must not have been the earliest vertebrates.",
+    "difficulty": null
+  },
+  "594": {
+    "correct_answer": "a",
+    "explanation": "The question asks which statement can be reasonably inferred, from information provided in the passage, to be a reason for the increase in proportion of verdicts favoring patentees, starting in the 1830s. The second paragraph argues that what changed in that decade was not judges' attitudes toward patent law but the types of patent cases that were litigated. It explains that a law passed in 1836 required that, for the first time in U.S. history, applications for patents had to be examined for their adherence to patent law before a patent would be issued. This information implies that patents granted after 1836 were more likely to adhere to patent law and were thus more likely to be upheld in court. The passage implies that patents granted after the 1836 law went into effect were more likely to adhere to patent law.",
+    "difficulty": null
+  },
+  "595": {
+    "correct_answer": "e",
+    "explanation": "This question asks about a statement implied by the passage. The scholars mentioned in line 8 question whether U.S. patent law achieved its goal. That goal is described in the first sentence of the passage: to encourage America's economic growth. Thus, it is reasonable to conclude that the scholars would criticize the pre-1830 patent system for failing to encourage economic growth. The scholars doubt that patent law helped to achieve its goal, which was to encourage economic growth.",
+    "difficulty": null
+  },
+  "596": {
+    "correct_answer": "b",
+    "explanation": "The question asks what is indicated by the frequency with which pre-1830 cases have been cited in court decisions. The second paragraph rejects some scholars' claims that judges prior to the 1830s were antipatent, while judges after that time were more accepting of patent rights. The passage supports its critique by pointing out that decisions made by judges before the 1830s have been cited as precedents by later judges just as frequently as post-1830s decisions have been. This implies that later judges' attitudes toward patent rights were similar to those of pre-1830s judges. Thus, there is no reason to believe judges' attitudes toward patent rights changed at that time. Pre-1830s court decisions have been cited as frequently as later decisions, suggesting no change in judges' attitudes.",
+    "difficulty": null
+  },
+  "597": {
+    "correct_answer": "d",
+    "explanation": "The question depends on recognizing differences between two explanations—one favored by the scholars mentioned in line 21, the other favored by the author—for the frequency with which patents were invalidated in U.S. courts prior to 1830. The first paragraph describes the scholars' view that judges before 1830 were antipatent and rejected patentees' claims for arbitrary reasons. The author of the passage rejects that view. As an alternative explanation, the author implies in the second paragraph that earlier patents often violated patent law; this view is supported with reference to an 1836 revision to the patent system which instituted a procedure by which patent applications were inspected to ensure adherence to patent law. The scholars claim that judges before 1830 decided against patentees for arbitrary reasons, but the passage suggests that the patents may have been invalidated because they failed to adhere to patent law.",
+    "difficulty": null
+  },
+  "598": {
+    "correct_answer": "c",
+    "explanation": "The question asks what evidence the author brings to bear against the argument referred to in lines 14-15. In the first paragraph, the author summarizes scholars' argument to the conclusion that judges' attitudes toward patent rights shifted in the 1830s, based on the fact that judges earlier had routinely ruled against patentees in lawsuits whereas judges after that time provided more protection for patent rights. In the second paragraph, the author challenges those scholars' attitudes shifted. The author provides evidence that judges after the 1830s cited legal precedents set in pre-1830s cases, suggesting that their views had not changed. The fact that judges after 1830 cited earlier cases as precedents is used as evidence to challenge scholars' claims that judges' attitudes shifted around 1830.",
+    "difficulty": null
+  },
+  "599": {
+    "correct_answer": "d",
+    "explanation": "This question focuses on the author's reason for mentioning Krontiris's work. The passage states that Krontiris, in her discussion of six Renaissance women writers, is an example of scholars who are optimistic about women's achievements but also suggest that these women faced significant obstacles. She is a writer who, in other words, agrees with neither Kelly's negative views nor Burckhardt's positive approach. The author uses Krontiris as an example of those feminist scholars who have rejected the overgeneralized approaches of both Kelly and Burckhardt.",
+    "difficulty": null
+  },
+  "600": {
+    "correct_answer": "e",
+    "explanation": "This question asks what the passage directly states about the difference between Krontiris's work and the feminist scholars mentioned in the first paragraph. The feminist scholars mentioned in the first paragraph explore differences among Renaissance women, particularly their social status and religion, and thus complicate Burckhardt's and Kelly's generalizations. Krontiris's work, on the other hand, focuses on Renaissance women writers, who are a distinctly privileged and small social group. The feminist scholars mentioned in the first paragraph are concerned with women of different social classes and religions, whereas Krontiris's work focuses on a limited social group.",
+    "difficulty": null
+  },
+  "601": {
+    "correct_answer": "c",
+    "explanation": "This question asks what the passage says explicitly about why feminist scholars reference Burckhardt's view of Renaissance women. The first paragraph states that Burckhardt's view is that Renaissance women enjoyed perfect equality with men, and then follows that by noting how feminist scholars have repeatedly cited this view to contrast it with extensive evidence of women's inequality during the Renaissance. Many feminist scholars wish to refute Burckhardt's view that Renaissance women and men were equal.",
+    "difficulty": null
+  },
+  "602": {
+    "correct_answer": "b",
+    "explanation": "Line 12 refers to feminist scholars who have rejected both Kelly's and Burckhardt's views of the status of Renaissance women. The next sentence states that the feminist scholars use class and religious differences among Renaissance women to argue against Kelly's and Burckhardt's generalizations, which were based on upper-class Italian women. The feminist scholars mentioned study different types of Renaissance women and so reject Kelly's and Burckhardt's conclusions that were based on a group that was not in fact typical.",
+    "difficulty": null
+  },
+  "606": {
+    "correct_answer": "c",
+    "explanation": "In line 12, five observed asteroids refers to the five asteroids whose rotation rates are exceptions to the strict limit on the rate of rotation found in all other observed asteroids. These five asteroids all have diameters smaller than 200 meters. The passage indicates that if asteroids were all monoliths—that is, single rocks—then their rotation rates would form a bell curve when graphed, but if asteroids were piles of rubble, the tail of the bell curve indicating very fast rotation rates would be missing. Among asteroids larger than 200 meters, this tail is missing, and only the five asteroids described as exceptions have rotation rates falling at the very high end of the bell curve. The second paragraph states that most small asteroids should be monolithic, and the five observed asteroids are all smaller than 200 meters in diameter.",
+    "difficulty": null
+  },
+  "607": {
+    "correct_answer": "d",
+    "explanation": "The conclusion that the text in line 16 points to is that asteroids with diameters greater than 200 meters are multicomponent structures or rubble piles. To call that conclusion into question, an observation would have to suggest that asteroids larger than 200 meters across are not such multicomponent structures. According to the first paragraph, rubble piles cannot be fast rotators: spinning faster than once every few hours would make them fly apart. Assuming that an asteroid composed of a pile of rubble is of a great enough density, a rotation rate greater than one revolution every few hours would make it fly apart—that is, faster than the crucial speed—would fly apart if it were not a monolith. The conclusion states that all asteroids larger than 200 meters are multicomponent structures—that is, are not monoliths—so the discovery of a 500-meter asteroid rotating at a rate of once an hour would call into question that conclusion.",
+    "difficulty": null
+  },
+  "608": {
+    "correct_answer": "b",
+    "explanation": "Regarding small asteroids, the second paragraph states that they have feeble gravity. Any fragments from impacts would escape that gravity, and thus, the passage states, the small asteroids should be monolithic. This prediction is offered in the second paragraph, based on the fact that small asteroids do not have strong gravitational attraction. Any impact fragments will easily escape the weak gravitational attraction of the small asteroids.",
+    "difficulty": null
+  },
+  "609": {
+    "correct_answer": "e",
+    "explanation": "This question asks about the purpose of the author's use of the phrase escape velocity in the second paragraph. The author is discussing what occurs after an asteroid collision, in which a large asteroid might be blasted to bits. The bits, according to the author, will move slower than their mutual escape velocity—that is, the speed at which they would have to move to get away from each other and not reassemble, under the influence of gravity, into a rubble pile. After a collision, it is the asteroid fragments' failure to reach escape velocity that allows the fragments' gravitational pull to reassemble them into a rubble pile.",
+    "difficulty": null
+  },
+  "610": {
+    "correct_answer": "e",
+    "explanation": "This question asks why the author discusses calculations about tunneling time and barrier thickness. According to the passage, these calculations provided the grounds for Wigner and Eisenbud's hypothesis that tunneling particles may travel faster than light. The calculations about tunneling time and barrier thickness supported Wigner and Eisenbud's hypothesis that quantum tunneling could occur at speeds faster than that of light.",
+    "difficulty": null
+  },
+  "611": {
+    "correct_answer": "d",
+    "explanation": "The passage states that because tunneling time reaches a maximum, then tunneling speed must increase as barrier thickness increases. But if tunneling time did not reach such a maximum, then speed need not increase without limit; the particle could have as low a speed in thicker barriers as in thinner ones and take longer to tunnel through a barrier. The tunneling particle could have as low a speed in thicker barriers as in thinner ones and simply take longer to make its way through a thicker barrier.",
+    "difficulty": null
+  },
+  "612": {
+    "correct_answer": "c",
+    "explanation": "This question asks about the earliest investigators of quantum tunneling. The passage notes that quantum tunneling's extreme rapidity was observed in 1932; thus, the earliest investigators of this phenomenon knew of its existence at that time. Not until 1955 did Wigner and Eisenbud hypothesize that the particles traveled faster than light. Thus, it is logical to infer that the earliest investigators did not imagine such a speed. The passage suggests that prior to 1955, investigators of quantum tunneling had not hypothesized that the particles could travel faster than the speed of light.",
+    "difficulty": null
+  }
+}

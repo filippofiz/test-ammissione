@@ -1,0 +1,6 @@
+{
+  "difficulty": "medium",
+  "note": "Questions 711-715 not clearly identifiable in provided PDF files",
+  "questions": [],
+  "error": "The PDF files VR_raw_questions_3.pdf and VR_raw_questions_4.pdf do not contain clearly numbered questions in the 711-715 range. VR_raw_questions_4.pdf shows questions 739-742+ which are in the hard difficulty range (739-802), not medium (673-737). The requested questions may be in different source files."
+}
