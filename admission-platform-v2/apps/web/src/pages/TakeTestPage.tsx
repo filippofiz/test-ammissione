@@ -18,11 +18,10 @@ import {
   faLock,
   faBookmark,
   faList,
-  faUndo,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import { supabase } from '../lib/supabase';
-import { supabaseTest, fromTest } from '../lib/supabaseTest';
+import { supabaseTest } from '../lib/supabaseTest';
 import { useTranslation } from 'react-i18next';
 import { LaTeX } from '../components/LaTeX';
 import { DSQuestion } from '../components/questions/DSQuestion';
@@ -38,7 +37,7 @@ import { translateTestTrack } from '../lib/translateTestTrack';
 interface TestConfig {
   test_type: string;
   track_type: string;
-  section_order_mode: 'mandatory' | 'user_choice' | 'no_sections';
+  section_order_mode: 'mandatory' | 'user_choice' | 'no_sections' | 'mandatory_macro_sections' | 'user_choice_macro_sections' | string;
   section_order: string[] | null;
   time_per_section: Record<string, number> | null;
   total_time_minutes: number | null;
@@ -59,7 +58,7 @@ interface TestConfig {
   question_order?: 'random' | 'sequential';
   adaptivity_mode?: 'adaptive' | 'non_adaptive' | 'static'; // Allow both naming conventions
   use_base_questions?: boolean;
-  base_questions_scope?: 'per_section' | 'per_test' | 'entire_test'; // Support both naming conventions
+  base_questions_scope?: 'per_section' | 'entire_test'; // Per section or entire test
   base_questions_count?: number;
   algorithm_type?: 'simple' | 'complex';
   baseline_difficulty?: number | string; // Difficulty level for baseline questions (e.g., 1, 2, 3 or "easy", "medium", "hard"). If not set, uses average difficulty.
@@ -89,6 +88,7 @@ interface Question {
   question_number: number;
   question_type: string;
   difficulty: string;
+  is_base?: boolean; // Mark if this is a baseline question for adaptive algorithms
 
   // New JSON structure
   question_data: {
@@ -116,7 +116,7 @@ interface Question {
     }>;
 
     // GI (Graphical Interpretation)
-    chart_config?: any;
+    chart_config?: Record<string, unknown>;
     context_text?: string;
     blank1_options?: string[];
     blank2_options?: string[];
@@ -142,13 +142,22 @@ interface Question {
     question?: string;
     passage?: string;
     question_text?: string;
+    question_text_eng?: string;
     options?: Record<string, string>;
+    options_eng?: Record<string, string>;
+    passage_text?: string;
+    passage_text_eng?: string;
+    passage_title?: string;
 
     // Answer choices (for multiple choice)
     choices?: Array<{
       label: string;
       text: string;
     }>;
+
+    // PDF-based test fields
+    pdf_url?: string;
+    page_number?: number;
   };
 
   answers: {
@@ -179,6 +188,86 @@ interface StudentAnswer {
   taAnswers?: Record<number, 'true' | 'false'>; // TA has multiple true/false statements
   column1?: string; // TPA has two columns
   column2?: string;
+}
+
+// JSONB answer format for database storage
+type JsonbAnswer =
+  | { answers: string[] } // MSR
+  | { answers: { part1: string | null; part2: string | null } } // GI or TPA
+  | { answers: Record<number, 'true' | 'false'> } // TA
+  | { answer: string | null }; // Simple questions
+
+// Attempt data stored in completion_details
+interface AttemptData {
+  attempt_number: number;
+  status: string;
+  reason: string;
+  annulment_reason?: string | null;
+  started_at: string;
+  completed_at: string;
+  browser_info: string;
+  screen_resolution: string;
+  timestamp: string;
+  pause_events?: Array<{
+    timestamp: string;
+    section: string;
+    action: 'pause_taken' | 'pause_skipped' | 'pause_auto_skipped';
+  }>;
+  pauses_used?: number;
+  test_config?: Record<string, unknown>;
+  sections_completed?: string[];
+  section_times?: Record<string, number>;
+  total_questions?: number;
+  [key: string]: unknown; // Allow additional properties
+}
+
+// Test info nested in assignment
+interface TestInfo {
+  id: string;
+  test_type: string;
+  exercise_type: string;
+  format: string;
+}
+
+// Algorithm configuration from database
+interface AlgorithmConfig {
+  id: string;
+  algorithm_type: 'simple' | 'complex';
+  simple_difficulty_increment?: number;
+  irt_model?: '1PL' | '2PL' | '3PL';
+  initial_theta?: number;
+  theta_min?: number;
+  theta_max?: number;
+  se_threshold?: number;
+  max_information_weight?: number;
+  exposure_control?: boolean;
+  [key: string]: unknown;
+}
+
+// Test assignment from database
+interface TestAssignment {
+  id: string;
+  student_id: string;
+  status: 'unlocked' | 'in_progress' | 'completed' | 'locked' | 'incomplete' | 'annulled';
+  start_time: string | null;
+  current_attempt: number;
+  total_attempts: number;
+  completion_details: {
+    attempts: AttemptData[];
+  } | null;
+  '2V_tests'?: TestInfo;
+  '2V_tests_test'?: TestInfo;
+  [key: string]: unknown; // Allow additional properties
+}
+
+// Student answer from database
+interface DbStudentAnswer {
+  question_id: string;
+  answer: JsonbAnswer;
+  is_flagged: boolean;
+  time_spent_seconds: number;
+  question_order: number;
+  attempt_number: number;
 }
 
 /**
@@ -264,10 +353,6 @@ export default function TakeTestPage() {
   const [showCorrectAnswers, setShowCorrectAnswers] = useState(false);
 
   const db = isTestMode ? supabaseTest : supabase;
-  const dbFrom = (table: string) => isTestMode ? fromTest(table) : supabase.from(table);
-
-  // Visual indicator for test mode
-  const [botAction, setBotAction] = useState<string | null>(null);
 
   // State
   const [loading, setLoading] = useState(true);
@@ -303,7 +388,7 @@ export default function TakeTestPage() {
   const [draggedSectionIndex, setDraggedSectionIndex] = useState<number | null>(null);
 
   // Fullscreen and screen monitoring state
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [_isFullscreen, setIsFullscreen] = useState(false);
   const [showExitWarning, setShowExitWarning] = useState(false);
   const [exitCountdown, setExitCountdown] = useState(5);
   const [multipleScreensDetected, setMultipleScreensDetected] = useState(false);
@@ -316,13 +401,12 @@ export default function TakeTestPage() {
   const [showSectionTransition, setShowSectionTransition] = useState(false);
   const [sectionTransitionCountdown, setSectionTransitionCountdown] = useState(5);
   const [isTransitioning, setIsTransitioning] = useState(false); // Prevent race conditions
-  const [isCompletingSection, setIsCompletingSection] = useState(false); // Prevent double section completion
+  const [_isCompletingSection, setIsCompletingSection] = useState(false); // Prevent double section completion
 
   // Adaptive testing state
   const [questionPool, setQuestionPool] = useState<Question[]>([]); // Available questions
   const [selectedQuestions, setSelectedQuestions] = useState<Question[]>([]); // Questions to show
-  const [currentTheta, setCurrentTheta] = useState<number>(0); // IRT ability estimate
-  const [algorithmConfig, setAlgorithmConfig] = useState<any>(null); // Algorithm configuration
+  const [_algorithmConfig, setAlgorithmConfig] = useState<Record<string, unknown> | null>(null); // Algorithm configuration
   const [adaptiveAlgorithm, setAdaptiveAlgorithm] = useState<SimpleAdaptiveAlgorithm | ComplexAdaptiveAlgorithm | null>(null); // Algorithm instance
   const [baseQuestionsCompletedPerSection, setBaseQuestionsCompletedPerSection] = useState<Record<string, boolean>>({}); // Track base questions per section
 
@@ -330,7 +414,7 @@ export default function TakeTestPage() {
   const [bookmarkedQuestions, setBookmarkedQuestions] = useState<Set<string>>(new Set()); // Question IDs that are bookmarked
   const [showReviewScreen, setShowReviewScreen] = useState(false); // Show review screen at end of section
   const [answerChangesUsed, setAnswerChangesUsed] = useState<number>(0); // Number of answer changes made in review
-  const [originalAnswers, setOriginalAnswers] = useState<Record<string, StudentAnswer>>({}); // Answers before review (to track changes)
+  const [_originalAnswers, setOriginalAnswers] = useState<Record<string, StudentAnswer>>({}); // Answers before review (to track changes)
   const [isInReviewMode, setIsInReviewMode] = useState(false); // Currently in review mode
 
   // Toggle bookmark for current question
@@ -349,32 +433,6 @@ export default function TakeTestPage() {
       }
       return newSet;
     });
-  };
-
-  // Check if answer was changed during review
-  const checkAnswerChanged = (questionId: string, newAnswer: StudentAnswer): boolean => {
-    const original = originalAnswers[questionId];
-    if (!original) return false;
-    // Compare all answer fields
-    const originalValue = JSON.stringify({
-      answer: original.answer,
-      msrAnswers: original.msrAnswers,
-      blank1: original.blank1,
-      blank2: original.blank2,
-      taAnswers: original.taAnswers,
-      column1: original.column1,
-      column2: original.column2,
-    });
-    const newValue = JSON.stringify({
-      answer: newAnswer.answer,
-      msrAnswers: newAnswer.msrAnswers,
-      blank1: newAnswer.blank1,
-      blank2: newAnswer.blank2,
-      taAnswers: newAnswer.taAnswers,
-      column1: newAnswer.column1,
-      column2: newAnswer.column2,
-    });
-    return originalValue !== newValue;
   };
 
   // Handle answer update with review mode tracking
@@ -508,6 +566,11 @@ export default function TakeTestPage() {
   const showReviewScreenRef = useRef(false); // Ref for review screen to avoid stale closures in timer
   const savingInProgressRef = useRef<Map<string, Promise<boolean>>>(new Map()); // Track ongoing save operations per question
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Track auto-save timeout for cancellation
+  const currentQuestionIdRef = useRef<string | null>(null); // Ref to avoid stale closure when time expires
+  const globalQuestionOrderRef = useRef<number>(0); // Ref to avoid stale closure when time expires
+  const currentAttemptRef = useRef<number>(1); // Ref to avoid stale closure when time expires
+  const questionStartTimesRef = useRef<Record<string, Date>>({}); // Ref to avoid stale closure when time expires
+  const answersRef = useRef<Record<string, StudentAnswer>>({}); // Ref to avoid stale closure when time expires
 
   // Helper function to get the correct section field based on config
   const getSectionField = (question: Question): string => {
@@ -538,7 +601,7 @@ export default function TakeTestPage() {
 
   // Helper to get localized question text based on language captured at test start
   // Special case: "inglese" sections should always show English questions
-  const getLocalizedQuestionText = (questionData: any): string => {
+  const getLocalizedQuestionText = (questionData: Question['question_data']): string => {
     if (!questionData) return '';
 
     // Check if current section is an English section (for Cattolica's "inglese" section)
@@ -553,7 +616,7 @@ export default function TakeTestPage() {
 
   // Helper to get localized options based on language captured at test start
   // Special case: "inglese" sections should always show English options
-  const getLocalizedOptions = (questionData: any): Record<string, string> => {
+  const getLocalizedOptions = (questionData: Question['question_data']): Record<string, string> => {
     if (!questionData) return {};
 
     // Check if current section is an English section (for Cattolica's "inglese" section)
@@ -568,7 +631,7 @@ export default function TakeTestPage() {
 
   // Helper to get localized passage text based on language captured at test start
   // Special case: "inglese" sections should always show English passages
-  const getLocalizedPassageText = (questionData: any): string => {
+  const getLocalizedPassageText = (questionData: Question['question_data']): string => {
     if (!questionData) return '';
 
     // Check if current section is an English section (for Cattolica's "inglese" section)
@@ -578,7 +641,7 @@ export default function TakeTestPage() {
     if ((testLanguage === 'en' || isEnglishSection) && questionData.passage_text_eng) {
       return questionData.passage_text_eng;
     }
-    return questionData.passage_text || '';
+    return questionData.passage_text ?? '';
   };
 
   // Calculate expected total sections (for footer display)
@@ -711,6 +774,31 @@ export default function TakeTestPage() {
     }
   }, [pausesUsed]);
 
+  // Keep currentQuestionIdRef in sync with state (for use in timer callbacks to avoid stale closures)
+  useEffect(() => {
+    currentQuestionIdRef.current = currentQuestion?.id || null;
+  }, [currentQuestion?.id]);
+
+  // Keep globalQuestionOrderRef in sync with state (for use in timer callbacks to avoid stale closures)
+  useEffect(() => {
+    globalQuestionOrderRef.current = globalQuestionOrder;
+  }, [globalQuestionOrder]);
+
+  // Keep currentAttemptRef in sync with state (for use in timer callbacks to avoid stale closures)
+  useEffect(() => {
+    currentAttemptRef.current = currentAttempt;
+  }, [currentAttempt]);
+
+  // Keep questionStartTimesRef in sync with state (for use in timer callbacks to avoid stale closures)
+  useEffect(() => {
+    questionStartTimesRef.current = questionStartTimes;
+  }, [questionStartTimes]);
+
+  // Keep answersRef in sync with state (for use in timer callbacks to avoid stale closures)
+  useEffect(() => {
+    answersRef.current = answers;
+  }, [answers]);
+
   // Save answers and clean up session before page unload (browser close, refresh, etc.)
   // This ensures "in_progress" status doesn't persist when student leaves
   useEffect(() => {
@@ -754,13 +842,9 @@ export default function TakeTestPage() {
       // Verify message origin for security
       if (event.origin !== window.location.origin) return;
 
-      const { type, action, answer, questionId } = event.data;
+      const { type, action, answer, questionId: _questionId } = event.data;
 
       if (type !== 'BOT_ACTION') return;
-
-      // Show visual feedback
-      setBotAction(`🤖 ${action}`);
-      setTimeout(() => setBotAction(null), 2000);
 
       switch (action) {
         case 'START_TEST':
@@ -982,7 +1066,7 @@ export default function TakeTestPage() {
   function prepareInitialQuestions(
     allQuestions: Question[],
     config: TestConfig,
-    algorithmConfig: any
+    _algorithmConfig: any
   ): Question[] {
     // Helper to get correct section field
     const getSection = (q: Question) =>
@@ -1198,9 +1282,10 @@ export default function TakeTestPage() {
         .from(`2V_test_assignments${tableSuffix}`)
         .select(`*, 2V_tests${tableSuffix}(id, test_type, exercise_type, format)`)
         .eq('id', assignmentId)
-        .single();
+        .single() as { data: TestAssignment | null; error: unknown };
 
       if (assignmentError) throw assignmentError;
+      if (!assignment) throw new Error('Assignment not found');
 
 
       // Check if test is locked (completed tests are auto-locked)
@@ -1231,7 +1316,7 @@ export default function TakeTestPage() {
           sessionStorage.removeItem(`test_session_${assignmentId}`);
 
           // Get existing attempts history or create new array
-          const existingDetails = assignment.completion_details || {};
+          const existingDetails = assignment.completion_details || { attempts: [] };
           const attempts = Array.isArray(existingDetails.attempts) ? existingDetails.attempts : [];
 
           const currentAttemptNum = assignment.current_attempt || 1;
@@ -1257,7 +1342,7 @@ export default function TakeTestPage() {
 
           // Check if attempt already exists (update instead of duplicating)
           const existingAttemptIndex = attempts.findIndex(
-            (a: any) => a.attempt_number === currentAttemptNum
+            (a: AttemptData) => a.attempt_number === currentAttemptNum
           );
 
           if (existingAttemptIndex >= 0) {
@@ -1277,10 +1362,10 @@ export default function TakeTestPage() {
             completion_details: { attempts }
           };
 
-          const { data: updateResult, error: statusError } = await db
+          const { error: statusError } = await db
             .from(`2V_test_assignments${tableSuffix}`)
             .update(updateData)
-            .eq('id', assignmentId)
+            .eq('id', assignmentId!)
             .select();
 
           if (!statusError) {
@@ -1300,9 +1385,10 @@ export default function TakeTestPage() {
       setStudentId(assignment.student_id);
       setCurrentAttempt(currentAttemptNum);
 
-      const testType = assignment['2V_tests'].test_type;
-      const exerciseType = assignment['2V_tests'].exercise_type;
-      const testFormat = assignment['2V_tests'].format;
+      const testInfo = (assignment['2V_tests'] || assignment['2V_tests_test'])!;
+      const testType = testInfo.test_type;
+      const exerciseType = testInfo.exercise_type;
+      const testFormat = testInfo.format;
 
       // SAT tests always start in English regardless of user's language setting
       if (testType === 'SAT' && i18n.language !== 'en') {
@@ -1327,7 +1413,7 @@ export default function TakeTestPage() {
       const { data: configsData, error: configsError } = await supabase
         .from('2V_test_track_config')
         .select('*')
-        .eq('test_type', testType);
+        .eq('test_type', testType) as { data: TestConfig[] | null; error: unknown };
 
       if (configsError) {
         throw configsError;
@@ -1357,26 +1443,28 @@ export default function TakeTestPage() {
         isUserChoicePause: configData.pause_mode === 'user_choice'
       });
 
+      // Log blank answer configuration
+      console.log('📝 [CONFIG] Can leave blank:', configData.can_leave_blank);
+
       // Load algorithm configuration if adaptive mode is enabled
-      let algorithmConfigData = null;
+      let algorithmConfigData: AlgorithmConfig | null = null;
       if (configData.adaptivity_mode === 'adaptive' && configData.algorithm_id) {
         // Fetch algorithm config by ID from the algorithm library
         const { data: algConfig, error: algError } = await supabase
           .from('2V_algorithm_config')
           .select('*')
           .eq('id', configData.algorithm_id)
-          .single();
+          .single() as { data: AlgorithmConfig | null; error: unknown };
 
         if (!algError && algConfig) {
           algorithmConfigData = algConfig;
           setAlgorithmConfig(algConfig);
-        } else {
         }
       }
 
       // Load test questions (always from real tables - questions are read-only reference data)
       // Questions are linked by test_id
-      const testId = assignment['2V_tests'].id;
+      const testId = testInfo.id;
 
       // For no_sections mode, order only by question_number; otherwise by section then question_number
       const questionsQuery = supabase
@@ -1390,7 +1478,7 @@ export default function TakeTestPage() {
         questionsQuery.order('section').order('question_number');
       }
 
-      const { data: questions, error: questionsError } = await questionsQuery;
+      const { data: questions, error: questionsError } = await questionsQuery as { data: Question[] | null; error: unknown };
 
       if (questionsError) throw questionsError;
 
@@ -1480,49 +1568,56 @@ export default function TakeTestPage() {
           .from(`2V_student_answers${tableSuffix}`)
           .select('*')
           .eq('assignment_id', assignmentId)
-          .eq('attempt_number', currentAttemptNumber);
+          .eq('attempt_number', currentAttemptNumber) as { data: DbStudentAnswer[] | null; error: unknown };
 
         if (!answersError && existingAnswers) {
 
           // Transform loaded answers back to local state format
-          const loadedAnswers: Record<string, any> = {};
+          const loadedAnswers: Record<string, StudentAnswer> = {};
 
-          existingAnswers.forEach((dbAnswer: any) => {
+          existingAnswers.forEach((dbAnswer) => {
             const questionId = dbAnswer.question_id;
             const jsonbAnswer = dbAnswer.answer;
 
             // Transform JSONB back to local format
-            let localAnswer: any = {
+            let localAnswer: Partial<StudentAnswer> = {
               questionId: questionId,
               flagged: dbAnswer.is_flagged || false,
               timeSpent: dbAnswer.time_spent_seconds || 0
             };
 
-            // Detect format and transform
-            if (jsonbAnswer.answer !== undefined) {
+            // Detect format and transform using type guards
+            if ('answer' in jsonbAnswer) {
               // Simple answer
               localAnswer.answer = jsonbAnswer.answer;
-            } else if (jsonbAnswer.answers && Array.isArray(jsonbAnswer.answers)) {
-              // MSR question (array)
-              localAnswer.msrAnswers = jsonbAnswer.answers;
-              localAnswer.answer = jsonbAnswer.answers.join(',');
-            } else if (jsonbAnswer.answers && typeof jsonbAnswer.answers === 'object') {
-              // Check if it's GI/TPA format (part1, part2) or TA format (row keys)
-              if (jsonbAnswer.answers.part1 !== undefined || jsonbAnswer.answers.part2 !== undefined) {
-                // GI or TPA format
-                localAnswer.blank1 = jsonbAnswer.answers.part1;
-                localAnswer.blank2 = jsonbAnswer.answers.part2;
-                localAnswer.column1 = jsonbAnswer.answers.part1; // For TPA
-                localAnswer.column2 = jsonbAnswer.answers.part2;
-                localAnswer.answer = `${jsonbAnswer.answers.part1 || ''}|${jsonbAnswer.answers.part2 || ''}`;
+            } else if ('answers' in jsonbAnswer) {
+              if (Array.isArray(jsonbAnswer.answers)) {
+                // MSR question (array)
+                localAnswer.msrAnswers = jsonbAnswer.answers;
+                localAnswer.answer = jsonbAnswer.answers.join(',');
               } else {
-                // TA format
-                localAnswer.taAnswers = jsonbAnswer.answers;
-                localAnswer.answer = Object.values(jsonbAnswer.answers).join(',');
+                // Check if it's GI/TPA format (part1, part2) or TA format (row keys)
+                // Type guard: GI/TPA format has 'part1' or 'part2' as keys (not numeric)
+                const answerKeys = Object.keys(jsonbAnswer.answers);
+                const isGIOrTPAFormat = answerKeys.includes('part1') || answerKeys.includes('part2');
+
+                if (isGIOrTPAFormat) {
+                  // GI or TPA format
+                  const giTpaAnswer = jsonbAnswer.answers as { part1: string | null; part2: string | null };
+                  localAnswer.blank1 = giTpaAnswer.part1 ?? undefined;
+                  localAnswer.blank2 = giTpaAnswer.part2 ?? undefined;
+                  localAnswer.column1 = giTpaAnswer.part1 ?? undefined; // For TPA
+                  localAnswer.column2 = giTpaAnswer.part2 ?? undefined;
+                  localAnswer.answer = `${giTpaAnswer.part1 || ''}|${giTpaAnswer.part2 || ''}`;
+                } else {
+                  // TA format
+                  localAnswer.taAnswers = jsonbAnswer.answers as Record<number, 'true' | 'false'>;
+                  localAnswer.answer = Object.values(jsonbAnswer.answers).join(',');
+                }
               }
             }
 
-            loadedAnswers[questionId] = localAnswer;
+            loadedAnswers[questionId] = localAnswer as StudentAnswer;
           });
 
           setAnswers(loadedAnswers);
@@ -1531,6 +1626,11 @@ export default function TakeTestPage() {
           const maxQuestionOrder = existingAnswers.reduce((max, answer) => {
             return Math.max(max, answer.question_order || 0);
           }, 0);
+          console.log('🔢 [INIT] Initializing globalQuestionOrder from existing answers', {
+            existingAnswersCount: existingAnswers.length,
+            maxQuestionOrder: maxQuestionOrder,
+            allQuestionOrders: existingAnswers.map(a => a.question_order).sort((a, b) => a - b)
+          });
           setGlobalQuestionOrder(maxQuestionOrder);
         }
       }
@@ -1555,8 +1655,8 @@ export default function TakeTestPage() {
     const { data: assignment, error: assignmentError } = await supabase
       .from('2V_test_assignments')
       .select('status, current_attempt, total_attempts')
-      .eq('id', assignmentId)
-      .single();
+      .eq('id', assignmentId!)
+      .single() as { data: { status: string; current_attempt: number | null; total_attempts: number | null } | null; error: unknown };
 
     if (assignmentError || !assignment) {
       return;
@@ -1568,16 +1668,23 @@ export default function TakeTestPage() {
       const newTotalAttempts = assignment.total_attempts || (assignment.current_attempt || 1);
 
 
+      const updateData1: {
+        current_attempt: number;
+        total_attempts: number;
+        status: string;
+        completion_status: string;
+        start_time: string;
+      } = {
+        current_attempt: newAttempt,
+        total_attempts: newTotalAttempts,
+        status: 'in_progress',
+        completion_status: 'in_progress',
+        start_time: new Date().toISOString()
+      };
       const { error: updateError } = await supabase
         .from('2V_test_assignments')
-        .update({
-          current_attempt: newAttempt,
-          total_attempts: newTotalAttempts,
-          status: 'in_progress',
-          completion_status: 'in_progress',
-          start_time: new Date().toISOString()
-        })
-        .eq('id', assignmentId);
+        .update(updateData1)
+        .eq('id', assignmentId!);
 
       if (updateError) {
         return;
@@ -1587,14 +1694,19 @@ export default function TakeTestPage() {
     } else if (assignment.status === 'unlocked') {
       // First time starting this test
 
+      const updateData2: {
+        status: string;
+        completion_status: string;
+        start_time: string;
+      } = {
+        status: 'in_progress',
+        completion_status: 'in_progress',
+        start_time: new Date().toISOString()
+      };
       const { error: updateError } = await supabase
         .from('2V_test_assignments')
-        .update({
-          status: 'in_progress',
-          completion_status: 'in_progress',
-          start_time: new Date().toISOString()
-        })
-        .eq('id', assignmentId);
+        .update(updateData2)
+        .eq('id', assignmentId!);
 
       if (updateError) {
         return;
@@ -1981,12 +2093,16 @@ export default function TakeTestPage() {
   }
 
   // Helper function to check GI answer correctness and record response
-  function checkAndRecordGIResponse(blank1: string | undefined, blank2: string | undefined, correctAnswerData: any) {
+  function checkAndRecordGIResponse(blank1: string | undefined, blank2: string | undefined, correctAnswerData: { blank1?: string; blank2?: string } | string[] | undefined) {
     if (!currentQuestion || !adaptiveAlgorithm || config?.adaptivity_mode !== 'adaptive') return;
 
     // For GI, correctAnswerData might be an object with blank1 and blank2, or an array
-    const correctBlank1 = correctAnswerData?.blank1 || (Array.isArray(correctAnswerData) ? correctAnswerData[0] : null);
-    const correctBlank2 = correctAnswerData?.blank2 || (Array.isArray(correctAnswerData) ? correctAnswerData[1] : null);
+    const correctBlank1 = Array.isArray(correctAnswerData)
+      ? correctAnswerData[0]
+      : (correctAnswerData?.blank1 || null);
+    const correctBlank2 = Array.isArray(correctAnswerData)
+      ? correctAnswerData[1]
+      : (correctAnswerData?.blank2 || null);
 
     // Check if both blanks match (case-insensitive)
     const isCorrect = blank1?.toUpperCase() === correctBlank1?.toUpperCase() &&
@@ -2024,7 +2140,7 @@ export default function TakeTestPage() {
   }
 
   // Helper function to check TPA answer correctness and record response
-  function checkAndRecordTPAResponse(column1: string | undefined, column2: string | undefined, correctAnswerData: any) {
+  function checkAndRecordTPAResponse(column1: string | undefined, column2: string | undefined, correctAnswerData: { column1?: string; column2?: string } | undefined) {
     if (!currentQuestion || !adaptiveAlgorithm || config?.adaptivity_mode !== 'adaptive') return;
 
     // For TPA, correctAnswerData should have column1 and column2
@@ -2147,7 +2263,7 @@ export default function TakeTestPage() {
    */
   async function saveAnswer(
     questionId: string,
-    answerData: any,
+    answerData: StudentAnswer,
     isFlagged: boolean = false,
     retryCount: number = 0,
     questionOrder?: number
@@ -2172,6 +2288,17 @@ export default function TakeTestPage() {
         setIsSaving(true);
         setSaveError(null);
 
+      // Use refs to get actual current values (avoids stale closure in timer callbacks)
+      const actualCurrentAttempt = currentAttemptRef.current;
+      const actualQuestionStartTimes = questionStartTimesRef.current;
+
+      console.log('💾 [SAVE] saveAnswer using ref values', {
+        questionId: questionId.substring(0, 8),
+        actualCurrentAttempt,
+        hasStartTime: !!actualQuestionStartTimes[questionId],
+        questionOrder
+      });
+
       // Check if answer already exists (to preserve question_order and accumulate time)
       const tableSuffix = isTestMode ? '_test' : '';
       const { data: existingAnswer } = await db
@@ -2179,11 +2306,11 @@ export default function TakeTestPage() {
         .select('question_order, time_spent_seconds')
         .eq('assignment_id', assignmentId)
         .eq('question_id', questionId)
-        .eq('attempt_number', currentAttempt)
+        .eq('attempt_number', actualCurrentAttempt)
         .maybeSingle();
 
       // Calculate time spent on this question ONLY for this viewing session
-      const startTime = questionStartTimes[questionId];
+      const startTime = actualQuestionStartTimes[questionId];
       const newTimeSpentSeconds = startTime
         ? Math.floor((new Date().getTime() - startTime.getTime()) / 1000)
         : 0;
@@ -2198,8 +2325,17 @@ export default function TakeTestPage() {
         ? existingAnswer.question_order // Preserve original order
         : questionOrder; // Use provided order for new answers
 
+      console.log('⏱️ [SAVE] Time calculation', {
+        questionId: questionId.substring(0, 8),
+        hasStartTime: !!startTime,
+        newTimeSpent: newTimeSpentSeconds,
+        existingTimeSpent: existingAnswer?.time_spent_seconds || 0,
+        finalTimeSpent: finalTimeSpentSeconds,
+        questionOrder: finalQuestionOrder
+      });
+
       // Transform answer to JSONB format based on question type
-      let jsonbAnswer: any = {};
+      let jsonbAnswer: JsonbAnswer;
 
       // Check the structure of answerData to determine format
       if (answerData.msrAnswers) {
@@ -2239,7 +2375,7 @@ export default function TakeTestPage() {
           assignment_id: assignmentId,
           student_id: studentId,
           question_id: questionId,
-          attempt_number: currentAttempt,
+          attempt_number: actualCurrentAttempt,
           answer: jsonbAnswer,
           is_flagged: isFlagged,
           time_spent_seconds: finalTimeSpentSeconds,
@@ -2259,7 +2395,7 @@ export default function TakeTestPage() {
 
       // Update assignment status to 'in_progress' on first answer (if still unlocked)
       // Note: annulled/incomplete transitions are now handled in loadTestData
-      const { error: statusError } = await db
+      const { error: _statusError } = await db
         .from(`2V_test_assignments${tableSuffix}`)
         .update({
           status: 'in_progress',
@@ -2308,9 +2444,11 @@ export default function TakeTestPage() {
   async function goToNextQuestion() {
     console.log('🔍 [NAVIGATION] goToNextQuestion called', {
       currentQuestionIndex,
+      globalQuestionOrder,
       currentSection,
       isTransitioning,
-      timeRemaining
+      timeRemaining,
+      willSaveCurrentQuestionWithOrder: globalQuestionOrder + 1
     });
 
     // Extra safety: reject if time has expired
@@ -2347,6 +2485,11 @@ export default function TakeTestPage() {
     }
 
     // Check if answer is required
+    console.log('📝 [VALIDATION] Checking blank answers:', {
+      can_leave_blank: config?.can_leave_blank,
+      willValidate: config?.can_leave_blank === false
+    });
+
     if (config?.can_leave_blank === false) {
       const currentAnswer = answers[currentQuestion?.id];
 
@@ -2378,7 +2521,7 @@ export default function TakeTestPage() {
       if (questionData?.di_type === 'GI') {
         if (!currentAnswer.blank1 || !currentAnswer.blank2) {
           // Check if one is answered (partial)
-          const hasAnyAnswer = currentAnswer.blank1 || currentAnswer.blank2;
+          const hasAnyAnswer = !!(currentAnswer.blank1 || currentAnswer.blank2);
           setIsPartialAnswer(hasAnyAnswer);
           setShowAnswerRequiredMessage(true);
           return;
@@ -2412,7 +2555,7 @@ export default function TakeTestPage() {
       if (questionData?.di_type === 'TPA') {
         if (!currentAnswer.column1 || !currentAnswer.column2) {
           // Check if one is answered (partial)
-          const hasAnyAnswer = currentAnswer.column1 || currentAnswer.column2;
+          const hasAnyAnswer = !!(currentAnswer.column1 || currentAnswer.column2);
           setIsPartialAnswer(hasAnyAnswer);
           setShowAnswerRequiredMessage(true);
           return;
@@ -2475,7 +2618,7 @@ export default function TakeTestPage() {
         );
 
         if (availableQuestions.length > 0) {
-          let nextQuestion;
+          let nextQuestion: Question | undefined;
 
           console.log('🔍 [NAVIGATION] Selecting next adaptive question', {
             availableCount: availableQuestions.length,
@@ -2485,10 +2628,11 @@ export default function TakeTestPage() {
 
           if (adaptiveAlgorithm) {
             // Use adaptive algorithm to select next question
-            nextQuestion = await adaptiveAlgorithm.selectNextQuestion(
+            const selected = await adaptiveAlgorithm.selectNextQuestion(
               availableQuestions,
               currentSection
             );
+            nextQuestion = selected ?? undefined;
             console.log('🔍 [NAVIGATION] Algorithm returned:', {
               hasQuestion: !!nextQuestion,
               questionId: nextQuestion?.id?.substring(0, 8)
@@ -2551,6 +2695,16 @@ export default function TakeTestPage() {
     } else {
       // Non-adaptive mode: check if we're at the end of section
       if (currentQuestionIndex < totalQuestionsInSection - 1) {
+        console.log('➡️ [NAVIGATION] Moving to next question', {
+          from: {
+            questionIndex: currentQuestionIndex,
+            globalQuestionOrder: globalQuestionOrder
+          },
+          to: {
+            questionIndex: currentQuestionIndex + 1,
+            globalQuestionOrder: globalQuestionOrder + 1
+          }
+        });
         setCurrentQuestionIndex(currentQuestionIndex + 1);
         setGlobalQuestionOrder(globalQuestionOrder + 1);
       } else {
@@ -2689,15 +2843,15 @@ export default function TakeTestPage() {
 
     try {
       // Get current completion_details
-      const { data: assignment, error: fetchError } = await supabase
+      const { data: assignment, error: _fetchError } = await supabase
         .from('2V_test_assignments')
         .select('completion_details')
-        .eq('id', assignmentId)
-        .single();
+        .eq('id', assignmentId!)
+        .single() as { data: { completion_details: { attempts: AttemptData[] } | null } | null; error: unknown };
 
-      if (fetchError) {
+      if (_fetchError) {
         console.error('❌ [PAUSE] Failed to fetch completion_details for pause event', {
-          error: fetchError,
+          error: _fetchError,
           assignmentId
         });
         return;
@@ -2707,7 +2861,7 @@ export default function TakeTestPage() {
       const attempts = Array.isArray(completionDetails.attempts) ? completionDetails.attempts : [];
 
       // Find current attempt
-      const attemptIndex = attempts.findIndex((a: any) => a.attempt_number === currentAttempt);
+      const attemptIndex = attempts.findIndex((a: AttemptData) => a.attempt_number === currentAttempt);
 
       const pauseEvent = {
         timestamp: new Date().toISOString(),
@@ -2748,10 +2902,13 @@ export default function TakeTestPage() {
       }
 
       // Save to database
+      const updatePayload: { completion_details: { attempts: AttemptData[] } } = {
+        completion_details: { attempts }
+      };
       const { error: updateError } = await supabase
         .from('2V_test_assignments')
-        .update({ completion_details: { attempts } })
-        .eq('id', assignmentId);
+        .update(updatePayload)
+        .eq('id', assignmentId!);
 
       if (updateError) {
         console.error('❌ [PAUSE] Failed to save pause event to database', {
@@ -3097,19 +3254,52 @@ export default function TakeTestPage() {
       return;
     }
 
+    // Use refs to get actual current values (avoids stale closure in timer callbacks)
+    const actualCurrentQuestionId = currentQuestionIdRef.current;
+    const actualGlobalQuestionOrder = globalQuestionOrderRef.current;
+    const actualAnswers = answersRef.current;
+
+    console.log('📤 [SUBMIT] submitTest called', {
+      stateValues: {
+        currentQuestionIndex,
+        globalQuestionOrder,
+        currentQuestionId: currentQuestion?.id,
+        answersCount: Object.keys(answers).length
+      },
+      refValues: {
+        actualCurrentQuestionId,
+        actualGlobalQuestionOrder,
+        actualAnswersCount: Object.keys(actualAnswers).length
+      },
+      willSaveWithQuestionOrder: actualGlobalQuestionOrder + 1,
+      hasAnswer: !!actualAnswers[actualCurrentQuestionId || ''],
+      totalAnswersInState: Object.keys(answers).length
+    });
 
     setSubmitting(true);
 
     if (timerRef.current) clearInterval(timerRef.current);
 
     // Save final answer if any (or save empty answer to track question order)
-    if (currentQuestion?.id) {
+    // Use ref values to avoid stale closures
+    if (actualCurrentQuestionId) {
+      console.log('📤 [SUBMIT] Saving current question before completion', {
+        questionId: actualCurrentQuestionId.substring(0, 8),
+        questionOrder: actualGlobalQuestionOrder + 1,
+        hasAnswer: !!actualAnswers[actualCurrentQuestionId],
+        answerValue: actualAnswers[actualCurrentQuestionId]?.answer || 'null'
+      });
       await saveAnswer(
-        currentQuestion.id,
-        answers[currentQuestion.id] || { answer: null },
-        answers[currentQuestion.id]?.flagged || false,
+        actualCurrentQuestionId,
+        actualAnswers[actualCurrentQuestionId] || {
+          questionId: actualCurrentQuestionId,
+          answer: null,
+          timeSpent: 0,
+          flagged: false
+        },
+        actualAnswers[actualCurrentQuestionId]?.flagged || false,
         0,
-        globalQuestionOrder + 1
+        actualGlobalQuestionOrder + 1
       );
     }
 
@@ -3210,17 +3400,17 @@ export default function TakeTestPage() {
   ) {
     try {
       // Get existing attempts history from database
-      const { data: currentAssignment, error: fetchError } = await supabase
+      const { data: currentAssignment, error: _fetchError } = await supabase
         .from('2V_test_assignments')
         .select('completion_details, start_time, current_attempt, total_attempts')
-        .eq('id', assignmentId)
-        .single();
+        .eq('id', assignmentId!)
+        .single() as { data: { completion_details: { attempts: AttemptData[] } | null; start_time: string | null; current_attempt: number | null; total_attempts: number | null } | null; error: unknown };
 
-      const existingDetails = currentAssignment?.completion_details || {};
+      const existingDetails = currentAssignment?.completion_details || { attempts: [] };
       const attempts = Array.isArray(existingDetails.attempts) ? existingDetails.attempts : [];
 
       // Create attempt record with ONLY essential metadata (no redundant data)
-      const newAttempt: any = {
+      const newAttempt: AttemptData = {
         attempt_number: currentAttempt,
         status,
         reason,
@@ -3274,7 +3464,7 @@ export default function TakeTestPage() {
 
       // Check if attempt already exists (update instead of duplicating)
       const existingAttemptIndex = attempts.findIndex(
-        (a: any) => a.attempt_number === currentAttempt
+        (a: AttemptData) => a.attempt_number === currentAttempt
       );
 
       if (existingAttemptIndex >= 0) {
@@ -3297,7 +3487,14 @@ export default function TakeTestPage() {
       // Auto-lock when completed (tutor must unlock to allow retake)
       const finalStatus = status === 'completed' ? 'locked' : status;
 
-      const updateData = {
+      const updateData: {
+        status: string;
+        completion_status: string;
+        completed_at: string;
+        completion_details: { attempts: AttemptData[] };
+        total_attempts: number;
+        results_viewable_by_student: boolean;
+      } = {
         status: finalStatus,
         completion_status: completionStatusText,
         completed_at: new Date().toISOString(),
@@ -3308,10 +3505,10 @@ export default function TakeTestPage() {
         results_viewable_by_student: false
       };
 
-      const { data: updateResult, error } = await supabase
+      const { data: _updateResult, error } = await supabase
         .from('2V_test_assignments')
         .update(updateData)
-        .eq('id', assignmentId)
+        .eq('id', assignmentId!)
         .select();
 
       if (error) {
@@ -3693,7 +3890,7 @@ export default function TakeTestPage() {
           </div>
 
           <button
-            onClick={handleSectionTransitionComplete}
+            onClick={() => handleSectionTransitionComplete()}
             disabled={isTransitioning || sectionTransitionCountdown <= 1}
             className="w-full px-8 py-3 bg-gradient-to-r from-brand-green to-green-600 text-white rounded-xl font-semibold hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -3742,7 +3939,7 @@ export default function TakeTestPage() {
             </div>
             <div className="flex gap-4">
               <button
-                onClick={handleSkipPause}
+                onClick={() => handleSkipPause()}
                 disabled={pauseChoiceCountdown <= 1}
                 className="flex-1 px-6 py-3 bg-gray-200 text-gray-800 rounded-xl font-semibold hover:bg-gray-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -3883,7 +4080,9 @@ export default function TakeTestPage() {
         {/* PDF Test View */}
         <div className="flex-1 overflow-hidden">
           <PDFTestView
-            questions={sectionQuestions}
+            questions={sectionQuestions.filter((q): q is Question & { question_data: { pdf_url: string; page_number: number } & Question['question_data'] } =>
+              typeof q.question_data.pdf_url === 'string' && typeof q.question_data.page_number === 'number'
+            )}
             currentPageGroup={currentPageGroup}
             answers={answers}
             showCorrectAnswers={isGuidedMode && showCorrectAnswers}
@@ -3920,8 +4119,10 @@ export default function TakeTestPage() {
               const pageGroups: Record<number, any[]> = {};
               sectionQuestions.forEach(q => {
                 const pageNum = q.question_data.page_number;
-                if (!pageGroups[pageNum]) pageGroups[pageNum] = [];
-                pageGroups[pageNum].push(q);
+                if (typeof pageNum === 'number') {
+                  if (!pageGroups[pageNum]) pageGroups[pageNum] = [];
+                  pageGroups[pageNum].push(q);
+                }
               });
               const totalPageGroups = Object.keys(pageGroups).length;
 
@@ -4037,8 +4238,8 @@ export default function TakeTestPage() {
       </div>
 
       {/* Question Content */}
-      <div className={`flex-1 overflow-y-auto ${currentQuestion?.question_data?.passage_text ? 'p-4' : 'p-6'}`}>
-        <div className={`${currentQuestion?.question_data?.passage_text ? 'w-full max-w-full' : 'max-w-4xl'} mx-auto bg-white rounded-2xl shadow-lg ${currentQuestion?.question_data?.passage_text ? 'p-6' : 'p-8'}`}>
+      <div className={`flex-1 overflow-y-auto ${currentQuestion?.question_data?.passage_text || undefined ? 'p-4' : 'p-6'}`}>
+        <div className={`${currentQuestion?.question_data?.passage_text || undefined ? 'w-full max-w-full' : 'max-w-4xl'} mx-auto bg-white rounded-2xl shadow-lg ${currentQuestion?.question_data?.passage_text || undefined ? 'p-6' : 'p-8'}`}>
           {/* Question Text */}
           <div className="mb-8">
             <div className="flex items-start justify-end gap-2 mb-4">
@@ -4296,7 +4497,7 @@ export default function TakeTestPage() {
             return (
               <MultipleChoiceQuestion
                 questionText={getLocalizedQuestionText(currentQuestion.question_data)}
-                passageText={getLocalizedPassageText(currentQuestion.question_data)}
+                passageText={getLocalizedPassageText(currentQuestion.question_data) || undefined}
                 passageTitle={currentQuestion.question_data.passage_title}
                 imageUrl={currentQuestion.question_data.image_url || undefined}
                 options={getLocalizedOptions(currentQuestion.question_data)}
