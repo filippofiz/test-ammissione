@@ -38,7 +38,7 @@ Algebra appears in approximately 25-30% of QR questions. It forms the backbone o
 
 #pagebreak()
 
-= Part 1: Algebraic Expressions
+= Algebraic Expressions
 
 Algebra is the language of mathematics — a system for expressing relationships between quantities using symbols. While arithmetic deals with specific numbers, algebra allows us to work with unknown quantities and general patterns. This abstraction is what makes algebra so powerful: a single algebraic statement can represent infinitely many numerical situations.
 
@@ -189,7 +189,7 @@ When multiplying two binomials (expressions with two terms each), we apply the d
 
 #pagebreak()
 
-= Part 2: Linear Equations
+= Linear Equations
 
 An *equation* is a mathematical statement that two expressions are equal. Solving an equation means finding all values of the variable(s) that make the statement true. Linear equations — equations where variables appear only to the first power — are the foundation of algebraic problem-solving.
 
@@ -479,7 +479,7 @@ Sometimes the GMAT asks for a specific expression rather than individual variabl
 
 #pagebreak()
 
-= Part 3: Quadratic Equations
+= Quadratic Equations
 
 While linear equations describe straight-line relationships, *quadratic equations* describe curves — specifically, parabolas. These equations appear whenever quantities grow or shrink at changing rates, making them essential for modeling everything from projectile motion to profit optimization. On the GMAT, quadratic equations appear frequently, and mastery of multiple solving methods is crucial for efficiency.
 
@@ -886,7 +886,7 @@ Comparing coefficients: $b = -a(r + s)$ and $c = a r s$, which gives us Vieta's 
 
 #pagebreak()
 
-= Part 4: Inequalities
+= Inequalities
 
 Equations ask "when are two expressions equal?" Inequalities ask a different question: "when is one expression greater (or less) than another?" While equations typically have specific solutions, inequalities usually have *ranges* of solutions — entire intervals of numbers that satisfy the condition. This makes inequalities essential for optimization problems, constraints, and real-world scenarios where we need to find acceptable ranges rather than exact values.
 
@@ -1282,7 +1282,7 @@ Quadratic inequalities involve expressions like $x^2 - 5x + 6 > 0$. The strategy
 
 #pagebreak()
 
-= Part 5: Functions
+= Functions
 
 A *function* is one of the most important concepts in mathematics — it's a precise way of describing how one quantity depends on another. Functions appear everywhere: in physics (velocity as a function of time), economics (profit as a function of units sold), and of course throughout the GMAT. Understanding function notation and behavior is essential for success.
 
@@ -1755,7 +1755,7 @@ The graph below illustrates vertical and horizontal shifts using $f(x) = x^2$:
 
 #pagebreak()
 
-= Part 6: GMAT Strategies for Algebra
+= GMAT Strategies for Algebra
 
 The GMAT is as much about strategy as it is about mathematical knowledge. While understanding algebra fundamentals is essential, knowing *when and how* to apply time-saving techniques can make the difference between finishing comfortably and running out of time. This section covers three powerful strategic approaches that expert test-takers use to solve algebra problems quickly and accurately.
 
