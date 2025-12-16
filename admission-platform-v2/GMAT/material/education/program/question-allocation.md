@@ -157,19 +157,25 @@ Full GMAT mock simulations: **64 questions, 2h 15min**
 
 | Cycle | Easy | Medium | Hard |
 |-------|------|--------|------|
-| Beginner | 70% | 25% | 5% |
-| Intermediate | 30% | 50% | 20% |
-| Advanced | 10% | 40% | 50% |
-| Elite | 5% | 25% | 70% |
+| Foundation | 60% | 30% | 10% |
+| Development | 25% | 50% | 25% |
+| Excellence | 5% | 30% | 65% |
 
 ### Section Assessments & Mocks
 
 | Cycle | Easy | Medium | Hard |
 |-------|------|--------|------|
-| Beginner | 50% | 40% | 10% |
-| Intermediate | 25% | 50% | 25% |
-| Advanced | 15% | 40% | 45% |
-| Elite | 10% | 30% | 60% |
+| Foundation | 50% | 35% | 15% |
+| Development | 20% | 50% | 30% |
+| Excellence | 5% | 35% | 60% |
+
+### Quick Tests (10 questions: 5 practice + 5 theory)
+
+| Cycle | Practice Difficulty | Theory Difficulty |
+|-------|---------------------|-------------------|
+| Foundation | 70% Easy, 30% Medium | Basic definitions and concepts |
+| Development | 40% Easy, 50% Medium, 10% Hard | Intermediate explanations and relationships |
+| Excellence | 20% Medium, 80% Hard | Advanced proofs and derivations |
 
 ---
 
@@ -198,7 +204,7 @@ Full GMAT mock simulations: **64 questions, 2h 15min**
 Section: [QR/DI/VR]
 Topic: [Specific topic]
 Training Number: [1 or 2]
-Cycle: [Beginner/Intermediate/Advanced/Elite]
+Cycle: [Foundation/Development/Excellence]
 Total Questions: [Number]
 Time Limit: [Minutes]
 Difficulty Distribution:
@@ -214,7 +220,7 @@ Categories Required: [List specific categories]
 Section: [QR/DI/VR]
 Assessment Type: [Topic/Section/Mock]
 Topic (if applicable): [Specific topic]
-Cycle: [Beginner/Intermediate/Advanced/Elite]
+Cycle: [Foundation/Development/Excellence]
 Total Questions: [Number]
 Time Limit: [Minutes]
 Difficulty Distribution:
@@ -222,6 +228,21 @@ Difficulty Distribution:
   - Medium: [Number] questions
   - Hard: [Number] questions
 Categories Required: [List specific categories]
+```
+
+### Quick Test Template Fields
+
+```
+Section: [QR/DI/VR]
+Topic: [Specific topic]
+Cycle: [Foundation/Development/Excellence]
+Total Questions: 10 (5 practice + 5 theory)
+Time Limit: 15-20 minutes
+Evaluation: Tutor-assessed
+Practice Questions:
+  - Difficulty: [Per cycle distribution]
+Theory Questions:
+  - Type: [Definitions/Explanations/Proofs per cycle]
 ```
 
 ---
