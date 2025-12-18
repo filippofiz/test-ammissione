@@ -6,7 +6,7 @@
   title: "GMAT Quantitative Reasoning",
   subtitle: "Percents, Ratios & Proportions",
   level: "Lesson Material",
-  intro: "Comprehensive tutor guide covering percentages, percent change, ratios, proportions, and unit conversions.",
+  intro: "Comprehensive guide covering percentages, percent change, ratios, proportions, and unit conversions.",
   logo: "/Logo.png"
 )
 

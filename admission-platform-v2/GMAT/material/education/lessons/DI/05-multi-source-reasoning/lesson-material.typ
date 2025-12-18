@@ -5,7 +5,7 @@
   title: "GMAT Data Insights",
   subtitle: "Multi-Source Reasoning",
   level: "Lesson Material",
-  intro: "Comprehensive tutor guide covering multi-tab information synthesis, cross-referencing data, and strategic navigation.",
+  intro: "Comprehensive guide covering multi-tab information synthesis, cross-referencing data, and strategic navigation.",
   logo: "/Logo.png"
 )
 

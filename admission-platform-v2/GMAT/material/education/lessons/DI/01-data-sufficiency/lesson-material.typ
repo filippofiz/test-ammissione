@@ -6,7 +6,7 @@
   title: "GMAT Data Insights",
   subtitle: "Data Sufficiency",
   level: "Lesson Material",
-  intro: "Comprehensive tutor guide covering Data Sufficiency question format, the AD/BCE method, value vs. yes/no questions, and common traps.",
+  intro: "Comprehensive guide covering Data Sufficiency question format, the AD/BCE method, value vs. yes/no questions, and common traps.",
   logo: "/Logo.png"
 )
 

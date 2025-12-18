@@ -199,9 +199,9 @@
 ### Checklist File da Creare
 
 **QR - 3 file mancanti:**
-- [ ] `QR/03-word-problems/exercises-problem-modeling.typ`
-- [ ] `QR/04-statistics-probability/exercises-problem-modeling.typ`
-- [ ] `QR/05-percents-ratios-proportions/exercises-problem-modeling.typ`
+- [x] `QR/03-word-problems/exercises-problem-modeling.typ` ✅
+- [x] `QR/04-statistics-probability/exercises-problem-modeling.typ` ✅
+- [x] `QR/05-percents-ratios-proportions/exercises-problem-modeling.typ` ✅
 
 **DI - 5 file:**
 - [ ] `DI/01-data-sufficiency/exercises-problem-modeling.typ`
@@ -279,14 +279,14 @@
 | `cycle-definitions.md` | 1 | ✅ |
 | `curriculum-overview.md` | 1 | ✅ |
 | `question-allocation.md` | 1 | ✅ |
-| `assessment-strategy.md` | 2 | ⏳ |
+| `assessment-strategy.md` | 2 | ✅ |
 | `lesson-flow-guide.md` | 1 | ✅ |
 
 ### File da Creare (22)
 | Tipo | Quantità | Fase | Stato |
 |------|----------|------|-------|
-| Assessment templates | 2 | 2 | ⏳ |
-| Modeling questions (QR) | 3 | 3 | ⏳ |
+| Assessment templates | 2 | 2 | ✅ |
+| Modeling questions (QR) | 3 | 3 | ✅ |
 | Modeling questions (DI) | 5 | 3 | ⏳ |
 | Quick tests (QR) | 5 | 4 | ⏳ |
 | Quick tests (DI) | 5 | 4 | ⏳ |
@@ -311,4 +311,4 @@
 
 ---
 
-*Ultimo aggiornamento: 2025-12-14 - FASE 1 completata*
+*Ultimo aggiornamento: 2025-12-16 - FASE 1-2 completate, FASE 3 (QR) completata, FASE 3 (DI) in corso*

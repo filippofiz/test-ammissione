@@ -6,7 +6,7 @@
   title: "GMAT Data Insights",
   subtitle: "Two-Part Analysis",
   level: "Lesson Material",
-  intro: "Comprehensive tutor guide covering two related questions, constraint problems, logical TPA, and efficient solving strategies.",
+  intro: "Comprehensive guide covering two related questions, constraint problems, logical TPA, and efficient solving strategies.",
   logo: "/Logo.png"
 )
 

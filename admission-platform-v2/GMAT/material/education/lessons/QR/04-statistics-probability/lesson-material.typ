@@ -6,7 +6,7 @@
   title: "GMAT Quantitative Reasoning",
   subtitle: "Statistics & Probability",
   level: "Lesson Material",
-  intro: "Comprehensive tutor guide covering mean, median, mode, range, standard deviation, counting methods, and probability.",
+  intro: "Comprehensive guide covering mean, median, mode, range, standard deviation, counting methods, and probability.",
   logo: "/Logo.png"
 )
 
