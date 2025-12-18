@@ -6,7 +6,7 @@
   title: "GMAT Data Insights",
   subtitle: "Table Analysis",
   level: "Lesson Material",
-  intro: "Comprehensive tutor guide covering table sorting, True/False statement evaluation, calculations from tables, and analytical strategies.",
+  intro: "Comprehensive guide covering table sorting, True/False statement evaluation, calculations from tables, and analytical strategies.",
   logo: "/Logo.png"
 )
 

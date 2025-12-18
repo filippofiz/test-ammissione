@@ -6,7 +6,7 @@
   title: "GMAT Quantitative Reasoning",
   subtitle: "Word Problems",
   level: "Lesson Material",
-  intro: "Comprehensive tutor guide covering rate problems, work problems, distance problems, mixture problems, and age problems.",
+  intro: "Comprehensive guide covering rate problems, work problems, distance problems, mixture problems, and age problems.",
   logo: "/Logo.png"
 )
 

@@ -6,7 +6,7 @@
   title: "GMAT Quantitative Reasoning",
   subtitle: "Algebra",
   level: "Lesson Material",
-  intro: "Comprehensive tutor guide covering algebraic expressions, equations, inequalities, functions, and polynomials.",
+  intro: "Comprehensive guide covering algebraic expressions, equations, inequalities, functions, and polynomials.",
   logo: "/Logo.png",
 )
 

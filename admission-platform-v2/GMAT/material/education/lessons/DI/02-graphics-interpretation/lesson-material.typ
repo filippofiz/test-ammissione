@@ -6,7 +6,7 @@
   title: "GMAT Data Insights",
   subtitle: "Graphics Interpretation",
   level: "Lesson Material",
-  intro: "Comprehensive tutor guide covering chart reading, graph types, fill-in-the-blank format, and visual data analysis strategies.",
+  intro: "Comprehensive guide covering chart reading, graph types, fill-in-the-blank format, and visual data analysis strategies.",
   logo: "/Logo.png"
 )
 
