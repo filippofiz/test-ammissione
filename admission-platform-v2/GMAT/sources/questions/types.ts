@@ -143,6 +143,10 @@ export interface DSQuestionData {
   statement1: string;
   statement2: string;
   image_url?: string | null;
+  chart_config?: ChartConfig; // For questions with graphs/charts
+  table_title?: string; // For questions with tables
+  column_headers?: string[]; // For questions with tables
+  table_data?: string[][]; // For questions with tables
   answer_choices: DSOptions;
   correct_answer: DSAnswer;
   explanation?: string;

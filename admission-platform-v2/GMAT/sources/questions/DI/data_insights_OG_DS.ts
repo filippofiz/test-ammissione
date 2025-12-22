@@ -2160,6 +2160,7 @@ export const dataInsightsOG_DS: DataInsightsQuestion[] = [
         E: "Statements (1) and (2) TOGETHER are NOT sufficient.",
       },
       correct_answer: "D",
+      explanation: "For each unpaid absence from work in a given month, an employee, George, loses 4% of his monthly salary. However, for each hour of overtime worked in that month, he can earn an addition of 1% to his salary, which helps to defray some of the salary losses due to absences. In June his monthly salary was reduced by 5%. We need to determine how many overtime hours George worked in June. 1. George's absence for 3 days in June would have incurred a salary reduction of 12%. But his total salary reduction was only 5%. The only other way for George to have reduced his net salary loss was by doing overtime. Therefore, George did 7 hours of overtime to defray 7% of the 12% salary loss resulting from unpaid absences. So (1) is sufficient by itself to provide a definitive answer to the question asked; SUFFICIENT. 2. Given that each hour of overtime earns an addition of 1% to monthly salary, George must have worked 7 hours of overtime in June. So (2) is sufficient alone; SUFFICIENT. The correct answer is D; each statement alone is sufficient.",
     } as DSQuestionData,
     answers: generateDSAnswers("D"),
     categories: ["Data Sufficiency"],
@@ -2341,6 +2342,12 @@ export const dataInsightsOG_DS: DataInsightsQuestion[] = [
     questionData: {
       di_type: "DS",
       problem: "Kim and Sue each bought some roses and some daisies at the prices shown above. If Kim bought the same total number of roses and daisies as Sue, was the price of Kim's purchase of roses and daisies higher than the price of Sue's purchase of roses and daisies?",
+      table_title: "Price per Flower",
+      column_headers: ["Flower", "Price per Flower"],
+      table_data: [
+        ["Roses", "$1.00"],
+        ["Daisies", "$0.50"]
+      ],
       statement1: "Kim bought twice as many daisies as roses.",
       statement2: "Kim bought 4 more roses than Sue bought.",
       answer_choices: {
@@ -2701,6 +2708,11 @@ export const dataInsightsOG_DS: DataInsightsQuestion[] = [
     questionData: {
       di_type: "DS",
       problem: "Six shipments of machine parts were shipped from a factory on two trucks, with each shipment entirely on one of the trucks. Each shipment was labeled either S1, S2, S3, S4, S5, or S6. The table shows the value of each shipment as a fraction of the total value of the six shipments. If the shipments on the first truck had a value greater than $\\frac{1}{2}$ of the total value of the six shipments, was S3 shipped on the first truck?",
+      table_title: "Shipment Values",
+      column_headers: ["Shipment", "S1", "S2", "S3", "S4", "S5", "S6"],
+      table_data: [
+        ["Fraction of the Total Value of the Six Shipments", "$\\frac{1}{4}$", "$\\frac{1}{5}$", "$\\frac{1}{6}$", "$\\frac{3}{20}$", "$\\frac{2}{15}$", "$\\frac{1}{10}$"]
+      ],
       statement1: "S2 and S4 were shipped on the first truck.",
       statement2: "S1 and S6 were shipped on the second truck.",
       answer_choices: {
@@ -2725,6 +2737,12 @@ export const dataInsightsOG_DS: DataInsightsQuestion[] = [
     questionData: {
       di_type: "DS",
       problem: "The table above shows the results of a survey of 100 voters who each responded \"Favorable\" or \"Unfavorable\" or \"Not Sure\" when asked about their impressions of Candidate M and of Candidate N. What was the number of voters who responded \"Favorable\" for both candidates?",
+      table_title: "Survey Results",
+      column_headers: ["Candidate", "Favorable", "Unfavorable", "Not Sure"],
+      table_data: [
+        ["Candidate M", "40", "20", "40"],
+        ["Candidate N", "30", "35", "35"]
+      ],
       statement1: "The number of voters who did not respond \"Favorable\" for either candidate was 40.",
       statement2: "The number of voters who responded \"Unfavorable\" for both candidates was 10.",
       answer_choices: {
@@ -2917,6 +2935,20 @@ export const dataInsightsOG_DS: DataInsightsQuestion[] = [
     questionData: {
       di_type: "DS",
       problem: "The annual rainfall in a city over the past 50 years is its historical average rainfall (HAR). The graph above shows the annual rainfall in City X over a seven-year period. All figures are rounded to the nearest integer. Is it true that the rounded HAR for City X is 47 mm or greater?",
+      chart_config: {
+        type: "bar",
+        title: "Annual Rainfall in City X",
+        labels: ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7"],
+        datasets: [
+          {
+            label: "Annual rainfall (mm)",
+            data: [35, 47, 60, 51, 32, 23, 35],
+            color: "#4A90E2"
+          }
+        ],
+        x_axis_label: "Year",
+        y_axis_label: "Annual rainfall (mm)"
+      },
       statement1: "In the seven-year period in City X, the annual rainfall was greater than the HAR in exactly two of the consecutive years.",
       statement2: "In the seven-year period in City X, the annual rainfall was less than the HAR in exactly four of the years.",
       answer_choices: {
@@ -3037,6 +3069,16 @@ export const dataInsightsOG_DS: DataInsightsQuestion[] = [
     questionData: {
       di_type: "DS",
       problem: "The table above shows the sales forecast from January to June of last year, by the sales team of Company X, for the number of units of Product Z each month. Was the actual number of units of Product Z sold in March less than the number sold in April?",
+      table_title: "Sales Forecast for Product Z",
+      column_headers: ["Month", "Forecast for Units of Product Z"],
+      table_data: [
+        ["January", "12"],
+        ["February", "16"],
+        ["March", "16"],
+        ["April", "20"],
+        ["May", "20"],
+        ["June", "24"]
+      ],
       statement1: "Twelve units of Product Z were sold in March.",
       statement2: "From January through June of last year, there was a constant, linear relationship between the forecast and actual number of units of Product Z sold.",
       answer_choices: {
@@ -3047,6 +3089,7 @@ export const dataInsightsOG_DS: DataInsightsQuestion[] = [
         E: "Statements (1) and (2) TOGETHER are NOT sufficient.",
       },
       correct_answer: "B",
+      explanation: "Note that the table only tells us what the sales team had forecast for March and April (16 and 20 units sold, respectively), not the actual units sold. 1. This statement tells us only the actual number of units sold in March but nothing about the actual number of units sold in April. If the actual sales varied from the forecast sales in a random way from month to month, then it is possible that March's sales were less than, more than, or the same as April's sales; NOT sufficient. 2. Because this statement tells us that there is an unchanging linear relationship between the forecast and the actual number of units of Product Z sold through the months given in the table, we know that for any month X given in the table, if another month Y was forecast to have lower sales than X, then the actual sales of Y were lower than the sales of X. Therefore, since the forecast for units sold for March was lower than the forecast for units sold for April, then the actual sales for March were lower than the actual sales for April; SUFFICIENT. The correct answer is B; statement 2 alone is sufficient.",
     } as DSQuestionData,
     answers: generateDSAnswers("B"),
     categories: ["Data Sufficiency"],
@@ -3070,6 +3113,7 @@ export const dataInsightsOG_DS: DataInsightsQuestion[] = [
         E: "Statements (1) and (2) TOGETHER are NOT sufficient.",
       },
       correct_answer: "E",
+      explanation: "Chris is in a store shopping for an LED computer monitor that must meet at least two criteria—the monitor must have a screen size of at least 32 inches and cost no more than $400. Note that we are not told whether these are Chris's only two criteria; there may be others. Chris likes both Monitor A and Monitor B, so presumably they both meet his criteria regarding screen size and price. 1. From this statement we can be certain that Monitor A's screen size is sufficiently large, but we cannot infer from it whether Monitor A meets Chris's price requirement. We cannot infer anything about Monitor B's screen size, and it may or may not be the case that its screen size is enough larger than Monitor A's that Chris would be willing to pay more for it, assuming neither monitor is more than $400; NOT sufficient. 2. From this statement we can conclude that Monitor B meets Chris's price criterion, but it does not allow us to infer anything about Monitor A's price—though it does inform us that Monitor B has a smaller screen size than Monitor A. It does not, however, give us information sufficient to infer whether either of the monitors meets his screen size requirement; NOT sufficient. It might seem that from (1) and (2) taken together, we can infer that Chris would prefer Monitor A to Monitor B and would therefore choose to purchase Monitor A. After all, we can infer from those statements together that Monitor A meets both the screen size requirement and the price requirement (because we can infer that Monitor A costs less than $390) and that Monitor A is both larger and less expensive than Monitor B. But remember that there may be other criteria that Chris may use for assessing which monitor to purchase besides the two criteria mentioned, which might make Monitor B preferable to Monitor A. Furthermore, none of the given information confirms that Monitor A or Monitor B are LED monitors, the kind we are told Chris desires. Furthermore, there may be a third monitor that Chris would choose over either of these two, in which case Chris might be likely to purchase neither. Therefore, (1) and (2) taken together are not sufficient. The correct answer is E; both statements together are still not sufficient.",
     } as DSQuestionData,
     answers: generateDSAnswers("E"),
     categories: ["Data Sufficiency"],
@@ -3083,6 +3127,15 @@ export const dataInsightsOG_DS: DataInsightsQuestion[] = [
     questionData: {
       di_type: "DS",
       problem: "A certain pizzeria has more than fifty types of pizza on its menu. The chart above shows the revenue share, in the pizzeria's total revenue in the last month, of its four most popular pizza types. Each pizza type has only a single size and a single price. Which was their best-selling pizza last month in terms of number of pizzas sold?",
+      table_title: "Revenue Share by Pizza Type",
+      column_headers: ["Pizza Type", "Percentage of Total Revenue"],
+      table_data: [
+        ["Tomato Blast", "14%"],
+        ["Pep-Peroni", "11%"],
+        ["NiceSpices", "8%"],
+        ["VegCheese", "5%"],
+        ["Others", "62%"]
+      ],
       statement1: "The number of customers who ordered at least one Pep-Peroni pizza last month was greater than the number of customers who ordered at least one of any other pizza type last month.",
       statement2: "The lowest-priced pizza type on the pizzeria's menu is Tomato Blast, followed by VegCheese.",
       answer_choices: {
@@ -3093,6 +3146,7 @@ export const dataInsightsOG_DS: DataInsightsQuestion[] = [
         E: "Statements (1) and (2) TOGETHER are NOT sufficient.",
       },
       correct_answer: "B",
+      explanation: "The chart shows the revenue share of the pizzeria's total revenue in the last month of its four most popular types. Each type of pizza has only a single size and a single price, but note that nothing in the initially given information indicates how the prices of the various types of pizza relate to one another—for instance, do all the types have the same price or not, and if not, which type is most expensive. Therefore, even though the chart shows that revenue from sales of Tomato Blast made up the greatest share of the total revenue, it is possible that Tomato Blast was not the best-selling pizza last month in terms of number of pizzas sold. 1. This statement does not allow us to answer the question, because it does not tell us whether the average number of Pep-Peroni pizzas ordered per customer was greater than, less than, or the same as the average number of other types. Therefore, though it is possible that Pep-Peroni was the best-selling pizza last month (in which case Pep-Peroni pizzas must be less expensive than Tomato Blast pizzas), it might not be if the average number of Pep-Peroni pizzas ordered by customers who bought at least one was less than the average number of pizzas of some other type ordered by customers who bought that type; NOT sufficient. 2. If Tomato Blast is the lowest-priced pizza type, and yet (as the chart shows) revenue from its sales made up the largest share of total revenue, clearly more Tomato Blast pizzas were sold than any other type of pizza; SUFFICIENT. The correct answer is B; statement 2 alone is sufficient.",
     } as DSQuestionData,
     answers: generateDSAnswers("B"),
     categories: ["Data Sufficiency"],
@@ -3116,6 +3170,7 @@ export const dataInsightsOG_DS: DataInsightsQuestion[] = [
         E: "Statements (1) and (2) TOGETHER are NOT sufficient.",
       },
       correct_answer: "C",
+      explanation: "The clock in question gains anywhere from one second to three minutes in any 24-hour period. Given that we know that the clock never stopped or lost time since noon the day before yesterday, we can answer the question if we could know whether the clock was any more than 5 minutes and one second slow at noon yesterday or any more than two minutes fast at noon yesterday. 1. From this statement we only know that the clock could be as much as six minutes fast—in which case the answer to the question is \"No.\" But nothing rules out that the clock gained only, for instance, two seconds, or that at some point in the past 48 hours someone manually changed the time on the clock; NOT sufficient. 2. Without the information given in (1), (2) does not help determine an answer to the question, because we do not know what time was on the clock immediately prior to its being reset at noon yesterday. If, for instance, the clock was one minute fast just before noon yesterday, then at most the clock would be three minutes fast at noon today, and the answer would be \"Yes.\" But if the clock at just before noon yesterday was, for instance, four minutes fast, then the clock at noon today could have been as much as six minutes fast, in which case the answer would be \"No\"; NOT sufficient. From (1) and (2), we can infer that, as of just before noon yesterday, the clock was at least one second fast and at most three minutes fast. Therefore, when the clock was set back one minute at noon, the clock could have been anywhere from fifty-nine seconds slow to two minutes fast. Therefore, because the clock would have gained a minimum of one second and a maximum of three minutes between noon yesterday and noon today, we can infer that at most the clock was fifty-eight seconds slow and at most five minutes fast at noon today. Given that range, we can infer that at noon today, the clock showed the correct time to an accuracy of five minutes, and thus the answer to the question is \"Yes,\" which makes both statements together sufficient. The correct answer is C; both statements together are sufficient.",
     } as DSQuestionData,
     answers: generateDSAnswers("C"),
     categories: ["Data Sufficiency"],
@@ -3139,6 +3194,7 @@ export const dataInsightsOG_DS: DataInsightsQuestion[] = [
         E: "Statements (1) and (2) TOGETHER are NOT sufficient.",
       },
       correct_answer: "E",
+      explanation: "A couple plans to go to the beach the next evening if and only if it is sunny and not raining at the time they plan to go. The hour-by-hour forecast says that it will be sunny without rain on that next evening. 1. We are told that the couple will go if and only if it is not raining at the time they plan to go, which is that next evening, not the morning or afternoon. Therefore, the information in this statement is irrelevant; NOT sufficient. 2. The couple may always believe that the forecast is likely to be accurate, and maybe it is likely to be accurate. But that does not mean that it will be accurate this time. Perhaps it will turn out to be one of the rare times when the forecast is inaccurate. The stimulus says that the couple will go if, but only if, it actually is sunny without rain at the time they plan to go, not if they have believed on the basis of an earlier forecast that it will not be raining; NOT sufficient. We cannot infer from (1) and (2) taken together whether or not it is actually sunny and not raining at the time they plan to go to the beach that evening. Therefore, (1) and (2) taken together are not sufficient. The correct answer is E; both statements together are still not sufficient.",
     } as DSQuestionData,
     answers: generateDSAnswers("E"),
     categories: ["Data Sufficiency"],
@@ -3162,6 +3218,7 @@ export const dataInsightsOG_DS: DataInsightsQuestion[] = [
         E: "Statements (1) and (2) TOGETHER are NOT sufficient.",
       },
       correct_answer: "B",
+      explanation: "Are fewer than 20 percent of the 100 books that the librarian has arbitrarily picked up to reshelve—all of which had been returned that day—on history? Note that all the books returned that day had been borrowed during the past three weeks. 1. Nothing in the stimulus or (1) tells us whether the distribution of subject matter of the books that were returned that day was representative of the distribution of subject matter of the library in general; NOT sufficient. 2. If during the past three weeks exactly 15 books on history were borrowed from the library, as this statement indicates, and all books returned to the library that day had been borrowed during the past three weeks, it follows that at most 15—and perhaps even none—of the 100 books that the librarian picked up to reshelve were on history. Therefore, no more than 15 percent of those books are on history; SUFFICIENT. The correct answer is B; statement 2 alone is sufficient.",
     } as DSQuestionData,
     answers: generateDSAnswers("B"),
     categories: ["Data Sufficiency"],
@@ -3175,6 +3232,15 @@ export const dataInsightsOG_DS: DataInsightsQuestion[] = [
     questionData: {
       di_type: "DS",
       problem: "Four book lovers have recently met and are not sure of the topics that interest the others. The table above indicates the topics that interest each of them with check marks and those that do not with cross marks (Xs). One of these persons will gift another of these persons two books, each on a different one of the listed topics. Will at least one of the two books fall under the recipient's broad topic of interest?",
+      table_title: "Book Topics Interest",
+      column_headers: ["Topic", "Alex", "Beika", "Carlos", "Deepa"],
+      table_data: [
+        ["History", "✓", "✓", "✓", "X"],
+        ["Humor", "X", "✓", "X", "✓"],
+        ["Language", "✓", "X", "✓", "✓"],
+        ["Philosophy", "X", "✓", "✓", "X"],
+        ["Science Fiction", "✓", "X", "✓", "✓"]
+      ],
       statement1: "One topic is science fiction and the other is humor.",
       statement2: "The intended recipient is Carlos.",
       answer_choices: {
@@ -3185,6 +3251,7 @@ export const dataInsightsOG_DS: DataInsightsQuestion[] = [
         E: "Statements (1) and (2) TOGETHER are NOT sufficient.",
       },
       correct_answer: "D",
+      explanation: "The table lists four book lovers and the book topics that interest them. None of these book lovers knows what topics interest the others, but one of the book lovers gifts another one of them two books, each on a different one of the topics. 1. One of the two topics is science fiction and the other is humor. Each of the potential recipients is interested in science fiction except for Beika, but Beika is interested in humor. Therefore, no matter which book lover is the recipient, at least one of the two books is on one of the potential recipient's topics of interest; SUFFICIENT. 2. This tells us that Carlos is the intended recipient, and the table shows that Carlos is interested in all the topics except for humor. So even if one of the two topics is humor, whatever the other topic is, it will be among the recipient's—i.e., Carlos's—topics of interest; SUFFICIENT. The correct answer is D; each statement alone is sufficient.",
     } as DSQuestionData,
     answers: generateDSAnswers("D"),
     categories: ["Data Sufficiency"],
@@ -3208,6 +3275,7 @@ export const dataInsightsOG_DS: DataInsightsQuestion[] = [
         E: "Statements (1) and (2) TOGETHER are NOT sufficient.",
       },
       correct_answer: "C",
+      explanation: "We are given that the number of $H_2$ molecules is greater than $5 \\times 10^{20}$ and the number of $O_2$ molecules is greater than $5 \\times 10^{20}$. Therefore, the combined number of molecules is greater than $1 \\times 10^{21}$, and hence the combined number of molecules is greater than $10^{20}$ when rounded to the nearest order of magnitude. We are to determine the combined number of molecules when rounded to the nearest order of magnitude. 1. We are given that each of the numbers of $H_2$ molecules and $O_2$ molecules is less than $3 \\times 10^{21}$. It is possible that the combined number of molecules is $10^{21}$ when rounded to the nearest order of magnitude. For example, if there are $2 \\times 10^{21}$ molecules of each type, then the combined number of molecules is $4 \\times 10^{21}$, which when rounded to the nearest order of magnitude is $10^{21}$. On the other hand, it is possible that the combined number of molecules is $10^{22}$ when rounded to the nearest order of magnitude. For example, if there are $2.8 \\times 10^{21}$ molecules of each type, then the combined number of molecules is $5.6 \\times 10^{21}$, which when rounded to the nearest order of magnitude is $10^{22}$; NOT sufficient. 2. We are given that the number of $H_2$ molecules is more than twice the number of $O_2$ molecules. It is possible that the combined number of molecules is $10^{21}$ when rounded to the nearest order of magnitude. For example, if there are $2 \\times 10^{21}$ molecules of $H_2$ and $6 \\times 10^{20}$ molecules of $O_2$ (note that each rounded to the nearest order of magnitude is $10^{21}$), then the number of $H_2$ molecules is more than twice the number of $O_2$ molecules, and the combined number of molecules is $2.6 \\times 10^{21}$, which when rounded to the nearest order of magnitude is $10^{21}$. On the other hand, it is possible that the combined number of molecules is $10^{22}$ when rounded to the nearest order of magnitude. For example, if there are $4.5 \\times 10^{21}$ molecules of $H_2$ and $2 \\times 10^{21}$ molecules of $O_2$ (note that each rounded to the nearest order of magnitude is $10^{21}$), then the number of $H_2$ molecules is more than twice the number of $O_2$ molecules, and the combined number of molecules is $6.5 \\times 10^{21}$, which when rounded to the nearest order of magnitude is $10^{22}$; NOT sufficient. Taking (1) and (2) together, from (1) we know the number of $H_2$ molecules is less than $3 \\times 10^{21}$, and from (2) we know the number of $O_2$ molecules is less than $1.5 \\times 10^{21}$. Therefore, the combined number of molecules is less than $4.5 \\times 10^{21}$, which is less than $10^{22}$ when rounded to the nearest order of magnitude. We also know from above (before (1) or (2) is considered) that the combined number of molecules is greater than $10^{20}$ when rounded to the nearest order of magnitude. Since the combined number of molecules, when rounded to the nearest order of magnitude, is less than $10^{22}$ and greater than $10^{20}$, it follows that the combined number of molecules is $10^{21}$ when rounded to the nearest order of magnitude. The correct answer is C; both statements together are sufficient.",
     } as DSQuestionData,
     answers: generateDSAnswers("C"),
     categories: ["Data Sufficiency"],
@@ -3231,6 +3299,7 @@ export const dataInsightsOG_DS: DataInsightsQuestion[] = [
         E: "Statements (1) and (2) TOGETHER are NOT sufficient.",
       },
       correct_answer: "D",
+      explanation: "1. It is given that the $300 payment was credited on the 21st day of the billing cycle. Thus, the 30 daily balances consisted of 20 daily balances of $600 followed by 10 daily balances of $300, and hence the average daily balance for the 30-day billing cycle was $\\frac{(20)(\\$600) + (10)(\\$300)}{30} = \\$500$; SUFFICIENT.\n\n2. It is given that the average daily balance through the 25th day of the billing cycle was $540. If $n$ is the number of days of the billing cycle before the $300 payment was credited, then the 25 daily balances consisted of $n$ daily balances of $600 followed by $(25 - n)$ daily balances of $300. Since the average of these 25 daily balances was $540, it follows that $\\frac{(n)(\\$600) + (25-n)(\\$300)}{25} = 540$, which can be solved to obtain $n = 20$. Therefore, the $300 payment was credited on the 21st day of the billing cycle, and the same calculation used to evaluate (1) above shows the average daily balance for the 30-day billing cycle was $500; SUFFICIENT.\n\nThe correct answer is D; each statement alone is sufficient.",
     } as DSQuestionData,
     answers: generateDSAnswers("D"),
     categories: ["Data Sufficiency"],
@@ -3254,6 +3323,7 @@ export const dataInsightsOG_DS: DataInsightsQuestion[] = [
         E: "Statements (1) and (2) TOGETHER are NOT sufficient.",
       },
       correct_answer: "B",
+      explanation: "We are given that the rent collected increased by $x$ percent from 1997 to 1998 and decreased by $y$ percent from 1998 to 1999. Therefore, if the rent collected in 1997 was $R$, then the rent collected in 1998 was $(R)\\left(1 + \\frac{x}{100}\\right)$ and the rent collected in 1999 was $(R)\\left(1 + \\frac{x}{100}\\right)\\left(1 - \\frac{y}{100}\\right)$. Expanding this last expression, the rent collected in 1999 was $R\\left(1 + \\frac{x}{100} - \\frac{y}{100} - \\frac{xy}{10,000}\\right)$, which is greater than $R$—the rent collected in 1997—if and only if $\\frac{x}{100} - \\frac{y}{100} - \\frac{xy}{10,000} > 0$, or equivalently, $\\frac{x - y}{100} > \\frac{xy}{10,000}$.\n\n1. Given that $x > y$, we have $\\frac{x - y}{100} > 0$, but it is not possible to determine whether $\\frac{x - y}{100} > \\frac{xy}{10,000}$. For example, if $x = 20$ and $y = 10$, then $x > y$ and $\\frac{x - y}{100} = \\frac{10}{100} > \\frac{200}{10,000} = \\frac{xy}{10,000}$. On the other hand, if $x = 200$ and $y = 100$, then $x > y$ and $\\frac{x - y}{100} = \\frac{100}{100} < \\frac{20,000}{10,000} = \\frac{xy}{10,000}$; NOT sufficient.\n\n2. Given that $\\frac{xy}{10,000} < \\frac{x - y}{100}$, it follows that $\\frac{x - y}{100} > \\frac{xy}{10,000}$ and hence $\\frac{x - y}{100} - \\frac{xy}{10,000} > 0$; SUFFICIENT.\n\nThe correct answer is B; statement 2 alone is sufficient.",
     } as DSQuestionData,
     answers: generateDSAnswers("B"),
     categories: ["Data Sufficiency"],
@@ -3277,7 +3347,7 @@ export const dataInsightsOG_DS: DataInsightsQuestion[] = [
         E: "Statements (1) and (2) TOGETHER are NOT sufficient.",
       },
       correct_answer: "A",
-      explanation: "On Jane's credit card account, the average daily balance for a 30-day billing cycle is the average (arithmetic mean) of the daily balances at the end of each of the 30 days. At the beginning of a certain 30-day billing cycle, Jane's credit card account had a balance of $600. Jane made a payment of $300 on the account during the billing cycle. If no other amounts were added or subtracted from the account during the billing cycle, what was the average daily balance on Jane's account for the billing cycle? 1. Jane's payment was credited on the 21st day of the billing cycle. 2. The average daily balance through the 25th day of the billing cycle was $540. 1. It is given that the $300 payment was credited on the 21st day of the billing cycle. Thus, the 30 daily balances consisted of 20 daily balances of $600 followed by 10 daily balances of $300. Since the average of these 25 daily balances was $\\frac{(20)(\\$600) + (10)(\\$300)}{30} = \\left(\\frac{20}{30}\\right)\\left(\\$20\\right) + \\left(\\frac{10}{30}\\right)\\left(\\$10\\right) = \\$500$; SUFFICIENT. 2. It is given that the average daily balance through the 25th day of the billing cycle was $540. If $n$ is the number of days of the billing cycle before the $300 payment was credited, then the 25 daily balances consisted of $n$ daily balances of $600 followed by $(25-n)$ daily balances of $300. Since the average of these 25 daily balances was $540, it follows that \\frac{(n)(\\$600) + (25-n)(\\$300)}{25} = 540$, which can be solved to obtain $n = 20$. Therefore, the $300 payment was credited on the 21st day of the billing cycle, and the same calculation used to evaluate (1) shows the average daily balance for the 30-day billing cycle was $500; SUFFICIENT. The correct answer is D; each statement alone is sufficient.",
+      explanation: "Let $T_1, T_2, \\ldots, T_6$ be the 6 original volumes of water at the beginning of the experiment and let $T_{\\text{ave}}$ be the average of the original volumes of water. We are given that the standard deviation of the original volumes of water is 10, namely $\\sqrt{\\frac{(T_1 - T_{\\text{ave}})^2 + (T_2 - T_{\\text{ave}})^2 + \\cdots + (T_6 - T_{\\text{ave}})^2}{6}} = 10$, and are to determine the standard deviation of the 6 new volumes of water at the end of the experiment. Note that one possibility for the 6 original volumes of water is 70, 70, 70, 90, 90, 90, since for these numbers we have $T_{\\text{ave}} = 80$, and hence $(T_1 - T_{\\text{ave}})^2 + \\cdots + (T_6 - T_{\\text{ave}})^2 = 10^2 + 10^2 + 10^2 + 10^2 + 10^2 + 10^2 = 600$, so the standard deviation is $\\sqrt{\\frac{600}{6}} = 10$.\n\n1. We are given that 30% was removed from each of the 6 tanks, so the 6 new volumes of water are $0.7T_1, 0.7T_2, \\ldots, 0.7T_6$. The average of the new volumes of water is 0.7 times the average of the original volumes of water because $\\frac{0.7T_1 + 0.7T_2 + \\cdots + 0.7T_6}{6} = \\frac{0.7(T_1 + T_2 + \\cdots + T_6)}{6} = 0.7T_{\\text{ave}}$. Therefore, the standard deviation of the 6 new volumes of water is $\\sqrt{\\frac{(0.7T_1 - 0.7T_{\\text{ave}})^2 + (0.7T_2 - 0.7T_{\\text{ave}})^2 + \\cdots + (0.7T_6 - 0.7T_{\\text{ave}})^2}{6}} = \\sqrt{\\frac{(0.7)^2[(T_1 - T_{\\text{ave}})^2 + (T_2 - T_{\\text{ave}})^2 + \\cdots + (T_6 - T_{\\text{ave}})^2]}{6}} = 0.7\\sqrt{\\frac{(T_1 - T_{\\text{ave}})^2 + (T_2 - T_{\\text{ave}})^2 + \\cdots + (T_6 - T_{\\text{ave}})^2}{6}} = 0.7(10) = 7$; SUFFICIENT.\n\n2. Given that the average of the 6 new volumes of water is 63, it is not possible to determine the standard deviation of the 6 new volumes of water. For example, if the original volumes of water were 70, 70, 70, 90, 90, 90 and each of the new volumes of water was 63, then the standard deviation of the original volumes of water would be 10, the average of the new volumes of water would be 63, and the standard deviation of the new volumes of water would be 0. On the other hand, if the original volumes of water were 70, 70, 70, 90, 90, 90 and the new volumes of water were 60, 60, 60, 66, 66, 66, then the standard deviation of the original volumes of water would be 10, the average of the new volumes of water would be 63, and the standard deviation of the new volumes of water would be greater than 0; NOT sufficient.\n\nThe correct answer is A; statement 1 alone is sufficient.",
     } as DSQuestionData,
     answers: generateDSAnswers("A"),
     categories: ["Data Sufficiency"],
