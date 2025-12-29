@@ -88,6 +88,14 @@ export interface QRQuestionData {
   options: MCOptions;
   image_url?: string | null;
   image_options?: Record<string, string> | null;
+  // Table support (for questions with tabular data)
+  table_title?: string;
+  column_headers?: string[];
+  table_data?: string[][];
+  // Chart support (for questions with graphs/charts)
+  chart_config?: ChartConfig;
+  // Context text for complex multi-part questions
+  context_text?: string;
 }
 
 // Full QR question for use in code (parsed)
