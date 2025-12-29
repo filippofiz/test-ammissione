@@ -1,0 +1,313 @@
+[
+  {
+    "question_number": 41,
+    "question_text": "If $(2^3)(3^2) = x$ and $(9^2)(3^3) = 8x$, then $(z, y) = ?$",
+    "options": {
+      "a": "$(1, 2)$",
+      "b": "$(2, 1)$",
+      "c": "$(1, 1)$",
+      "d": "$(2, 2)$",
+      "e": "$(1, 3)$"
+    },
+    "difficulty": "easy",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 42,
+    "question_text": "Three machines, each of which produces $7$ billboards and each of which operates for $35$ hours, will produce exactly what quantity? From $8$ o'clock yesterday morning to $12$ o'clock midnight, $24$ clocks passed each of the billboards at the average rate of $4$ vehicles per minute. Approximately how much money did the toll turnpike collect during that period?",
+    "options": {
+      "a": "$\\$1,500$",
+      "b": "$\\$3,000$",
+      "c": "$\\$11,500$",
+      "d": "$\\$23,000$",
+      "e": "$\\$30,000$"
+    },
+    "difficulty": "easy",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": true,
+    "context_text": "Note: Question text appears garbled or incomplete in source. Needs verification."
+  },
+  {
+    "question_number": 43,
+    "question_text": "If $y = -2$, $2x$ and $y = \\frac{1}{x}$, then $\\frac{1}{y} + \\frac{1}{x} - \\frac{1}{y} - \\frac{1}{x} = ?$",
+    "options": {
+      "a": "$\\frac{1}{x - 32}$",
+      "b": "$\\frac{2}{1 + x}$",
+      "c": "$\\frac{x}{x + 8}$",
+      "d": "$\\frac{8}{x + 8}$",
+      "e": "$\\frac{1}{1 + x}$"
+    },
+    "difficulty": "easy",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 44,
+    "question_text": "If $x - y^2 = 1 + 16(2, \\text{then } x(z - 1)) = ?$",
+    "options": {
+      "a": "$12$",
+      "b": "$16$",
+      "c": "$20$"
+    },
+    "difficulty": "easy",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": true,
+    "context_text": "Note: Question text and options appear incomplete in source."
+  },
+  {
+    "question_number": 45,
+    "question_text": "The $100$ positive integers, $x$, is defined as the product of the integers from $1$ through $x$. If $p$ is the product of the integers from $200$ through $209$, which of the following is equal to $\\frac{p}{199!}$?",
+    "options": {
+      "a": "$\\frac{99!}{199!}$",
+      "b": "$199!$",
+      "c": "$\\frac{200!}{199!}$",
+      "d": "$\\frac{199!}{99!}$",
+      "e": "$\\frac{209!}{199!}$"
+    },
+    "difficulty": "easy",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 46,
+    "question_text": "A school club plans to package and sell dried fruit to raise money. The club purchased $12$ containers of dried fruit, each containing $10\\frac{1}{2}$ pounds. What is the maximum number of individual bags of dried fruit, each containing $\\frac{1}{4}$ pounds, that can be sold from the dried fruit the club purchased?",
+    "options": {
+      "a": "$50$",
+      "b": "$64$",
+      "c": "$126$",
+      "d": "$700$",
+      "e": "$504$"
+    },
+    "difficulty": "easy",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 47,
+    "question_text": "A nursery sells fruit trees priced as shown in the chart above. In its inventory $54$ trees are less than $5$ feet in height. If the expected revenue from the sale of its entire stock is estimated at $\\$2,400$, approximately how many trees are at least $5$ feet tall?",
+    "table_title": "Height and Price",
+    "column_headers": ["Height", "Price"],
+    "table_data": [
+      ["Less than 5 ft", "$14.95"],
+      ["5 ft to 6 ft", "$37.95"],
+      ["Over 6 ft", "$21.95"]
+    ],
+    "options": {
+      "a": "$\\$1,730$",
+      "b": "$\\$1,640$",
+      "c": "$\\$1,410$",
+      "d": "$\\$1,030$",
+      "e": "$\\$810$"
+    },
+    "difficulty": "easy",
+    "has_table": true,
+    "has_chart": false,
+    "needs_manual_review": true,
+    "context_text": "Note: Question asks for number of trees, but options are dollar amounts. Needs review."
+  },
+  {
+    "question_number": 48,
+    "question_text": "A certain bridge is $4,024$ feet long. Approximately how many minutes does it take to cross this bridge at a constant speed of $20$ miles per hour? ($1$ mile $= 5,280$ feet)",
+    "options": {
+      "a": "$1$",
+      "b": "$2$",
+      "c": "$4$",
+      "d": "$6$",
+      "e": "$7$"
+    },
+    "difficulty": "easy",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 49,
+    "question_text": "A purse contains $57$ coins, all of which are nickels, dimes, or quarters. If the purse contains $4$ dimes and $4$ more nickels than dimes, which of the following gives the number of quarters the purse contains in terms of $x$?",
+    "options": {
+      "a": "$2x + 49$",
+      "b": "$x + 49$",
+      "c": "$2x - 65$",
+      "d": "$57 - 3x$",
+      "e": "$65 - 2x$"
+    },
+    "difficulty": "easy",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 50,
+    "question_text": "The annual interest rate earned by an investment increased by $10$ percent from last year to this year. If the annual interest rate earned by the investment this year was $11$ percent, what was the annual interest rate last year?",
+    "options": {
+      "a": "$1\\%$",
+      "b": "$9.1\\%$",
+      "c": "$10\\%$",
+      "d": "$10.8\\%$"
+    },
+    "difficulty": "easy",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": true,
+    "context_text": "Note: Options appear incomplete in source (only 4 options visible)."
+  },
+  {
+    "question_number": 51,
+    "question_text": "A total of $5$ liters of gasoline is to be poured into two empty containers with capacities of $2$ liters and $6$ liters, respectively, such that both containers will be filled to the same percent of their respective capacities. What amount of gasoline, in liters, must be poured into the $6$-liter container?",
+    "options": {
+      "a": "$4\\frac{1}{2}$",
+      "b": "$4$",
+      "c": "$3\\frac{3}{4}$",
+      "d": "$3$",
+      "e": "$1\\frac{1}{4}$"
+    },
+    "difficulty": "easy",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 52,
+    "question_text": "What is the larger of the $2$ solutions of the equation $x^2 - 4x = 96$?",
+    "options": {
+      "a": "$8$",
+      "b": "$12$",
+      "c": "$16$",
+      "d": "$32$",
+      "e": "$100$"
+    },
+    "difficulty": "easy",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 53,
+    "question_text": "In the formula shown, if $a$ is a constant and $z = \\frac{1}{a}x + \\frac{1}{a^2}$, when $x = a$, what is the value of $z$ when $x = 4$?",
+    "options": {
+      "a": "$-24$",
+      "b": "$-20$",
+      "c": "$-5$",
+      "d": "$20$",
+      "e": "$24$"
+    },
+    "difficulty": "easy",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 54,
+    "question_text": "$(39,897)(0.0096)$ is approximately",
+    "options": {
+      "a": "$0.04$",
+      "b": "$0.2$",
+      "c": "$2$",
+      "d": "$20$",
+      "e": "$200$"
+    },
+    "difficulty": "easy",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 55,
+    "question_text": "The \"prime sum\" of an integer $n$ greater than $1$ is the sum of all the prime factors of $n$, including repetitions. For example, the prime sum of $12$ is $7$ since $12 = 2 \\times 2 \\times 3$ and $2 + 2 + 3 = 7$. For which of the following integers is the prime sum greater than $35$?",
+    "options": {
+      "a": "$440$",
+      "b": "$512$",
+      "c": "$620$",
+      "d": "$700$",
+      "e": "$750$"
+    },
+    "difficulty": "easy",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 56,
+    "question_text": "A factory that employs $1,000$ assembly-line workers pays each of these workers $\\$5$ per hour for the first $40$ hours worked during a week and $1\\frac{1}{2}$ times that rate for hours worked in excess of $40$. What is the total payroll for the assembly-line workers for a week in which $30$ percent of the workers worked $20$ hours, $50$ percent of the workers worked $40$ hours, and the rest of the workers worked $50$ hours?",
+    "options": {
+      "a": "$\\$180,000$",
+      "b": "$\\$185,000$",
+      "c": "$\\$200,000$",
+      "d": "$\\$supreme,000$",
+      "e": "$\\$50\\%$"
+    },
+    "difficulty": "easy",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": true,
+    "context_text": "Note: Options D and E appear corrupted in source."
+  },
+  {
+    "question_number": 57,
+    "question_text": "When a subscription to a new magazine was purchased for $m$ months, the publisher offered a discount of $75$ percent off the regular monthly price of the magazine. If the total value of the discount was equivalent to buying the magazine at its regular monthly price for $27$ months, what was the value of $m$?",
+    "options": {
+      "a": "$18$",
+      "b": "$24$",
+      "c": "$30$",
+      "d": "$36$",
+      "e": "$48$"
+    },
+    "difficulty": "easy",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 58,
+    "question_text": "At a selling price of $\\$20$ per radio, a manufacturer's sales revenue from radios sold at the garage sale was $\\$6,000$. If the $20\\%$ lowest price was among the prices of the items sold, how many items were sold at the garage sale?",
+    "options": {
+      "a": "$33$",
+      "b": "$34$",
+      "c": "$35$",
+      "d": "$36$",
+      "e": "$37$"
+    },
+    "difficulty": "easy",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": true,
+    "context_text": "Note: Question text appears garbled. Needs verification from source."
+  },
+  {
+    "question_number": 59,
+    "question_text": "Half of a large pizza is cut into $4$ equal-sized pieces, and the other half is cut into $6$ equal-sized pieces. If a person were to eat $1$ of the larger pieces and $2$ of the smaller pieces, what fraction of the pizza would remain uneaten?",
+    "options": {
+      "a": "$\\frac{5}{12}$",
+      "b": "$\\frac{13}{24}$",
+      "c": "$\\frac{7}{12}$",
+      "d": "$\\frac{2}{3}$",
+      "e": "$\\frac{17}{24}$"
+    },
+    "difficulty": "easy",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 60,
+    "question_text": "A rectangular room has the dimensions shown above. What is the area of the floor of the room, in square feet?",
+    "options": {
+      "a": "$250$",
+      "b": "$350$",
+      "c": "$400$",
+      "d": "$450$",
+      "e": "$500$"
+    },
+    "difficulty": "easy",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": true,
+    "context_text": "Note: Question references dimensions shown in a diagram. Dimensions not visible in transcription."
+  }
+]
