@@ -1,0 +1,312 @@
+[
+  {
+    "question_number": 123,
+    "question_text": "If the average (arithmetic mean) of $x$, $y$, and $z$ is $7x$ and $z = \\frac{x}{6}$, what is the ratio of $x$ to the sum of $y$ and $z$?",
+    "options": {
+      "a": "$1:24$",
+      "b": "$1:20$",
+      "c": "$1:6$",
+      "d": "$6:1$",
+      "e": "$20:1$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 124,
+    "question_text": "Jonah drove the first half of a $100$-mile trip in $x$ hours and the second half in $y$ hours. Which of the following is equal to Jonah's average speed, in miles per hour, for the entire trip?",
+    "options": {
+      "a": "$\\frac{50}{x + y}$",
+      "b": "$\\frac{x + y}{100}$",
+      "c": "$\\frac{25}{x} + \\frac{25}{y}$",
+      "d": "$\\frac{50}{x} + \\frac{50}{y}$",
+      "e": "$\\frac{100}{x} + \\frac{100}{y}$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 125,
+    "question_text": "If the assessed value of a parcel of real estate has risen $\\$1.35$ million in $\\$437,000$ plus $1$ percent of the value of the estate in excess of $\\$1.25$ million, then the federal tax due is approximately what percent of the value of the estate?",
+    "options": {
+      "a": "$30\\%$",
+      "b": "$35\\%$",
+      "c": "$40\\%$",
+      "d": "$45\\%$",
+      "e": "$50\\%$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": true,
+    "context_text": "Note: Question text appears incomplete or garbled. Needs verification."
+  },
+  {
+    "question_number": 126,
+    "question_text": "A manufacturer wants to produce $x$ balls and $y$ boxes. Resource constraints require that $x$ and $y$ satisfy the inequalities shown. What is the maximum number of balls and boxes combined that can be produced given the constraints?",
+    "context_text": "$7x + 6y \\leq 58,000$\n$4x + 5y \\leq 25,000$",
+    "options": {
+      "a": "$5,000$",
+      "b": "$6,000$",
+      "c": "$7,000$",
+      "d": "$8,000$",
+      "e": "$10,000$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 127,
+    "question_text": "If $\\frac{1}{10^2} = n$, then $n = ?$",
+    "options": {
+      "a": "$0.3$",
+      "b": "$0.03$",
+      "c": "$0.003$",
+      "d": "$0.0003$",
+      "e": "$0.00003$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 128,
+    "question_text": "What is the remainder when $3^{74}$ is divided by $5$?",
+    "options": {
+      "a": "$0$",
+      "b": "$1$",
+      "c": "$2$",
+      "d": "$3$",
+      "e": "$4$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 129,
+    "question_text": "José has a collection of $100$ coins, consisting of nickels, dimes, quarters, and half-dollars. If he has a total of $35$ nickels and dimes, a total of $45$ dimes and quarters, and a total of $50$ nickels and quarters, how many half-dollars does he have?",
+    "options": {
+      "a": "$15$",
+      "b": "$20$",
+      "c": "$25$",
+      "d": "$30$",
+      "e": "$35$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 130,
+    "question_text": "David used part of $\\$100,000$ to purchase a house. Of the remaining portion, he invested $\\frac{1}{3}$ of it at $4$ percent simple annual interest and $\\frac{2}{3}$ of it at $6$ percent simple annual interest. If after a year the income from the two investments totaled $\\$320$, what was the purchase price of the house?",
+    "options": {
+      "a": "$\\$96,000$",
+      "b": "$\\$94,000$",
+      "c": "$\\$88,000$",
+      "d": "$\\$75,000$",
+      "e": "$\\$40,000$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 131,
+    "question_text": "A certain manufacturer sells its product to stores in $113$ different regions worldwide, with an average (arithmetic mean) of $181$ stores per region. If last year these stores sold an average of $51,752$ units of the manufacturer's product per store, which of the following is closest to the total number of units of the manufacturer's product sold worldwide last year?",
+    "options": {
+      "a": "$10^6$",
+      "b": "$10^7$",
+      "c": "$10^8$",
+      "d": "$10^9$",
+      "e": "$10^{10}$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 132,
+    "question_text": "Andrew started saving at the beginning of the year and had saved $\\$240$ by the end of the year. He continued to save and by the end of $2$ years had saved a total of $\\$540$. Which of the following is closest to the percent increase in the amount Andrew saved during the second year compared to the amount he saved during the first year?",
+    "options": {
+      "a": "$11\\%$",
+      "b": "$25\\%$",
+      "c": "$44\\%$",
+      "d": "$56\\%$",
+      "e": "$125\\%$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 133,
+    "question_text": "Given the inequalities above, which of the following CANNOT be the value of $r$?",
+    "context_text": "$-3 < 4s - 5$\n$s \\leq 5$",
+    "options": {
+      "a": "$-20$",
+      "b": "$-5$",
+      "c": "$0$",
+      "d": "$5$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": true,
+    "context_text": "Note: Options appear incomplete (only 4 options visible). Question asks about 'r' but constraints use 's'."
+  },
+  {
+    "question_number": 134,
+    "question_text": "If $m$ is an even integer, $n$ is an odd integer, and $m > n > 0$, which of the following represents the number of even integers less than $m$ and greater than $n$?",
+    "options": {
+      "a": "$\\frac{m - n}{2}$",
+      "b": "$\\frac{m - n - 1}{2}$",
+      "c": "$\\frac{m - n}{2} - 1$",
+      "d": "$m - n - 1$",
+      "e": "$m - n - 1$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": true,
+    "context_text": "Note: Options D and E appear identical. Needs verification."
+  },
+  {
+    "question_number": 135,
+    "question_text": "An integer $n$ is divisible by $9$ if and only if the sum of its digits is divisible by $9$. If $n$ is a positive integer, which of the following expressions is divisible by $9$?",
+    "options": {
+      "a": "$9$",
+      "b": "$16$",
+      "c": "$23$",
+      "d": "$30$",
+      "e": "$47$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 136,
+    "question_text": "On the number line, the shaded interval is the graph of which of the following inequalities?",
+    "options": {
+      "a": "$|x| \\leq 4$",
+      "b": "$|x| \\leq 8$",
+      "c": "$|x - 2| \\leq 4$",
+      "d": "$|x - 2| \\leq 6$",
+      "e": "$|x + 2| \\leq 6$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": true,
+    "needs_manual_review": true,
+    "context_text": "Note: Question references a shaded interval on a number line diagram."
+  },
+  {
+    "question_number": 137,
+    "question_text": "Last year members of a certain professional organization for teachers consisted of teachers from $49$ different school districts, with an average (arithmetic mean) of $9.8$ schools per district. If the average number of teachers per school in the organization was $22$, which of the following is closest to the total number of members of the organization last year?",
+    "options": {
+      "a": "$10^4$",
+      "b": "$10^5$",
+      "c": "$10^6$",
+      "d": "$10^7$",
+      "e": "$10^8$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 138,
+    "question_text": "Of all the students in a certain dormitory, $\\frac{1}{2}$ are first-year students and the rest are second-year students. If $\\frac{1}{4}$ of the first-year students and all of the fraction of second-year students who have declared a major, $3$ times the fraction of first-year students who have declared a major, what fraction of all the students in the dormitory are second-year students who have declared a major?",
+    "options": {
+      "a": "$\\frac{1}{16}$",
+      "b": "$\\frac{1}{8}$",
+      "c": "$\\frac{3}{16}$",
+      "d": "$\\frac{1}{4}$",
+      "e": "$\\frac{3}{8}$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": true,
+    "context_text": "Note: Question text appears garbled or incomplete. Needs verification."
+  },
+  {
+    "question_number": 139,
+    "question_text": "José has a collection of $100$ coins, consisting of nickels, dimes, quarters, and half-dollars. If he has a total of $35$ nickels and dimes, a total of $45$ dimes and quarters, and a total of $50$ nickels and quarters, how many half-dollars does he have?",
+    "options": {
+      "a": "$0$",
+      "b": "$1$",
+      "c": "$2$",
+      "d": "$3$",
+      "e": "$4$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": true,
+    "context_text": "Note: Question 139 appears to be duplicate of Q129 but with different options. Needs verification."
+  },
+  {
+    "question_number": 140,
+    "question_text": "David used part of $\\$100,000$ to purchase a house. Of the remaining portion, he invested $\\frac{1}{3}$ of it at $4$ percent simple annual interest and $\\frac{2}{3}$ of it at $6$ percent simple annual interest. If after a year the income from the two investments totaled $\\$320$, what was the purchase price of the house?",
+    "options": {
+      "a": "$\\$96,000$",
+      "b": "$\\$94,000$",
+      "c": "$\\$88,000$",
+      "d": "$\\$75,000$",
+      "e": "$\\$40,000$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": true,
+    "context_text": "Note: Question 140 appears to be duplicate of Q130. Needs verification."
+  },
+  {
+    "question_number": 141,
+    "question_text": "A certain manufacturer sells its product to stores in $113$ different regions worldwide, with an average (arithmetic mean) of $181$ stores per region. If last year these stores sold an average of $51,752$ units of the manufacturer's product per store, which of the following is closest to the total number of units of the manufacturer's product sold worldwide last year?",
+    "options": {
+      "a": "$10^6$",
+      "b": "$10^7$",
+      "c": "$10^8$",
+      "d": "$10^9$",
+      "e": "$10^{10}$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": true,
+    "context_text": "Note: Question 141 appears to be duplicate of Q131. Needs verification."
+  },
+  {
+    "question_number": 142,
+    "question_text": "Andrew started saving at the beginning of the year and had saved $\\$240$ by the end of the year. He continued to save and by the end of $2$ years had saved a total of $\\$540$. Which of the following is closest to the percent increase in the amount Andrew saved during the second year compared to the amount he saved during the first year?",
+    "options": {
+      "a": "$11\\%$",
+      "b": "$25\\%$",
+      "c": "$44\\%$",
+      "d": "$56\\%$",
+      "e": "$125\\%$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": true,
+    "context_text": "Note: Question 142 appears to be duplicate of Q132. Needs verification."
+  }
+]

@@ -1,0 +1,314 @@
+[
+  {
+    "question_number": 83,
+    "question_text": "If $x$ equals the sum of the even integers from $2$ to $20$, inclusive, and $y$ equals the sum of the odd integers from $1$ to $19$, inclusive, what is the value of $x - y$?",
+    "options": {
+      "a": "$1$",
+      "b": "$10$",
+      "c": "$19$",
+      "d": "$20$",
+      "e": "$21$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 84,
+    "question_text": "If Car $A$ took $n$ hours to travel $2$ miles and Car $B$ took $m$ hours to travel $3$ miles, which of the following expresses the time it would take Car $C$, traveling at the average (arithmetic mean) of those speeds, to travel $5$ miles?",
+    "options": {
+      "a": "$10mn$",
+      "b": "$\\frac{3m + 2n}{5}$",
+      "c": "$\\frac{10(m + n)}{5}$",
+      "d": "$\\frac{2n + 3m}{5}$",
+      "e": "$\\frac{5(m + n)}{2n + 3m}$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 85,
+    "question_text": "If $x$, $y$, and $z$ are positive and $x$ is less than $y$, then $\\frac{x + z}{y + z}$ is",
+    "options": {
+      "a": "$1$",
+      "b": "$greater$ $than$ $\\frac{x}{y}$",
+      "c": "$equal$ $to$ $\\frac{x}{y}$",
+      "d": "$less$ $than$ $\\frac{x}{y}$",
+      "e": "$cannot$ $be$ $determined$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 86,
+    "question_text": "If $p$ less than $n$ is defined by the equation $p \\star n = p^2 + \\frac{n}{2}$, depending on the value of $n$, the value of $3 \\star n$ is greater than $3 \\star 6$ for which of the following conditions?",
+    "options": {
+      "a": "$n > 6$ $and$ $t$",
+      "b": "$n$ $and$ $t$",
+      "c": "$n$ $and$ $y$",
+      "d": "$p$ $and$ $t$",
+      "e": "$r$ $and$ $t$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": true,
+    "context_text": "Note: Question options appear corrupted or incomplete in source. Needs verification."
+  },
+  {
+    "question_number": 87,
+    "question_text": "Carl averaged $2m$ miles per hour on a trip that took $h$ hours. If both made the same trip in $\\frac{2}{3}h$ hours, what was her average speed, in miles per hour?",
+    "options": {
+      "a": "$\\frac{1}{3}mh$",
+      "b": "$\\frac{3}{2}m$",
+      "c": "$m$",
+      "d": "$\\frac{2}{3}m$",
+      "e": "$3m$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 88,
+    "question_text": "A delicatessen sold two types of relish, two plain pepper, and two plain salt. The ratio who takes no salt also takes no relish, and the one who takes no pepper also takes no relish. Which of the following statements must be true?",
+    "options": {
+      "a": "$I$. The person who takes no salt also takes no relish.",
+      "b": "$II$. Any of the three persons who takes pepper also takes relish and salt.",
+      "c": "$III$. The person who takes no relish is not one of those who takes salt.",
+      "d": "$I$ only",
+      "e": "$II$ only"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": true,
+    "context_text": "Note: Question text appears garbled. Should be about people taking condiments. Needs verification."
+  },
+  {
+    "question_number": 89,
+    "question_text": "If the number of $2$ consecutive odd integers is a multiple of $5$, which of the following could NOT be the sum of those $2$ integers?",
+    "options": {
+      "a": "$-8$",
+      "b": "$12$",
+      "c": "$22$",
+      "d": "$52$",
+      "e": "$624$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 90,
+    "question_text": "Eight light bulbs numbered $1$ through $8$ are arranged in a circle as shown above. The bulbs are wired so that every third bulb, counting in a clockwise direction, flashes until all bulbs have flashed once. If the bulbs are numbered $1$ flashes first, which numbered bulb will flash last?",
+    "options": {
+      "a": "$2$",
+      "b": "$4$",
+      "c": "$5$",
+      "d": "$6$",
+      "e": "$7$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": true,
+    "needs_manual_review": true,
+    "context_text": "Note: Question references a diagram showing 8 light bulbs arranged in a circle."
+  },
+  {
+    "question_number": 91,
+    "question_text": "A certain financial analyst defines the \"volatility\" of a stock during a given week to be the result of the following procedure: For each day of the week, find the absolute difference in the stock's closing price for each pair of consecutive days in that week and then find the average (arithmetic mean) of those $4$ values. What is the volatility of Stock $X$ during the week shown in the table?",
+    "table_title": "Closing Prices of Stock X During a Certain Week (in dollars)",
+    "column_headers": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+    "table_data": [
+      ["$21$", "$19$", "$22$", "$18$", "$23$"]
+    ],
+    "options": {
+      "a": "$0.50$",
+      "b": "$1.80$",
+      "c": "$2.80$",
+      "d": "$3.00$",
+      "e": "$4.00$"
+    },
+    "difficulty": "medium",
+    "has_table": true,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 92,
+    "question_text": "If $y = \\frac{3x - 6}{x^2 - 4}$, for what value of $x$ will the value of $y$ be greatest?",
+    "options": {
+      "a": "$-5$",
+      "b": "$-\\frac{2}{3}$",
+      "c": "$0$",
+      "d": "$\\frac{2}{3}$",
+      "e": "$5$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 93,
+    "question_text": "What values of $x$ have a corresponding value of $y$ that satisfies both $xy = 0$ and $xy = zy - 3y$?",
+    "options": {
+      "a": "$x \\leq -1$",
+      "b": "$-1 < x \\leq 0$",
+      "c": "$0 < x \\leq 1$",
+      "d": "$x > 1$",
+      "e": "$All$ $real$ $numbers$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 94,
+    "question_text": "Employee $X$'s annual salary is $\\$12,000$ more than half of Employee $Y$'s annual salary. Employee $Z$'s annual salary is $\\$3,000$ more than half of Employee $Y$'s annual salary. If Employee $X$'s annual salary is $\\$27,000$, which of the following best describes three people in order of increasing annual salary?",
+    "options": {
+      "a": "$Y, Z, X$",
+      "b": "$Z, X, Y$",
+      "c": "$Z, Y, X$",
+      "d": "$X, Y, Z$",
+      "e": "$X, Z, Y$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 95,
+    "question_text": "The formula above gives the contribution $C$, in dollars, to a certain profit-sharing plan for a participant with a salary of $\\$10,000$ but for a participant with a salary of $\\$50,000$ then",
+    "context_text": "$0.10x$, if $x \\leq 60,000$\n$0.10x + 0.01(x - 60,000)$, if $x > 60,000$",
+    "options": {
+      "a": "$\\$600$",
+      "b": "$\\$1,400$",
+      "c": "$\\$2,000$",
+      "d": "$\\$2,400$",
+      "e": "$\\$2,600$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": true,
+    "has_chart": false
+  },
+  {
+    "question_number": 96,
+    "question_text": "Next month, Ron and Cathy will each begin working part-time at $\\frac{3}{4}$ of their respective current salaries. If the sum of their current salaries will be equal to Cathy's current salary, then Ron's current salary is what fraction of Cathy's current salary?",
+    "options": {
+      "a": "$\\frac{1}{3}$",
+      "b": "$\\frac{2}{5}$",
+      "c": "$-2$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": true,
+    "context_text": "Note: Question text appears incomplete and options are cut off. Needs verification."
+  },
+  {
+    "question_number": 97,
+    "question_text": "A retailer sold an appliance for $\\$80$. If the retailer's gross profit on the appliance was $25$ percent of the retailer's cost for the appliance, how many dollars was the retailer's gross profit?",
+    "options": {
+      "a": "$\\$10$",
+      "b": "$\\$16$",
+      "c": "$\\$20$",
+      "d": "$\\$24$",
+      "e": "$\\$25$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 98,
+    "question_text": "If $x - 1 = t$ and $t + 3 = x$, then $x = ?$",
+    "options": {
+      "a": "$-4$",
+      "b": "$-1$",
+      "c": "$0$",
+      "d": "$1$",
+      "e": "$2$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  },
+  {
+    "question_number": 99,
+    "question_text": "If $x = kx$ and $y = kx$, then $y = ?$",
+    "options": {
+      "a": "$k(x - t)$",
+      "b": "$k(x - t)$",
+      "c": "$x(k - t)$",
+      "d": "$t(k - x)$",
+      "e": "$k(t - t)$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": true,
+    "context_text": "Note: Question appears to have errors. Options B and E look identical/incomplete."
+  },
+  {
+    "question_number": 100,
+    "question_text": "If $p$ is a positive even integer, which of the following must be an odd integer?",
+    "options": {
+      "a": "$I$. $3p + 4$",
+      "b": "$II$. $p^2 + 4$",
+      "c": "$III$. $7p - 7$",
+      "d": "$II$ only",
+      "e": "$III$ only"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": true,
+    "context_text": "Note: Question has Roman numeral statements. Options format needs adjustment."
+  },
+  {
+    "question_number": 101,
+    "question_text": "The value of the expression shown is closest to which of the following?",
+    "context_text": "$\\frac{1 - 0.0001}{0.04 \\div 10}$",
+    "options": {
+      "a": "$0.0001$",
+      "b": "$0.001$",
+      "c": "$1$",
+      "d": "$10$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": true,
+    "context_text": "Note: Options appear incomplete (only 4 options visible)."
+  },
+  {
+    "question_number": 102,
+    "question_text": "If $x^2 - 1 = t$ and $t = 3$, then $x = ?$",
+    "options": {
+      "a": "$-4$",
+      "b": "$-1$",
+      "c": "$0$",
+      "d": "$1$",
+      "e": "$2$"
+    },
+    "difficulty": "medium",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false
+  }
+]
