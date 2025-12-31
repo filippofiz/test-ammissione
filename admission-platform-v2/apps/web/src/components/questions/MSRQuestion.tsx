@@ -20,6 +20,7 @@ interface MSRSource {
 interface MSRSubQuestion {
   text: string;
   options: Record<string, string>;
+  image_options?: Record<string, string>;
   question_type: string;
   correct_answer: string;
 }
@@ -59,19 +60,19 @@ export function MSRQuestion({ sources, questions, selectedAnswers, onAnswerChang
         </div>
 
         {/* Tab Content */}
-        <div className="p-6 bg-white max-h-96 overflow-y-auto">
+        <div className="p-6 bg-white max-h-96 overflow-y-auto overflow-x-hidden">
           {sources[activeTab].content_type === 'text' ? (
             <div className="text-gray-800 whitespace-pre-wrap">
               <LaTeX>{normalizeWhitespace(sources[activeTab].content || '')}</LaTeX>
             </div>
           ) : (
             // Table display
-            <div className="overflow-x-auto">
-              <table className="min-w-full border-collapse">
+            <div className="overflow-x-auto w-full">
+              <table className="w-full border-collapse table-auto">
                 <thead>
                   <tr className="bg-gray-100">
                     {sources[activeTab].table_headers?.map((header, i) => (
-                      <th key={i} className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-700">
+                      <th key={i} className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-700 break-words">
                         <LaTeX>{normalizeOptionText(header)}</LaTeX>
                       </th>
                     ))}
@@ -81,7 +82,7 @@ export function MSRQuestion({ sources, questions, selectedAnswers, onAnswerChang
                   {sources[activeTab].table_data?.map((row, i) => (
                     <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                       {row.map((cell, j) => (
-                        <td key={j} className="border border-gray-300 px-4 py-2 text-gray-800">
+                        <td key={j} className="border border-gray-300 px-4 py-2 text-gray-800 break-words">
                           <LaTeX>{normalizeOptionText(cell)}</LaTeX>
                         </td>
                       ))}
@@ -163,7 +164,15 @@ export function MSRQuestion({ sources, questions, selectedAnswers, onAnswerChang
                           {key.toUpperCase()}
                         </div>
                         <div className="flex-1">
-                          <LaTeX>{normalizeOptionText(value)}</LaTeX>
+                          {question.image_options?.[key] ? (
+                            <img
+                              src={question.image_options[key]}
+                              alt={`Option ${key.toUpperCase()}`}
+                              className="max-w-full h-auto rounded"
+                            />
+                          ) : (
+                            value && <LaTeX>{normalizeOptionText(value)}</LaTeX>
+                          )}
                           {showResults && isSelected && isCorrect && (
                             <div className="text-xs text-green-700 font-semibold mt-1">Your answer - Correct!</div>
                           )}
