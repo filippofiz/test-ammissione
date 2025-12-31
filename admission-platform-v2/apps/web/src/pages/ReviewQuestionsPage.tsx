@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faArrowLeft,
@@ -26,6 +26,8 @@ import {
   faMagic,
   faChartLine,
   faBan,
+  faList,
+  faDownload,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import { MathJaxProvider, MathJaxRenderer } from '../components/MathJaxRenderer';
@@ -33,6 +35,8 @@ import { AdvancedGraphRenderer } from '../components/GraphRenderer';
 import RechartsRenderer from '../components/RechartsRenderer';
 import { supabase } from '../lib/supabase';
 import * as pdfjsLib from 'pdfjs-dist';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 // Configure pdfjs worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
@@ -100,6 +104,7 @@ type AICheckType = 'correctness' | 'translation' | 'both';
 
 export default function ReviewQuestionsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Test list state
   const [tests, setTests] = useState<Test[]>([]);
@@ -155,6 +160,9 @@ export default function ReviewQuestionsPage() {
   const [recreateWithPython, setRecreateWithPython] = useState(false);
   const [recreateWithRecharts, setRecreateWithRecharts] = useState(false);
 
+  // Answer key modal
+  const [showAnswerKeyModal, setShowAnswerKeyModal] = useState(false);
+
   // Recharts code editing
   const [editingRechartsCode, setEditingRechartsCode] = useState<string | null>(null);
   const [rechartsCodeQuestionId, setRechartsCodeQuestionId] = useState<string | null>(null);
@@ -169,12 +177,15 @@ export default function ReviewQuestionsPage() {
   const [selectedQuestionsForPassage, setSelectedQuestionsForPassage] = useState<number[]>([]);
   const [newPassageText, setNewPassageText] = useState('');
   const [newPassageTextEng, setNewPassageTextEng] = useState('');
+  const [newPassageTitle, setNewPassageTitle] = useState('');
+  const [newPassageTitleEng, setNewPassageTitleEng] = useState('');
   const [detectingPassage, setDetectingPassage] = useState(false);
   const [pageRangeInput, setPageRangeInput] = useState('');
 
   // Image management
   const [showImageSourceModal, setShowImageSourceModal] = useState(false);
   const [currentImageQuestionId, setCurrentImageQuestionId] = useState<string | null>(null);
+  const [currentImageOptionKey, setCurrentImageOptionKey] = useState<string | null>(null); // For answer option images (a, b, c, d)
   const [selectedPageForExtraction, setSelectedPageForExtraction] = useState<number>(1);
   const [availableImages, setAvailableImages] = useState<{ url: string; width: number; height: number; y: number }[]>([]);
   const [loadingImages, setLoadingImages] = useState(false);
@@ -194,6 +205,28 @@ export default function ReviewQuestionsPage() {
       setQuestions([]);
     }
   }, [selectedTest]);
+
+  // Handle navigation from preview mode
+  useEffect(() => {
+    const state = location.state as { selectedTestId?: string; scrollToQuestion?: number } | null;
+    if (state?.selectedTestId && tests.length > 0) {
+      const test = tests.find(t => t.id === state.selectedTestId);
+      if (test) {
+        setSelectedTest(test);
+        // Scroll to question after a brief delay to ensure DOM is ready
+        if (state.scrollToQuestion) {
+          setTimeout(() => {
+            const element = document.getElementById(`question-${state.scrollToQuestion}`);
+            if (element) {
+              element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }, 500);
+        }
+      }
+      // Clear the state to prevent re-triggering
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, tests]);
 
   async function loadTests() {
     setLoadingTests(true);
@@ -281,6 +314,7 @@ export default function ReviewQuestionsPage() {
                 passage_text: q.question_data.passage_text,
                 passage_text_eng: q.question_data.passage_text_eng,
                 passage_title: q.question_data.passage_title,
+                passage_title_eng: q.question_data.passage_title_eng,
                 question_numbers: []
               });
             }
@@ -969,6 +1003,112 @@ export default function ReviewQuestionsPage() {
     }
   };
 
+  // Download Answer Key as PDF
+  const downloadAnswerKeyPDF = () => {
+    if (!selectedTest) return;
+
+    try {
+      const doc = new jsPDF();
+
+      // Prepare table data
+      const tableData = questions.map((question) => {
+        let correctAnswerDisplay = '';
+
+        try {
+          const answersData = typeof question.answers === 'string'
+            ? JSON.parse(question.answers)
+            : question.answers;
+
+          if (question.question_type === 'multiple_choice') {
+            const correctAnswer = Array.isArray(answersData?.correct_answer)
+              ? answersData.correct_answer[0]
+              : answersData?.correct_answer;
+            correctAnswerDisplay = correctAnswer ? correctAnswer.toUpperCase() : 'N/A';
+          } else if (question.question_type === 'tpa') {
+            if (answersData?.correct_answer) {
+              const tpaAnswer = answersData.correct_answer;
+              if (typeof tpaAnswer === 'object' && tpaAnswer.col1 && tpaAnswer.col2) {
+                correctAnswerDisplay = `Col1: ${tpaAnswer.col1}, Col2: ${tpaAnswer.col2}`;
+              } else {
+                correctAnswerDisplay = 'N/A';
+              }
+            } else {
+              correctAnswerDisplay = 'N/A';
+            }
+          } else if (question.question_type === 'msr') {
+            if (Array.isArray(answersData?.correct_answer)) {
+              correctAnswerDisplay = answersData.correct_answer
+                .map((ans: string, idx: number) => `${idx + 1}: ${ans.toUpperCase()}`)
+                .join(', ');
+            } else {
+              correctAnswerDisplay = 'N/A';
+            }
+          } else if (question.question_type === 'open_ended') {
+            correctAnswerDisplay = 'Open-ended';
+          } else {
+            correctAnswerDisplay = 'N/A';
+          }
+        } catch (error) {
+          console.error('Error parsing answer for question', question.id, error);
+          correctAnswerDisplay = 'Error';
+        }
+
+        const questionType = question.question_type.replace('_', ' ').toUpperCase();
+
+        return [
+          question.question_number.toString(),
+          questionType,
+          correctAnswerDisplay
+        ];
+      });
+
+      // Prepare test name
+      const testName = selectedTest.test_name || selectedTest.name || 'Test';
+
+      // Add title table
+      autoTable(doc, {
+        body: [
+          [{ content: 'ANSWER KEY', styles: { halign: 'center', fontSize: 16, fontStyle: 'bold' } }],
+          [{ content: testName, styles: { halign: 'center', fontSize: 12 } }],
+          [{ content: `Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, styles: { halign: 'center', fontSize: 8, textColor: [100, 100, 100] } }]
+        ],
+        startY: 10,
+        theme: 'plain',
+        tableWidth: 'auto',
+        margin: { left: 14 }
+      });
+
+      // Add answer key table
+      autoTable(doc, {
+        head: [['Question #', 'Type', 'Correct Answer']],
+        body: tableData,
+        startY: (doc as any).lastAutoTable.finalY + 10,
+        theme: 'grid',
+        headStyles: {
+          fillColor: [79, 70, 229], // Indigo color
+          fontSize: 10,
+          fontStyle: 'bold'
+        },
+        styles: {
+          fontSize: 9,
+          cellPadding: 3
+        },
+        columnStyles: {
+          0: { cellWidth: 25 },
+          1: { cellWidth: 50 },
+          2: { cellWidth: 'auto' }
+        }
+      });
+
+      // Save the PDF
+      const fileName = `Answer_Key_${testName.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert(`Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
   // Recreate graph with Recharts using Claude API
   const handleRecreateGraphWithRecharts = async (questionId: string) => {
     setGeneratingGraph(questionId);
@@ -1060,9 +1200,10 @@ export default function ReviewQuestionsPage() {
   };
 
   // Image management functions
-  const handleAddImage = (questionId: string) => {
+  const handleAddImage = (questionId: string, optionKey?: string) => {
     const question = questions.find(q => q.id === questionId);
     setCurrentImageQuestionId(questionId);
+    setCurrentImageOptionKey(optionKey || null);
     setSelectedPageForExtraction(question?.question_data?.page_number || 1);
     setShowImageSourceModal(true);
   };
@@ -1421,7 +1562,9 @@ export default function ReviewQuestionsPage() {
       console.log('  ✓ Auth token obtained');
 
       const question = questions.find(q => q.id === currentImageQuestionId);
-      const filePath = `question_${question?.question_number}_${Date.now()}.png`;
+      const filePath = currentImageOptionKey
+        ? `question_${question?.question_number}_option_${currentImageOptionKey}_${Date.now()}.png`
+        : `question_${question?.question_number}_${Date.now()}.png`;
       console.log(`  📝 File path: ${filePath}`);
 
       console.log('  🌐 Uploading to edge function...');
@@ -1462,10 +1605,26 @@ export default function ReviewQuestionsPage() {
       // Update question in database
       if (question) {
         console.log('  💾 Updating question in database...');
-        const updatedData = {
-          ...question.question_data,
-          image_url: publicUrl,
-        };
+        let updatedData;
+
+        if (currentImageOptionKey) {
+          // Updating an answer option image
+          console.log(`  → Updating option ${currentImageOptionKey} image`);
+          updatedData = {
+            ...question.question_data,
+            image_options: {
+              ...(question.question_data.image_options || {}),
+              [currentImageOptionKey]: publicUrl,
+            },
+          };
+        } else {
+          // Updating the main question image
+          console.log('  → Updating main question image');
+          updatedData = {
+            ...question.question_data,
+            image_url: publicUrl,
+          };
+        }
 
         const { error: updateError } = await supabase
           .from('2V_questions')
@@ -1511,6 +1670,7 @@ export default function ReviewQuestionsPage() {
       setAvailableImages([]);
       setShowImageSourceModal(false);
       setCurrentImageQuestionId(null);
+      setCurrentImageOptionKey(null);
       console.log('✅ Image upload completed successfully!');
     } catch (err) {
       console.error('❌ Error uploading image:', err);
@@ -1544,7 +1704,9 @@ export default function ReviewQuestionsPage() {
       if (!token) throw new Error('Not authenticated');
 
       const question = questions.find(q => q.id === currentImageQuestionId);
-      const filePath = `question_${question?.question_number}_${Date.now()}.${file.name.split('.').pop()}`;
+      const filePath = currentImageOptionKey
+        ? `question_${question?.question_number}_option_${currentImageOptionKey}_${Date.now()}.${file.name.split('.').pop()}`
+        : `question_${question?.question_number}_${Date.now()}.${file.name.split('.').pop()}`;
 
       const uploadResponse = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-question-image`,
@@ -1571,10 +1733,24 @@ export default function ReviewQuestionsPage() {
 
       // Update question in database
       if (question) {
-        const updatedData = {
-          ...question.question_data,
-          image_url: publicUrl,
-        };
+        let updatedData;
+
+        if (currentImageOptionKey) {
+          // Updating an answer option image
+          updatedData = {
+            ...question.question_data,
+            image_options: {
+              ...(question.question_data.image_options || {}),
+              [currentImageOptionKey]: publicUrl,
+            },
+          };
+        } else {
+          // Updating the main question image
+          updatedData = {
+            ...question.question_data,
+            image_url: publicUrl,
+          };
+        }
 
         await supabase
           .from('2V_questions')
@@ -1591,6 +1767,7 @@ export default function ReviewQuestionsPage() {
 
       setShowImageSourceModal(false);
       setCurrentImageQuestionId(null);
+      setCurrentImageOptionKey(null);
     } catch (err) {
       console.error('Error uploading image:', err);
       alert('Failed to upload image');
@@ -1885,9 +2062,19 @@ export default function ReviewQuestionsPage() {
                       </div>
                     </div>
 
-                    {/* Language Toggle, Section Filter and AI Check */}
+                    {/* Language Toggle, Section Filter, Answer Key and AI Check */}
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <div className="flex items-center gap-3">
+                        {/* Answer Key Button */}
+                        <button
+                          onClick={() => setShowAnswerKeyModal(true)}
+                          className="px-4 py-2 bg-indigo-100 text-indigo-700 border-2 border-indigo-300 rounded-lg hover:bg-indigo-200 transition-colors flex items-center gap-2 font-semibold text-sm"
+                          title="View all correct answers at a glance"
+                        >
+                          <FontAwesomeIcon icon={faList} />
+                          Answer Key
+                        </button>
+
                         {/* Language Toggle */}
                         <div className="flex items-center gap-2">
                           <FontAwesomeIcon icon={faLanguage} className="text-gray-500" />
@@ -1979,7 +2166,9 @@ export default function ReviewQuestionsPage() {
                               <div className="flex items-center justify-between mb-3">
                                 <h3 className="font-bold text-amber-900 flex items-center gap-2">
                                   <span>📖</span>
-                                  {passage.passage_title || 'Shared Passage'}
+                                  {getQuestionLanguage(question.id) === 'en' && passage.passage_title_eng
+                                    ? passage.passage_title_eng
+                                    : passage.passage_title || 'Shared Passage'}
                                 </h3>
                                 <div className="flex items-center gap-2">
                                   <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded">
@@ -1995,6 +2184,8 @@ export default function ReviewQuestionsPage() {
                                       setSelectedQuestionsForPassage(linkedQuestions.map(q => q.question_number));
                                       setNewPassageText(passage.passage_text || '');
                                       setNewPassageTextEng(passage.passage_text_eng || '');
+                                      setNewPassageTitle(passage.passage_title || '');
+                                      setNewPassageTitleEng(passage.passage_title_eng || '');
                                       setPageRangeInput('');
                                       setShowPassageModal(true);
                                     }}
@@ -2019,6 +2210,7 @@ export default function ReviewQuestionsPage() {
 
                           {/* Question Card */}
                           <div
+                            id={`question-${question.question_number}`}
                             className={`border-2 rounded-xl p-4 transition-colors ${
                               isFlagged
                                 ? 'border-red-400 bg-red-50'
@@ -2035,6 +2227,45 @@ export default function ReviewQuestionsPage() {
                                       📖 {passageId}
                                     </span>
                                   )}
+                                  {/* Language Consistency Indicator */}
+                                  {(() => {
+                                    // Check if both Italian and English options exist
+                                    const hasItalian = question.question_data?.options;
+                                    const hasEnglish = question.question_data?.options_eng;
+
+                                    if (hasItalian && hasEnglish && question.question_type === 'multiple_choice') {
+                                      // Get correct answer
+                                      const answersData = typeof question.answers === 'string'
+                                        ? JSON.parse(question.answers)
+                                        : question.answers;
+                                      const correctAnswer = Array.isArray(answersData?.correct_answer)
+                                        ? answersData.correct_answer[0]
+                                        : answersData?.correct_answer;
+
+                                      if (correctAnswer) {
+                                        // Show which option is correct (same for both languages)
+                                        return (
+                                          <span
+                                            className="ml-2 text-xs font-semibold px-2 py-1 rounded bg-green-100 text-green-700"
+                                            title={`Correct answer: ${correctAnswer.toUpperCase()} (same for IT & EN)`}
+                                          >
+                                            ✓ {correctAnswer.toUpperCase()}
+                                          </span>
+                                        );
+                                      } else {
+                                        // No correct answer defined
+                                        return (
+                                          <span
+                                            className="ml-2 text-xs font-semibold px-2 py-1 rounded bg-red-100 text-red-700"
+                                            title="No correct answer defined"
+                                          >
+                                            ⚠ No Answer
+                                          </span>
+                                        );
+                                      }
+                                    }
+                                    return null;
+                                  })()}
                                 </h3>
                               {isFlagged && (
                                 <span className="px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded-full">
@@ -2066,10 +2297,14 @@ export default function ReviewQuestionsPage() {
                                 {/* Per-question language toggle */}
                                 <button
                                   onClick={() => toggleQuestionLanguage(question.id)}
-                                  className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded hover:bg-gray-200"
-                                  title="Toggle language for this question"
+                                  className={`px-3 py-1 border-2 text-sm font-semibold rounded-lg hover:shadow-md transition-all ${
+                                    getQuestionLanguage(question.id) === 'it'
+                                      ? 'bg-blue-50 border-blue-400 text-blue-700 hover:bg-blue-100'
+                                      : 'bg-red-50 border-red-400 text-red-700 hover:bg-red-100'
+                                  }`}
+                                  title="Click to switch language for this question"
                                 >
-                                  {getQuestionLanguage(question.id) === 'it' ? '🇮🇹' : '🇬🇧'}
+                                  {getQuestionLanguage(question.id) === 'it' ? '🇮🇹 Italiano' : '🇬🇧 English'}
                                 </button>
                               </div>
                             </div>
@@ -2143,6 +2378,16 @@ export default function ReviewQuestionsPage() {
                                 title={question.question_data?.image_url ? "Change Image" : "Add Image"}
                               >
                                 <FontAwesomeIcon icon={faUpload} />
+                              </button>
+                              {/* Preview Test */}
+                              <button
+                                onClick={() => {
+                                  navigate(`/preview-test/${selectedTest!.id}/${question.question_number}`);
+                                }}
+                                className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded hover:bg-blue-200 font-semibold"
+                                title="Preview this question in test mode"
+                              >
+                                <FontAwesomeIcon icon={faEye} /> Preview
                               </button>
                               {editingQuestionId === question.id ? (
                                 <>
@@ -2397,28 +2642,50 @@ export default function ReviewQuestionsPage() {
                                   }`}>
                                     {key.toUpperCase()}
                                   </span>
-                                  <div className="flex-1">
+                                  <div className="flex-1 relative">
                                     {question.question_data?.image_options?.[key] ? (
-                                      <img
-                                        src={question.question_data.image_options[key]}
-                                        alt={`Option ${key}`}
-                                        className="max-w-full rounded"
-                                      />
-                                    ) : editingQuestionId === question.id ? (
-                                      <input
-                                        type="text"
-                                        value={String(
-                                          getQuestionLanguage(question.id) === 'en'
-                                            ? (question.question_data?.options_eng?.[key] || '')
-                                            : (question.question_data?.options?.[key] || '')
+                                      <div className="relative group">
+                                        <img
+                                          src={question.question_data.image_options[key]}
+                                          alt={`Option ${key}`}
+                                          className="max-w-full rounded"
+                                        />
+                                        {editingQuestionId === question.id && (
+                                          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button
+                                              onClick={() => handleAddImage(question.id, key)}
+                                              className="px-3 py-1 bg-white/90 text-gray-700 text-xs rounded shadow cursor-pointer hover:bg-white"
+                                            >
+                                              Change
+                                            </button>
+                                          </div>
                                         )}
-                                        onChange={(e) => {
-                                          const isEnglish = getQuestionLanguage(question.id) === 'en';
-                                          handleEditQuestion(question.id, `option_${key}_${isEnglish ? 'eng' : 'it'}`, e.target.value);
-                                        }}
-                                        className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-brand-green focus:border-transparent font-mono text-sm"
-                                        placeholder={`Option ${key.toUpperCase()}`}
-                                      />
+                                      </div>
+                                    ) : editingQuestionId === question.id ? (
+                                      <div className="flex gap-2 items-center">
+                                        <input
+                                          type="text"
+                                          value={String(
+                                            getQuestionLanguage(question.id) === 'en'
+                                              ? (question.question_data?.options_eng?.[key] || '')
+                                              : (question.question_data?.options?.[key] || '')
+                                          )}
+                                          onChange={(e) => {
+                                            const isEnglish = getQuestionLanguage(question.id) === 'en';
+                                            handleEditQuestion(question.id, `option_${key}_${isEnglish ? 'eng' : 'it'}`, e.target.value);
+                                          }}
+                                          className="flex-1 p-2 border border-gray-300 rounded focus:ring-2 focus:ring-brand-green focus:border-transparent font-mono text-sm"
+                                          placeholder={`Option ${key.toUpperCase()}`}
+                                        />
+                                        <button
+                                          onClick={() => handleAddImage(question.id, key)}
+                                          className="px-3 py-2 bg-indigo-100 text-indigo-700 text-xs rounded hover:bg-indigo-200 whitespace-nowrap"
+                                          title="Add image for this option"
+                                        >
+                                          <FontAwesomeIcon icon={faImage} className="mr-1" />
+                                          Add Image
+                                        </button>
+                                      </div>
                                     ) : (
                                       <MathJaxRenderer>{String(value)}</MathJaxRenderer>
                                     )}
@@ -2673,6 +2940,8 @@ export default function ReviewQuestionsPage() {
                         setSelectedQuestionsForPassage([]);
                         setNewPassageText('');
                         setNewPassageTextEng('');
+                        setNewPassageTitle('');
+                        setNewPassageTitleEng('');
                       }}
                       className="text-gray-500 hover:text-gray-700 text-2xl"
                     >
@@ -2785,6 +3054,34 @@ export default function ReviewQuestionsPage() {
                     </p>
                   </div>
 
+                  {/* Passage Title - Italian */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Passage Title (Italian)
+                    </label>
+                    <input
+                      type="text"
+                      value={newPassageTitle || (editingPassageId ? passages.find(p => p.passage_id === editingPassageId)?.passage_title : '')}
+                      onChange={(e) => setNewPassageTitle(e.target.value)}
+                      className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                      placeholder="e.g., Brano per le domande 1-3"
+                    />
+                  </div>
+
+                  {/* Passage Title - English */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Passage Title (English) - Optional
+                    </label>
+                    <input
+                      type="text"
+                      value={newPassageTitleEng || (editingPassageId ? passages.find(p => p.passage_id === editingPassageId)?.passage_title_eng : '')}
+                      onChange={(e) => setNewPassageTitleEng(e.target.value)}
+                      className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                      placeholder="e.g., Passage for Questions 1-3"
+                    />
+                  </div>
+
                   {/* Passage Text - Italian */}
                   <div className="mb-4">
                     <div className="flex justify-between items-center mb-2">
@@ -2868,6 +3165,8 @@ export default function ReviewQuestionsPage() {
                         setSelectedQuestionsForPassage([]);
                         setNewPassageText('');
                         setNewPassageTextEng('');
+                        setNewPassageTitle('');
+                        setNewPassageTitleEng('');
                       }}
                       className="px-4 py-2 text-gray-600 hover:text-gray-800"
                     >
@@ -2878,12 +3177,14 @@ export default function ReviewQuestionsPage() {
                         const passageId = editingPassageId || `passage_${passages.length + 1}`;
                         const passageText = newPassageText || passages.find(p => p.passage_id === editingPassageId)?.passage_text || '';
                         const passageTextEng = newPassageTextEng || passages.find(p => p.passage_id === editingPassageId)?.passage_text_eng || '';
+                        const passageTitle = newPassageTitle || passages.find(p => p.passage_id === editingPassageId)?.passage_title || `Passage ${passageId}`;
+                        const passageTitleEng = newPassageTitleEng || passages.find(p => p.passage_id === editingPassageId)?.passage_title_eng || '';
 
                         // Update or create passage in local state
                         if (editingPassageId) {
                           setPassages(prev => prev.map(p =>
                             p.passage_id === editingPassageId
-                              ? { ...p, passage_text: passageText, passage_text_eng: passageTextEng, question_numbers: selectedQuestionsForPassage }
+                              ? { ...p, passage_text: passageText, passage_text_eng: passageTextEng, passage_title: passageTitle, passage_title_eng: passageTitleEng, question_numbers: selectedQuestionsForPassage }
                               : p
                           ));
                         } else {
@@ -2891,6 +3192,8 @@ export default function ReviewQuestionsPage() {
                             passage_id: passageId,
                             passage_text: passageText,
                             passage_text_eng: passageTextEng,
+                            passage_title: passageTitle,
+                            passage_title_eng: passageTitleEng,
                             question_numbers: selectedQuestionsForPassage
                           }]);
                         }
@@ -2905,7 +3208,8 @@ export default function ReviewQuestionsPage() {
                               passage_id: passageId,
                               passage_text: passageText,
                               passage_text_eng: passageTextEng || null,
-                              passage_title: `Passage ${passageId}`
+                              passage_title: passageTitle,
+                              passage_title_eng: passageTitleEng || null
                             };
 
                             await supabase
@@ -2926,6 +3230,7 @@ export default function ReviewQuestionsPage() {
                               delete updatedData.passage_text;
                               delete updatedData.passage_text_eng;
                               delete updatedData.passage_title;
+                              delete updatedData.passage_title_eng;
 
                               await supabase
                                 .from('2V_questions')
@@ -2946,6 +3251,8 @@ export default function ReviewQuestionsPage() {
                         setSelectedQuestionsForPassage([]);
                         setNewPassageText('');
                         setNewPassageTextEng('');
+                        setNewPassageTitle('');
+                        setNewPassageTitleEng('');
                       }}
                       className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 font-semibold"
                     >
@@ -2962,9 +3269,13 @@ export default function ReviewQuestionsPage() {
                 <div className="bg-white rounded-xl shadow-2xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-xl font-bold text-brand-dark">
-                      {questions.find(q => q.id === currentImageQuestionId)?.question_data?.image_url
-                        ? 'Change Image'
-                        : 'Add Image'}
+                      {currentImageOptionKey
+                        ? (questions.find(q => q.id === currentImageQuestionId)?.question_data?.image_options?.[currentImageOptionKey]
+                            ? `Change Image for Option ${currentImageOptionKey.toUpperCase()}`
+                            : `Add Image for Option ${currentImageOptionKey.toUpperCase()}`)
+                        : (questions.find(q => q.id === currentImageQuestionId)?.question_data?.image_url
+                            ? 'Change Image'
+                            : 'Add Image')}
                     </h3>
                     <button
                       onClick={() => {
@@ -2972,6 +3283,7 @@ export default function ReviewQuestionsPage() {
                         setAvailableImages([]);
                         setShowImageSourceModal(false);
                         setCurrentImageQuestionId(null);
+                        setCurrentImageOptionKey(null);
                         setImageActionQuestionId(null);
                         setRecreateWithRecharts(false);
                         setRecreateWithPython(false);
@@ -3428,6 +3740,109 @@ export default function ReviewQuestionsPage() {
                     className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
                   >
                     Save Code
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Answer Key Modal */}
+          {showAnswerKeyModal && selectedTest && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-xl p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-2xl font-bold text-brand-dark">
+                    Answer Key - {selectedTest.test_name}
+                  </h3>
+                  <button
+                    onClick={() => setShowAnswerKeyModal(false)}
+                    className="text-gray-500 hover:text-gray-700 text-2xl"
+                  >
+                    <FontAwesomeIcon icon={faTimes} />
+                  </button>
+                </div>
+
+                <div className="overflow-y-auto flex-1">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {questions.map((question) => {
+                      let correctAnswerDisplay = '';
+
+                      try {
+                        const answersData = typeof question.answers === 'string'
+                          ? JSON.parse(question.answers)
+                          : question.answers;
+
+                        if (question.question_type === 'multiple_choice') {
+                          const correctAnswer = Array.isArray(answersData?.correct_answer)
+                            ? answersData.correct_answer[0]
+                            : answersData?.correct_answer;
+                          correctAnswerDisplay = correctAnswer ? correctAnswer.toUpperCase() : 'N/A';
+                        } else if (question.question_type === 'tpa') {
+                          // TPA has two columns
+                          if (answersData?.correct_answer) {
+                            const tpaAnswer = answersData.correct_answer;
+                            if (typeof tpaAnswer === 'object' && tpaAnswer.col1 && tpaAnswer.col2) {
+                              correctAnswerDisplay = `Col1: ${tpaAnswer.col1}, Col2: ${tpaAnswer.col2}`;
+                            } else {
+                              correctAnswerDisplay = 'N/A';
+                            }
+                          } else {
+                            correctAnswerDisplay = 'N/A';
+                          }
+                        } else if (question.question_type === 'msr') {
+                          // MSR has multiple sub-questions
+                          if (Array.isArray(answersData?.correct_answer)) {
+                            correctAnswerDisplay = answersData.correct_answer
+                              .map((ans: string, idx: number) => `${idx + 1}: ${ans.toUpperCase()}`)
+                              .join(', ');
+                          } else {
+                            correctAnswerDisplay = 'N/A';
+                          }
+                        } else if (question.question_type === 'open_ended') {
+                          correctAnswerDisplay = 'Open-ended';
+                        } else {
+                          correctAnswerDisplay = 'N/A';
+                        }
+                      } catch (error) {
+                        console.error('Error parsing answer for question', question.id, error);
+                        correctAnswerDisplay = 'Error';
+                      }
+
+                      return (
+                        <div
+                          key={question.id}
+                          className="border-2 border-gray-200 rounded-lg p-4 bg-white hover:border-indigo-300 transition-colors"
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-semibold text-gray-600">
+                              Question {question.question_number}
+                            </span>
+                            <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
+                              {question.question_type.replace('_', ' ').toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="text-xl font-bold text-indigo-600">
+                            {correctAnswerDisplay}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-gray-200 flex gap-3">
+                  <button
+                    onClick={downloadAnswerKeyPDF}
+                    className="flex-1 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <FontAwesomeIcon icon={faDownload} />
+                    Download PDF
+                  </button>
+                  <button
+                    onClick={() => setShowAnswerKeyModal(false)}
+                    className="flex-1 px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                  >
+                    Close
                   </button>
                 </div>
               </div>
