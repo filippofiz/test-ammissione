@@ -148,6 +148,7 @@ interface Question {
     passage_text?: string;
     passage_text_eng?: string;
     passage_title?: string;
+    passage_title_eng?: string;
 
     // Answer choices (for multiple choice)
     choices?: Array<{
@@ -337,9 +338,19 @@ function filterSectionsWithAdaptivity(
 }
 
 export default function TakeTestPage() {
-  const { assignmentId } = useParams<{ assignmentId: string }>();
+  const { assignmentId, testId, startQuestionNumber } = useParams<{
+    assignmentId?: string;
+    testId?: string;
+    startQuestionNumber?: string;
+  }>();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
+  const location = window.location;
+
+  // PREVIEW MODE DETECTION - 100% separate from real test
+  const isPreviewMode = location.pathname.startsWith('/preview-test');
+  const previewTestId = isPreviewMode ? testId : null;
+  const previewStartQuestion = isPreviewMode ? parseInt(startQuestionNumber || '1', 10) : 1;
 
   // Detect test mode from URL parameter (?testMode=true)
   const searchParams = new URLSearchParams(window.location.search);
@@ -644,6 +655,21 @@ export default function TakeTestPage() {
     return questionData.passage_text ?? '';
   };
 
+  // Helper to get localized passage title based on language captured at test start
+  // Special case: "inglese" sections should always show English titles
+  const getLocalizedPassageTitle = (questionData: Question['question_data']): string => {
+    if (!questionData) return '';
+
+    // Check if current section is an English section (for Cattolica's "inglese" section)
+    const isEnglishSection = currentSection && currentSection.toLowerCase().includes('inglese');
+
+    // Show English version if: test language is English OR current section is an English section
+    if ((testLanguage === 'en' || isEnglishSection) && questionData.passage_title_eng) {
+      return questionData.passage_title_eng;
+    }
+    return questionData.passage_title ?? '';
+  };
+
   // Calculate expected total sections (for footer display)
   // In macro_section adaptivity mode, each base section will have an adaptive section added
   const expectedTotalSections = (() => {
@@ -830,11 +856,15 @@ export default function TakeTestPage() {
   }, [currentQuestion, answers, assignmentId, studentId]);
 
   useEffect(() => {
-    loadTestData();
+    if (isPreviewMode) {
+      loadPreviewData();
+    } else {
+      loadTestData();
+    }
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [assignmentId]);
+  }, [assignmentId, isPreviewMode, previewTestId]);
 
   // Bot Control: Listen for bot commands to automate test
   useEffect(() => {
@@ -1270,6 +1300,103 @@ export default function TakeTestPage() {
     // If adaptive but no base questions, return empty array
     // (adaptive selection will happen as student progresses)
     return [];
+  }
+
+  // PREVIEW MODE: Load test data without assignment
+  async function loadPreviewData() {
+    try {
+      setLoading(true);
+
+      if (!previewTestId) {
+        console.error('Preview mode: No testId provided');
+        navigate('/admin/review-questions');
+        return;
+      }
+
+      // Load test info
+      const { data: testInfo, error: testError } = await supabase
+        .from('2V_tests')
+        .select('*')
+        .eq('id', previewTestId)
+        .single();
+
+      if (testError || !testInfo) {
+        console.error('Preview mode: Test not found', testError);
+        navigate('/admin/review-questions');
+        return;
+      }
+
+      const testType = testInfo.test_type;
+      const exerciseType = testInfo.exercise_type;
+      setExerciseType(exerciseType || '');
+
+      // Load test config
+      const normalize = (str: string) => str.toLowerCase().replace(/[\s_]+/g, '_');
+      const trackTypeNormalized = normalize(exerciseType);
+
+      const { data: configsData, error: configsError } = await supabase
+        .from('2V_test_track_config')
+        .select('*')
+        .eq('test_type', testType);
+
+      if (configsError) throw configsError;
+
+      const configData = configsData?.find(config =>
+        normalize(config.track_type) === trackTypeNormalized
+      );
+
+      if (!configData) {
+        alert('Test configuration not found');
+        navigate('/admin/review-questions');
+        return;
+      }
+
+      setConfig(configData);
+
+      // Load questions - SEQUENTIAL ORDER (no randomization in preview)
+      const { data: questions, error: questionsError } = await supabase
+        .from('2V_questions')
+        .select('*')
+        .eq('test_id', previewTestId)
+        .order('question_number', { ascending: true });
+
+      if (questionsError) throw questionsError;
+      if (!questions || questions.length === 0) {
+        alert('No questions found for this test');
+        navigate('/admin/review-questions');
+        return;
+      }
+
+      setAllQuestions(questions);
+
+      // Set sections (if any)
+      if (configData.section_order_mode !== 'no_sections') {
+        const uniqueSections = [...new Set(questions.map(q => q.section))];
+        setSections(uniqueSections);
+      } else {
+        setSections([]);
+      }
+
+      // Set language to Italian by default for preview
+      setTestLanguage('it');
+
+      // Navigate to the start question
+      const startIndex = questions.findIndex(q => q.question_number === previewStartQuestion);
+      if (startIndex >= 0) {
+        setCurrentQuestionIndex(startIndex);
+      } else {
+        setCurrentQuestionIndex(0);
+      }
+
+      // Disable start screen in preview
+      setShowStartScreen(false);
+      setLoading(false);
+
+    } catch (err) {
+      console.error('Preview mode: Error loading test data', err);
+      alert('Failed to load preview');
+      navigate('/admin/review-questions');
+    }
   }
 
   async function loadTestData() {
@@ -2190,6 +2317,11 @@ export default function TakeTestPage() {
       return false;
     }
 
+    // PREVIEW MODE: Always allow back except at very first question
+    if (isPreviewMode) {
+      return currentQuestionIndex > 0;
+    }
+
     // Can't go back if at first question of first section
     if (currentSectionIndex === 0 && currentQuestionIndex === 0) {
       return false;
@@ -2268,6 +2400,11 @@ export default function TakeTestPage() {
     retryCount: number = 0,
     questionOrder?: number
   ): Promise<boolean> {
+    // PREVIEW MODE: Don't save answers to database
+    if (isPreviewMode) {
+      return true; // Return success without saving
+    }
+
     if (!assignmentId || !studentId) {
       return false;
     }
@@ -3249,6 +3386,12 @@ export default function TakeTestPage() {
   }
 
   async function submitTest() {
+    // PREVIEW MODE: Don't submit test
+    if (isPreviewMode) {
+      console.log('Preview mode: Submit blocked');
+      return;
+    }
+
     // Prevent double submission
     if (submitting) {
       return;
@@ -4040,11 +4183,49 @@ export default function TakeTestPage() {
       <div className="flex flex-col h-screen bg-gray-50">
         {/* Header with Timer and Section Info */}
         <div className="bg-white border-b-2 border-gray-200 px-6 py-4 flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-brand-dark">{formatSectionName(currentSection)}</h2>
-            <p className="text-sm text-gray-600">
-              Section {currentSectionIndex + 1} of {expectedTotalSections}
-            </p>
+          <div className="flex items-center gap-4">
+            {/* Preview Mode Exit Button */}
+            {isPreviewMode && (
+              <>
+                <button
+                  onClick={() => {
+                    const currentQ = currentQuestion?.question_number || previewStartQuestion;
+                    navigate('/admin/review-questions', {
+                      state: {
+                        selectedTestId: previewTestId,
+                        scrollToQuestion: currentQ
+                      }
+                    });
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-sm flex items-center gap-2"
+                  title="Exit preview and return to review page"
+                >
+                  <FontAwesomeIcon icon={faArrowLeft} />
+                  Exit Preview
+                </button>
+                {/* Language Toggle in Preview */}
+                <button
+                  onClick={() => {
+                    const newLang = testLanguage === 'it' ? 'en' : 'it';
+                    setTestLanguage(newLang);
+                    i18n.changeLanguage(newLang);
+                  }}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-semibold text-sm"
+                  title="Toggle language"
+                >
+                  {testLanguage === 'it' ? '🇮🇹 → 🇬🇧' : '🇬🇧 → 🇮🇹'}
+                </button>
+              </>
+            )}
+            <div>
+              <h2 className="text-xl font-bold text-brand-dark">
+                {isPreviewMode && '🔍 PREVIEW MODE - '}
+                {formatSectionName(currentSection)}
+              </h2>
+              <p className="text-sm text-gray-600">
+                Section {currentSectionIndex + 1} of {expectedTotalSections}
+              </p>
+            </div>
           </div>
           {timeRemaining !== null && (
             <div className="flex items-center gap-2 text-lg">
@@ -4159,13 +4340,48 @@ export default function TakeTestPage() {
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Header with Timer */}
       <div className="bg-white border-b-2 border-gray-200 px-6 py-4 flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-brand-dark">
-            {config?.section_order_mode === 'no_sections'
-              ? (currentQuestion?.section ? formatSectionName(currentQuestion.section) : `Domanda ${currentQuestionIndex + 1}`)
-              : formatSectionName(currentSection)
-            }
-          </h2>
+        <div className="flex items-center gap-4">
+          {/* Preview Mode Exit Button */}
+          {isPreviewMode && (
+            <>
+              <button
+                onClick={() => {
+                  const currentQ = currentQuestion?.question_number || previewStartQuestion;
+                  navigate('/admin/review-questions', {
+                    state: {
+                      selectedTestId: previewTestId,
+                      scrollToQuestion: currentQ
+                    }
+                  });
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-sm flex items-center gap-2"
+                title="Exit preview and return to review page"
+              >
+                <FontAwesomeIcon icon={faArrowLeft} />
+                Exit Preview
+              </button>
+              {/* Language Toggle in Preview */}
+              <button
+                onClick={() => {
+                  const newLang = testLanguage === 'it' ? 'en' : 'it';
+                  setTestLanguage(newLang);
+                  i18n.changeLanguage(newLang);
+                }}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-semibold text-sm"
+                title="Toggle language"
+              >
+                {testLanguage === 'it' ? '🇮🇹 → 🇬🇧' : '🇬🇧 → 🇮🇹'}
+              </button>
+            </>
+          )}
+          <div>
+            <h2 className="text-xl font-bold text-brand-dark">
+              {isPreviewMode && '🔍 PREVIEW MODE - '}
+              {config?.section_order_mode === 'no_sections'
+                ? (currentQuestion?.section ? formatSectionName(currentQuestion.section) : `Domanda ${currentQuestionIndex + 1}`)
+                : formatSectionName(currentSection)
+              }
+            </h2>
           <div className="flex items-center gap-3">
             <p className="text-sm text-gray-600">
               {t('takeTest.question')} {currentQuestionIndex + 1} {t('takeTest.of')} {sectionQuestionLimit}
@@ -4205,6 +4421,7 @@ export default function TakeTestPage() {
             </div>
           )}
           */}
+          </div>
         </div>
         {timeRemaining !== null && (
           <div className="flex items-center gap-2 text-lg">
@@ -4286,7 +4503,7 @@ export default function TakeTestPage() {
                   selectedAnswer={answers[currentQuestion.id]?.answer}
                   onAnswerChange={handleAnswerSelect}
                   correctAnswer={correctDSAnswer}
-                  showResults={isGuidedMode && showCorrectAnswers}
+                  showResults={(isGuidedMode && showCorrectAnswers) || isPreviewMode}
                 />
               );
             })()}
@@ -4498,12 +4715,13 @@ export default function TakeTestPage() {
               <MultipleChoiceQuestion
                 questionText={getLocalizedQuestionText(currentQuestion.question_data)}
                 passageText={getLocalizedPassageText(currentQuestion.question_data) || undefined}
-                passageTitle={currentQuestion.question_data.passage_title}
+                passageTitle={getLocalizedPassageTitle(currentQuestion.question_data) || undefined}
                 imageUrl={currentQuestion.question_data.image_url || undefined}
                 options={getLocalizedOptions(currentQuestion.question_data)}
+                imageOptions={currentQuestion.question_data.image_options}
                 selectedAnswer={answers[currentQuestion.id]?.answer}
                 onAnswerChange={handleAnswerSelect}
-                showResults={isGuidedMode && showCorrectAnswers}
+                showResults={(isGuidedMode && showCorrectAnswers) || isPreviewMode}
                 correctAnswer={correctAnswer}
               />
             );
@@ -4517,9 +4735,9 @@ export default function TakeTestPage() {
               <div className="flex gap-8 w-full">
                 {/* Passage Text on the left */}
                 <div className="flex-1 min-w-[45%] border-2 border-blue-200 rounded-xl p-6 bg-blue-50 h-fit sticky top-4">
-                  {currentQuestion.question_data.passage_title && (
+                  {getLocalizedPassageTitle(currentQuestion.question_data) && (
                     <h3 className="text-lg font-semibold text-blue-900 mb-4">
-                      {currentQuestion.question_data.passage_title}
+                      {getLocalizedPassageTitle(currentQuestion.question_data)}
                     </h3>
                   )}
                   <div className="text-gray-700 whitespace-pre-wrap max-h-[650px] overflow-y-auto">
@@ -4752,7 +4970,7 @@ export default function TakeTestPage() {
         ) : (
           <button
             onClick={goToNextQuestion}
-            disabled={submitting || isTransitioning || (timeRemaining !== null && timeRemaining <= 1)}
+            disabled={submitting || isTransitioning || (timeRemaining !== null && timeRemaining <= 1) || (isPreviewMode && currentQuestionIndex >= allQuestions.length - 1)}
           className="px-6 py-3 rounded-xl font-semibold transition-all bg-brand-green text-white hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {submitting ? (
@@ -4766,6 +4984,12 @@ export default function TakeTestPage() {
               {(config?.adaptivity_mode === 'adaptive'
                 ? currentQuestionIndex < sectionQuestionLimit - 1
                 : currentQuestionIndex < totalQuestionsInSection - 1) ? (
+                <>
+                  {t('takeTest.next')}
+                  <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
+                </>
+              ) : isPreviewMode ? (
+                // In preview mode, show "Last Question" instead of submit
                 <>
                   {t('takeTest.next')}
                   <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
