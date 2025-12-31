@@ -13,6 +13,7 @@ interface TPAQuestionProps {
   column1Title: string;
   column2Title: string;
   sharedOptions: string[];
+  sharedOptionsImages?: string[]; // Optional images for options (parallel array to sharedOptions)
   selectedColumn1?: string;
   selectedColumn2?: string;
   onColumn1Change: (value: string) => void;
@@ -56,7 +57,7 @@ export function TPAQuestion({
   return (
     <div className="space-y-6">
       {/* Scenario Section */}
-      <div className="border-2 border-gray-200 rounded-xl p-6 bg-white">
+      <div className="border-2 border-gray-200 rounded-xl p-6 bg-white overflow-x-auto">
         <div className="text-gray-800 text-lg whitespace-pre-wrap">
           <LaTeX>{normalizeWhitespace(scenario)}</LaTeX>
         </div>

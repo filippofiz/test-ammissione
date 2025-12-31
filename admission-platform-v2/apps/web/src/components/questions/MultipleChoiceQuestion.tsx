@@ -15,6 +15,7 @@ interface MultipleChoiceQuestionProps {
   passageTitle?: string; // Optional passage title
   imageUrl?: string;
   options: Record<string, string>; // { "a": "option text", "b": "option text", ... }
+  imageOptions?: Record<string, string>; // { "a": "image_url", "b": "image_url", ... } - Optional images for answer options
   selectedAnswer?: string;
   onAnswerChange: (answer: string) => void;
   readOnly?: boolean; // For results view - disables answer buttons
@@ -28,6 +29,7 @@ export function MultipleChoiceQuestion({
   passageTitle,
   imageUrl,
   options,
+  imageOptions,
   selectedAnswer,
   onAnswerChange,
   readOnly = false,
@@ -47,7 +49,7 @@ export function MultipleChoiceQuestion({
               <LaTeX>{normalizeWhitespace(passageTitle)}</LaTeX>
             </h3>
           )}
-          <div className="text-gray-700 whitespace-pre-wrap max-h-[650px] overflow-y-auto">
+          <div className="text-gray-700 whitespace-pre-wrap max-h-[650px] overflow-y-auto overflow-x-auto">
             <LaTeX>{normalizeWhitespace(passageText)}</LaTeX>
           </div>
         </div>
@@ -55,7 +57,7 @@ export function MultipleChoiceQuestion({
         {/* Question and Options on the right - wider */}
         <div className="flex-1 min-w-[45%] space-y-6">
           {/* Question Text */}
-          <div className="border-2 border-gray-200 rounded-xl p-6 bg-white">
+          <div className="border-2 border-gray-200 rounded-xl p-6 bg-white overflow-x-auto">
             <div className="text-gray-800 text-lg whitespace-pre-wrap mb-4">
               <LaTeX>{normalizeWhitespace(questionText)}</LaTeX>
             </div>
@@ -125,7 +127,15 @@ export function MultipleChoiceQuestion({
                   {key.toUpperCase()}
                 </div>
                 <div className="flex-1">
-                  <LaTeX>{normalizeOptionText(text)}</LaTeX>
+                  {imageOptions?.[key] ? (
+                    <img
+                      src={imageOptions[key]}
+                      alt={`Option ${key.toUpperCase()}`}
+                      className="max-w-full h-auto rounded"
+                    />
+                  ) : (
+                    text && <LaTeX>{normalizeOptionText(text)}</LaTeX>
+                  )}
                   {showResults && isSelected && isCorrectOption && (
                     <div className="text-xs text-green-700 font-semibold mt-1">{t('testResults.yourAnswerCorrect')}</div>
                   )}
@@ -159,7 +169,7 @@ export function MultipleChoiceQuestion({
   return (
     <div className="space-y-6">
       {/* Question Text */}
-      <div className="border-2 border-gray-200 rounded-xl p-6 bg-white">
+      <div className="border-2 border-gray-200 rounded-xl p-6 bg-white overflow-x-auto">
         <div className="text-gray-800 text-lg whitespace-pre-wrap mb-4">
           <LaTeX>{normalizeWhitespace(questionText)}</LaTeX>
         </div>
@@ -229,7 +239,15 @@ export function MultipleChoiceQuestion({
                   {key.toUpperCase()}
                 </div>
                 <div className="flex-1">
-                  <LaTeX>{normalizeOptionText(text)}</LaTeX>
+                  {imageOptions?.[key] ? (
+                    <img
+                      src={imageOptions[key]}
+                      alt={`Option ${key.toUpperCase()}`}
+                      className="max-w-full h-auto rounded"
+                    />
+                  ) : (
+                    text && <LaTeX>{normalizeOptionText(text)}</LaTeX>
+                  )}
                   {showResults && isSelected && isCorrectOption && (
                     <div className="text-xs text-green-700 font-semibold mt-1">{t('testResults.yourAnswerCorrect')}</div>
                   )}
