@@ -232,6 +232,14 @@ function App() {
           }
         />
         <Route
+          path="/preview-test/:testId/:startQuestionNumber"
+          element={
+            <ProtectedRoute requiredRoles={['ADMIN']}>
+              <TakeTestPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/"
           element={
             <ProtectedRoute>
