@@ -362,6 +362,19 @@ export default function ReviewQuestionsPage() {
   async function loadFlaggedQuestions() {
     setLoadingFlagged(true);
     try {
+      // Get current user profile
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setLoadingFlagged(false);
+        return;
+      }
+
+      const { data: currentProfile } = await supabase
+        .from('2V_profiles')
+        .select('id, email')
+        .eq('auth_uid', user.id)
+        .single();
+
       const { data, error } = await supabase
         .from('2V_questions')
         .select(`
@@ -373,9 +386,35 @@ export default function ReviewQuestionsPage() {
 
       if (error) throw error;
 
+      // Filter based on user and test type
+      const ANDREA_ID = 'ed3865f5-9207-4a1e-9534-d57b0f8f15f3';
+      const KLAUDIO_ID = 'ca0a06db-0b50-4edf-a26d-8b5213690413';
+
+      let filteredData = data || [];
+
+      if (currentProfile) {
+        if (currentProfile.id === ANDREA_ID) {
+          // Andrea sees everything EXCEPT SAT and GMAT
+          filteredData = filteredData.filter((q: any) => {
+            const testType = q['2V_tests']?.test_type?.toUpperCase();
+            return testType !== 'SAT' && testType !== 'GMAT';
+          });
+        } else if (currentProfile.id === KLAUDIO_ID) {
+          // Klaudio sees ONLY SAT and GMAT
+          filteredData = filteredData.filter((q: any) => {
+            const testType = q['2V_tests']?.test_type?.toUpperCase();
+            return testType === 'SAT' || testType === 'GMAT';
+          });
+        }
+        // Other users see nothing (empty list)
+        else if (currentProfile.id !== ANDREA_ID && currentProfile.id !== KLAUDIO_ID) {
+          filteredData = [];
+        }
+      }
+
       // Fetch profile names for flagged_by IDs
       const questionsWithNames = await Promise.all(
-        (data || []).map(async (question) => {
+        filteredData.map(async (question) => {
           if (question.Questions_toReview?.flagged_by) {
             const { data: profile } = await supabase
               .from('2V_profiles')
