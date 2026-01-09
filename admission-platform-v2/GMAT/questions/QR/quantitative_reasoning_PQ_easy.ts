@@ -17,12 +17,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "Working at a constant rate, a copy machine makes 20 copies of a one-page document per minute. If the machine works at this constant rate, how many hours does it take to make 4,800 copies of a one-page document?",
-      options: {,
+      options: {
         a: "4",
         b: "5",
         c: "6",
         d: "7",
-        e: "8",
+        e: "8"
       },
       image_url: null,
       image_options: null
@@ -38,12 +38,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "If $x = y + 2$ and $x^2 + y^2 = 2$, what is the value of $xy$?",
-      options: {,
+      options: {
         a: "$-2$",
         b: "$-1$",
         c: "$0$",
         d: "$1$",
-        e: "$2$",
+        e: "$2$"
       },
       image_url: null,
       image_options: null
@@ -59,12 +59,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "The sum $S$ of the first $n$ consecutive positive even integers is given by $S = n(n + 1)$. For what value of $n$ is the sum equal to $110$?",
-      options: {,
+      options: {
         a: "$10$",
         b: "$11$",
         c: "$12$",
         d: "$13$",
-        e: "$14$",
+        e: "$14$"
       },
       image_url: null,
       image_options: null
@@ -80,12 +80,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "$(60^2 \\times 0.65) \\times 0.30 = ?$",
-      options: {,
+      options: {
         a: "$7.02$",
         b: "$39.60$",
         c: "$90.90$",
         d: "$91.20$",
-        e: "$91.85$",
+        e: "$91.85$"
       },
       image_url: null,
       image_options: null
@@ -101,12 +101,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "What is the value of $x^2yz - xyz^2$ if $x = -2$, $y = 1$, and $z = 3$?",
-      options: {,
+      options: {
         a: "$-20$",
         b: "$-24$",
         c: "$30$",
         d: "$32$",
-        e: "$48$",
+        e: "$48$"
       },
       image_url: null,
       image_options: null
@@ -122,12 +122,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "If $T$ is a set of $35$ consecutive integers, of which $17$ are negative, what is the sum of all the integers in $T$?",
-      options: {,
+      options: {
         a: "$-2$",
         b: "$0$",
         c: "$1$",
         d: "$2$",
-        e: "$48$",
+        e: "$48$"
       },
       image_url: null,
       image_options: null
@@ -143,12 +143,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "If $x = y + 2$ and $y \\neq 0$, which of the following represents the greatest number?",
-      options: {,
+      options: {
         a: "$x = z$",
         b: "$x = y$",
         c: "$y = z$",
         d: "$z = y$",
-        e: "$x + y = z$",
+        e: "$x + y = z$"
       },
       image_url: null,
       image_options: null
@@ -164,12 +164,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "$3(8, 22, 27, 33, 47, 51, 82)$ - Which of the following numbers is greater than three-fourths of the numbers but less than one-fourth of the numbers in the list above?",
-      options: {,
+      options: {
         a: "$56$",
         b: "$68$",
         c: "$69$",
         d: "$71$",
-        e: "$73$",
+        e: "$73$"
       },
       image_url: null,
       image_options: null
@@ -185,12 +185,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "A rug manufacturer produces rugs at a cost of $\\$75$ per rug. What is the manufacturer's gross profit from the sale of $150$ rugs if $\\frac{2}{3}$ of the rugs are sold for $\\$150$ per rug and the rest are sold for $\\$200$ per rug?",
-      options: {,
+      options: {
         a: "$\\$10,350$",
         b: "$\\$11,250$",
         c: "$\\$13,750$",
         d: "$\\$16,250$",
-        e: "$\\$17,800$",
+        e: "$\\$17,800$"
       },
       image_url: null,
       image_options: null
@@ -206,12 +206,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "The value of Maureen's investment portfolio has decreased by $5.8$ percent since her initial investment in the portfolio. If her initial investment was $\\$16,800$, what is the current value of the portfolio?",
-      options: {,
+      options: {
         a: "$\\$10,000$",
         b: "$\\$14,280.00$",
         c: "$\\$15,825.60$",
         d: "$\\$16,702.56$",
-        e: "$\\$17,774.40$",
+        e: "$\\$17,774.40$"
       },
       image_url: null,
       image_options: null
@@ -227,12 +227,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "Company $C$ produces toy trucks at a cost of $\\$5.00$ each for the first $100$ trucks and $\\$3.50$ for each additional truck. If $500$ toy trucks were produced by Company $C$ and sold for $\\$10.00$ each, what was Company $C$'s gross profit?",
-      options: {,
+      options: {
         a: "$\\$2,250$",
         b: "$\\$2,500$",
         c: "$\\$3,100$",
         d: "$\\$500$",
-        e: "$\\$1,000$",
+        e: "$\\$1,000$"
       },
       image_url: null,
       image_options: null
@@ -248,12 +248,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "The annual profit or loss for the three divisions of Company $T$ for the years $1991$ through $1995$ are summarized in the table below, where losses are enclosed in parentheses. For which division and which three consecutive years shown was the division's profit or loss for the three-year period closest to $\\$0$?",
-      options: {,
+      options: {
         a: "Division $A$ for $1992$-$1994$",
         b: "Division $A$ for $1991$-$1993$",
         c: "Division $B$ for $1992$-$1994$",
         d: "Division $B$ for $1993$-$1995$",
-        e: "Division $C$ for $1992$-$1994$",
+        e: "Division $C$ for $1992$-$1994$"
       },
       table_title: "Profit or Loss (in millions of dollars)",
       column_headers: ["Division", "1991", "1992", "1993", "1994", "1995"],
@@ -272,12 +272,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "A company appliance dealer bought a refrigerator at a wholesale price of $\\$500$ and then sold it at a $20$ percent discount off the suggested retail price. If the dealer made a $12$ percent profit on the wholesale price, what was the suggested retail price of the refrigerator?",
-      options: {,
+      options: {
         a: "$\\$560$",
         b: "$\\$580$",
         c: "$\\$600$",
         d: "$\\$620$",
-        e: "$\\$700$",
+        e: "$\\$700$"
       },
       image_url: null,
       image_options: null
@@ -293,12 +293,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "Pat invested $x$ dollars in a fund that paid $8$ percent annual interest, compounded annually. Which of the following represents the value, in dollars, of Pat's investment plus interest at the end of $3$ years?",
-      options: {,
+      options: {
         a: "$x(0.08)^3$",
         b: "$x(1.08)^3$",
         c: "$[1 + 3(0.08)]x$",
         d: "$3(1.08^3)x$",
-        e: "$(1.08x)^3$",
+        e: "$(1.08x)^3$"
       },
       image_url: null,
       image_options: null
@@ -314,12 +314,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "Of the $50$ researchers in a workgroup, $40$ percent will be assigned to Team $A$ and the remaining $60$ percent to Team $B$. However, $70$ percent of the researchers prefer Team $A$ and $30$ percent prefer Team $B$. What is the least number of researchers who will NOT be assigned to the team they prefer?",
-      options: {,
+      options: {
         a: "$15$",
         b: "$17$",
         c: "$20$",
         d: "$25$",
-        e: "$30$",
+        e: "$30$"
       },
       image_url: null,
       image_options: null
@@ -335,12 +335,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "In a field day at a school, each child who competed in $n$ events and scored a total of $p$ points was given an overall score of $\\frac{p}{n} + n$. Andrew competed in $1$ event and scored $9$ points. Jason competed in $3$ events and scored $5$, $6$, and $7$ points, respectively. What was the ratio of Andrew's overall score to Jason's overall score?",
-      options: {,
+      options: {
         a: "$\\frac{10}{11}$",
         b: "$\\frac{7}{10}$",
         c: "$\\frac{4}{5}$",
         d: "$\\frac{10}{9}$",
-        e: "$\\frac{12}{5}$",
+        e: "$\\frac{12}{5}$"
       },
       image_url: null,
       image_options: null
@@ -356,12 +356,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "A certain work plan for September requires that a work team, working every day, produce an average of $200$ items per day. For the first half of the month, the team produced an average of $150$ items per day. How many items per day must the team average during the second half of the month if it is to attain the average daily production rate required by the work plan?",
-      options: {,
+      options: {
         a: "$225$",
         b: "$250$",
         c: "$275$",
         d: "$300$",
-        e: "$350$",
+        e: "$350$"
       },
       image_url: null,
       image_options: null
@@ -377,12 +377,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "A company sells radios for $\\$15.00$ each. It costs the company $\\$14.00$ per radio to produce $2,000$ radios. How much greater will the company's gross profit be from the production and sale of $2,000$ radios than from the production and sale of $1,000$ radios?",
-      options: {,
+      options: {
         a: "$\\$500$",
         b: "$\\$1,000$",
         c: "$\\$1,500$",
         d: "$\\$2,500$",
-        e: "$\\$3,000$",
+        e: "$\\$3,000$"
       },
       image_url: null,
       image_options: null
@@ -398,12 +398,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "Working at their respective constant rates, machine $A$ makes $100$ copies in $12$ minutes and machine $B$ makes $150$ copies in $10$ minutes. If these machines work simultaneously at their respective rates for $30$ minutes, what is the total number of copies that they will produce?",
-      options: {,
+      options: {
         a: "$425$",
         b: "$675$",
         c: "$700$",
         d: "$750$",
-        e: "$850$",
+        e: "$850$"
       },
       image_url: null,
       image_options: null
@@ -419,12 +419,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "A survey mailed out questionnaires. Sixty percent of those who received the questionnaires by mail responded. Company $X$ mailed $300$ responses. What is the minimum number of questionnaires that Company $X$ should have mailed in order to get the necessary responses?",
-      options: {,
+      options: {
         a: "$400$",
         b: "$420$",
         c: "$500$",
         d: "$600$",
-        e: "$650$",
+        e: "$650$"
       },
       image_url: null,
       image_options: null
@@ -440,12 +440,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "A car dealer sold $x$ used cars and $y$ new cars during May. If the number of used cars sold was $10$ greater than the number of new cars sold, which of the following expresses this relationship?",
-      options: {,
+      options: {
         a: "$x > 10y$",
         b: "$x > y + 10$",
         c: "$x > y - 10$",
         d: "$x = y + 10$",
-        e: "$x = y - 10$",
+        e: "$x = y - 10$"
       },
       image_url: null,
       image_options: null
@@ -461,12 +461,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "For what value of $x$ between $-4$ and $4$, inclusive, is the value of $x^2 - 10x + 16$ the greatest?",
-      options: {,
+      options: {
         a: "$-4$",
         b: "$-2$",
         c: "$0$",
         d: "$2$",
-        e: "$4$",
+        e: "$4$"
       },
       image_url: null,
       image_options: null
@@ -482,12 +482,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "If $y = -\\frac{3}{2}$ and $x = -\\frac{1}{2}$, what is the value of the expression $-2x - y^2$?",
-      options: {,
+      options: {
         a: "$-3$",
         b: "$-\\frac{5}{2}$",
         c: "$1$",
         d: "$\\frac{5}{2}$",
-        e: "$\\frac{7}{2}$",
+        e: "$\\frac{7}{2}$"
       },
       image_url: null,
       image_options: null
@@ -503,12 +503,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "At the beginning of the year, the price of stock $X$ was $\\$80$ per share. At the closing of the trading day, stock $X$ had a value of $\\$41.00$ per share and stock $Y$ had a value of $\\$28.50$ per share. For each of the following day, the percent increase in the value of stock $X$ was how many percentage points greater than the percent increase in the value of stock $Y$?",
-      options: {,
+      options: {
         a: "$2.5$",
         b: "$6.25$",
         c: "$10$",
         d: "$13$",
-        e: "$12.5$",
+        e: "$12.5$"
       },
       image_url: null,
       image_options: null
@@ -524,12 +524,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "For positive integers $a$ and $b$, the remainder when $a$ is divided by $b$ is equal to the remainder when $b$ is divided by $a$. Which of the following could be a value of $ab$?",
-      options: {,
+      options: {
         a: "$24$",
         b: "$30$",
         c: "$III: 36$",
         d: "$I$ only",
-        e: "$II$ only",
+        e: "$II$ only"
       },
       image_url: null,
       image_options: null
@@ -545,12 +545,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "List $S$ consists of the positive integers that are multiples of $9$ and are less than $100$. What is the median of the integers in $S$?",
-      options: {,
+      options: {
         a: "$36$",
         b: "$45$",
         c: "$49$",
         d: "$54$",
-        e: "$63$",
+        e: "$63$"
       },
       image_url: null,
       image_options: null
@@ -566,12 +566,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "A rope $20$ meters long is cut into two pieces. If the length of one piece of rope is $2.8$ meters shorter than the length of the other, what is the length, in meters, of the longer piece of rope?",
-      options: {,
+      options: {
         a: "$7.2$",
         b: "$8.9$",
         c: "$9.9$",
         d: "$10.3$",
-        e: "$11.7$",
+        e: "$11.7$"
       },
       image_url: null,
       image_options: null
@@ -587,12 +587,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "If $x$ and $y$ are integers and $x = y + 5$, which of the following must be true?",
-      options: {,
+      options: {
         a: "$I$. $xy$ is even.",
         b: "$II$. $(x - y)^2$ is odd.",
         c: "$III$. $(x + y)^2$ is even.",
         d: "$I$ only",
-        e: "$II$ only",
+        e: "$II$ only"
       },
       image_url: null,
       image_options: null
@@ -608,12 +608,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "On Monday, the opening price of a certain stock was $\\$109$ per share and its closing price was $\\$110$ per share. On Tuesday the closing price of the stock was $1$ percent less than its closing price on Monday, and on Wednesday the closing price of the stock was $4$ percent greater than its closing price on Tuesday. If no other change occurred in the price of the stock during the week, what was the percent change in the price of the stock from its opening price on Monday to its closing price on Wednesday?",
-      options: {,
+      options: {
         a: "$A$ decrease of $4\\%$",
         b: "$A$ decrease of $3\\%$",
         c: "$A$ decrease of $1\\%$",
         d: "$An$ increase of $3\\%$",
-        e: "$An$ increase of $4\\%$",
+        e: "$An$ increase of $4\\%$"
       },
       image_url: null,
       image_options: null
@@ -629,12 +629,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "$1 - 0.000001 = ?$",
-      options: {,
+      options: {
         a: "$(1.0)(0.99999)$",
         b: "$(1.1)(0.99999)$",
         c: "$(1.0)(0.9999)$",
         d: "$(1.1)(0.9999)$",
-        e: "$(1.001)(1.0999)$",
+        e: "$(1.001)(1.0999)$"
       },
       image_url: null,
       image_options: null
@@ -650,12 +650,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "In a certain history class of $17$ juniors and seniors, each junior has written $2$ book reports and each senior has written $3$ book reports. If the $17$ students have written a total of $44$ book reports, how many juniors are in the class?",
-      options: {,
+      options: {
         a: "$7$",
         b: "$8$",
         c: "$9$",
         d: "$10$",
-        e: "$11$",
+        e: "$11$"
       },
       image_url: null,
       image_options: null
@@ -671,12 +671,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "$|-4|(-20 - |-5|) = ?$",
-      options: {,
+      options: {
         a: "$-100$",
         b: "$-60$",
         c: "$60$",
         d: "$75$",
-        e: "$100$",
+        e: "$100$"
       },
       image_url: null,
       image_options: null
@@ -692,12 +692,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "What is the greatest integer $g$ for which $2^g$ is a factor of $17!$?",
-      options: {,
+      options: {
         a: "$-2$",
         b: "$1$",
         c: "$-1$",
         d: "$1$",
-        e: "$2$",
+        e: "$2$"
       },
       image_url: null,
       image_options: null
@@ -713,12 +713,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "How many integers $x$ satisfy both $2 < x \\leq 4$ and $0 \\leq x \\leq 3$?",
-      options: {,
+      options: {
         a: "$5$",
         b: "$4$",
         c: "$3$",
         d: "$2$",
-        e: "$1$",
+        e: "$1$"
       },
       image_url: null,
       image_options: null
@@ -734,12 +734,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "Stock $X$ is trading at a price per share of a certain stock exchange. If the price per share of stock $X$ was $\\$9$ at the closing of the day, what was the percent increase in the price per share of stock $X$ for that day?",
-      options: {,
+      options: {
         a: "$4.5\\%$",
         b: "$5.0\\%$",
         c: "$11.1\\%$",
         d: "$12.5\\%$",
-        e: "$23.6\\%$",
+        e: "$23.6\\%$"
       },
       image_url: null,
       image_options: null
@@ -755,15 +755,15 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "As shown in the diagram above, a lever resting on a fulcrum has weights of $w_1$ pounds and $w_2$ pounds, located $d_1$ feet and $d_2$ feet from the fulcrum. The lever is balanced and $w_1d_1 = w_2d_2$. Suppose that $w_1$ is $50$ pounds and $w_2$ is $30$ pounds. If $d_2$ is $4$ feet from the fulcrum and $d_1$ is $x$ feet from the fulcrum, what is the value of $x$?",
-      options: {,
+      options: {
         a: "$1.5$",
         b: "$2.4$",
         c: "$6$",
         d: "$10$",
-        e: "$20$",
+        e: "$20$"
       },
-      image_url: null  // TODO: Add chart/diagram,
-      image_options: null
+      image_url: null,
+      image_options: null  // TODO: Add chart/diagram
     } as QRQuestionData,
     answers: generateMCAnswers("b"),
     explanation: "",
@@ -776,12 +776,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "The table above shows the daily change in the price of a certain stock last week. What was the net change in dollars in the price of the stock for the week?",
-      options: {,
+      options: {
         a: "$+\\frac{6}{8}$",
         b: "$+2\\frac{1}{2}$",
         c: "$+2\\frac{5}{8}$",
         d: "$+3\\frac{1}{2}$",
-        e: "$+4\\frac{5}{8}$",
+        e: "$+4\\frac{5}{8}$"
       },
       table_title: "Daily Change in Dollars",
       column_headers: ["Day", "Change in Dollars"],
@@ -800,12 +800,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "Of $120$ hotel rooms rented one night, some were hotel rooms rented for $\\$115$ each and the rest were double rooms rented for $\\$85$ each. If the total revenue from the room rentals for this night was $\\$10,850$, how many single rooms were rented?",
-      options: {,
+      options: {
         a: "$23$",
         b: "$30$",
         c: "$54$",
         d: "$94$",
-        e: "$97$",
+        e: "$97$"
       },
       image_url: null,
       image_options: null
@@ -821,12 +821,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "Last week Jack worked $70$ hours and earned $\\$1,260$. If he earned his regular hourly wage for the first $40$ hours worked, $1\\frac{1}{2}$ times his regular hourly wage for the next $20$ hours worked, and $2$ times his regular hourly wage for the remaining $10$ hours worked, what was his regular hourly wage?",
-      options: {,
+      options: {
         a: "$\\$7.00$",
         b: "$\\$9.00$",
         c: "$\\$12.00$",
         d: "$\\$14.00$",
-        e: "$\\$18.00$",
+        e: "$\\$18.00$"
       },
       image_url: null,
       image_options: null
@@ -842,12 +842,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "A train travels from New York City to Chicago, a distance of $840$ miles, at an average rate of $60$ miles per hour and then returns to New York City at an average rate of $50$ miles per hour. What is the average rate, in miles per hour, for the round trip?",
-      options: {,
+      options: {
         a: "$52.5$",
         b: "$53.8$",
         c: "$54.5$",
         d: "$55.0$",
-        e: "$56.0$",
+        e: "$56.0$"
       },
       image_url: null,
       image_options: null
@@ -863,12 +863,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "If $(2^3)(3^2) = x$ and $(9^2)(3^3) = 8x$, then $(z, y) = ?$",
-      options: {,
+      options: {
         a: "$(1, 2)$",
         b: "$(2, 1)$",
         c: "$(1, 1)$",
         d: "$(2, 2)$",
-        e: "$(1, 3)$",
+        e: "$(1, 3)$"
       },
       image_url: null,
       image_options: null
@@ -884,12 +884,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "Three machines, each of which produces $7$ billboards and each of which operates for $35$ hours, will produce exactly what quantity? From $8$ o'clock yesterday morning to $12$ o'clock midnight, $24$ clocks passed each of the billboards at the average rate of $4$ vehicles per minute. Approximately how much money did the toll turnpike collect during that period?",
-      options: {,
+      options: {
         a: "$\\$1,500$",
         b: "$\\$3,000$",
         c: "$\\$11,500$",
         d: "$\\$23,000$",
-        e: "$\\$30,000$",
+        e: "$\\$30,000$"
       },
       image_url: null,
       image_options: null
@@ -905,12 +905,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "If $y = -2$, $2x$ and $y = \\frac{1}{x}$, then $\\frac{1}{y} + \\frac{1}{x} - \\frac{1}{y} - \\frac{1}{x} = ?$",
-      options: {,
+      options: {
         a: "$\\frac{1}{x - 32}$",
         b: "$\\frac{2}{1 + x}$",
         c: "$\\frac{x}{x + 8}$",
         d: "$\\frac{8}{x + 8}$",
-        e: "$\\frac{1}{1 + x}$",
+        e: "$\\frac{1}{1 + x}$"
       },
       image_url: null,
       image_options: null
@@ -926,12 +926,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "If $x - y^2 = 1 + 16(2, \\text{then } x(z - 1)) = ?$",
-      options: {,
+      options: {
         a: "$12$",
         b: "$16$",
         c: "$20$",
-        d: "",
-        e: "",
+        d: "[Option D - needs manual transcription from source PDF]",
+        e: "[Option E - needs manual transcription from source PDF]"
       },
       image_url: null,
       image_options: null
@@ -947,12 +947,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "The $100$ positive integers, $x$, is defined as the product of the integers from $1$ through $x$. If $p$ is the product of the integers from $200$ through $209$, which of the following is equal to $\\frac{p}{199!}$?",
-      options: {,
+      options: {
         a: "$\\frac{99!}{199!}$",
         b: "$199!$",
         c: "$\\frac{200!}{199!}$",
         d: "$\\frac{199!}{99!}$",
-        e: "$\\frac{209!}{199!}$",
+        e: "$\\frac{209!}{199!}$"
       },
       image_url: null,
       image_options: null
@@ -968,12 +968,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "A school club plans to package and sell dried fruit to raise money. The club purchased $12$ containers of dried fruit, each containing $10\\frac{1}{2}$ pounds. What is the maximum number of individual bags of dried fruit, each containing $\\frac{1}{4}$ pounds, that can be sold from the dried fruit the club purchased?",
-      options: {,
+      options: {
         a: "$50$",
         b: "$64$",
         c: "$126$",
         d: "$700$",
-        e: "$504$",
+        e: "$504$"
       },
       image_url: null,
       image_options: null
@@ -989,12 +989,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "A nursery sells fruit trees priced as shown in the chart above. In its inventory $54$ trees are less than $5$ feet in height. If the expected revenue from the sale of its entire stock is estimated at $\\$2,400$, approximately how many trees are at least $5$ feet tall?",
-      options: {,
+      options: {
         a: "$\\$1,730$",
         b: "$\\$1,640$",
         c: "$\\$1,410$",
         d: "$\\$1,030$",
-        e: "$\\$810$",
+        e: "$\\$810$"
       },
       table_title: "Height and Price",
       column_headers: ["Height", "Price"],
@@ -1013,12 +1013,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "A certain bridge is $4,024$ feet long. Approximately how many minutes does it take to cross this bridge at a constant speed of $20$ miles per hour? ($1$ mile $= 5,280$ feet)",
-      options: {,
+      options: {
         a: "$1$",
         b: "$2$",
         c: "$4$",
         d: "$6$",
-        e: "$7$",
+        e: "$7$"
       },
       image_url: null,
       image_options: null
@@ -1034,12 +1034,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "A purse contains $57$ coins, all of which are nickels, dimes, or quarters. If the purse contains $4$ dimes and $4$ more nickels than dimes, which of the following gives the number of quarters the purse contains in terms of $x$?",
-      options: {,
+      options: {
         a: "$2x + 49$",
         b: "$x + 49$",
         c: "$2x - 65$",
         d: "$57 - 3x$",
-        e: "$65 - 2x$",
+        e: "$65 - 2x$"
       },
       image_url: null,
       image_options: null
@@ -1055,12 +1055,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "The annual interest rate earned by an investment increased by $10$ percent from last year to this year. If the annual interest rate earned by the investment this year was $11$ percent, what was the annual interest rate last year?",
-      options: {,
+      options: {
         a: "$1\\%$",
         b: "$9.1\\%$",
         c: "$10\\%$",
         d: "$10.8\\%$",
-        e: "",
+        e: "[Option E - needs manual transcription from source PDF]"
       },
       image_url: null,
       image_options: null
@@ -1076,12 +1076,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "A total of $5$ liters of gasoline is to be poured into two empty containers with capacities of $2$ liters and $6$ liters, respectively, such that both containers will be filled to the same percent of their respective capacities. What amount of gasoline, in liters, must be poured into the $6$-liter container?",
-      options: {,
+      options: {
         a: "$4\\frac{1}{2}$",
         b: "$4$",
         c: "$3\\frac{3}{4}$",
         d: "$3$",
-        e: "$1\\frac{1}{4}$",
+        e: "$1\\frac{1}{4}$"
       },
       image_url: null,
       image_options: null
@@ -1097,12 +1097,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "What is the larger of the $2$ solutions of the equation $x^2 - 4x = 96$?",
-      options: {,
+      options: {
         a: "$8$",
         b: "$12$",
         c: "$16$",
         d: "$32$",
-        e: "$100$",
+        e: "$100$"
       },
       image_url: null,
       image_options: null
@@ -1118,12 +1118,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "In the formula shown, if $a$ is a constant and $z = \\frac{1}{a}x + \\frac{1}{a^2}$, when $x = a$, what is the value of $z$ when $x = 4$?",
-      options: {,
+      options: {
         a: "$-24$",
         b: "$-20$",
         c: "$-5$",
         d: "$20$",
-        e: "$24$",
+        e: "$24$"
       },
       image_url: null,
       image_options: null
@@ -1139,12 +1139,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "$(39,897)(0.0096)$ is approximately",
-      options: {,
+      options: {
         a: "$0.04$",
         b: "$0.2$",
         c: "$2$",
         d: "$20$",
-        e: "$200$",
+        e: "$200$"
       },
       image_url: null,
       image_options: null
@@ -1160,12 +1160,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "The \"prime sum\" of an integer $n$ greater than $1$ is the sum of all the prime factors of $n$, including repetitions. For example, the prime sum of $12$ is $7$ since $12 = 2 \\times 2 \\times 3$ and $2 + 2 + 3 = 7$. For which of the following integers is the prime sum greater than $35$?",
-      options: {,
+      options: {
         a: "$440$",
         b: "$512$",
         c: "$620$",
         d: "$700$",
-        e: "$750$",
+        e: "$750$"
       },
       image_url: null,
       image_options: null
@@ -1181,12 +1181,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "A factory that employs $1,000$ assembly-line workers pays each of these workers $\\$5$ per hour for the first $40$ hours worked during a week and $1\\frac{1}{2}$ times that rate for hours worked in excess of $40$. What is the total payroll for the assembly-line workers for a week in which $30$ percent of the workers worked $20$ hours, $50$ percent of the workers worked $40$ hours, and the rest of the workers worked $50$ hours?",
-      options: {,
+      options: {
         a: "$\\$180,000$",
         b: "$\\$185,000$",
         c: "$\\$200,000$",
         d: "$\\$supreme,000$",
-        e: "$\\$50\\%$",
+        e: "$\\$50\\%$"
       },
       image_url: null,
       image_options: null
@@ -1202,12 +1202,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "When a subscription to a new magazine was purchased for $m$ months, the publisher offered a discount of $75$ percent off the regular monthly price of the magazine. If the total value of the discount was equivalent to buying the magazine at its regular monthly price for $27$ months, what was the value of $m$?",
-      options: {,
+      options: {
         a: "$18$",
         b: "$24$",
         c: "$30$",
         d: "$36$",
-        e: "$48$",
+        e: "$48$"
       },
       image_url: null,
       image_options: null
@@ -1223,12 +1223,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "At a selling price of $\\$20$ per radio, a manufacturer's sales revenue from radios sold at the garage sale was $\\$6,000$. If the $20\\%$ lowest price was among the prices of the items sold, how many items were sold at the garage sale?",
-      options: {,
+      options: {
         a: "$33$",
         b: "$34$",
         c: "$35$",
         d: "$36$",
-        e: "$37$",
+        e: "$37$"
       },
       image_url: null,
       image_options: null
@@ -1244,12 +1244,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "Half of a large pizza is cut into $4$ equal-sized pieces, and the other half is cut into $6$ equal-sized pieces. If a person were to eat $1$ of the larger pieces and $2$ of the smaller pieces, what fraction of the pizza would remain uneaten?",
-      options: {,
+      options: {
         a: "$\\frac{5}{12}$",
         b: "$\\frac{13}{24}$",
         c: "$\\frac{7}{12}$",
         d: "$\\frac{2}{3}$",
-        e: "$\\frac{17}{24}$",
+        e: "$\\frac{17}{24}$"
       },
       image_url: null,
       image_options: null
@@ -1265,12 +1265,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "A rectangular room has the dimensions shown above. What is the area of the floor of the room, in square feet?",
-      options: {,
+      options: {
         a: "$250$",
         b: "$350$",
         c: "$400$",
         d: "$450$",
-        e: "$500$",
+        e: "$500$"
       },
       image_url: null,
       image_options: null
@@ -1286,12 +1286,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "In a certain diving competition, each diver's final score is the sum of $7$ scores from judges. A diver earned scores from the judges of either $-2$, $-1$, $0$, $1$, or $2$. The participant's final score comprised of the sum of the individual scores, $2$ times the second final score, and $3$ times the third final score. If Anil received scores of $1$ and $-1$ for the first and second dives, respectively, and a final score of $3$, what is Anil's score for the third dive?",
-      options: {,
+      options: {
         a: "$-4$",
         b: "$-2$",
         c: "$1$",
         d: "$5$",
-        e: "$6$",
+        e: "$6$"
       },
       image_url: null,
       image_options: null
@@ -1307,12 +1307,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "For all positive integers $n$, the expression $(n \\triangle)(n \\square) - (n \\square)(n \\triangle)$ represents the remainder when $n$ is divided by $5$. What is the value of $(18 \\triangle)(7) = ?$",
-      options: {,
+      options: {
         a: "$-10$",
         b: "$-2$",
         c: "$8$",
         d: "$13$",
-        e: "$17$",
+        e: "$17$"
       },
       image_url: null,
       image_options: null
@@ -1328,15 +1328,15 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "The chart above shows year-end investment values for Darnell's investments. For just the stocks, what was the increase in value from year-end $2000$ to year-end $2003$?",
-      options: {,
+      options: {
         a: "$\\$1,000$",
         b: "$\\$2,000$",
         c: "$\\$3,000$",
         d: "$\\$4,000$",
-        e: "$\\$5,000$",
+        e: "$\\$5,000$"
       },
-      image_url: null  // TODO: Add chart/diagram,
-      image_options: null
+      image_url: null,
+      image_options: null  // TODO: Add chart/diagram
     } as QRQuestionData,
     answers: generateMCAnswers("b"),
     explanation: "",
@@ -1349,12 +1349,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "If the sum of the reciprocals of two consecutive odd integers is $\\frac{12}{35}$, then the greater of the two integers is",
-      options: {,
+      options: {
         a: "$3$",
         b: "$5$",
         c: "$7$",
         d: "$9$",
-        e: "$11$",
+        e: "$11$"
       },
       image_url: null,
       image_options: null
@@ -1370,12 +1370,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "What is the sum of the odd integers from $35$ to $85$, inclusive?",
-      options: {,
+      options: {
         a: "$1,560$",
         b: "$1,500$",
         c: "$1,240$",
         d: "$1,120$",
-        e: "$1,100$",
+        e: "$1,100$"
       },
       image_url: null,
       image_options: null
@@ -1391,12 +1391,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "For all numbers $a$, $b$, $c$, and $d$, $a \\star b$ is defined by the equation $a \\star b = \\frac{a}{b} - \\frac{ab}{c}$. Which of the following is equal to $1 \\star 2$?",
-      options: {,
+      options: {
         a: "$\\frac{1}{6}$",
         b: "$\\frac{1}{5}$",
         c: "$\\frac{1}{4}$",
         d: "$\\frac{1}{3}$",
-        e: "$\\frac{1}{2}$",
+        e: "$\\frac{1}{2}$"
       },
       image_url: null,
       image_options: null
@@ -1412,12 +1412,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "In a certain sequence, each term after the first term is one-half the previous term. If the tenth term of the sequence is between $0.0001$ and $0.001$, then the twelfth term of the sequence is between",
-      options: {,
+      options: {
         a: "$0.0025$ and $0.025$",
         b: "$0.00025$ and $0.0025$",
         c: "$0.000025$ and $0.00025$",
         d: "$0.0000025$ and $0.000025$",
-        e: "$0.00000025$ and $0.0000025$",
+        e: "$0.00000025$ and $0.0000025$"
       },
       image_url: null,
       image_options: null
@@ -1433,12 +1433,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "A certain drive-in movie theater has a total of $17$ rows of parking spaces. There are $20$ parking spaces in the first row and $21$ parking spaces in the second row. In each subsequent row there are $2$ more parking spaces than in the previous row. What is the total number of parking spaces in the movie theater?",
-      options: {,
+      options: {
         a: "$412$",
         b: "$544$",
         c: "$596$",
         d: "$632$",
-        e: "$692$",
+        e: "$692$"
       },
       image_url: null,
       image_options: null
@@ -1454,12 +1454,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "In a certain sequence, each term after the first term is one-half the previous term. If the tenth term of the sequence is between $0.0001$ and $0.001$, then the twelfth term of the sequence is between",
-      options: {,
+      options: {
         a: "$\\frac{6}{5}$",
         b: "$\\frac{1}{2}$",
         c: "$\\frac{6}{7}$",
         d: "$\\frac{-6}{5}$",
-        e: "$\\frac{-1}{7}$",
+        e: "$\\frac{-1}{7}$"
       },
       image_url: null,
       image_options: null
@@ -1475,12 +1475,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "On the first day, a tennis player practices serves for $45$ minutes. On the second day, Ada's serve was $8$ points higher than Jean's score. If Jean's average (arithmetic mean) score on the three tests was $3$ points higher than Ada's average score on the three tests, then what was Jean's score on the three tests was $3$ points higher than Ada's score?",
-      options: {,
+      options: {
         a: "$9$",
         b: "$14$",
         c: "$17$",
         d: "$23$",
-        e: "$25$",
+        e: "$25$"
       },
       image_url: null,
       image_options: null
@@ -1496,12 +1496,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "The price of a certain stock increased by $0.25$ of $1$ percent on a certain day. By what fraction did the price of the stock increase that day?",
-      options: {,
+      options: {
         a: "$\\frac{1}{2,500}$",
         b: "$\\frac{1}{400}$",
         c: "$\\frac{1}{40}$",
         d: "$\\frac{1}{4}$",
-        e: "$\\frac{1}{4}$",
+        e: "$\\frac{1}{4}$"
       },
       image_url: null,
       image_options: null
@@ -1517,12 +1517,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "When $24$ is divided by the positive integer $n$, the remainder is $4$. Which of the following statements about $n$ must be true?",
-      options: {,
+      options: {
         a: "$I$. $n$ is even.",
         b: "$II$. $n$ is a multiple of $5$.",
         c: "$III$. $n$ is a factor of $20$.",
         d: "$I$ and $II$ only",
-        e: "$I$ and $III$ only",
+        e: "$I$ and $III$ only"
       },
       image_url: null,
       image_options: null
@@ -1538,12 +1538,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "Terry needs to purchase some rope for a climbing job that requires three pipes with lengths of $1$ ft $4$ in, $2$ ft $6$ in, $3$ ft $4$ in, and $5$ ft $8$ in. If Terry needs $10$ ft-length rope to cut into shorter pieces, what is the minimum number of $10$ ft pipe lengths that Terry needs to purchase for this climbing job? (Note: $1$ ft $=$ $12$ in)",
-      options: {,
+      options: {
         a: "$3$",
         b: "$4$",
         c: "$5$",
         d: "$6$",
-        e: "$7$",
+        e: "$7$"
       },
       image_url: null,
       image_options: null
@@ -1559,12 +1559,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "What is the thousandths digit in the decimal equivalent of $\\frac{53}{5,000}$?",
-      options: {,
+      options: {
         a: "$0$",
         b: "$1$",
         c: "$3$",
         d: "$5$",
-        e: "$6$",
+        e: "$6$"
       },
       image_url: null,
       image_options: null
@@ -1580,12 +1580,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "For each trip, a taxicab company charges $\\$4.25$ for the first mile and $\\$2.65$ for each additional mile or fraction thereof. If the total charge for a certain trip was $\\$62.55$, how many miles at most was the trip?",
-      options: {,
+      options: {
         a: "$21$",
         b: "$22$",
         c: "$23$",
         d: "$24$",
-        e: "$25$",
+        e: "$25$"
       },
       image_url: null,
       image_options: null
@@ -1601,12 +1601,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "A certain drive-in movie theater has a total of $17$ rows of parking spaces. There are $20$ parking spaces in the first row and $21$ parking spaces in the second row. In each subsequent row there are $2$ more parking spaces than in the previous row. What is the total number of parking spaces in the movie theater?",
-      options: {,
+      options: {
         a: "$412$",
         b: "$596$",
         c: "$632$",
         d: "$692$",
-        e: "$852$",
+        e: "$852$"
       },
       image_url: null,
       image_options: null
@@ -1622,12 +1622,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "On a scale drawing, a rectangular plot of land has an area of $12$ square centimeters. If the actual plot has an area of $3,000$ square meters, what is the scale of the drawing?",
-      options: {,
+      options: {
         a: "$1$ centimeter to $5$ meters",
         b: "$1$ centimeter to $10$ meters",
         c: "$1$ centimeter to $25$ meters",
         d: "$1$ centimeter to $50$ meters",
-        e: "$1$ centimeter to $250$ meters",
+        e: "$1$ centimeter to $250$ meters"
       },
       image_url: null,
       image_options: null
@@ -1643,12 +1643,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "A certain company's customer service hotline receives calls from customers between the hours of $8:00$ A.M. and $5:00$ P.M. The hotline receives an average of $2$ calls per hour during off-peak hours and $6$ calls per hour during peak hours. If the peak hours are from $11:00$ A.M. to $2:00$ P.M., how many calls does the hotline receive in a day?",
-      options: {,
+      options: {
         a: "$30$",
         b: "$32$",
         c: "$36$",
         d: "$38$",
-        e: "$40$",
+        e: "$40$"
       },
       image_url: null,
       image_options: null
@@ -1664,12 +1664,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "What is the value of $2x^2 - 2.4$ when $x = -4$?",
-      options: {,
+      options: {
         a: "$-34.4$",
         b: "$-17.6$",
         c: "$-2.4$",
         d: "$29.6$",
-        e: "$34.4$",
+        e: "$34.4$"
       },
       image_url: null,
       image_options: null
@@ -1685,12 +1685,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "If $x$ and $y$ are positive integers such that $x = 8y + 12$, what is the remainder when $x$ is divided by $4$?",
-      options: {,
+      options: {
         a: "$0$",
         b: "$1$",
         c: "$2$",
         d: "$3$",
-        e: "$4$",
+        e: "$4$"
       },
       image_url: null,
       image_options: null
@@ -1706,12 +1706,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "If $3 < x < 100$, for how many values of $x$ is $\\frac{x}{3}$ the square of a prime number?",
-      options: {,
+      options: {
         a: "$1$",
         b: "$2$",
         c: "$3$",
         d: "$4$",
-        e: "$5$",
+        e: "$5$"
       },
       image_url: null,
       image_options: null
@@ -1727,12 +1727,12 @@ export const quantitativeReasoningPQEasy: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 2,
     questionData: {
       question_text: "A researcher plans to identify each participant in a certain medical experiment with a code consisting of either a single letter or a pair of distinct letters written in alphabetical order. What is the least number of letters that can be used if there are $12$ participants, and each participant is to receive a different code?",
-      options: {,
+      options: {
         a: "$4$",
         b: "$5$",
         c: "$6$",
         d: "$7$",
-        e: "$8$",
+        e: "$8$"
       },
       image_url: null,
       image_options: null
