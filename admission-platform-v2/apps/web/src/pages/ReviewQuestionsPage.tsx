@@ -27,12 +27,14 @@ import {
   faChartLine,
   faBan,
   faList,
+  faListCheck,
   faDownload,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import { MathJaxProvider, MathJaxRenderer } from '../components/MathJaxRenderer';
 import { AdvancedGraphRenderer } from '../components/GraphRenderer';
 import RechartsRenderer from '../components/RechartsRenderer';
+import { FlaggedQuestionEditor } from '../components/FlaggedQuestionEditor';
 import { supabase } from '../lib/supabase';
 import * as pdfjsLib from 'pdfjs-dist';
 import jsPDF from 'jspdf';
@@ -106,10 +108,17 @@ export default function ReviewQuestionsPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // View mode: 'entireTests' or 'flaggedQuestions'
+  const [viewMode, setViewMode] = useState<'entireTests' | 'flaggedQuestions'>('entireTests');
+
   // Test list state
   const [tests, setTests] = useState<Test[]>([]);
   const [loadingTests, setLoadingTests] = useState(true);
   const [selectedTest, setSelectedTest] = useState<Test | null>(null);
+
+  // Flagged questions state
+  const [flaggedQuestions, setFlaggedQuestions] = useState<any[]>([]);
+  const [loadingFlagged, setLoadingFlagged] = useState(false);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -197,6 +206,12 @@ export default function ReviewQuestionsPage() {
   useEffect(() => {
     loadTests();
   }, []);
+
+  useEffect(() => {
+    if (viewMode === 'flaggedQuestions') {
+      loadFlaggedQuestions();
+    }
+  }, [viewMode]);
 
   useEffect(() => {
     if (selectedTest) {
@@ -341,6 +356,50 @@ export default function ReviewQuestionsPage() {
       console.error('Error loading questions:', err);
     } finally {
       setLoadingQuestions(false);
+    }
+  }
+
+  async function loadFlaggedQuestions() {
+    setLoadingFlagged(true);
+    try {
+      const { data, error } = await supabase
+        .from('2V_questions')
+        .select(`
+          *,
+          2V_tests!inner(id, test_type, section, exercise_type, test_number)
+        `)
+        .not('Questions_toReview', 'is', null)
+        .order('updated_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Fetch profile names for flagged_by IDs
+      const questionsWithNames = await Promise.all(
+        (data || []).map(async (question) => {
+          if (question.Questions_toReview?.flagged_by) {
+            const { data: profile } = await supabase
+              .from('2V_profiles')
+              .select('name')
+              .eq('id', question.Questions_toReview.flagged_by)
+              .single();
+
+            return {
+              ...question,
+              Questions_toReview: {
+                ...question.Questions_toReview,
+                flagged_by_name: profile?.name || 'Unknown',
+              },
+            };
+          }
+          return question;
+        })
+      );
+
+      setFlaggedQuestions(questionsWithNames);
+    } catch (err) {
+      console.error('Error loading flagged questions:', err);
+    } finally {
+      setLoadingFlagged(false);
     }
   }
 
@@ -1823,7 +1882,44 @@ export default function ReviewQuestionsPage() {
               <span className="font-medium">Back to Admin Dashboard</span>
             </button>
 
-            {!selectedTest ? (
+            {/* Tab Navigation */}
+            <div className="mb-6 flex gap-4 bg-white rounded-xl shadow-md p-2">
+              <button
+                onClick={() => {
+                  setViewMode('entireTests');
+                  setSelectedTest(null);
+                }}
+                className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-all ${
+                  viewMode === 'entireTests'
+                    ? 'bg-teal-500 text-white shadow-lg'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <FontAwesomeIcon icon={faListCheck} className="mr-2" />
+                Entire Tests
+              </button>
+              <button
+                onClick={() => {
+                  setViewMode('flaggedQuestions');
+                  setSelectedTest(null);
+                }}
+                className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-all relative ${
+                  viewMode === 'flaggedQuestions'
+                    ? 'bg-orange-500 text-white shadow-lg'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <FontAwesomeIcon icon={faExclamationTriangle} className="mr-2" />
+                Flagged Questions
+                {flaggedQuestions.length > 0 && (
+                  <span className="ml-2 bg-white text-orange-600 text-xs font-bold px-2 py-1 rounded-full">
+                    {flaggedQuestions.length}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {viewMode === 'entireTests' && !selectedTest ? (
               /* Test Selection View */
               <div className="bg-white rounded-xl shadow-xl p-6">
                 {/* Filters */}
@@ -1977,7 +2073,7 @@ export default function ReviewQuestionsPage() {
                   </div>
                 )}
               </div>
-            ) : (
+            ) : viewMode === 'entireTests' && selectedTest ? (
               /* Test Review View - PDF Left, Questions Right */
               <div className="lg:grid lg:grid-cols-2 lg:gap-6">
                 {/* Fixed PDF Panel */}
@@ -2702,7 +2798,56 @@ export default function ReviewQuestionsPage() {
                   )}
                 </div>
               </div>
-            )}
+            ) : viewMode === 'flaggedQuestions' ? (
+              /* Flagged Questions List View */
+              <div className="bg-white rounded-xl shadow-xl p-6">
+                <h2 className="text-2xl font-bold text-orange-600 mb-6 flex items-center gap-3">
+                  <FontAwesomeIcon icon={faExclamationTriangle} />
+                  Flagged Questions for Review
+                  <span className="text-sm font-normal text-gray-500">({flaggedQuestions.length} total)</span>
+                </h2>
+
+                {loadingFlagged ? (
+                  <div className="flex items-center justify-center py-12">
+                    <FontAwesomeIcon icon={faSpinner} className="text-4xl text-gray-400 animate-spin" />
+                  </div>
+                ) : flaggedQuestions.length === 0 ? (
+                  <div className="text-center py-12">
+                    <FontAwesomeIcon icon={faCheckCircle} className="text-6xl text-green-500 mb-4" />
+                    <p className="text-xl text-gray-600">No flagged questions!</p>
+                    <p className="text-sm text-gray-500 mt-2">All questions are good to go.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {flaggedQuestions.map((question: any) => (
+                      <FlaggedQuestionEditor
+                        key={question.id}
+                        question={question}
+                        onUpdate={loadFlaggedQuestions}
+                        onClearFlag={(questionId) => {
+                          setFlaggedQuestions(prev => prev.filter(q => q.id !== questionId));
+                        }}
+                        onGoToTest={(testId, questionNumber) => {
+                          // Find the test
+                          const test = tests.find(t => t.id === testId);
+                          if (test) {
+                            setSelectedTest(test);
+                            setViewMode('entireTests');
+                            // Scroll to question after a brief delay
+                            setTimeout(() => {
+                              const element = document.getElementById(`question-${questionNumber}`);
+                              if (element) {
+                                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                              }
+                            }, 500);
+                          }
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : null}
 
             {/* AI Check Modal */}
             {showAICheckModal && (
