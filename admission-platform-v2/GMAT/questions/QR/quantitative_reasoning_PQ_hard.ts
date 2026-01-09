@@ -17,15 +17,15 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "Variables $X$ and $Y$ take on only the values $10, 20, 30, 40, 50, 60, 70$ with frequencies indicated by the shaded regions in the frequency polygons shown in the rectangular grid. What is the median of the values of $X$?",
-      options: {,
+      options: {
         a: "$X$ only",
         b: "$Y$ only",
         c: "$Z$ only",
         d: "$X$ and $Y$",
-        e: "$X$ and $Z$",
+        e: "$X$ and $Z$"
       },
-      image_url: null  // TODO: Add chart/diagram,
-      image_options: null
+      image_url: null,
+      image_options: null  // TODO: Add chart/diagram
     } as QRQuestionData,
     answers: generateMCAnswers("e"),
     explanation: "",
@@ -38,12 +38,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "For how many ordered pairs $(x, y)$ that are solutions of the system above $x^2 + y^2$ is an integer?",
-      options: {,
+      options: {
         a: "$7$",
         b: "$10$",
         c: "$12$",
         d: "$13$",
-        e: "$14$",
+        e: "$14$"
       },
       image_url: null,
       image_options: null
@@ -59,12 +59,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "The United States Mint produces coins in $1$-cent, $5$-cent, $10$-cent, $25$-cent, and $50$-cent denominations. If a jar contains exactly $100$ coins worth of these denominations with a total value of the following could be the total number of coins in the jar?",
-      options: {,
+      options: {
         a: "$I$. $91$",
         b: "$II$. $81$",
         c: "$III$. $76$",
         d: "$I$ only",
-        e: "$III$ only",
+        e: "$III$ only"
       },
       image_url: null,
       image_options: null
@@ -80,12 +80,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "A certain university will select $1$ of $7$ candidates eligible to fill a position in the mathematics department and $2$ of $10$ candidates eligible to fill $2$ identical positions in the computer science department. If none of the candidates is eligible for a position in both departments, how many different sets of $3$ candidates are possible?",
-      options: {,
+      options: {
         a: "$42$",
         b: "$70$",
         c: "$140$",
         d: "$165$",
-        e: "$315$",
+        e: "$315$"
       },
       image_url: null,
       image_options: null
@@ -101,12 +101,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "A company found that during $1993$ employment costs rose $3.8$ percent during that year. If total costs consist of salary costs and fringe-benefit costs, if salary costs rose $3$ percent and fringe-benefit costs rose $5.5$ percent during $1993$, then fringe-benefit costs represented what percent of employment costs at the beginning of $1993$?",
-      options: {,
+      options: {
         a: "$16.5\\%$",
         b: "$20\\%$",
         c: "$35\\%$",
         d: "$55\\%$",
-        e: "$65\\%$",
+        e: "$65\\%$"
       },
       image_url: null,
       image_options: null
@@ -122,12 +122,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "The values of the set $(x, y) = \\{(x', y'), (x'', y''), (x''', y'''), (w, w), (w', w'), (w'', w''), (w''', w''')\\}$ and $1$ (the empty set) satisfy values of the set $\\{x, y, xy\\}$ contain $2$?",
-      options: {,
+      options: {
         a: "$Four$",
         b: "$Five$",
         c: "$Seven$",
         d: "$Eight$",
-        e: "$Sixteen$",
+        e: "$Sixteen$"
       },
       image_url: null,
       image_options: null
@@ -143,12 +143,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "The number $\\sqrt{63 - 36\\sqrt{3}}$ can be expressed as $x - y\\sqrt{3}$ for some integers $x$ and $y$. What is the value of $xy$?",
-      options: {,
+      options: {
         a: "$-18$",
         b: "$-6$",
         c: "$6$",
         d: "$18$",
-        e: "",
+        e: "[Option E - needs manual transcription from source PDF]"
       },
       image_url: null,
       image_options: null
@@ -164,12 +164,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "There are $10$ books on a shelf, of which $4$ are paperbacks and $6$ are hardbacks. How many possible selections of $5$ books from the shelf contain at least one paperback and at least one hardback?",
-      options: {,
+      options: {
         a: "$75$",
         b: "$120$",
         c: "$210$",
         d: "$246$",
-        e: "$252$",
+        e: "$252$"
       },
       image_url: null,
       image_options: null
@@ -185,12 +185,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "If $x$ is chosen at random from the set $\\{1, 2, 3, 4\\}$ and $y$ is to be chosen at random from the set $\\{5, 6, 7\\}$, what is the probability that $xy$ will be even?",
-      options: {,
+      options: {
         a: "$\\frac{1}{6}$",
         b: "$\\frac{1}{3}$",
         c: "$\\frac{1}{2}$",
         d: "$\\frac{2}{3}$",
-        e: "",
+        e: "[Option E - needs manual transcription from source PDF]"
       },
       image_url: null,
       image_options: null
@@ -206,12 +206,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "The function $f_n$ is defined for each positive three-digit integer $n$ by $f(n) = 2^x \\cdot 3^y \\cdot 5^z$ where $x, y$, and $z$ are the hundreds, tens, and units digits of $n$, respectively. If $m$ and $n$ are three-digit positive integers such that $f(m) = 9f(n)$, then $m = ?$",
-      options: {,
+      options: {
         a: "$n + 2$",
         b: "$n + 9$",
         c: "$10n$",
         d: "$9n$",
-        e: "$90$",
+        e: "$90$"
       },
       image_url: null,
       image_options: null
@@ -227,12 +227,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "If $10^{50} - 74$ is written as an integer in base $10$ notation, what is the sum of the digits in that integer?",
-      options: {,
+      options: {
         a: "$424$",
         b: "$433$",
         c: "$440$",
         d: "$449$",
-        e: "$467$",
+        e: "$467$"
       },
       image_url: null,
       image_options: null
@@ -248,12 +248,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "A certain company that sells only cars and trucks reported that revenues from car sales in $1997$ were down $11$ percent from $1996$ and revenues from truck sales in $1997$ were up $7$ percent from $1996$. If total revenues from car sales and truck sales in $1997$ were up $1$ percent from $1996$, what is the ratio of revenue from car sales in $1996$ to revenue from truck sales in $1996$?",
-      options: {,
+      options: {
         a: "$1:2$",
         b: "$4:5$",
         c: "$1:1$",
         d: "$3:2$",
-        e: "$5:3$",
+        e: "$5:3$"
       },
       image_url: null,
       image_options: null
@@ -269,12 +269,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "Becky rented a power tool from a rental shop. The rent for the tool was $\\$12$ for the first hour and $\\$3$ for each additional hour. If Becky paid a total of $\\$27$, excluding sales tax, to rent the tool, for how many hours did she rent it?",
-      options: {,
+      options: {
         a: "$5$",
         b: "$6$",
         c: "$9$",
         d: "$10$",
-        e: "",
+        e: "[Option E - needs manual transcription from source PDF]"
       },
       image_url: null,
       image_options: null
@@ -290,12 +290,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "If $x < \\frac{7 - x}{3}$, which of the following must be true?",
-      options: {,
+      options: {
         a: "$I$. $5 < x$",
         b: "$II$. $|x + 3| > 2$",
         c: "$III$. $-(x + 5)$ is positive.",
         d: "$II$ only",
-        e: "$III$ only",
+        e: "$III$ only"
       },
       image_url: null,
       image_options: null
@@ -311,12 +311,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "On a certain day, a bakery produced a batch of rolls at a total production cost of $\\$300$. On that day, $\\frac{4}{5}$ of the rolls in the batch were sold, each at a price that was $50$ percent greater than the average (arithmetic mean) production cost per roll. The remaining rolls in the batch were sold the next day, each at a price that was $20$ percent less than the price of the day before. What was the bakery's profit on this batch of rolls?",
-      options: {,
+      options: {
         a: "$\\$150$",
         b: "$\\$144$",
         c: "$\\$132$",
         d: "$\\$108$",
-        e: "$\\$90$",
+        e: "$\\$90$"
       },
       image_url: null,
       image_options: null
@@ -332,12 +332,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "A set of numbers has the property that for any number $t$ in the set, $t + 2$ is in the set. If $-1$ is in the set, which of the following must also be in the set?",
-      options: {,
+      options: {
         a: "$I$. $-3$",
         b: "$II$. $1$",
         c: "$III$. $5$",
         d: "$I$ only",
-        e: "$II$ only",
+        e: "$II$ only"
       },
       image_url: null,
       image_options: null
@@ -353,12 +353,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "A couple decides to have $4$ children. If they succeed in having $4$ children and each child is equally likely to be a boy or a girl, what is the probability that they will have exactly $2$ girls and $2$ boys?",
-      options: {,
+      options: {
         a: "$\\frac{3}{8}$",
         b: "$\\frac{1}{4}$",
         c: "$\\frac{1}{2}$",
         d: "$\\frac{1}{8}$",
-        e: "$\\frac{1}{16}$",
+        e: "$\\frac{1}{16}$"
       },
       image_url: null,
       image_options: null
@@ -374,12 +374,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "The closing price of Stock $X$ changed on each trading day last month. The percent change in the closing price of Stock $X$ from the first trading day last month to each of the other trading days last month was less than $20$ percent. If the closing price on the second trading day last month was $\\$10.00$, which of the following CANNOT be the closing price on the last trading day last month?",
-      options: {,
+      options: {
         a: "$\\$9.00$",
         b: "$\\$9.90$",
         c: "$\\$10.00$",
         d: "$\\$24.00$",
-        e: "$\\$25.00$",
+        e: "$\\$25.00$"
       },
       image_url: null,
       image_options: null
@@ -395,12 +395,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "How many different positive integers are factors of $441$?",
-      options: {,
+      options: {
         a: "$4$",
         b: "$6$",
         c: "$7$",
         d: "$9$",
-        e: "",
+        e: "[Option E - needs manual transcription from source PDF]"
       },
       image_url: null,
       image_options: null
@@ -416,12 +416,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "If $n$ is a positive integer and $r$ is divisible by $72$, then the largest positive integer that must divide $n$ is",
-      options: {,
+      options: {
         a: "$6$",
         b: "$12$",
         c: "$24$",
         d: "$36$",
-        e: "$48$",
+        e: "$48$"
       },
       image_url: null,
       image_options: null
@@ -437,12 +437,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "A certain grocery purchased $x$ pounds of produce for $y$ dollars per pound. If a pound of the produce had to be discarded due to spoilage and the grocery sold the rest at a price that was $z$ dollars per pound, which of the following represents the gross profit on the sale of the produce?",
-      options: {,
+      options: {
         a: "$A = (z - y)x - zp$",
         b: "$B = (z - y)x - yp$",
         c: "$C = (z - p)y - zp$",
         d: "$D = (p - y)x - xp$",
-        e: "$E = y(x - p)$",
+        e: "$E = y(x - p)$"
       },
       image_url: null,
       image_options: null
@@ -458,12 +458,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "If $x, y$, and $z$ are positive integers such that $x$ is a factor of $y$, and $x$ is a multiple of $z$, which of the following is NOT necessarily an integer?",
-      options: {,
+      options: {
         a: "$\\frac{x + z}{z}$",
         b: "$\\frac{y + z}{x}$",
         c: "$\\frac{x + y}{z}$",
         d: "$\\frac{xz}{z}$",
-        e: "$\\frac{yz}{x}$",
+        e: "$\\frac{yz}{x}$"
       },
       image_url: null,
       image_options: null
@@ -479,12 +479,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "Running at their respective constant rates, Machine $X$ takes $2$ days longer to produce $w$ widgets than Machine $Y$. At these rates, if the two machines together produce $\\frac{5}{4}w$ widgets in $3$ days, how many days would it take Machine $X$ alone to produce $2w$ widgets?",
-      options: {,
+      options: {
         a: "$4$",
         b: "$6$",
         c: "$8$",
         d: "$10$",
-        e: "$12$",
+        e: "$12$"
       },
       image_url: null,
       image_options: null
@@ -500,12 +500,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "What is the greatest positive integer $n$ such that $3^n$ divides $10! - (2)(5!)$?",
-      options: {,
+      options: {
         a: "$2$",
         b: "$3$",
         c: "$4$",
         d: "$5$",
-        e: "",
+        e: "[Option E - needs manual transcription from source PDF]"
       },
       image_url: null,
       image_options: null
@@ -521,12 +521,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "Candice and Sabrina traveled for a bicycle race by riding around an oval track. They both started riding at the same time from the track's starting point. However, Candice rode at a faster pace than Sabrina, completing each lap around the track in $42$ seconds, while Sabrina completed each lap around the track in $48$ seconds. How many seconds after Candice and Sabrina began riding around the track had Candice completed exactly two more laps than Sabrina?",
-      options: {,
+      options: {
         a: "$21$",
         b: "$23$",
         c: "$42$",
         d: "$84$",
-        e: "$336$",
+        e: "$336$"
       },
       image_url: null,
       image_options: null
@@ -542,12 +542,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "If $m = -\\frac{9}{4}$, which of the following is the greatest integer $k$ such that $m^k$ is a value of $m$?",
-      options: {,
+      options: {
         a: "$1$",
         b: "$3$",
         c: "$4$",
         d: "$6$",
-        e: "$8$",
+        e: "$8$"
       },
       image_url: null,
       image_options: null
@@ -563,12 +563,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "The integer $120$ has many factorizations. For example, $120 = (2)(60), 120 = (3)(40), 120 = (3)(8)(5)$, and $120 = (-1)(-3)(4)$. In how many of the factorizations of $120$ are all the factors consecutive integers in ascending order?",
-      options: {,
+      options: {
         a: "$1$",
         b: "$2$",
         c: "$4$",
         d: "$5$",
-        e: "$6$",
+        e: "$6$"
       },
       image_url: null,
       image_options: null
@@ -584,12 +584,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "Jess's bank statement showed a balance of $\\$5.54$ more than what his records showed. He discovered that the bank had recorded a check for $\\$1.50$ what his records showed, a check for $\\$1.50$ what his records showed, where each of $x, y$, and $z$ represents a digit from $0$ through $9$. Which of the following could be the value of $z$?",
-      options: {,
+      options: {
         a: "$4$",
         b: "$5$",
         c: "$6$",
         d: "$7$",
-        e: "$8$",
+        e: "$8$"
       },
       image_url: null,
       image_options: null
@@ -605,12 +605,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "One side of a parking lot is defined by a straight stripe that consists of $4$ painted sections of equal length with an unpainted section of $\\frac{3}{16}$ inch between each $2$ consecutive painted sections. The total length of the stripe from the beginning of the first painted section to the end of the last painted section is $203$ inches. If $n$ is an integer and the length, in inches, of each unpainted section is an integer greater than $2$, what is the value of $n$?",
-      options: {,
+      options: {
         a: "$5$",
         b: "$9$",
         c: "$10$",
-        d: "",
-        e: "",
+        d: "[Option D - needs manual transcription from source PDF]",
+        e: "[Option E - needs manual transcription from source PDF]"
       },
       image_url: null,
       image_options: null
@@ -626,12 +626,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "This year, Henry will save a certain amount of his income, and he will spend the rest. Next year, Henry will have no income, but for each dollar that he saves this year, he will have $1 + r$ dollars available to spend. In terms of $r$, what fraction of his income should Henry save this year so that next year the amount he has available to spend will be equal to half the amount that he spends this year?",
-      options: {,
+      options: {
         a: "$\\frac{1}{3 + 2r}$",
         b: "$\\frac{1}{2 + 2r}$",
         c: "$\\frac{1}{3(1 + r)}$",
         d: "$\\frac{1}{3}$",
-        e: "$\\frac{1}{1 + 3r}$",
+        e: "$\\frac{1}{1 + 3r}$"
       },
       image_url: null,
       image_options: null
@@ -647,12 +647,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "At a certain factory, each of Machines $A, B$, and $C$ is periodically on for exactly $1$ minute and periodically off for a fixed number of consecutive minutes. The table above shows that Machine $A$ is on and uses $15$ units of power every $16^{th}$ minute. Machine $B$ is on and uses $18$ units of power every $19^{th}$ minute, and Machine $C$ is on and uses $12$ units of power every $13^{th}$ minute. The factory has a backup generator that operates only when the total power usage of the $3$ machines exceeds $20$ units of power. Between consecutive times the backup generator begins to operate?",
-      options: {,
+      options: {
         a: "$36$",
         b: "$63$",
         c: "$90$",
         d: "$180$",
-        e: "$270$",
+        e: "$270$"
       },
       table_title: "Consecutive Minutes Until Off When On",
       column_headers: ["Machine", "Machine is Off", "Units of Power When On"],
@@ -671,12 +671,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "In a certain region, the number of children who have been vaccinated against rubella is twice the number who have been vaccinated against mumps. The number who have been vaccinated against both is twice the number who have been vaccinated only against mumps. If $5,000$ have been vaccinated against both, how many have been vaccinated only against rubella?",
-      options: {,
+      options: {
         a: "$2,500$",
         b: "$7,500$",
         c: "$10,000$",
         d: "$15,000$",
-        e: "$17,500$",
+        e: "$17,500$"
       },
       image_url: null,
       image_options: null
@@ -692,12 +692,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "There are $8$ teams of members in a company. If each of $2$ kilograms and a median weight of $3$ kilograms. What is the maximum possible weight, in kilograms, of the lightest box?",
-      options: {,
+      options: {
         a: "$1$",
         b: "$2$",
         c: "$3$",
         d: "$4$",
-        e: "$5$",
+        e: "$5$"
       },
       image_url: null,
       image_options: null
@@ -713,12 +713,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "A certain list of numbers has a median of $3$ and a mode of $8$. Which of the following are possible values for $n$ when this list of numbers is ordered from least to greatest?",
-      options: {,
+      options: {
         a: "$68$",
         b: "$112$",
         c: "$56$",
-        d: "",
-        e: "",
+        d: "[Option D - needs manual transcription from source PDF]",
+        e: "[Option E - needs manual transcription from source PDF]"
       },
       table_title: "Stock, Number of Shares",
       column_headers: ["Stock", "Number of Shares"],
@@ -737,12 +737,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "Question 199 - Difficulty: Hard",
-      options: {,
+      options: {
         a: "Option A",
         b: "Option B",
         c: "Option C",
         d: "Option D",
-        e: "Option E",
+        e: "Option E"
       },
       image_url: null,
       image_options: null
@@ -758,12 +758,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "Question 200 - Difficulty: Hard",
-      options: {,
+      options: {
         a: "Option A",
         b: "Option B",
         c: "Option C",
         d: "Option D",
-        e: "Option E",
+        e: "Option E"
       },
       image_url: null,
       image_options: null
@@ -779,12 +779,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "Question 201 - Difficulty: Hard",
-      options: {,
+      options: {
         a: "Option A",
         b: "Option B",
         c: "Option C",
         d: "Option D",
-        e: "Option E",
+        e: "Option E"
       },
       image_url: null,
       image_options: null
@@ -800,12 +800,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "Question 202 - Difficulty: Hard",
-      options: {,
+      options: {
         a: "Option A",
         b: "Option B",
         c: "Option C",
         d: "Option D",
-        e: "Option E",
+        e: "Option E"
       },
       image_url: null,
       image_options: null
@@ -821,12 +821,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "Question 203 - Difficulty: Hard",
-      options: {,
+      options: {
         a: "Option A",
         b: "Option B",
         c: "Option C",
         d: "Option D",
-        e: "Option E",
+        e: "Option E"
       },
       image_url: null,
       image_options: null
@@ -842,12 +842,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "Question 204 - Difficulty: Hard",
-      options: {,
+      options: {
         a: "Option A",
         b: "Option B",
         c: "Option C",
         d: "Option D",
-        e: "Option E",
+        e: "Option E"
       },
       image_url: null,
       image_options: null
@@ -863,12 +863,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "Question 205 - Difficulty: Hard",
-      options: {,
+      options: {
         a: "Option A",
         b: "Option B",
         c: "Option C",
         d: "Option D",
-        e: "Option E",
+        e: "Option E"
       },
       image_url: null,
       image_options: null
@@ -884,12 +884,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "Question 206 - Difficulty: Hard",
-      options: {,
+      options: {
         a: "Option A",
         b: "Option B",
         c: "Option C",
         d: "Option D",
-        e: "Option E",
+        e: "Option E"
       },
       image_url: null,
       image_options: null
@@ -905,12 +905,12 @@ export const quantitativeReasoningPQHard: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 4,
     questionData: {
       question_text: "Question 207 - Difficulty: Hard",
-      options: {,
+      options: {
         a: "Option A",
         b: "Option B",
         c: "Option C",
         d: "Option D",
-        e: "Option E",
+        e: "Option E"
       },
       image_url: null,
       image_options: null

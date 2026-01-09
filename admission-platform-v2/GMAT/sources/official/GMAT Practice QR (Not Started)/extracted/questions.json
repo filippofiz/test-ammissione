@@ -12,11 +12,12 @@
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "a"
   },
   {
     "question_number": 2,
-    "question_text": "If $x = y + 2$ and $x^2 + y^2 = 2$, what is the value of $xy$?",
+    "question_text": "If $x + y = 2$ and $x^2 + y^2 = 2$, what is the value of $xy$?",
     "options": {
       "a": "$-2$",
       "b": "$-1$",
@@ -27,7 +28,8 @@
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "d"
   },
   {
     "question_number": 3,
@@ -42,14 +44,15 @@
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "a"
   },
   {
     "question_number": 4,
-    "question_text": "$(60^2 \\times 0.65) \\times 0.30 = ?$",
+    "question_text": "$6(87.30 + 0.65) - 5(87.30)=$",
     "options": {
-      "a": "$7.02$",
-      "b": "$39.60$",
+      "a": "$3.90$",
+      "b": "$39.00$",
       "c": "$90.90$",
       "d": "$91.20$",
       "e": "$91.85$"
@@ -57,14 +60,15 @@
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "d"
   },
   {
     "question_number": 5,
     "question_text": "What is the value of $x^2yz - xyz^2$ if $x = -2$, $y = 1$, and $z = 3$?",
     "options": {
-      "a": "$-20$",
-      "b": "$-24$",
+      "a": "$20$",
+      "b": "$24$",
       "c": "$30$",
       "d": "$32$",
       "e": "$48$"
@@ -72,42 +76,46 @@
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 6,
     "question_text": "If $T$ is a set of $35$ consecutive integers, of which $17$ are negative, what is the sum of all the integers in $T$?",
     "options": {
       "a": "$-2$",
-      "b": "$0$",
-      "c": "$1$",
-      "d": "$2$",
-      "e": "$48$"
+      "b": "$-1$",
+      "c": "$0$",
+      "d": "$1$",
+      "e": "$2$"
     },
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 7,
-    "question_text": "If $x = y + 2$ and $y \\neq 0$, which of the following represents the greatest number?",
+    "question_text": "If $x > y$ and $y > z$, which of the following represents the greatest number?",
     "options": {
-      "a": "$x = z$",
-      "b": "$x = y$",
-      "c": "$y = z$",
-      "d": "$z = y$",
-      "e": "$x + y = z$"
+      "a": "$x - z$",
+      "b": "$x - y$",
+      "c": "$y - x$",
+      "d": "$z - y$",
+      "e": "$z - x$"
     },
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question 7 appears to have an error in the options - they seem to be equations rather than expressions to compare. Needs manual review."
+    "reviewed": true,
+    "context_text": "Note: Question 7 appears to have an error in the options - they seem to be equations rather than expressions to compare. Needs manual review.",
+    "correct_answer": "a"
   },
   {
     "question_number": 8,
-    "question_text": "$3(8, 22, 27, 33, 47, 51, 82)$ - Which of the following numbers is greater than three-fourths of the numbers but less than one-fourth of the numbers in the list above?",
+    "question_text": "$38,69,22,73,31,47,13,82$ - Which of the following numbers is greater than three-fourths of the numbers but less than one-fourth of the numbers in the list above?",
     "options": {
       "a": "$56$",
       "b": "$68$",
@@ -118,7 +126,8 @@
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "d"
   },
   {
     "question_number": 9,
@@ -133,13 +142,14 @@
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 10,
     "question_text": "The value of Maureen's investment portfolio has decreased by $5.8$ percent since her initial investment in the portfolio. If her initial investment was $\\$16,800$, what is the current value of the portfolio?",
     "options": {
-      "a": "$\\$10,000$",
+      "a": "$\\$7,056.00$",
       "b": "$\\$14,280.00$",
       "c": "$\\$15,825.60$",
       "d": "$\\$16,702.56$",
@@ -148,7 +158,8 @@
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 11,
@@ -157,13 +168,14 @@
       "a": "$\\$2,250$",
       "b": "$\\$2,500$",
       "c": "$\\$3,100$",
-      "d": "$\\$500$",
-      "e": "$\\$1,000$"
+      "d": "$\\$3,250$",
+      "e": "$\\$3,500$"
     },
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 12,
@@ -204,76 +216,81 @@
       ]
     ],
     "options": {
-      "a": "Division $A$ for $1992$-$1994$",
-      "b": "Division $A$ for $1991$-$1993$",
-      "c": "Division $B$ for $1992$-$1994$",
+      "a": "Division $A$ for $1991$-$1993$",
+      "b": "Division $A$ for $1992$-$1994$",
+      "c": "Division $B$ for $1991$-$1993$",
       "d": "Division $B$ for $1993$-$1995$",
       "e": "Division $C$ for $1992$-$1994$"
     },
     "difficulty": "easy",
     "has_table": true,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "e"
   },
   {
     "question_number": 13,
-    "question_text": "A company appliance dealer bought a refrigerator at a wholesale price of $\\$500$ and then sold it at a $20$ percent discount off the suggested retail price. If the dealer made a $12$ percent profit on the wholesale price, what was the suggested retail price of the refrigerator?",
+    "question_text": "A computer appliance dealer bought a computer at a wholesale price of $\\$500$ and then sold it at a $20$ percent discount off the suggested retail price. If the dealer made a $12$ percent profit on the wholesale price, what was the suggested retail price of the computer?",
     "options": {
       "a": "$\\$560$",
       "b": "$\\$580$",
-      "c": "$\\$600$",
-      "d": "$\\$620$",
-      "e": "$\\$700$"
+      "c": "$\\$660$",
+      "d": "$\\$700$",
+      "e": "$\\$730$"
     },
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "d"
   },
   {
     "question_number": 14,
-    "question_text": "Pat invested $x$ dollars in a fund that paid $8$ percent annual interest, compounded annually. Which of the following represents the value, in dollars, of Pat's investment plus interest at the end of $3$ years?",
+    "question_text": "Pat invested $x$ dollars in a fund that paid $8$ percent annual interest, compounded annually. Which of the following represents the value, in dollars, of Pat's investment plus interest at the end of $5$ years?",
     "options": {
-      "a": "$x(0.08)^3$",
-      "b": "$x(1.08)^3$",
-      "c": "$[1 + 3(0.08)]x$",
-      "d": "$3(1.08^3)x$",
-      "e": "$(1.08x)^3$"
+      "a": "$5(0.08 x)$",
+      "b": "$5(1.08 x)$",
+      "c": "$[1 + 5(0.08)]x$",
+      "d": "$(1.08)^5 x$",
+      "e": "$(1.08x)^5$"
     },
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "d"
   },
   {
     "question_number": 15,
-    "question_text": "Of the $50$ researchers in a workgroup, $40$ percent will be assigned to Team $A$ and the remaining $60$ percent to Team $B$. However, $70$ percent of the researchers prefer Team $A$ and $30$ percent prefer Team $B$. What is the least number of researchers who will NOT be assigned to the team they prefer?",
+    "question_text": "There are five sales agents in a certain real estate office. One month Andy sold twice as many properties as Ellen, Bob sold 3 more than Ellen, Cary sold twice as many as Bob, and Dora sold as many as Bob and Ellen together. Who sold the most properties that month?",
     "options": {
-      "a": "$15$",
-      "b": "$17$",
-      "c": "$20$",
-      "d": "$25$",
-      "e": "$30$"
+      "a": "$Andy$",
+      "b": "$Bob$",
+      "c": "$Cary$",
+      "d": "$Dora$",
+      "e": "$Ellen$"
     },
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 16,
     "question_text": "In a field day at a school, each child who competed in $n$ events and scored a total of $p$ points was given an overall score of $\\frac{p}{n} + n$. Andrew competed in $1$ event and scored $9$ points. Jason competed in $3$ events and scored $5$, $6$, and $7$ points, respectively. What was the ratio of Andrew's overall score to Jason's overall score?",
     "options": {
-      "a": "$\\frac{10}{11}$",
+      "a": "$\\frac{10}{23}$",
       "b": "$\\frac{7}{10}$",
       "c": "$\\frac{4}{5}$",
       "d": "$\\frac{10}{9}$",
-      "e": "$\\frac{12}{5}$"
+      "e": "$\\frac{12}{7}$"
     },
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "d"
   },
   {
     "question_number": 17,
@@ -288,67 +305,72 @@
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "b"
   },
   {
     "question_number": 18,
-    "question_text": "A company sells radios for $\\$15.00$ each. It costs the company $\\$14.00$ per radio to produce $2,000$ radios. How much greater will the company's gross profit be from the production and sale of $2,000$ radios than from the production and sale of $1,000$ radios?",
+    "question_text": "A company sells radios for $\\$15.00$ each. It costs the company $\\$14.00$ per radio to produce $1,000$ radios and $\\$13.50$ per radio to produce $2,000$ radios. How much greater will the company's gross profit be from the production and sale of $2,000$ radios than from the production and sale of $1,000$ radios?",
     "options": {
       "a": "$\\$500$",
       "b": "$\\$1,000$",
       "c": "$\\$1,500$",
-      "d": "$\\$2,500$",
-      "e": "$\\$3,000$"
+      "d": "$\\$2,000$",
+      "e": "$\\$2,500$"
     },
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "d"
   },
   {
     "question_number": 19,
     "question_text": "Working at their respective constant rates, machine $A$ makes $100$ copies in $12$ minutes and machine $B$ makes $150$ copies in $10$ minutes. If these machines work simultaneously at their respective rates for $30$ minutes, what is the total number of copies that they will produce?",
     "options": {
-      "a": "$425$",
-      "b": "$675$",
-      "c": "$700$",
-      "d": "$750$",
-      "e": "$850$"
+      "a": "$250$",
+      "b": "$425$",
+      "c": "$675$",
+      "d": "$700$",
+      "e": "$750$"
     },
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "d"
   },
   {
     "question_number": 20,
-    "question_text": "A survey mailed out questionnaires. Sixty percent of those who received the questionnaires by mail responded. Company $X$ mailed $300$ responses. What is the minimum number of questionnaires that Company $X$ should have mailed in order to get the necessary responses?",
+    "question_text": "Company $X$ mailed out questionnaires. Sixty percent of those who received the questionnaires by mail responded. Company $X$ needed $300$ responses. What is the minimum number of questionnaires that Company $X$ should have mailed in order to get the necessary responses?",
     "options": {
       "a": "$400$",
       "b": "$420$",
-      "c": "$500$",
-      "d": "$600$",
-      "e": "$650$"
+      "c": "$480$",
+      "d": "$500$",
+      "e": "$600$"
     },
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "d"
   },
   {
     "question_number": 21,
-    "question_text": "A car dealer sold $x$ used cars and $y$ new cars during May. If the number of used cars sold was $10$ greater than the number of new cars sold, which of the following expresses this relationship?",
+    "question_text": "The toll $T$, in dollar, for a truck using a certain bridge is given by the formula $T = 1.50 + 0.50(x-2)$, where $x$ is the number of axles on the truck. What is the toll for an 18-wheel truck that has 2 wheels on its front axle and 4 wheels on each of its other axles?",
     "options": {
-      "a": "$x > 10y$",
-      "b": "$x > y + 10$",
-      "c": "$x > y - 10$",
-      "d": "$x = y + 10$",
-      "e": "$x = y - 10$"
+      "a": "$\\$2.50$",
+      "b": "$\\$3.00$",
+      "c": "$\\$3.50$",
+      "d": "$\\$4.00$",
+      "e": "$\\$5.00$"
     },
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "b"
   },
   {
     "question_number": 22,
@@ -363,53 +385,58 @@
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "a"
   },
   {
     "question_number": 23,
-    "question_text": "If $y = -\\frac{3}{2}$ and $x = -\\frac{1}{2}$, what is the value of the expression $-2x - y^2$?",
+    "question_text": "If $x = -\\frac{5}{8}$ and $y = -\\frac{1}{2}$, what is the value of the expression $-2x - y^2$?",
     "options": {
-      "a": "$-3$",
-      "b": "$-\\frac{5}{2}$",
+      "a": "$-\\frac{3}{2}$",
+      "b": "$-1$",
       "c": "$1$",
-      "d": "$\\frac{5}{2}$",
-      "e": "$\\frac{7}{2}$"
+      "d": "$\\frac{3}{2}$",
+      "e": "$\\frac{7}{4}$"
     },
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 24,
-    "question_text": "At the beginning of the year, the price of stock $X$ was $\\$80$ per share. At the closing of the trading day, stock $X$ had a value of $\\$41.00$ per share and stock $Y$ had a value of $\\$28.50$ per share. For each of the following day, the percent increase in the value of stock $X$ was how many percentage points greater than the percent increase in the value of stock $Y$?",
+    "question_text": "At the beginning of the year, the price of stock $X$ had a value of $\\$40.00$ per share and stock $Y$ had a value of $\\$25.00$ per share. At the closing of the trading day, stock $X$ had a value of $\\$41.00$ per share and stock $Y$ had a value of $\\$28.50$ per share. For this trading day, the percent increase in the value of stock $Y$ was how many percentage points greater than the percent increase in the value of stock $X$?",
     "options": {
       "a": "$2.5$",
       "b": "$6.25$",
       "c": "$10$",
-      "d": "$13$",
+      "d": "$11.5$",
       "e": "$12.5$"
     },
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "d"
   },
   {
     "question_number": 25,
-    "question_text": "For positive integers $a$ and $b$, the remainder when $a$ is divided by $b$ is equal to the remainder when $b$ is divided by $a$. Which of the following could be a value of $ab$?",
+    "question_text": "For positive integers $a$ and $b$, the remainder when $a$ is divided by $b$ is equal to the remainder when $b$ is divided by $a$. Which of the following could be a value of $ab$?\nI. 24\nII. 30\nIII. 36",
     "options": {
-      "a": "$24$",
-      "b": "$30$",
-      "c": "$III: 36$",
-      "d": "$I$ only",
-      "e": "$II$ only"
+      "a": "II only",
+      "b": "III only",
+      "c": "I and II only",
+      "d": "II and III only",
+      "e": "I, II, and III"
     },
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question 25 options appear to be formatted incorrectly in the source. May need review."
+    "reviewed": true,
+    "context_text": "Note: Question 25 options appear to be formatted incorrectly in the source. May need review.",
+    "correct_answer": "b"
   },
   {
     "question_number": 26,
@@ -424,13 +451,14 @@
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "d"
   },
   {
     "question_number": 27,
-    "question_text": "A rope $20$ meters long is cut into two pieces. If the length of one piece of rope is $2.8$ meters shorter than the length of the other, what is the length, in meters, of the longer piece of rope?",
+    "question_text": "A rope $20.6$ meters long is cut into two pieces. If the length of one piece of rope is $2.8$ meters shorter than the length of the other, what is the length, in meters, of the longer piece of rope?",
     "options": {
-      "a": "$7.2$",
+      "a": "$7.5$",
       "b": "$8.9$",
       "c": "$9.9$",
       "d": "$10.3$",
@@ -439,53 +467,58 @@
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "e"
   },
   {
     "question_number": 28,
-    "question_text": "If $x$ and $y$ are integers and $x = y + 5$, which of the following must be true?",
+    "question_text": "If $x$ and $y$ are integers and $x-y$ is odd, which of the following must be true?\nI. $xy$ is even.\nII. $x^2 + y^2$ is odd.\nIII. $(x + y)^2$ is even.",
     "options": {
-      "a": "$I$. $xy$ is even.",
-      "b": "$II$. $(x - y)^2$ is odd.",
-      "c": "$III$. $(x + y)^2$ is even.",
-      "d": "$I$ only",
-      "e": "$II$ only"
+      "a": "I only",
+      "b": "II only",
+      "c": "III only",
+      "d": "I and II only",
+      "e": "I, II, and III"
     },
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question 28 appears to have Roman numeral statements that need to be evaluated. Options format may need review."
+    "reviewed": true,
+    "context_text": "Note: Question 28 appears to have Roman numeral statements that need to be evaluated. Options format may need review.",
+    "correct_answer": "d"
   },
   {
     "question_number": 29,
-    "question_text": "On Monday, the opening price of a certain stock was $\\$109$ per share and its closing price was $\\$110$ per share. On Tuesday the closing price of the stock was $1$ percent less than its closing price on Monday, and on Wednesday the closing price of the stock was $4$ percent greater than its closing price on Tuesday. If no other change occurred in the price of the stock during the week, what was the percent change in the price of the stock from its opening price on Monday to its closing price on Wednesday?",
+    "question_text": "On Monday, the opening price of a certain stock was $\\$100$ per share and its closing price was $\\$110$ per share. On Tuesday the closing price of the stock was $10$ percent less than its closing price on Monday, and on Wednesday the closing price of the stock was $4$ percent greater than its closing price on Tuesday. What was the approximate percent change in the price of the stock from its opening price on Monday to its closing price on Wednesday?",
     "options": {
-      "a": "$A$ decrease of $4\\%$",
-      "b": "$A$ decrease of $3\\%$",
-      "c": "$A$ decrease of $1\\%$",
-      "d": "$An$ increase of $3\\%$",
-      "e": "$An$ increase of $4\\%$"
+      "a": "A decrease of $6\\%$",
+      "b": "A decrease of $4\\%$",
+      "c": "A decrease of $1\\%$",
+      "d": "An increase of $3\\%$",
+      "e": "An increase of $4\\%$"
     },
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "d"
   },
   {
     "question_number": 30,
     "question_text": "$1 - 0.000001 = ?$",
     "options": {
-      "a": "$(1.0)(0.99999)$",
-      "b": "$(1.1)(0.99999)$",
-      "c": "$(1.0)(0.9999)$",
-      "d": "$(1.1)(0.9999)$",
-      "e": "$(1.001)(1.0999)$"
+      "a": "$(1.01)(0.99)$",
+      "b": "$(1.11)(0.99)$",
+      "c": "$(1.001)(0.999)$",
+      "d": "$(1.111)(0.999)$",
+      "e": "$(1.0101)(0.0909)$"
     },
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 31,
@@ -500,11 +533,12 @@
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "a"
   },
   {
     "question_number": 32,
-    "question_text": "$|-4|(-20 - |-5|) = ?$",
+    "question_text": "$|-4|(|-20| - |5|) = ?$",
     "options": {
       "a": "$-100$",
       "b": "$-60$",
@@ -515,15 +549,16 @@
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 33,
-    "question_text": "What is the greatest integer $g$ for which $2^g$ is a factor of $17!$?",
+    "question_text": "What is the greatest integer $k$ for which $32.45\\times 10^k$ is less than 1?",
     "options": {
       "a": "$-2$",
-      "b": "$1$",
-      "c": "$-1$",
+      "b": "$-1$",
+      "c": "$0$",
       "d": "$1$",
       "e": "$2$"
     },
@@ -531,7 +566,8 @@
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Options appear to have duplicates. May need verification from source."
+    "context_text": "Note: Options appear to have duplicates. May need verification from source.",
+    "correct_answer": "a"
   },
   {
     "question_number": 34,
@@ -546,14 +582,15 @@
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "e"
   },
   {
     "question_number": 35,
-    "question_text": "Stock $X$ is trading at a price per share of a certain stock exchange. If the price per share of stock $X$ was $\\$9$ at the closing of the day, what was the percent increase in the price per share of stock $X$ for that day?",
+    "question_text": "At the opening of a trading day at certain stock exchange, the price per share of stock $K$ was $\\$8$. If the price per share of the stock $K$ was $\\$9$ at the closing of the day, what was the percent increase in the price per share of stock $K$ for that day?",
     "options": {
-      "a": "$4.5\\%$",
-      "b": "$5.0\\%$",
+      "a": "$1.4\\%$",
+      "b": "$5.9\\%$",
       "c": "$11.1\\%$",
       "d": "$12.5\\%$",
       "e": "$23.6\\%$"
@@ -562,14 +599,15 @@
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question text appears incomplete. Missing opening price information."
+    "context_text": "Note: Question text appears incomplete. Missing opening price information.",
+    "correct_answer": "d"
   },
   {
     "question_number": 36,
-    "question_text": "As shown in the diagram above, a lever resting on a fulcrum has weights of $w_1$ pounds and $w_2$ pounds, located $d_1$ feet and $d_2$ feet from the fulcrum. The lever is balanced and $w_1d_1 = w_2d_2$. Suppose that $w_1$ is $50$ pounds and $w_2$ is $30$ pounds. If $d_2$ is $4$ feet from the fulcrum and $d_1$ is $x$ feet from the fulcrum, what is the value of $x$?",
+    "question_text": "As shown in the diagram above, a lever resting on a fulcrum has weights of $W_1$ pounds and $W_2$ pounds, located $d_1$ feet and $d_2$ feet from the fulcrum. The lever is balanced and $W_1d_1 = W_2d_2$. Suppose that $W_1$ is $50$ pounds and $W_2$ is $30$ pounds. If $d_1$ is $4$ feet less than $d_2$, what is $d_2$, in feet?",
     "options": {
       "a": "$1.5$",
-      "b": "$2.4$",
+      "b": "$2.5$",
       "c": "$6$",
       "d": "$10$",
       "e": "$20$"
@@ -578,7 +616,10 @@
     "has_table": false,
     "has_chart": true,
     "needs_manual_review": true,
-    "context_text": "Note: Question references a diagram showing a lever on a fulcrum. Diagram should be included as image_url or described in context."
+    "reviewed": true,
+    "image_local_location": "admission-platform-v2\\GMAT\\sources\\questions\\QR\\images\\QR_PQ_36.png",
+    "context_text": "Note: Question references a diagram showing a lever on a fulcrum. Diagram should be included as image_url or described in context.",
+    "correct_answer": "d"
   },
   {
     "question_number": 37,
@@ -611,65 +652,69 @@
       ]
     ],
     "options": {
-      "a": "$+\\frac{6}{8}$",
-      "b": "$+2\\frac{1}{2}$",
-      "c": "$+2\\frac{5}{8}$",
-      "d": "$+3\\frac{1}{2}$",
-      "e": "$+4\\frac{5}{8}$"
+      "a": "$-4\\frac{5}{8}$",
+      "b": "$-2\\frac{7}{8}$",
+      "c": "$+2\\frac{7}{8}$",
+      "d": "$+3\\frac{3}{4}$",
+      "e": "$-4\\frac{5}{8}$"
     },
     "difficulty": "easy",
     "has_table": true,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 38,
-    "question_text": "Of $120$ hotel rooms rented one night, some were hotel rooms rented for $\\$115$ each and the rest were double rooms rented for $\\$85$ each. If the total revenue from the room rentals for this night was $\\$10,850$, how many single rooms were rented?",
+    "question_text": "Of $120$ hotel rooms rented one night, some were suites rented for $\\$115$ each and the rest were double rooms rented for $\\$85$ each. If the total revenue from the room rentals for this night was $\\$10,890$, how many suites were rented?",
     "options": {
       "a": "$23$",
-      "b": "$30$",
+      "b": "$35$",
       "c": "$54$",
       "d": "$94$",
-      "e": "$97$"
+      "e": "$99$"
     },
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "a"
   },
   {
     "question_number": 39,
     "question_text": "Last week Jack worked $70$ hours and earned $\\$1,260$. If he earned his regular hourly wage for the first $40$ hours worked, $1\\frac{1}{2}$ times his regular hourly wage for the next $20$ hours worked, and $2$ times his regular hourly wage for the remaining $10$ hours worked, what was his regular hourly wage?",
     "options": {
       "a": "$\\$7.00$",
-      "b": "$\\$9.00$",
-      "c": "$\\$12.00$",
-      "d": "$\\$14.00$",
-      "e": "$\\$18.00$"
+      "b": "$\\$14.00$",
+      "c": "$\\$18.00$",
+      "d": "$\\$22.00$",
+      "e": "$\\$31.50$"
     },
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "b"
   },
   {
     "question_number": 40,
-    "question_text": "A train travels from New York City to Chicago, a distance of $840$ miles, at an average rate of $60$ miles per hour and then returns to New York City at an average rate of $50$ miles per hour. What is the average rate, in miles per hour, for the round trip?",
+    "question_text": "If $\\frac{x}{4}$ is 2 more than $\\frac{x}{8}$, then $x$ = ?",
     "options": {
-      "a": "$52.5$",
-      "b": "$53.8$",
-      "c": "$54.5$",
-      "d": "$55.0$",
-      "e": "$56.0$"
+      "a": "$4$",
+      "b": "$8$",
+      "c": "$16$",
+      "d": "$32$",
+      "e": "$64$"
     },
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 41,
-    "question_text": "If $(2^3)(3^2) = x$ and $(9^2)(3^3) = 8x$, then $(z, y) = ?$",
+    "question_text": "If $(2^x)(2^y) = 8$ and $(9^x)(3^y) = 81$, then $(x, y) = ?$",
     "options": {
       "a": "$(1, 2)$",
       "b": "$(2, 1)$",
@@ -680,11 +725,12 @@
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "a"
   },
   {
     "question_number": 42,
-    "question_text": "Three machines, each of which produces $7$ billboards and each of which operates for $35$ hours, will produce exactly what quantity? From $8$ o'clock yesterday morning to $12$ o'clock midnight, $24$ clocks passed each of the billboards at the average rate of $4$ vehicles per minute. Approximately how much money did the toll turnpike collect during that period?",
+    "question_text": "A certain toll station on a highway has $7$ tollbooths, and each tollbooth collects $\\$0.75$ from each vehicle that passes in. From 6 o'clock yesterday morning to 12 o'clock midnight, vehicles passed each of the tollbooths at the average rate of $4$ vehicles per minute. Approximately how much money did the toll station collect during that time period?",
     "options": {
       "a": "$\\$1,500$",
       "b": "$\\$3,000$",
@@ -696,70 +742,79 @@
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question text appears garbled or incomplete in source. Needs verification."
+    "reviewed": true,
+    "context_text": "Note: Question text appears garbled or incomplete in source. Needs verification.",
+    "correct_answer": "d"
   },
   {
     "question_number": 43,
-    "question_text": "If $y = -2$, $2x$ and $y = \\frac{1}{x}$, then $\\frac{1}{y} + \\frac{1}{x} - \\frac{1}{y} - \\frac{1}{x} = ?$",
+    "question_text": "If $y = -2+2k$ and $y\\neq 0$, then $\\frac{1}{y} + \\frac{1}{y} + \\frac{1}{y} + \\frac{1}{x} = ?$",
     "options": {
-      "a": "$\\frac{1}{x - 32}$",
-      "b": "$\\frac{2}{1 + x}$",
-      "c": "$\\frac{x}{x + 8}$",
-      "d": "$\\frac{8}{x + 8}$",
-      "e": "$\\frac{1}{1 + x}$"
+      "a": "$\\frac{1}{8 + 8k}$",
+      "b": "$\\frac{2}{1 + k}$",
+      "c": "$\\frac{1}{8 + k}$",
+      "d": "$\\frac{4}{8 + k}$",
+      "e": "$\\frac{4}{1 + k}$"
     },
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "b"
   },
   {
     "question_number": 44,
-    "question_text": "If $x - y^2 = 1 + 16(2, \\text{then } x(z - 1)) = ?$",
+    "question_text": "If $3^x - 3^{x-1} = 162$, then $x(x-1) = ?$",
     "options": {
       "a": "$12$",
       "b": "$16$",
-      "c": "$20$"
+      "c": "$20$",
+      "d": "$30$",
+      "e": "$81$"
     },
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question text and options appear incomplete in source."
+    "reviewed": true,
+    "context_text": "Note: Question text and options appear incomplete in source.",
+    "correct_answer": "c"
   },
   {
     "question_number": 45,
-    "question_text": "The $100$ positive integers, $x$, is defined as the product of the integers from $1$ through $x$. If $p$ is the product of the integers from $200$ through $209$, which of the following is equal to $\\frac{p}{199!}$?",
+    "question_text": "The expression $n!$ is defined as the product of all the integers from $1$ through $n$. If $p$ is the product of the integers from $100$ through $299$ and $q$ is the product of the integers from $200$ through $299$, which of the following is equal to $\\frac{p}{q}$?",
     "options": {
-      "a": "$\\frac{99!}{199!}$",
+      "a": "$99!$",
       "b": "$199!$",
-      "c": "$\\frac{200!}{199!}$",
-      "d": "$\\frac{199!}{99!}$",
-      "e": "$\\frac{209!}{199!}$"
+      "c": "$\\frac{199!}{99!}$",
+      "d": "$\\frac{299!}{99!}$",
+      "e": "$\\frac{299!}{199!}$"
     },
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 46,
-    "question_text": "A school club plans to package and sell dried fruit to raise money. The club purchased $12$ containers of dried fruit, each containing $10\\frac{1}{2}$ pounds. What is the maximum number of individual bags of dried fruit, each containing $\\frac{1}{4}$ pounds, that can be sold from the dried fruit the club purchased?",
+    "question_text": "A school club plans to package and sell dried fruit to raise money. The club purchased $12$ containers of dried fruit, each containing $16\\frac{3}{4}$ pounds. What is the maximum number of individual bags of dried fruit, each containing $\\frac{1}{4}$ pounds, that can be sold from the dried fruit the club purchased?",
     "options": {
       "a": "$50$",
       "b": "$64$",
-      "c": "$126$",
-      "d": "$700$",
-      "e": "$504$"
+      "c": "$67$",
+      "d": "$768$",
+      "e": "$804$"
     },
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "e"
   },
   {
     "question_number": 47,
-    "question_text": "A nursery sells fruit trees priced as shown in the chart above. In its inventory $54$ trees are less than $5$ feet in height. If the expected revenue from the sale of its entire stock is estimated at $\\$2,400$, approximately how many trees are at least $5$ feet tall?",
+    "question_text": "A nursery sells fruit trees priced as shown in the chart above. In its inventory $54$ trees are less than $5$ feet in height. If the expected revenue from the sale of its entire stock is estimated at $\\$2,450$, approximately how much of this will come from the sale of the trees that are at least $5$ feet tall?",
     "table_title": "Height and Price",
     "column_headers": [
       "Height",
@@ -772,7 +827,7 @@
       ],
       [
         "5 ft to 6 ft",
-        "$37.95"
+        "$17.95"
       ],
       [
         "Over 6 ft",
@@ -783,14 +838,16 @@
       "a": "$\\$1,730$",
       "b": "$\\$1,640$",
       "c": "$\\$1,410$",
-      "d": "$\\$1,030$",
+      "d": "$\\$1,080$",
       "e": "$\\$810$"
     },
     "difficulty": "easy",
     "has_table": true,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question asks for number of trees, but options are dollar amounts. Needs review."
+    "reviewed": true,
+    "context_text": "Note: Question asks for number of trees, but options are dollar amounts. Needs review.",
+    "correct_answer": "b"
   },
   {
     "question_number": 48,
@@ -805,22 +862,24 @@
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "b"
   },
   {
     "question_number": 49,
-    "question_text": "A purse contains $57$ coins, all of which are nickels, dimes, or quarters. If the purse contains $4$ dimes and $4$ more nickels than dimes, which of the following gives the number of quarters the purse contains in terms of $x$?",
+    "question_text": "A purse contains $57$ coins, all of which are nickels, dimes, or quarters. If the purse contains $x$ dimes and $8$ more nickels than dimes, which of the following gives the number of quarters the purse contains in terms of $x$?",
     "options": {
-      "a": "$2x + 49$",
-      "b": "$x + 49$",
+      "a": "$2x - 49$",
+      "b": "$2x + 49$",
       "c": "$2x - 65$",
-      "d": "$57 - 3x$",
+      "d": "$49 - 2x$",
       "e": "$65 - 2x$"
     },
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "d"
   },
   {
     "question_number": 50,
@@ -829,13 +888,15 @@
       "a": "$1\\%$",
       "b": "$9.1\\%$",
       "c": "$10\\%$",
-      "d": "$10.8\\%$"
+      "d": "$10.8\\%$",
+      "e": "[Option E - needs manual transcription from source PDF]"
     },
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Options appear incomplete in source (only 4 options visible)."
+    "context_text": "Note: Options appear incomplete in source (only 4 options visible).",
+    "correct_answer": "d"
   },
   {
     "question_number": 51,
@@ -850,7 +911,8 @@
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 52,
@@ -865,28 +927,30 @@
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "b"
   },
   {
     "question_number": 53,
-    "question_text": "In the formula shown, if $a$ is a constant and $z = \\frac{1}{a}x + \\frac{1}{a^2}$, when $x = a$, what is the value of $z$ when $x = 4$?",
+    "question_text": "In the formula shown, if $g$ is a constant and $x = -6$, when $t = 2$, what is the value of $x$ when $t = 4$?\n$x = \\frac{1}{6}gt^2$",
     "options": {
       "a": "$-24$",
       "b": "$-20$",
-      "c": "$-5$",
+      "c": "$-15$",
       "d": "$20$",
       "e": "$24$"
     },
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "a"
   },
   {
     "question_number": 54,
-    "question_text": "$(39,897)(0.0096)$ is approximately",
+    "question_text": "$\\frac{(39,897)(0.0096)}{198.76}$ is approximately",
     "options": {
-      "a": "$0.04$",
+      "a": "$0.02$",
       "b": "$0.2$",
       "c": "$2$",
       "d": "$20$",
@@ -895,7 +959,8 @@
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 55,
@@ -910,23 +975,26 @@
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 56,
-    "question_text": "A factory that employs $1,000$ assembly-line workers pays each of these workers $\\$5$ per hour for the first $40$ hours worked during a week and $1\\frac{1}{2}$ times that rate for hours worked in excess of $40$. What is the total payroll for the assembly-line workers for a week in which $30$ percent of the workers worked $20$ hours, $50$ percent of the workers worked $40$ hours, and the rest of the workers worked $50$ hours?",
+    "question_text": "Each machine at a toy factory assembles a certain kind of toy at a constant rate of one toy every $4$ minutes. If $40$ percent of the machines at the factory are to be replaced by the new machines that assemble this kind of toy at a constant rate of one toy every $2$ minutes, what will be the percent increase in the number of toys assembled in one hour by all the machines at the factory, working at their constant rates?",
     "options": {
-      "a": "$\\$180,000$",
-      "b": "$\\$185,000$",
-      "c": "$\\$200,000$",
-      "d": "$\\$supreme,000$",
-      "e": "$\\$50\\%$"
+      "a": "$20$%",
+      "b": "$25$%",
+      "c": "$30$%",
+      "d": "$40$%",
+      "e": "$50$%"
     },
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Options D and E appear corrupted in source."
+    "reviewed": true,
+    "context_text": "Note: Options D and E appear corrupted in source.",
+    "correct_answer": "a"
   },
   {
     "question_number": 57,
@@ -941,11 +1009,12 @@
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "d"
   },
   {
     "question_number": 58,
-    "question_text": "At a selling price of $\\$20$ per radio, a manufacturer's sales revenue from radios sold at the garage sale was $\\$6,000$. If the $20\\%$ lowest price was among the prices of the items sold, how many items were sold at the garage sale?",
+    "question_text": "At a garage sale, all of the prices of the items sold were different. If the price of a radio sold at the garage sale was both the $15^{\\text{th}}$ highest price and the $20^{\\text{th}}$ lowest price among the prices of the items sold, how many items were sold at the garage sale?",
     "options": {
       "a": "$33$",
       "b": "$34$",
@@ -957,7 +1026,9 @@
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question text appears garbled. Needs verification from source."
+    "reviewed": true,
+    "context_text": "Note: Question text appears garbled. Needs verification from source.",
+    "correct_answer": "b"
   },
   {
     "question_number": 59,
@@ -972,27 +1043,30 @@
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "e"
   },
   {
     "question_number": 60,
-    "question_text": "A rectangular room has the dimensions shown above. What is the area of the floor of the room, in square feet?",
+    "question_text": "If $a = 1 + \\frac{1}{4} + \\frac{1}{16} + \\frac{1}{64}$ and $b = 1 + \\frac{1}{4}a$, then what is the value of $a - b$?",
     "options": {
-      "a": "$250$",
-      "b": "$350$",
-      "c": "$400$",
-      "d": "$450$",
-      "e": "$500$"
+      "a": "$-\\frac{85}{256}$",
+      "b": "$-\\frac{1}{256}$",
+      "c": "$-\\frac{1}{4}$",
+      "d": "$\\frac{125}{256}$",
+      "e": "$\\frac{169}{256}$"
     },
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question references dimensions shown in a diagram. Dimensions not visible in transcription."
+    "reviewed": true,
+    "context_text": "Note: Question references dimensions shown in a diagram. Dimensions not visible in transcription.",
+    "correct_answer": "b"
   },
   {
     "question_number": 61,
-    "question_text": "In a certain diving competition, each diver's final score is the sum of $7$ scores from judges. A diver earned scores from the judges of either $-2$, $-1$, $0$, $1$, or $2$. The participant's final score comprised of the sum of the individual scores, $2$ times the second final score, and $3$ times the third final score. If Anil received scores of $1$ and $-1$ for the first and second dives, respectively, and a final score of $3$, what is Anil's score for the third dive?",
+    "question_text": "In a certain learning experiment, each participant had three trials and was assigned, for each trial, a score of either $-2,-1,0,1,$ or $2$. The participant's final score consisted of the sum of the first trial scores, 2 times the second trial score, and 3 times the third trial score. If Anne received scores of $1$ and $-2$ for her first two trials, not necessarily in that order, which of the following could not be her final score?",
     "options": {
       "a": "$-4$",
       "b": "$-2$",
@@ -1003,11 +1077,12 @@
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "e"
   },
   {
     "question_number": 62,
-    "question_text": "For all positive integers $n$, the expression $(n \\triangle)(n \\square) - (n \\square)(n \\triangle)$ represents the remainder when $n$ is divided by $5$. What is the value of $(18 \\triangle)(7) = ?$",
+    "question_text": "For all positive integers $m$ and $v$, the expression $m\\Theta v$ represents the remainder when $m$ is divided by $v$. What is the value of $((98\\Theta 33)\\Theta 17) - (98\\Theta (33\\Theta 17))$?",
     "options": {
       "a": "$-10$",
       "b": "$-2$",
@@ -1019,11 +1094,39 @@
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question uses special symbols (△ and □) that may need proper representation."
+    "reviewed": true,
+    "context_text": "Note: Question uses special symbols (△ and □) that may need proper representation.",
+    "correct_answer": "d"
   },
   {
     "question_number": 63,
     "question_text": "The chart above shows year-end investment values for Darnell's investments. For just the stocks, what was the increase in value from year-end $2000$ to year-end $2003$?",
+    "chart_title": "Year-End Investment Values",
+    "chart_type": "stacked bar chart",
+    "x_axis_title": "Year",
+    "y_axis_title": "Value (in U.S. dollars)",
+    "data": {
+      "2000": {
+        "Bonds": 5000,
+        "Stocks": 3000,
+        "Cash": 6000
+      },
+      "2001": {
+        "Bonds": 4000,
+        "Stocks": 3000,
+        "Cash": 4000
+      },
+      "2002": {
+        "Bonds": 6000,
+        "Stocks": 6000,
+        "Cash": 4000
+      },
+      "2003": {
+        "Bonds": 7000,
+        "Stocks": 5000,
+        "Cash": 5000
+      }
+    },
     "options": {
       "a": "$\\$1,000$",
       "b": "$\\$2,000$",
@@ -1035,7 +1138,9 @@
     "has_table": false,
     "has_chart": true,
     "needs_manual_review": true,
-    "context_text": "Note: Question references a bar chart showing year-end investment values. Chart should be included as image or described."
+    "reviewed": true,
+    "context_text": "Note: Question references a bar chart showing year-end investment values. Chart should be included as image or described.",
+    "correct_answer": "b"
   },
   {
     "question_number": 64,
@@ -1050,7 +1155,8 @@
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 65,
@@ -1065,23 +1171,24 @@
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "a"
   },
   {
     "question_number": 66,
-    "question_text": "For all numbers $a$, $b$, $c$, and $d$, $a \\star b$ is defined by the equation $a \\star b = \\frac{a}{b} - \\frac{ab}{c}$. Which of the following is equal to $1 \\star 2$?",
+    "question_text": "For all numbers $a$, $b$, $c$, and $d$, $\\begin{vmatrix} a & b \\\\ c & d \\end{vmatrix}$ is defined by the equation $\\begin{vmatrix} a & b \\\\ c & d \\end{vmatrix} = ad - cb$. Which of the following is equal to $\\begin{vmatrix} s & t \\\\ 1 & s \\end{vmatrix} - \\begin{vmatrix} -t & 2 \\\\ -4 & t \\end{vmatrix} + \\begin{vmatrix} 2 & 2 \\\\ t & s \\end{vmatrix}$?",
     "options": {
-      "a": "$\\frac{1}{6}$",
-      "b": "$\\frac{1}{5}$",
-      "c": "$\\frac{1}{4}$",
-      "d": "$\\frac{1}{3}$",
-      "e": "$\\frac{1}{2}$"
+      "a": "$\\begin{vmatrix} s & t \\\\ 1 & 5 \\end{vmatrix}$",
+      "b": "$\\begin{vmatrix} s & t \\\\ 7 & 1 \\end{vmatrix}$",
+      "c": "$\\begin{vmatrix} s & t \\\\ 5 & 7 \\end{vmatrix}$",
+      "d": "$\\begin{vmatrix} s & -t \\\\ 1 & 5 \\end{vmatrix}$",
+      "e": "$\\begin{vmatrix} s & -t \\\\ 1 & 7 \\end{vmatrix}$"
     },
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question uses custom operation (★). Formula appears incomplete (missing c value)."
+    "needs_manual_review": false,
+    "correct_answer": "e"
   },
   {
     "question_number": 67,
@@ -1096,7 +1203,8 @@
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 68,
@@ -1111,27 +1219,12 @@
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 69,
-    "question_text": "In a certain sequence, each term after the first term is one-half the previous term. If the tenth term of the sequence is between $0.0001$ and $0.001$, then the twelfth term of the sequence is between",
-    "options": {
-      "a": "$\\frac{6}{5}$",
-      "b": "$\\frac{1}{2}$",
-      "c": "$\\frac{6}{7}$",
-      "d": "$\\frac{-6}{5}$",
-      "e": "$\\frac{-1}{7}$"
-    },
-    "difficulty": "easy",
-    "has_table": false,
-    "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question 69 text appears to be duplicate of Q67 but with different options. Needs verification."
-  },
-  {
-    "question_number": 70,
-    "question_text": "On the first day, a tennis player practices serves for $45$ minutes. On the second day, Ada's serve was $8$ points higher than Jean's score. If Jean's average (arithmetic mean) score on the three tests was $3$ points higher than Ada's average score on the three tests, then what was Jean's score on the three tests was $3$ points higher than Ada's score?",
+    "question_text": "Ada and Paul received their scores on three tests. On the first test, Ada's score was 10 points higher than Paul's score. On the second test, Ada's score was 4 points higher than Paul's score. If Paul's average (arithmetic mean) score on the three tests was 3 points higher than Ada's average score on the three tests, then Paul's score on the third test was how many points higher than Ada's score?",
     "options": {
       "a": "$9$",
       "b": "$14$",
@@ -1142,44 +1235,65 @@
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question text appears garbled - tennis/serve context mixed with Jean/Ada test scores. Needs verification."
+    "needs_manual_review": false,
+    "correct_answer": "d"
   },
   {
-    "question_number": 71,
+    "question_number": 70,
     "question_text": "The price of a certain stock increased by $0.25$ of $1$ percent on a certain day. By what fraction did the price of the stock increase that day?",
     "options": {
       "a": "$\\frac{1}{2,500}$",
       "b": "$\\frac{1}{400}$",
       "c": "$\\frac{1}{40}$",
-      "d": "$\\frac{1}{4}$",
+      "d": "$\\frac{1}{25}$",
       "e": "$\\frac{1}{4}$"
     },
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Options D and E appear identical. Needs verification."
+    "reviewed": true,
+    "context_text": "Note: Options D and E appear identical. Needs verification.",
+    "correct_answer": "b"
   },
   {
-    "question_number": 72,
-    "question_text": "When $24$ is divided by the positive integer $n$, the remainder is $4$. Which of the following statements about $n$ must be true?",
+    "question_number": 71,
+    "question_text": "For each trip, a taxicab company charges $\\$4.25$ for the first mile and $\\$2.65$ for each additional mile or fraction thereof. If the total charge for a certain trip was $\\$62.55$, how many miles at most was the trip?",
     "options": {
-      "a": "$I$. $n$ is even.",
-      "b": "$II$. $n$ is a multiple of $5$.",
-      "c": "$III$. $n$ is a factor of $20$.",
-      "d": "$I$ and $II$ only",
-      "e": "$I$ and $III$ only"
+      "a": "$21$",
+      "b": "$22$",
+      "c": "$23$",
+      "d": "$24$",
+      "e": "$25$"
+    },
+    "difficulty": "easy",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false,
+    "correct_answer": "c"
+  },
+
+  {
+    "question_number": 72,
+    "question_text": "When $24$ is divided by the positive integer $n$, the remainder is $4$. Which of the following statements about $n$ must be true?\nI. $n$ is even.\nII. $n$ is a multiple of $5$.\nIII. $n$ is a factor of $20$.",
+    "options": {
+      "a": "III only",
+      "b": "I and II only",
+      "c": "I and III only",
+      "d": "II and III only",
+      "e": "I, II, and III"
     },
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question has Roman numeral statements. Options format may need adjustment."
+    "reviewed": true,
+    "context_text": "Note: Question has Roman numeral statements. Options format may need adjustment.",
+    "correct_answer": "d"
   },
   {
     "question_number": 73,
-    "question_text": "Terry needs to purchase some rope for a climbing job that requires three pipes with lengths of $1$ ft $4$ in, $2$ ft $6$ in, $3$ ft $4$ in, and $5$ ft $8$ in. If Terry needs $10$ ft-length rope to cut into shorter pieces, what is the minimum number of $10$ ft pipe lengths that Terry needs to purchase for this climbing job? (Note: $1$ ft $=$ $12$ in)",
+    "question_text": "Terry needs to purchase some pipe for a plumbing job that requires  pipes with lengths of $1$ ft $4$ in, $2$ ft $8$ in, $3$ ft $4$ in, and $5$ ft $8$ in, and $9$ ft $4$ in. The store from which Terry will purchase the pipe sells the pipe only in $10$-ft lengths. If each $10$ ft-length can be cut into shorter pieces, what is the minimum number of $10$-ft pipe lengths that Terry needs to purchase for this plumbing job? (Note: $1$ ft $=$ $12$ in)",
     "options": {
       "a": "$3$",
       "b": "$4$",
@@ -1190,7 +1304,8 @@
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "b"
   },
   {
     "question_number": 74,
@@ -1205,132 +1320,12 @@
     "difficulty": "easy",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "a"
   },
   {
     "question_number": 75,
-    "question_text": "For each trip, a taxicab company charges $\\$4.25$ for the first mile and $\\$2.65$ for each additional mile or fraction thereof. If the total charge for a certain trip was $\\$62.55$, how many miles at most was the trip?",
-    "options": {
-      "a": "$21$",
-      "b": "$22$",
-      "c": "$23$",
-      "d": "$24$",
-      "e": "$25$"
-    },
-    "difficulty": "easy",
-    "has_table": false,
-    "has_chart": false,
-    "needs_manual_review": false
-  },
-  {
-    "question_number": 76,
-    "question_text": "A certain drive-in movie theater has a total of $17$ rows of parking spaces. There are $20$ parking spaces in the first row and $21$ parking spaces in the second row. In each subsequent row there are $2$ more parking spaces than in the previous row. What is the total number of parking spaces in the movie theater?",
-    "options": {
-      "a": "$412$",
-      "b": "$596$",
-      "c": "$632$",
-      "d": "$692$",
-      "e": "$852$"
-    },
-    "difficulty": "easy",
-    "has_table": false,
-    "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question 76 appears to be duplicate of Q68. Needs verification from source."
-  },
-  {
-    "question_number": 77,
-    "question_text": "On a scale drawing, a rectangular plot of land has an area of $12$ square centimeters. If the actual plot has an area of $3,000$ square meters, what is the scale of the drawing?",
-    "options": {
-      "a": "$1$ centimeter to $5$ meters",
-      "b": "$1$ centimeter to $10$ meters",
-      "c": "$1$ centimeter to $25$ meters",
-      "d": "$1$ centimeter to $50$ meters",
-      "e": "$1$ centimeter to $250$ meters"
-    },
-    "difficulty": "easy",
-    "has_table": false,
-    "has_chart": false,
-    "needs_manual_review": false
-  },
-  {
-    "question_number": 78,
-    "question_text": "A certain company's customer service hotline receives calls from customers between the hours of $8:00$ A.M. and $5:00$ P.M. The hotline receives an average of $2$ calls per hour during off-peak hours and $6$ calls per hour during peak hours. If the peak hours are from $11:00$ A.M. to $2:00$ P.M., how many calls does the hotline receive in a day?",
-    "options": {
-      "a": "$30$",
-      "b": "$32$",
-      "c": "$36$",
-      "d": "$38$",
-      "e": "$40$"
-    },
-    "difficulty": "easy",
-    "has_table": false,
-    "has_chart": false,
-    "needs_manual_review": false
-  },
-  {
-    "question_number": 79,
-    "question_text": "What is the value of $2x^2 - 2.4$ when $x = -4$?",
-    "options": {
-      "a": "$-34.4$",
-      "b": "$-17.6$",
-      "c": "$-2.4$",
-      "d": "$29.6$",
-      "e": "$34.4$"
-    },
-    "difficulty": "easy",
-    "has_table": false,
-    "has_chart": false,
-    "needs_manual_review": false
-  },
-  {
-    "question_number": 80,
-    "question_text": "If $x$ and $y$ are positive integers such that $x = 8y + 12$, what is the remainder when $x$ is divided by $4$?",
-    "options": {
-      "a": "$0$",
-      "b": "$1$",
-      "c": "$2$",
-      "d": "$3$",
-      "e": "$4$"
-    },
-    "difficulty": "easy",
-    "has_table": false,
-    "has_chart": false,
-    "needs_manual_review": false
-  },
-  {
-    "question_number": 81,
-    "question_text": "If $3 < x < 100$, for how many values of $x$ is $\\frac{x}{3}$ the square of a prime number?",
-    "options": {
-      "a": "$1$",
-      "b": "$2$",
-      "c": "$3$",
-      "d": "$4$",
-      "e": "$5$"
-    },
-    "difficulty": "easy",
-    "has_table": false,
-    "has_chart": false,
-    "needs_manual_review": false
-  },
-  {
-    "question_number": 82,
-    "question_text": "A researcher plans to identify each participant in a certain medical experiment with a code consisting of either a single letter or a pair of distinct letters written in alphabetical order. What is the least number of letters that can be used if there are $12$ participants, and each participant is to receive a different code?",
-    "options": {
-      "a": "$4$",
-      "b": "$5$",
-      "c": "$6$",
-      "d": "$7$",
-      "e": "$8$"
-    },
-    "difficulty": "easy",
-    "has_table": false,
-    "has_chart": false,
-    "needs_manual_review": false
-  },
-  {
-    "question_number": 83,
-    "question_text": "If $x$ equals the sum of the even integers from $2$ to $20$, inclusive, and $y$ equals the sum of the odd integers from $1$ to $19$, inclusive, what is the value of $x - y$?",
+    "question_text": "If $a$ equals the sum of the even integers from 2 to 20, inclusive, and $b$ equals the sum of the odd integers from 1 to 19, inclusive, what is the value of $a - b$?",
     "options": {
       "a": "$1$",
       "b": "$10$",
@@ -1338,87 +1333,219 @@
       "d": "$20$",
       "e": "$21$"
     },
+    "difficulty": "easy",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false,
+    "correct_answer": "b"
+  },
+  {
+    "question_number": 76,
+    "question_text": "If $a$, $b$, $c$, and $d$ are consecutive even integers and $a < b < c < d$, then $a + b$ is how much less than $c + d$?",
+    "options": {
+      "a": "$2$",
+      "b": "$4$",
+      "c": "$6$",
+      "d": "$8$",
+      "e": "$10$"
+    },
+    "difficulty": "easy",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false,
+    "correct_answer": "d"
+  },
+  {
+    "question_number": 77,
+    "question_text": "A retailer sold an appliance for $\\$80$. If the retailer's gross profit on the appliance was 25 percent of the retailer's cost for the appliance, how many dollars was the retailer's gross profit?",
+    "options": {
+      "a": "$\\$10$",
+      "b": "$\\$16$",
+      "c": "$\\$20$",
+      "d": "$\\$24$",
+      "e": "$\\$25$"
+    },
+    "difficulty": "easy",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false,
+    "correct_answer": "b"
+  },
+  {
+    "question_number": 78,
+    "question_text": "Beth has a collection of 8 boxes of clothing for a charity, and the average (arithmetic mean) number of pieces of clothing per box is $c$. If she replaces a box in the collection that contains 12 pieces of clothing with a box that contains 22 pieces of clothing, what is the average number of pieces of clothing per box for the new collection, in terms of $c$?",
+    "options": {
+      "a": "$c - \\frac{5}{4}$",
+      "b": "$c + \\frac{5}{4}$",
+      "c": "$8 - \\frac{10}{c}$",
+      "d": "$8 + \\frac{10}{c}$",
+      "e": "$8c - 10$"
+    },
+    "difficulty": "easy",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false,
+    "correct_answer": "b"
+  },
+  {
+    "question_number": 79,
+    "question_text": "The value of the expression $\\frac{1 + 0.0001}{0.04 + 10}$ is closest to which of the following?",
+    "options": {
+      "a": "$0.0001$",
+      "b": "$0.001$",
+      "c": "$0.01$",
+      "d": "$1$",
+      "e": "$10$"
+    },
+    "difficulty": "easy",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false,
+    "correct_answer": "c"
+  },
+  {
+    "question_number": 80,
+    "question_text": "If $x + 1 = t$ and $t = 3 - x$, then $x =$?",
+    "options": {
+      "a": "$-2$",
+      "b": "$-1$",
+      "c": "$0$",
+      "d": "$1$",
+      "e": "$2$"
+    },
+    "difficulty": "easy",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false,
+    "correct_answer": "d"
+  },
+  {
+    "question_number": 81,
+    "question_text": "If $x = kc$ and $y = kt$, then $y - x =$",
+    "options": {
+      "a": "$k(t - c)$",
+      "b": "$k(c - t)$",
+      "c": "$c(k - t)$",
+      "d": "$t(k - c)$",
+      "e": "$k(1 - t)$"
+    },
+    "difficulty": "easy",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false,
+    "correct_answer": "a"
+  },
+  {
+    "question_number": 82,
+    "question_text": "If $k$ is a positive even integer, which of the following must be an odd integer?\nI. $k^2 - 3k + 4$\nII. $k^5 + 3$\nIII. $7k - 7$",
+    "options": {
+      "a": "II only",
+      "b": "III only",
+      "c": "I and III only",
+      "d": "II and III only",
+      "e": "I, II, and III"
+    },
+    "difficulty": "easy",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false,
+    "correct_answer": "d"
+  },
+  {
+    "question_number": 83,
+    "question_text": "If $\\frac{1}{2}$ the result obtained when 2 is subtracted from $5x$ is equal to the sum of 10 and $3x$, what is the value of $x$?",
+    "options": {
+      "a": "$-22$",
+      "b": "$-4$",
+      "c": "$4$",
+      "d": "$18$",
+      "e": "$22$"
+    },
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "a"
   },
   {
     "question_number": 84,
-    "question_text": "If Car $A$ took $n$ hours to travel $2$ miles and Car $B$ took $m$ hours to travel $3$ miles, which of the following expresses the time it would take Car $C$, traveling at the average (arithmetic mean) of those speeds, to travel $5$ miles?",
+    "question_text": "If Car A took $n$ hours to travel 2 miles and Car B took $m$ hours to travel 3 miles, which of the following expresses the time it would take Car C, traveling at the average (arithmetic mean) of those rates, to travel 5 miles?",
     "options": {
-      "a": "$10mn$",
-      "b": "$\\frac{3m + 2n}{5}$",
-      "c": "$\\frac{10(m + n)}{5}$",
-      "d": "$\\frac{2n + 3m}{5}$",
-      "e": "$\\frac{5(m + n)}{2n + 3m}$"
+      "a": "$\\frac{10nm}{3n + 2m}$",
+      "b": "$\\frac{3n + 2m}{10(n + m)}$",
+      "c": "$\\frac{2n + 3m}{5nm}$",
+      "d": "$\\frac{10(n + m)}{2n + 3m}$",
+      "e": "$\\frac{5(n + m)}{2n + 3m}$"
     },
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "a"
   },
   {
     "question_number": 85,
-    "question_text": "If $x$, $y$, and $z$ are positive and $x$ is less than $y$, then $\\frac{x + z}{y + z}$ is",
+    "question_text": "If $x$, $y$, and $k$ are positive and $x$ is less than $y$, then $\\frac{x + k}{y + k}$ is",
     "options": {
       "a": "$1$",
-      "b": "$greater$ $than$ $\\frac{x}{y}$",
-      "c": "$equal$ $to$ $\\frac{x}{y}$",
-      "d": "$less$ $than$ $\\frac{x}{y}$",
-      "e": "$cannot$ $be$ $determined$"
+      "b": "greater than $\\frac{x}{y}$",
+      "c": "equal to $\\frac{x}{y}$",
+      "d": "less than $\\frac{x}{y}$",
+      "e": "less than $\\frac{x}{y}$ or greater than $\\frac{x}{y}$ depending on the value of $k$"
     },
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "b"
   },
   {
     "question_number": 86,
-    "question_text": "If $p$ less than $n$ is defined by the equation $p \\star n = p^2 + \\frac{n}{2}$, depending on the value of $n$, the value of $3 \\star n$ is greater than $3 \\star 6$ for which of the following conditions?",
+    "question_text": "Consider the following set of inequalities: $p > q$, $s > r$, $q > t$, $s > p$, and $r > q$. Between which two quantities is no relationship established?",
     "options": {
-      "a": "$n > 6$ $and$ $t$",
-      "b": "$n$ $and$ $t$",
-      "c": "$n$ $and$ $y$",
-      "d": "$p$ $and$ $t$",
-      "e": "$r$ $and$ $t$"
+      "a": "$p$ and $r$",
+      "b": "$s$ and $t$",
+      "c": "$s$ and $q$",
+      "d": "$p$ and $t$",
+      "e": "$r$ and $t$"
     },
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question options appear corrupted or incomplete in source. Needs verification."
+    "needs_manual_review": false,
+    "correct_answer": "a"
   },
   {
     "question_number": 87,
-    "question_text": "Carl averaged $2m$ miles per hour on a trip that took $h$ hours. If both made the same trip in $\\frac{2}{3}h$ hours, what was her average speed, in miles per hour?",
+    "question_text": "Carl averaged $2m$ miles per hour on a trip that took him $h$ hours. If Ruth made the same trip in $\\frac{2}{3}h$ hours, what was her average speed in miles per hour?",
     "options": {
       "a": "$\\frac{1}{3}mh$",
-      "b": "$\\frac{3}{2}m$",
+      "b": "$\\frac{2}{3}mh$",
       "c": "$m$",
-      "d": "$\\frac{2}{3}m$",
+      "d": "$\\frac{3}{2}m$",
       "e": "$3m$"
     },
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "e"
   },
   {
     "question_number": 88,
-    "question_text": "A delicatessen sold two types of relish, two plain pepper, and two plain salt. The ratio who takes no salt also takes no relish, and the one who takes no pepper also takes no relish. Which of the following statements must be true?",
+    "question_text": "Of three persons, two take relish, two take pepper, and two take salt. The one who takes no salt takes no pepper, and the one who takes no pepper takes no relish. Which of the following statements must be true?\nI. The person who takes no salt also takes no relish.\nII. Any of the three persons who takes pepper also takes relish and salt.\nIII. The person who takes no relish is not one of those who takes salt.",
     "options": {
-      "a": "$I$. The person who takes no salt also takes no relish.",
-      "b": "$II$. Any of the three persons who takes pepper also takes relish and salt.",
-      "c": "$III$. The person who takes no relish is not one of those who takes salt.",
-      "d": "$I$ only",
-      "e": "$II$ only"
+      "a": "I only",
+      "b": "II only",
+      "c": "III only",
+      "d": "I and II only",
+      "e": "I, II, and III"
     },
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question text appears garbled. Should be about people taking condiments. Needs verification."
+    "needs_manual_review": false,
+    "correct_answer": "e"
   },
   {
     "question_number": 89,
@@ -1428,20 +1555,21 @@
       "b": "$12$",
       "c": "$22$",
       "d": "$52$",
-      "e": "$624$"
+      "e": "$252$"
     },
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 90,
-    "question_text": "Eight light bulbs numbered $1$ through $8$ are arranged in a circle as shown above. The bulbs are wired so that every third bulb, counting in a clockwise direction, flashes until all bulbs have flashed once. If the bulbs are numbered $1$ flashes first, which numbered bulb will flash last?",
+    "question_text": "Eight light bulbs numbered $1$ through $8$ are arranged in a circle as shown above. The bulbs are wired so that every third bulb, counting in a clockwise direction, flashes until all bulbs have flashed once. If the bulbs numbered $1$ flashes first, which numbered bulb will flash last?",
     "options": {
       "a": "$2$",
-      "b": "$4$",
-      "c": "$5$",
+      "b": "$3$",
+      "c": "$4$",
       "d": "$6$",
       "e": "$7$"
     },
@@ -1449,11 +1577,13 @@
     "has_table": false,
     "has_chart": true,
     "needs_manual_review": true,
-    "context_text": "Note: Question references a diagram showing 8 light bulbs arranged in a circle."
+    "reviewed": true,
+    "context_text": "Note: Question references a diagram showing 8 light bulbs arranged in a circle.",
+    "correct_answer": "d"
   },
   {
     "question_number": 91,
-    "question_text": "A certain financial analyst defines the \"volatility\" of a stock during a given week to be the result of the following procedure: For each day of the week, find the absolute difference in the stock's closing price for each pair of consecutive days in that week and then find the average (arithmetic mean) of those $4$ values. What is the volatility of Stock $X$ during the week shown in the table?",
+    "question_text": "A certain financial analyst defines the \"volatility\" of a stock during a given week to be the result of the following procedure: find the absolute difference in the stock's closing price for each pair of consecutive days in that week and then find the average (arithmetic mean) of those $4$ values. What is the volatility of Stock $X$ during the week shown in the table?",
     "table_title": "Closing Prices of Stock X During a Certain Week (in dollars)",
     "column_headers": [
       "Monday",
@@ -1467,194 +1597,205 @@
         "$21$",
         "$19$",
         "$22$",
-        "$18$",
+        "$24\\frac{1}{2}$",
         "$23$"
       ]
     ],
     "options": {
       "a": "$0.50$",
       "b": "$1.80$",
-      "c": "$2.80$",
-      "d": "$3.00$",
-      "e": "$4.00$"
+      "c": "$2.00$",
+      "d": "$2.25$",
+      "e": "$2.50$"
     },
     "difficulty": "medium",
     "has_table": true,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "d"
   },
   {
     "question_number": 92,
-    "question_text": "If $y = \\frac{3x - 6}{x^2 - 4}$, for what value of $x$ will the value of $y$ be greatest?",
+    "question_text": "If $y = \\frac{3x - 5}{-x^2 - 3}$, for what value of $x$ will the value of $y$ be greatest?",
     "options": {
       "a": "$-5$",
-      "b": "$-\\frac{2}{3}$",
+      "b": "$-\\frac{3}{5}$",
       "c": "$0$",
-      "d": "$\\frac{2}{3}$",
-      "e": "$5$"
+      "d": "$\\frac{3}{5}$",
+      "e": "$\\frac{5}{3}$"
     },
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "e"
   },
   {
     "question_number": 93,
-    "question_text": "What values of $x$ have a corresponding value of $y$ that satisfies both $xy = 0$ and $xy = zy - 3y$?",
+    "question_text": "What values of $x$ have a corresponding value of $y$ that satisfies both $xy > 0$ and $xy = x + y$?",
     "options": {
       "a": "$x \\leq -1$",
       "b": "$-1 < x \\leq 0$",
       "c": "$0 < x \\leq 1$",
       "d": "$x > 1$",
-      "e": "$All$ $real$ $numbers$"
+      "e": "All real numbers"
     },
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "d"
   },
   {
     "question_number": 94,
-    "question_text": "Employee $X$'s annual salary is $\\$12,000$ more than half of Employee $Y$'s annual salary. Employee $Z$'s annual salary is $\\$3,000$ more than half of Employee $Y$'s annual salary. If Employee $X$'s annual salary is $\\$27,000$, which of the following best describes three people in order of increasing annual salary?",
+    "question_text": "Employee $X$'s annual salary is $\\$12,000$ more than half of Employee $Y$'s annual salary. Employee $Z$'s annual salary is $\\$15,000$ more than half of Employee $Y$'s annual salary. If Employee $X$'s annual salary is $\\$27,500$, which of the following lists these people in order of increasing annual salary?",
     "options": {
       "a": "$Y, Z, X$",
-      "b": "$Z, X, Y$",
-      "c": "$Z, Y, X$",
+      "b": "$Y, X, Z$",
+      "c": "$Z, X, Y$",
       "d": "$X, Y, Z$",
       "e": "$X, Z, Y$"
     },
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "e"
   },
   {
     "question_number": 95,
-    "question_text": "The formula above gives the contribution $C$, in dollars, to a certain profit-sharing plan for a participant with a salary of $\\$10,000$ but for a participant with a salary of $\\$50,000$ then",
-    "context_text": "$0.10x$, if $x \\leq 60,000$\n$0.10x + 0.01(x - 60,000)$, if $x > 60,000$",
+    "question_text": "The formula above gives the contribution $C$, in dollars, to a certain profit-sharing plan for a participant with a salary of $s$ dollars. How many more dollars is the contribution for a participant with a salary of $\\$70,000$ than for a participant with a salary of $\\$50,000$?",
+    "context_text": "$C = \\begin{cases} 0.10s, & \\text{if } s \\leq 60,000 \\\\ 0.10s + 0.04(s - 60,000), & \\text{if } s > 60,000 \\end{cases}$",
     "options": {
-      "a": "$\\$600$",
+      "a": "$\\$800$",
       "b": "$\\$1,400$",
       "c": "$\\$2,000$",
       "d": "$\\$2,400$",
-      "e": "$\\$2,600$"
+      "e": "$\\$2,800$"
     },
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true
+    "needs_manual_review": false,
+    "correct_answer": "d"
   },
   {
     "question_number": 96,
-    "question_text": "Next month, Ron and Cathy will each begin working part-time at $\\frac{3}{4}$ of their respective current salaries. If the sum of their current salaries will be equal to Cathy's current salary, then Ron's current salary is what fraction of Cathy's current salary?",
+    "question_text": "Next month, Ron and Cathy will each begin working part-time at $\\frac{3}{5}$ of their respective current salaries. If the sum of their reduced salaries will be equal to Cathy's current salary, then Ron's current salary is what fraction of Cathy's current salary?",
     "options": {
       "a": "$\\frac{1}{3}$",
       "b": "$\\frac{2}{5}$",
-      "c": "$-2$"
+      "c": "$\\frac{1}{2}$",
+      "d": "$\\frac{3}{5}$",
+      "e": "$\\frac{2}{3}$"
     },
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question text appears incomplete and options are cut off. Needs verification."
+    "needs_manual_review": false,
+    "correct_answer": "e"
   },
   {
     "question_number": 97,
-    "question_text": "A retailer sold an appliance for $\\$80$. If the retailer's gross profit on the appliance was $25$ percent of the retailer's cost for the appliance, how many dollars was the retailer's gross profit?",
+    "question_text": "David and Ron are ordering food for a business lunch. David thinks that there should be twice as many sandwiches as there are pastries, but Ron thinks the number of pastries should be 12 more than one-fourth of the number of sandwiches. How many sandwiches should be ordered so that David and Ron can agree on the number of pastries to order?",
     "options": {
-      "a": "$\\$10$",
-      "b": "$\\$16$",
-      "c": "$\\$20$",
-      "d": "$\\$24$",
-      "e": "$\\$25$"
+      "a": "$12$",
+      "b": "$16$",
+      "c": "$20$",
+      "d": "$24$",
+      "e": "$48$"
     },
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "e"
   },
   {
     "question_number": 98,
-    "question_text": "If $x - 1 = t$ and $t + 3 = x$, then $x = ?$",
+    "question_text": "The cost of purchasing each box of candy from a certain mail order catalog is $v$ dollars per pound of candy, plus a shipping charge of $h$ dollars. How many dollars does it cost to purchase $2$ boxes of candy, one containing $s$ pounds of candy and the other containing $t$ pounds of candy, from this catalog?",
     "options": {
-      "a": "$-4$",
-      "b": "$-1$",
-      "c": "$0$",
-      "d": "$1$",
-      "e": "$2$"
+      "a": "$h + stv$",
+      "b": "$2h + stv$",
+      "c": "$2hstv$",
+      "d": "$2h + s + t + v$",
+      "e": "$2h + v(s + t)$"
     },
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "e"
   },
   {
     "question_number": 99,
-    "question_text": "If $x = kx$ and $y = kx$, then $y = ?$",
+    "question_text": "If $x \\neq -\\frac{1}{2}$, then $\\frac{6x^3 + 3x^2 - 8x - 4}{2x + 1} =$",
     "options": {
-      "a": "$k(x - t)$",
-      "b": "$k(x - t)$",
-      "c": "$x(k - t)$",
-      "d": "$t(k - x)$",
-      "e": "$k(t - t)$"
+      "a": "$3x^2 + \\frac{3}{2}x - 8$",
+      "b": "$3x^2 + \\frac{3}{2}x - 4$",
+      "c": "$3x^2 - 4$",
+      "d": "$3x - 4$",
+      "e": "$3x + 4$"
     },
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question appears to have errors. Options B and E look identical/incomplete."
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 100,
-    "question_text": "If $p$ is a positive even integer, which of the following must be an odd integer?",
+    "question_text": "If $x^2 + bx + 5 = (x + c)^2$ for all numbers $x$, where $b$ and $c$ are positive constants, what is the value of $b$?",
     "options": {
-      "a": "$I$. $3p + 4$",
-      "b": "$II$. $p^2 + 4$",
-      "c": "$III$. $7p - 7$",
-      "d": "$II$ only",
-      "e": "$III$ only"
+      "a": "$\\sqrt{5}$",
+      "b": "$\\sqrt{10}$",
+      "c": "$2\\sqrt{5}$",
+      "d": "$2\\sqrt{10}$",
+      "e": "$10$"
     },
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question has Roman numeral statements. Options format needs adjustment."
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 101,
-    "question_text": "The value of the expression shown is closest to which of the following?",
-    "context_text": "Note: Options appear incomplete (only 4 options visible).",
+    "question_text": "Last year Shannon listened to a certain public radio station $10$ hours per week and contributed $\\$35$ to the station. Of the following, which is closest to Shannon's contribution per minute of listening time last year?",
     "options": {
-      "a": "$0.0001$",
-      "b": "$0.001$",
-      "c": "$1$",
-      "d": "$10$"
+      "a": "$\\$0.001$",
+      "b": "$\\$0.010$",
+      "c": "$\\$0.025$",
+      "d": "$\\$0.058$",
+      "e": "$\\$0.067$"
     },
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true
+    "needs_manual_review": false,
+    "correct_answer": "a"
   },
   {
     "question_number": 102,
-    "question_text": "If $x^2 - 1 = t$ and $t = 3$, then $x = ?$",
+    "question_text": "Each of the $20$ employees at Company J is to receive an end-of-year bonus this year. Agnes will receive a larger bonus than any other employee, but only $\\$500$ more than Cheryl will receive. None of the employees will receive a smaller bonus than Cheryl. If the amount of money to be distributed in bonuses at Company J this year totals $\\$60,000$, what is the largest bonus Agnes can receive?",
     "options": {
-      "a": "$-4$",
-      "b": "$-1$",
-      "c": "$0$",
-      "d": "$1$",
-      "e": "$2$"
+      "a": "$\\$3,250$",
+      "b": "$\\$3,325$",
+      "c": "$\\$3,400$",
+      "d": "$\\$3,475$",
+      "e": "$\\$3,500$"
     },
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "d"
   },
   {
     "question_number": 103,
-    "question_text": "Barb, Naomi, and Joan raised a total of $\\$55$ for charity. Naomi raised $\\$5$ less than Barb, and Joan raised twice as much as Barb. How much did Barb raise?",
+    "question_text": "Beth, Naomi, and Juan raised a total of $\\$55$ for charity. Naomi raised $\\$5$ less than Juan, and Juan raised twice as much as Beth. How much did Beth raise?",
     "options": {
-      "a": "$\\$8$",
+      "a": "$\\$9$",
       "b": "$\\$10$",
       "c": "$\\$12$",
       "d": "$\\$13$",
@@ -1663,11 +1804,12 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 104,
-    "question_text": "The set of solutions for the equation $(x^2 - 25)^{\\frac{1}{2}} = 10x + 25$ contains how many real numbers?",
+    "question_text": "The set of solutions for the equation $(x^2 - 25)^2 = x^2 - 10x + 25$ contains how many real numbers?",
     "options": {
       "a": "$0$",
       "b": "$1$",
@@ -1678,73 +1820,77 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "d"
   },
   {
     "question_number": 105,
-    "question_text": "A right triangle is inscribed in a circle. The legs of the triangle are $8$ inches per square inch, in which it is initially filled. Which of the following formulas expresses the relationship between $y$ and $x$?",
+    "question_text": "An aerosol can is designed so that its bursting pressure, $B$, in pounds per square inch, is $120\\%$ of the pressure, $F$, in pounds per square inch, to which it is initially filled. Which of the following formulas expresses the relationship between $B$ and $F$?",
     "options": {
-      "a": "$y = 1.2x$",
-      "b": "$y = 1.2(1 - x)$",
-      "c": "$y = 1.2x^2$",
-      "d": "$y = \\frac{x}{1.2}$",
-      "e": "$y = \\frac{1.2}{x}$"
+      "a": "$B = 1.2F$",
+      "b": "$B = 120F$",
+      "c": "$B = 1 + 0.2F$",
+      "d": "$B = \\frac{F}{1.2}$",
+      "e": "$B = \\frac{1.2}{F}$"
     },
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question text appears garbled - mixes triangle/circle context with formula relationship. Needs verification."
+    "needs_manual_review": false,
+    "correct_answer": "a"
   },
   {
     "question_number": 106,
-    "question_text": "If $x$ is the arithmetic mean of the positive integers $x$, $y$, and $z$, and $z = 3$, if $z < x < y$, what is the greatest possible value of $z$?",
+    "question_text": "The average (arithmetic mean) of the positive integers $x$, $y$, and $z$ is $3$. If $x < y < z$, what is the greatest possible value of $z$?",
     "options": {
       "a": "$5$",
       "b": "$6$",
       "c": "$7$",
-      "d": "$8$"
+      "d": "$8$",
+      "e": "$9$"
     },
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Options appear incomplete (only 4 options visible). Question definition unclear."
+    "needs_manual_review": false,
+    "correct_answer": "b"
   },
   {
     "question_number": 107,
-    "question_text": "The product of $A$ and $B$ and the $1$-digit integer $n$ is a $5$-digit integer. The units (ones) digit of the product is $3$ and the hundreds digit is $7$. If $A$ is the set of all possible values of $n$ and $B$ is the set of all possible values of $A$, how many members does the set $A \\times B$ have?",
+    "question_text": "The product of $3,305$ and the $1$-digit integer $x$ is a $5$-digit integer. The units (ones) digit of the product is $5$ and the hundreds digit is $y$. If $A$ is the set of all possible values of $x$ and $B$ is the set of all possible values of $y$, then which of the following gives the members of $A$ and $B$?",
+    "context_text": "Note: Options show sets in the format (A set values) (B set values)",
     "options": {
-      "a": "$(1, 3, 5, 7, 9)$ $(1, 2, 3, 4, 5, 6, 7, 8, 9)$",
-      "b": "$(1, 3, 5, 7, 9)$ $(1, 3, 5, 7, 9)$",
-      "c": "$(1, 5, 7, 9)$ $(1, 5, 7, 9)$",
-      "d": "$(5, 7, 9)$ $(1, 5, 7)$",
-      "e": "$(5, 7, 9)$ $(1, 5, 7, 9)$"
+      "a": "$\\{1, 3, 5, 7, 9\\}$ $\\{0, 1, 2, 3, 4, 5, 6, 7, 8, 9\\}$",
+      "b": "$\\{1, 3, 5, 7, 9\\}$ $\\{1, 3, 5, 7, 9\\}$",
+      "c": "$\\{3, 5, 7, 9\\}$ $\\{1, 5, 7, 9\\}$",
+      "d": "$\\{5, 7, 9\\}$ $\\{1, 5, 7\\}$",
+      "e": "$\\{5, 7, 9\\}$ $\\{1, 5, 9\\}$"
     },
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question asks about set membership but options show set pairs. Format needs verification."
+    "needs_manual_review": false,
+    "correct_answer": "d"
   },
   {
     "question_number": 108,
-    "question_text": "If $x$ and $y$ are integers such that $2 < x \\leq 8$ and $2 \\leq y \\leq 9$, what is the maximum value of $\\frac{1}{x} - \\frac{x}{y}$?",
+    "question_text": "If $x$ and $y$ are integers such that $2 < x \\leq 8$ and $2 < y \\leq 9$, what is the maximum value of $\\frac{1}{x} - \\frac{x}{y}$?",
     "options": {
-      "a": "$-3\\frac{1}{2}$",
-      "b": "$-1$",
-      "c": "$0$",
-      "d": "$\\frac{1}{8}$",
+      "a": "$-3\\frac{1}{8}$",
+      "b": "$0$",
+      "c": "$\\frac{1}{4}$",
+      "d": "$\\frac{5}{18}$",
       "e": "$2$"
     },
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "b"
   },
   {
     "question_number": 109,
-    "question_text": "$16$ items are purchased together at a certain discount store are priced at $\\$3$ for the first item purchased and $\\$1$ for each additional item purchased. What is the maximum number of items that could be purchased together for a total price that does not exceed $\\$20$?",
+    "question_text": "Items that are purchased together at a certain discount store are priced at $\\$3$ for the first item purchased and $\\$1$ for each additional item purchased. What is the maximum number of items that could be purchased together for a total price that is less than $\\$30$?",
     "options": {
       "a": "$25$",
       "b": "$26$",
@@ -1755,14 +1901,15 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 110,
-    "question_text": "What is the least integer $x$ for which $(0.000125)(0.0025)(0.00000125) \\cdot 10^x$ is an integer?",
+    "question_text": "What is the least integer $z$ for which $(0.000125)(0.0025)(0.00000125) \\times 10^z$ is an integer?",
     "options": {
-      "a": "$-10$",
-      "b": "$-5$",
+      "a": "$18$",
+      "b": "$10$",
       "c": "$0$",
       "d": "$-10$",
       "e": "$-18$"
@@ -1770,8 +1917,8 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Options A and D appear identical. Needs verification."
+    "needs_manual_review": false,
+    "correct_answer": "a"
   },
   {
     "question_number": 111,
@@ -1786,7 +1933,8 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "b"
   },
   {
     "question_number": 112,
@@ -1801,37 +1949,40 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "b"
   },
   {
     "question_number": 113,
-    "question_text": "If $z = -mn$, which of the following must be true?",
+    "question_text": "If $x = -|w|$, which of the following must be true?",
     "options": {
-      "a": "$z = -w$",
-      "b": "$z = w$",
-      "c": "$z^3 = w$",
-      "d": "$z^3 = w^3$",
-      "e": "$z^4 = w^4$"
+      "a": "$x = -w$",
+      "b": "$x = w$",
+      "c": "$x^2 = w$",
+      "d": "$x^2 = w^2$",
+      "e": "$x^3 = w^3$"
     },
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "d"
   },
   {
     "question_number": 114,
-    "question_text": "A savings account institution reported that its assets totaled $\\$377,366,302$ on a certain day. Of this amount, $\\$31,724,54$ was held in cash. Approximately what percent of the reported assets was held in cash on that day?",
+    "question_text": "A certain financial institution reported that its assets totaled $\\$2,377,366.30$ on a certain day. Of this amount, $\\$31,724.54$ was held in cash. Approximately what percent of the reported assets was held in cash on that day?",
     "options": {
-      "a": "$0.00017\\%$",
-      "b": "$0.0017\\%$",
-      "c": "$0.017\\%$",
-      "d": "$0.17\\%$",
-      "e": "$1.7\\%$"
+      "a": "$0.00013\\%$",
+      "b": "$0.0013\\%$",
+      "c": "$0.013\\%$",
+      "d": "$0.13\\%$",
+      "e": "$1.3\\%$"
     },
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "e"
   },
   {
     "question_number": 115,
@@ -1847,113 +1998,122 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "e"
   },
   {
     "question_number": 116,
-    "question_text": "The hard drive, monitor, and printer for a certain desktop computer system cost a total of $\\$2,500$. The cost of the printer is $\\frac{2}{5}$ the cost of the hard drive. If the cost of the printer is $\\$100$ more than the cost of the monitor, what is the cost of the printer?",
+    "question_text": "The hard drive, monitor, and printer for a certain desktop computer system cost a total of $\\$2,500$. The cost of the printer is $\\frac{2}{3}$ the cost of the hard drive. If the cost of the printer is $\\$100$ more than the cost of the monitor, what is the cost of the printer?",
     "options": {
-      "a": "$\\$400$",
-      "b": "$\\$500$",
-      "c": "$\\$600$",
-      "d": "$\\$700$",
-      "e": "$\\$1,000$"
+      "a": "$\\$800$",
+      "b": "$\\$600$",
+      "c": "$\\$550$",
+      "d": "$\\$500$",
+      "e": "$\\$350$"
     },
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 117,
-    "question_text": "David and Ron are ordering food for a business lunch. David thinks that there should be twice as many sandwiches as there are pastries. But Ron thinks the number of pastries should be $12$ more than one-half of the number of sandwiches. How many sandwiches should be ordered so that David and Ron can agree on the number of pastries to order?",
+    "question_text": "Given the inequalities above, which of the following CANNOT be the value of $r$?",
+    "context_text": "$3r \\leq 4s + 5$\n$|s| \\leq 5$",
     "options": {
-      "a": "$12$",
-      "b": "$16$",
-      "c": "$20$",
-      "d": "$24$",
-      "e": "$48$"
+      "a": "$-20$",
+      "b": "$-5$",
+      "c": "$0$",
+      "d": "$5$",
+      "e": "$20$"
     },
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "e"
   },
   {
     "question_number": 118,
-    "question_text": "The cost of purchasing two bags of candy from a certain mail order catalog is $p$ dollars per pound of candy, plus a shipping charge of $s$ dollars per order. If Mohan orders $2$ kilos of candy, what will be the total cost in dollars? $(1$ kilo $= 2.2$ pounds$)$",
+    "question_text": "If $m$ is an even integer, $v$ is an odd integer, and $m > v > 0$, which of the following represents the number of even integers less than $m$ and greater than $v$?",
     "options": {
-      "a": "$p + s(n)$",
-      "b": "$2p + sn$",
-      "c": "$2p(n)$",
-      "d": "$2p + s + (s + t)$",
-      "e": "$2p + s(s + t)$"
+      "a": "$\\frac{m - v}{2} - 1$",
+      "b": "$\\frac{m - v - 1}{2}$",
+      "c": "$\\frac{m - v}{2}$",
+      "d": "$m - v - 1$",
+      "e": "$m - v$"
     },
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question mentions ordering 2 kilos but options reference undefined variable 'n'. Needs verification."
+    "needs_manual_review": false,
+    "correct_answer": "b"
   },
   {
     "question_number": 119,
-    "question_text": "If $x = -\\frac{1}{2}$, then $\\frac{6x^2 + 3x - 8x - 4}{2x - 1} = ?$",
+    "question_text": "A positive integer is divisible by $9$ if and only if the sum of its digits is divisible by $9$. If $n$ is a positive integer, for which of the following values of $k$ is $25 \\times 10^n + k \\times 10^{2n}$ divisible by $9$?",
     "options": {
-      "a": "$3x^2 - \\frac{5}{2}x - 8$",
-      "b": "$3x^2 - \\frac{5}{2}x - 4$",
-      "c": "$3x^2 - 4$",
-      "d": "$3x - 4$"
+      "a": "$9$",
+      "b": "$16$",
+      "c": "$23$",
+      "d": "$35$",
+      "e": "$47$"
     },
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Options appear incomplete (only 4 options visible)."
+    "needs_manual_review": false,
+    "correct_answer": "e"
   },
   {
     "question_number": 120,
-    "question_text": "Each of the $26$ employees at Company $J$ is to receive a year-end bonus this year. Agnes will receive a larger bonus than any of the other employees, and Cheryl will receive a smaller bonus than any of the other employees. If the amount of money to be distributed in bonuses at Company $J$ this year totals $\\$60,000$, what is the largest bonus Agnes can receive?",
+    "question_text": "On the number line, the shaded interval is the graph of which of the following inequalities?",
+    "context_text": "Number line showing shaded interval from -4 to 5 (including both endpoints)",
     "options": {
-      "a": "$\\$0.001$",
-      "b": "$\\$0.010$",
-      "c": "$\\$0.025$",
-      "d": "$\\$0.058$",
-      "e": "$\\$0.067$"
+      "a": "$|x| \\leq 4$",
+      "b": "$|x| \\leq 8$",
+      "c": "$|x - 2| \\leq 4$",
+      "d": "$|x - 2| \\leq 6$",
+      "e": "$|x + 2| \\leq 6$"
     },
     "difficulty": "medium",
     "has_table": false,
-    "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Options show very small dollar amounts which don't match the $60,000 total. Likely transcription error."
+    "has_chart": true,
+    "needs_manual_review": false,
+    "correct_answer": "e"
   },
   {
     "question_number": 121,
-    "question_text": "Last year Shannon journeyed to a certain public radio station $10$ hours per week and contributed $\\$35$ to the station. Of the following, which is closest to Shannon's contribution per minute of listening time last year?",
+    "question_text": "Last year members of a certain professional organization for teachers consisted of teachers from $49$ different school districts, with an average (arithmetic mean) of $9.8$ schools per district. Last year the average number of teachers at these schools who were members of the organization was $22$. Which of the following is closest to the total number of members of the organization last year?",
     "options": {
-      "a": "$\\$0.001$",
-      "b": "$\\$0.010$",
-      "c": "$\\$0.025$",
-      "d": "$\\$0.058$",
-      "e": "$\\$0.067$"
+      "a": "$10^7$",
+      "b": "$10^6$",
+      "c": "$10^5$",
+      "d": "$10^4$",
+      "e": "$10^3$"
     },
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "d"
   },
   {
     "question_number": 122,
-    "question_text": "Each of the $26$ employees at Company $J$ is to receive a year-end bonus this year. Agnes will receive a larger bonus than each of the other $25$ employees. Cheryl will receive a smaller bonus than each of the other employees. If the amount of money to be distributed in bonuses at Company $J$ this year totals $\\$60,000$, what is the largest bonus Agnes can receive?",
+    "question_text": "Of all the students in a certain dormitory, $\\frac{1}{2}$ are first-year students and the rest are second-year students. If $\\frac{4}{5}$ of the first-year students have not declared a major and if the fraction of second-year students who have declared a major is $3$ times the fraction of first-year students who have declared a major, what fraction of all the students in the dormitory are second-year students who have not declared a major?",
     "options": {
-      "a": "$\\$3,000$",
-      "b": "$\\$3,475$",
-      "c": "$\\$3,500$"
+      "a": "$\\frac{1}{15}$",
+      "b": "$\\frac{1}{5}$",
+      "c": "$\\frac{4}{15}$",
+      "d": "$\\frac{1}{3}$",
+      "e": "$\\frac{2}{5}$"
     },
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Options appear incomplete (only 3 options visible). This appears to be the correct version of Q120."
+    "needs_manual_review": false,
+    "correct_answer": "b"
   },
   {
     "question_number": 123,
@@ -1968,14 +2128,15 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "b"
   },
   {
     "question_number": 124,
     "question_text": "Jonah drove the first half of a $100$-mile trip in $x$ hours and the second half in $y$ hours. Which of the following is equal to Jonah's average speed, in miles per hour, for the entire trip?",
     "options": {
       "a": "$\\frac{50}{x + y}$",
-      "b": "$\\frac{x + y}{100}$",
+      "b": "$\\frac{100}{x + y}$",
       "c": "$\\frac{25}{x} + \\frac{25}{y}$",
       "d": "$\\frac{50}{x} + \\frac{50}{y}$",
       "e": "$\\frac{100}{x} + \\frac{100}{y}$"
@@ -1983,11 +2144,12 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "b"
   },
   {
     "question_number": 125,
-    "question_text": "If the assessed value of a parcel of real estate has risen $\\$1.35$ million in $\\$437,000$ plus $1$ percent of the value of the estate in excess of $\\$1.25$ million, then the federal tax due is approximately what percent of the value of the estate?",
+    "question_text": "If the amount of federal estate tax due on an estate valued at $\\$1.35$ million is $\\$437,000$ plus $43$ percent of the value of the estate in excess of $\\$1.25$ million, then the federal tax due is approximately what percent of the value of the estate?",
     "options": {
       "a": "$30\\%$",
       "b": "$35\\%$",
@@ -1998,13 +2160,13 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question text appears incomplete or garbled. Needs verification."
+    "needs_manual_review": false,
+    "correct_answer": "b"
   },
   {
     "question_number": 126,
-    "question_text": "A manufacturer wants to produce $x$ balls and $y$ boxes. Resource constraints require that $x$ and $y$ satisfy the inequalities shown. What is the maximum number of balls and boxes combined that can be produced given the constraints?",
-    "context_text": "$7x + 6y \\leq 58,000$\n$4x + 5y \\leq 25,000$",
+    "question_text": "A manufacturer wants to produce $x$ balls and $y$ boxes. Resource constraints require that $x$ and $y$ satisfy the inequalities shown. What is the maximum number of balls and boxes combined that can be produced given the resource constraints?",
+    "context_text": "$7x + 6y \\leq 38,000$\n$4x + 5y \\leq 28,000$",
     "options": {
       "a": "$5,000$",
       "b": "$6,000$",
@@ -2015,11 +2177,12 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "b"
   },
   {
     "question_number": 127,
-    "question_text": "If $\\frac{1}{10^2} = n$, then $n = ?$",
+    "question_text": "If $\\frac{3}{10^4} = x\\%$, then $x =$",
     "options": {
       "a": "$0.3$",
       "b": "$0.03$",
@@ -2030,11 +2193,12 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "b"
   },
   {
     "question_number": 128,
-    "question_text": "What is the remainder when $3^{74}$ is divided by $5$?",
+    "question_text": "What is the remainder when $3^{24}$ is divided by $5$?",
     "options": {
       "a": "$0$",
       "b": "$1$",
@@ -2045,7 +2209,8 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "b"
   },
   {
     "question_number": 129,
@@ -2060,7 +2225,8 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "e"
   },
   {
     "question_number": 130,
@@ -2075,7 +2241,8 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "b"
   },
   {
     "question_number": 131,
@@ -2090,7 +2257,8 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "d"
   },
   {
     "question_number": 132,
@@ -2105,7 +2273,8 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "b"
   },
   {
     "question_number": 133,
@@ -2115,12 +2284,14 @@
       "a": "$-20$",
       "b": "$-5$",
       "c": "$0$",
-      "d": "$5$"
+      "d": "$5$",
+      "e": "[Option E - needs manual transcription from source PDF]"
     },
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true
+    "needs_manual_review": true,
+    "correct_answer": "c"
   },
   {
     "question_number": 134,
@@ -2136,7 +2307,8 @@
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Options D and E appear identical. Needs verification."
+    "context_text": "Note: Options D and E appear identical. Needs verification.",
+    "correct_answer": "c"
   },
   {
     "question_number": 135,
@@ -2151,7 +2323,8 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "e"
   },
   {
     "question_number": 136,
@@ -2167,7 +2340,8 @@
     "has_table": false,
     "has_chart": true,
     "needs_manual_review": true,
-    "context_text": "Note: Question references a shaded interval on a number line diagram."
+    "context_text": "Note: Question references a shaded interval on a number line diagram.",
+    "correct_answer": "d"
   },
   {
     "question_number": 137,
@@ -2182,7 +2356,8 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 138,
@@ -2198,7 +2373,8 @@
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question text appears garbled or incomplete. Needs verification."
+    "context_text": "Note: Question text appears garbled or incomplete. Needs verification.",
+    "correct_answer": "c"
   },
   {
     "question_number": 139,
@@ -2214,7 +2390,8 @@
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question 139 appears to be duplicate of Q129 but with different options. Needs verification."
+    "context_text": "Note: Question 139 appears to be duplicate of Q129 but with different options. Needs verification.",
+    "correct_answer": "d"
   },
   {
     "question_number": 140,
@@ -2230,7 +2407,8 @@
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question 140 appears to be duplicate of Q130. Needs verification."
+    "context_text": "Note: Question 140 appears to be duplicate of Q130. Needs verification.",
+    "correct_answer": "a"
   },
   {
     "question_number": 141,
@@ -2246,7 +2424,8 @@
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question 141 appears to be duplicate of Q131. Needs verification."
+    "context_text": "Note: Question 141 appears to be duplicate of Q131. Needs verification.",
+    "correct_answer": "b"
   },
   {
     "question_number": 142,
@@ -2262,7 +2441,8 @@
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question 142 appears to be duplicate of Q132. Needs verification."
+    "context_text": "Note: Question 142 appears to be duplicate of Q132. Needs verification.",
+    "correct_answer": "b"
   },
   {
     "question_number": 143,
@@ -2277,7 +2457,8 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 144,
@@ -2292,7 +2473,8 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 145,
@@ -2307,7 +2489,8 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "a"
   },
   {
     "question_number": 146,
@@ -2322,7 +2505,8 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "e"
   },
   {
     "question_number": 147,
@@ -2337,7 +2521,8 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "e"
   },
   {
     "question_number": 148,
@@ -2352,7 +2537,8 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 149,
@@ -2367,7 +2553,8 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 150,
@@ -2382,7 +2569,8 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "a"
   },
   {
     "question_number": 151,
@@ -2398,7 +2586,8 @@
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question has Roman numeral statements. Options format may need adjustment."
+    "context_text": "Note: Question has Roman numeral statements. Options format may need adjustment.",
+    "correct_answer": "b"
   },
   {
     "question_number": 152,
@@ -2413,7 +2602,8 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "d"
   },
   {
     "question_number": 153,
@@ -2428,7 +2618,8 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "d"
   },
   {
     "question_number": 154,
@@ -2443,7 +2634,8 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 155,
@@ -2458,7 +2650,8 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "a"
   },
   {
     "question_number": 156,
@@ -2473,7 +2666,8 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 157,
@@ -2489,7 +2683,8 @@
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question has Roman numeral statements. Options format may need adjustment."
+    "context_text": "Note: Question has Roman numeral statements. Options format may need adjustment.",
+    "correct_answer": "b"
   },
   {
     "question_number": 158,
@@ -2504,7 +2699,8 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "a"
   },
   {
     "question_number": 159,
@@ -2519,7 +2715,8 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "b"
   },
   {
     "question_number": 160,
@@ -2534,7 +2731,8 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 161,
@@ -2549,7 +2747,8 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "e"
   },
   {
     "question_number": 162,
@@ -2564,7 +2763,8 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "a"
   },
   {
     "question_number": 163,
@@ -2579,7 +2779,8 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "b"
   },
   {
     "question_number": 164,
@@ -2594,7 +2795,8 @@
     "difficulty": "medium",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 165,
@@ -2610,7 +2812,8 @@
     "has_table": false,
     "has_chart": true,
     "needs_manual_review": true,
-    "context_text": "Note: Question references frequency polygon diagrams. Charts should be included as images."
+    "context_text": "Note: Question references frequency polygon diagrams. Charts should be included as images.",
+    "correct_answer": "e"
   },
   {
     "question_number": 166,
@@ -2626,7 +2829,8 @@
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "d"
   },
   {
     "question_number": 167,
@@ -2642,7 +2846,8 @@
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question has Roman numeral statements. Options format may need adjustment. Question text appears incomplete."
+    "context_text": "Note: Question has Roman numeral statements. Options format may need adjustment. Question text appears incomplete.",
+    "correct_answer": "d"
   },
   {
     "question_number": 168,
@@ -2657,7 +2862,8 @@
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "e"
   },
   {
     "question_number": 169,
@@ -2672,7 +2878,8 @@
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "b"
   },
   {
     "question_number": 170,
@@ -2688,7 +2895,8 @@
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question text appears garbled or incomplete. Needs verification."
+    "context_text": "Note: Question text appears garbled or incomplete. Needs verification.",
+    "correct_answer": "d"
   },
   {
     "question_number": 171,
@@ -2697,13 +2905,15 @@
       "a": "$-18$",
       "b": "$-6$",
       "c": "$6$",
-      "d": "$18$"
+      "d": "$18$",
+      "e": "[Option E - needs manual transcription from source PDF]"
     },
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Options appear incomplete (only 4 options visible)."
+    "context_text": "Note: Options appear incomplete (only 4 options visible).",
+    "correct_answer": "a"
   },
   {
     "question_number": 172,
@@ -2718,7 +2928,8 @@
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "d"
   },
   {
     "question_number": 173,
@@ -2727,13 +2938,15 @@
       "a": "$\\frac{1}{6}$",
       "b": "$\\frac{1}{3}$",
       "c": "$\\frac{1}{2}$",
-      "d": "$\\frac{2}{3}$"
+      "d": "$\\frac{2}{3}$",
+      "e": "[Option E - needs manual transcription from source PDF]"
     },
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Options appear incomplete (only 4 options visible)."
+    "context_text": "Note: Options appear incomplete (only 4 options visible).",
+    "correct_answer": "d"
   },
   {
     "question_number": 174,
@@ -2748,7 +2961,8 @@
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "d"
   },
   {
     "question_number": 175,
@@ -2763,7 +2977,8 @@
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 176,
@@ -2778,7 +2993,8 @@
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "a"
   },
   {
     "question_number": 177,
@@ -2787,13 +3003,15 @@
       "a": "$5$",
       "b": "$6$",
       "c": "$9$",
-      "d": "$10$"
+      "d": "$10$",
+      "e": "[Option E - needs manual transcription from source PDF]"
     },
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Options appear incomplete (only 4 options visible)."
+    "context_text": "Note: Options appear incomplete (only 4 options visible).",
+    "correct_answer": "b"
   },
   {
     "question_number": 178,
@@ -2809,7 +3027,8 @@
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question has Roman numeral statements. Options format may need adjustment."
+    "context_text": "Note: Question has Roman numeral statements. Options format may need adjustment.",
+    "correct_answer": "d"
   },
   {
     "question_number": 179,
@@ -2824,7 +3043,8 @@
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 180,
@@ -2840,7 +3060,8 @@
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question has Roman numeral statements. Options format may need adjustment."
+    "context_text": "Note: Question has Roman numeral statements. Options format may need adjustment.",
+    "correct_answer": "d"
   },
   {
     "question_number": 181,
@@ -2855,7 +3076,8 @@
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "a"
   },
   {
     "question_number": 182,
@@ -2870,7 +3092,8 @@
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "a"
   },
   {
     "question_number": 183,
@@ -2879,13 +3102,15 @@
       "a": "$4$",
       "b": "$6$",
       "c": "$7$",
-      "d": "$9$"
+      "d": "$9$",
+      "e": "[Option E - needs manual transcription from source PDF]"
     },
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Options appear incomplete (only 4 options visible)."
+    "context_text": "Note: Options appear incomplete (only 4 options visible).",
+    "correct_answer": "d"
   },
   {
     "question_number": 184,
@@ -2900,7 +3125,8 @@
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "b"
   },
   {
     "question_number": 185,
@@ -2915,7 +3141,8 @@
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "a"
   },
   {
     "question_number": 186,
@@ -2930,7 +3157,8 @@
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "b"
   },
   {
     "question_number": 187,
@@ -2945,7 +3173,8 @@
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "e"
   },
   {
     "question_number": 188,
@@ -2954,13 +3183,15 @@
       "a": "$2$",
       "b": "$3$",
       "c": "$4$",
-      "d": "$5$"
+      "d": "$5$",
+      "e": "[Option E - needs manual transcription from source PDF]"
     },
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Options appear incomplete (only 4 options visible)."
+    "context_text": "Note: Options appear incomplete (only 4 options visible).",
+    "correct_answer": "c"
   },
   {
     "question_number": 189,
@@ -2975,7 +3206,8 @@
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "b"
   },
   {
     "question_number": 190,
@@ -2990,7 +3222,8 @@
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "d"
   },
   {
     "question_number": 191,
@@ -3005,7 +3238,8 @@
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 192,
@@ -3021,7 +3255,8 @@
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question text appears garbled or incomplete. Needs verification."
+    "context_text": "Note: Question text appears garbled or incomplete. Needs verification.",
+    "correct_answer": "e"
   },
   {
     "question_number": 193,
@@ -3029,13 +3264,16 @@
     "options": {
       "a": "$5$",
       "b": "$9$",
-      "c": "$10$"
+      "c": "$10$",
+      "d": "[Option D - needs manual transcription from source PDF]",
+      "e": "[Option E - needs manual transcription from source PDF]"
     },
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Options appear incomplete (only 3 options visible)."
+    "context_text": "Note: Options appear incomplete (only 3 options visible).",
+    "correct_answer": "c"
   },
   {
     "question_number": 194,
@@ -3050,7 +3288,8 @@
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "e"
   },
   {
     "question_number": 195,
@@ -3088,7 +3327,8 @@
     "difficulty": "hard",
     "has_table": true,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 196,
@@ -3103,7 +3343,8 @@
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": false
+    "needs_manual_review": false,
+    "correct_answer": "c"
   },
   {
     "question_number": 197,
@@ -3119,7 +3360,8 @@
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question text appears garbled. Needs verification."
+    "context_text": "Note: Question text appears garbled. Needs verification.",
+    "correct_answer": "c"
   },
   {
     "question_number": 198,
@@ -3146,13 +3388,16 @@
     "options": {
       "a": "$68$",
       "b": "$112$",
-      "c": "$56$"
+      "c": "$56$",
+      "d": "[Option D - needs manual transcription from source PDF]",
+      "e": "[Option E - needs manual transcription from source PDF]"
     },
     "difficulty": "hard",
     "has_table": true,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question text and table don't match. Options appear incomplete. Needs verification."
+    "context_text": "Note: Question text and table don't match. Options appear incomplete. Needs verification.",
+    "correct_answer": "d"
   },
   {
     "question_number": 199,
@@ -3168,7 +3413,8 @@
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question 199 content not clearly transcribed. Needs manual verification."
+    "context_text": "Note: Question 199 content not clearly transcribed. Needs manual verification.",
+    "correct_answer": "d"
   },
   {
     "question_number": 200,
@@ -3184,7 +3430,8 @@
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question 200 content not clearly transcribed. Needs manual verification."
+    "context_text": "Note: Question 200 content not clearly transcribed. Needs manual verification.",
+    "correct_answer": "e"
   },
   {
     "question_number": 201,
@@ -3200,7 +3447,8 @@
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question 201 content not clearly transcribed. Needs manual verification."
+    "context_text": "Note: Question 201 content not clearly transcribed. Needs manual verification.",
+    "correct_answer": "c"
   },
   {
     "question_number": 202,
@@ -3216,7 +3464,8 @@
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question 202 content not clearly transcribed. Needs manual verification."
+    "context_text": "Note: Question 202 content not clearly transcribed. Needs manual verification.",
+    "correct_answer": "a"
   },
   {
     "question_number": 203,
@@ -3232,7 +3481,8 @@
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question 203 content not clearly transcribed. Needs manual verification."
+    "context_text": "Note: Question 203 content not clearly transcribed. Needs manual verification.",
+    "correct_answer": "a"
   },
   {
     "question_number": 204,
@@ -3248,7 +3498,8 @@
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question 204 content not clearly transcribed. Needs manual verification."
+    "context_text": "Note: Question 204 content not clearly transcribed. Needs manual verification.",
+    "correct_answer": "e"
   },
   {
     "question_number": 205,
@@ -3264,7 +3515,8 @@
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question 205 content not clearly transcribed. Needs manual verification."
+    "context_text": "Note: Question 205 content not clearly transcribed. Needs manual verification.",
+    "correct_answer": "d"
   },
   {
     "question_number": 206,
@@ -3280,7 +3532,8 @@
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question 206 content not clearly transcribed. Needs manual verification."
+    "context_text": "Note: Question 206 content not clearly transcribed. Needs manual verification.",
+    "correct_answer": "c"
   },
   {
     "question_number": 207,
@@ -3296,6 +3549,7 @@
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": true,
-    "context_text": "Note: Question 207 content not clearly transcribed. Needs manual verification."
+    "context_text": "Note: Question 207 content not clearly transcribed. Needs manual verification.",
+    "correct_answer": "e"
   }
 ]

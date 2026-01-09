@@ -17,12 +17,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "If $x$ equals the sum of the even integers from $2$ to $20$, inclusive, and $y$ equals the sum of the odd integers from $1$ to $19$, inclusive, what is the value of $x - y$?",
-      options: {,
+      options: {
         a: "$1$",
         b: "$10$",
         c: "$19$",
         d: "$20$",
-        e: "$21$",
+        e: "$21$"
       },
       image_url: null,
       image_options: null
@@ -38,12 +38,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "If Car $A$ took $n$ hours to travel $2$ miles and Car $B$ took $m$ hours to travel $3$ miles, which of the following expresses the time it would take Car $C$, traveling at the average (arithmetic mean) of those speeds, to travel $5$ miles?",
-      options: {,
+      options: {
         a: "$10mn$",
         b: "$\\frac{3m + 2n}{5}$",
         c: "$\\frac{10(m + n)}{5}$",
         d: "$\\frac{2n + 3m}{5}$",
-        e: "$\\frac{5(m + n)}{2n + 3m}$",
+        e: "$\\frac{5(m + n)}{2n + 3m}$"
       },
       image_url: null,
       image_options: null
@@ -59,12 +59,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "If $x$, $y$, and $z$ are positive and $x$ is less than $y$, then $\\frac{x + z}{y + z}$ is",
-      options: {,
+      options: {
         a: "$1$",
         b: "$greater$ $than$ $\\frac{x}{y}$",
         c: "$equal$ $to$ $\\frac{x}{y}$",
         d: "$less$ $than$ $\\frac{x}{y}$",
-        e: "$cannot$ $be$ $determined$",
+        e: "$cannot$ $be$ $determined$"
       },
       image_url: null,
       image_options: null
@@ -80,12 +80,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "If $p$ less than $n$ is defined by the equation $p \\star n = p^2 + \\frac{n}{2}$, depending on the value of $n$, the value of $3 \\star n$ is greater than $3 \\star 6$ for which of the following conditions?",
-      options: {,
+      options: {
         a: "$n > 6$ $and$ $t$",
         b: "$n$ $and$ $t$",
         c: "$n$ $and$ $y$",
         d: "$p$ $and$ $t$",
-        e: "$r$ $and$ $t$",
+        e: "$r$ $and$ $t$"
       },
       image_url: null,
       image_options: null
@@ -101,12 +101,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "Carl averaged $2m$ miles per hour on a trip that took $h$ hours. If both made the same trip in $\\frac{2}{3}h$ hours, what was her average speed, in miles per hour?",
-      options: {,
+      options: {
         a: "$\\frac{1}{3}mh$",
         b: "$\\frac{3}{2}m$",
         c: "$m$",
         d: "$\\frac{2}{3}m$",
-        e: "$3m$",
+        e: "$3m$"
       },
       image_url: null,
       image_options: null
@@ -122,12 +122,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "A delicatessen sold two types of relish, two plain pepper, and two plain salt. The ratio who takes no salt also takes no relish, and the one who takes no pepper also takes no relish. Which of the following statements must be true?",
-      options: {,
+      options: {
         a: "$I$. The person who takes no salt also takes no relish.",
         b: "$II$. Any of the three persons who takes pepper also takes relish and salt.",
         c: "$III$. The person who takes no relish is not one of those who takes salt.",
         d: "$I$ only",
-        e: "$II$ only",
+        e: "$II$ only"
       },
       image_url: null,
       image_options: null
@@ -143,12 +143,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "If the number of $2$ consecutive odd integers is a multiple of $5$, which of the following could NOT be the sum of those $2$ integers?",
-      options: {,
+      options: {
         a: "$-8$",
         b: "$12$",
         c: "$22$",
         d: "$52$",
-        e: "$624$",
+        e: "$624$"
       },
       image_url: null,
       image_options: null
@@ -164,15 +164,15 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "Eight light bulbs numbered $1$ through $8$ are arranged in a circle as shown above. The bulbs are wired so that every third bulb, counting in a clockwise direction, flashes until all bulbs have flashed once. If the bulbs are numbered $1$ flashes first, which numbered bulb will flash last?",
-      options: {,
+      options: {
         a: "$2$",
         b: "$4$",
         c: "$5$",
         d: "$6$",
-        e: "$7$",
+        e: "$7$"
       },
-      image_url: null  // TODO: Add chart/diagram,
-      image_options: null
+      image_url: null,
+      image_options: null  // TODO: Add chart/diagram
     } as QRQuestionData,
     answers: generateMCAnswers("d"),
     explanation: "",
@@ -185,12 +185,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "A certain financial analyst defines the \"volatility\" of a stock during a given week to be the result of the following procedure: For each day of the week, find the absolute difference in the stock's closing price for each pair of consecutive days in that week and then find the average (arithmetic mean) of those $4$ values. What is the volatility of Stock $X$ during the week shown in the table?",
-      options: {,
+      options: {
         a: "$0.50$",
         b: "$1.80$",
         c: "$2.80$",
         d: "$3.00$",
-        e: "$4.00$",
+        e: "$4.00$"
       },
       table_title: "Closing Prices of Stock X During a Certain Week (in dollars)",
       column_headers: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
@@ -209,12 +209,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "If $y = \\frac{3x - 6}{x^2 - 4}$, for what value of $x$ will the value of $y$ be greatest?",
-      options: {,
+      options: {
         a: "$-5$",
         b: "$-\\frac{2}{3}$",
         c: "$0$",
         d: "$\\frac{2}{3}$",
-        e: "$5$",
+        e: "$5$"
       },
       image_url: null,
       image_options: null
@@ -230,12 +230,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "What values of $x$ have a corresponding value of $y$ that satisfies both $xy = 0$ and $xy = zy - 3y$?",
-      options: {,
+      options: {
         a: "$x \\leq -1$",
         b: "$-1 < x \\leq 0$",
         c: "$0 < x \\leq 1$",
         d: "$x > 1$",
-        e: "$All$ $real$ $numbers$",
+        e: "$All$ $real$ $numbers$"
       },
       image_url: null,
       image_options: null
@@ -251,12 +251,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "Employee $X$'s annual salary is $\\$12,000$ more than half of Employee $Y$'s annual salary. Employee $Z$'s annual salary is $\\$3,000$ more than half of Employee $Y$'s annual salary. If Employee $X$'s annual salary is $\\$27,000$, which of the following best describes three people in order of increasing annual salary?",
-      options: {,
+      options: {
         a: "$Y, Z, X$",
         b: "$Z, X, Y$",
         c: "$Z, Y, X$",
         d: "$X, Y, Z$",
-        e: "$X, Z, Y$",
+        e: "$X, Z, Y$"
       },
       image_url: null,
       image_options: null
@@ -272,12 +272,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "The formula above gives the contribution $C$, in dollars, to a certain profit-sharing plan for a participant with a salary of $\\$10,000$ but for a participant with a salary of $\\$50,000$ then",
-      options: {,
+      options: {
         a: "$\\$600$",
         b: "$\\$1,400$",
         c: "$\\$2,000$",
         d: "$\\$2,400$",
-        e: "$\\$2,600$",
+        e: "$\\$2,600$"
       },
       image_url: null,
       image_options: null
@@ -293,12 +293,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "Next month, Ron and Cathy will each begin working part-time at $\\frac{3}{4}$ of their respective current salaries. If the sum of their current salaries will be equal to Cathy's current salary, then Ron's current salary is what fraction of Cathy's current salary?",
-      options: {,
+      options: {
         a: "$\\frac{1}{3}$",
         b: "$\\frac{2}{5}$",
         c: "$-2$",
-        d: "",
-        e: "",
+        d: "[Option D - needs manual transcription from source PDF]",
+        e: "[Option E - needs manual transcription from source PDF]"
       },
       image_url: null,
       image_options: null
@@ -314,12 +314,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "A retailer sold an appliance for $\\$80$. If the retailer's gross profit on the appliance was $25$ percent of the retailer's cost for the appliance, how many dollars was the retailer's gross profit?",
-      options: {,
+      options: {
         a: "$\\$10$",
         b: "$\\$16$",
         c: "$\\$20$",
         d: "$\\$24$",
-        e: "$\\$25$",
+        e: "$\\$25$"
       },
       image_url: null,
       image_options: null
@@ -335,12 +335,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "If $x - 1 = t$ and $t + 3 = x$, then $x = ?$",
-      options: {,
+      options: {
         a: "$-4$",
         b: "$-1$",
         c: "$0$",
         d: "$1$",
-        e: "$2$",
+        e: "$2$"
       },
       image_url: null,
       image_options: null
@@ -356,12 +356,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "If $x = kx$ and $y = kx$, then $y = ?$",
-      options: {,
+      options: {
         a: "$k(x - t)$",
         b: "$k(x - t)$",
         c: "$x(k - t)$",
         d: "$t(k - x)$",
-        e: "$k(t - t)$",
+        e: "$k(t - t)$"
       },
       image_url: null,
       image_options: null
@@ -377,12 +377,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "If $p$ is a positive even integer, which of the following must be an odd integer?",
-      options: {,
+      options: {
         a: "$I$. $3p + 4$",
         b: "$II$. $p^2 + 4$",
         c: "$III$. $7p - 7$",
         d: "$II$ only",
-        e: "$III$ only",
+        e: "$III$ only"
       },
       image_url: null,
       image_options: null
@@ -398,12 +398,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "The value of the expression shown is closest to which of the following?",
-      options: {,
+      options: {
         a: "$0.0001$",
         b: "$0.001$",
         c: "$1$",
         d: "$10$",
-        e: "",
+        e: "[Option E - needs manual transcription from source PDF]"
       },
       image_url: null,
       image_options: null
@@ -419,12 +419,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "If $x^2 - 1 = t$ and $t = 3$, then $x = ?$",
-      options: {,
+      options: {
         a: "$-4$",
         b: "$-1$",
         c: "$0$",
         d: "$1$",
-        e: "$2$",
+        e: "$2$"
       },
       image_url: null,
       image_options: null
@@ -440,12 +440,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "Barb, Naomi, and Joan raised a total of $\\$55$ for charity. Naomi raised $\\$5$ less than Barb, and Joan raised twice as much as Barb. How much did Barb raise?",
-      options: {,
+      options: {
         a: "$\\$8$",
         b: "$\\$10$",
         c: "$\\$12$",
         d: "$\\$13$",
-        e: "$\\$15$",
+        e: "$\\$15$"
       },
       image_url: null,
       image_options: null
@@ -461,12 +461,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "The set of solutions for the equation $(x^2 - 25)^{\\frac{1}{2}} = 10x + 25$ contains how many real numbers?",
-      options: {,
+      options: {
         a: "$0$",
         b: "$1$",
         c: "$2$",
         d: "$3$",
-        e: "$4$",
+        e: "$4$"
       },
       image_url: null,
       image_options: null
@@ -482,12 +482,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "A right triangle is inscribed in a circle. The legs of the triangle are $8$ inches per square inch, in which it is initially filled. Which of the following formulas expresses the relationship between $y$ and $x$?",
-      options: {,
+      options: {
         a: "$y = 1.2x$",
         b: "$y = 1.2(1 - x)$",
         c: "$y = 1.2x^2$",
         d: "$y = \\frac{x}{1.2}$",
-        e: "$y = \\frac{1.2}{x}$",
+        e: "$y = \\frac{1.2}{x}$"
       },
       image_url: null,
       image_options: null
@@ -503,12 +503,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "If $x$ is the arithmetic mean of the positive integers $x$, $y$, and $z$, and $z = 3$, if $z < x < y$, what is the greatest possible value of $z$?",
-      options: {,
+      options: {
         a: "$5$",
         b: "$6$",
         c: "$7$",
         d: "$8$",
-        e: "",
+        e: "[Option E - needs manual transcription from source PDF]"
       },
       image_url: null,
       image_options: null
@@ -524,12 +524,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "The product of $A$ and $B$ and the $1$-digit integer $n$ is a $5$-digit integer. The units (ones) digit of the product is $3$ and the hundreds digit is $7$. If $A$ is the set of all possible values of $n$ and $B$ is the set of all possible values of $A$, how many members does the set $A \\times B$ have?",
-      options: {,
+      options: {
         a: "$(1, 3, 5, 7, 9)$ $(1, 2, 3, 4, 5, 6, 7, 8, 9)$",
         b: "$(1, 3, 5, 7, 9)$ $(1, 3, 5, 7, 9)$",
         c: "$(1, 5, 7, 9)$ $(1, 5, 7, 9)$",
         d: "$(5, 7, 9)$ $(1, 5, 7)$",
-        e: "$(5, 7, 9)$ $(1, 5, 7, 9)$",
+        e: "$(5, 7, 9)$ $(1, 5, 7, 9)$"
       },
       image_url: null,
       image_options: null
@@ -545,12 +545,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "If $x$ and $y$ are integers such that $2 < x \\leq 8$ and $2 \\leq y \\leq 9$, what is the maximum value of $\\frac{1}{x} - \\frac{x}{y}$?",
-      options: {,
+      options: {
         a: "$-3\\frac{1}{2}$",
         b: "$-1$",
         c: "$0$",
         d: "$\\frac{1}{8}$",
-        e: "$2$",
+        e: "$2$"
       },
       image_url: null,
       image_options: null
@@ -566,12 +566,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "$16$ items are purchased together at a certain discount store are priced at $\\$3$ for the first item purchased and $\\$1$ for each additional item purchased. What is the maximum number of items that could be purchased together for a total price that does not exceed $\\$20$?",
-      options: {,
+      options: {
         a: "$25$",
         b: "$26$",
         c: "$27$",
         d: "$28$",
-        e: "$29$",
+        e: "$29$"
       },
       image_url: null,
       image_options: null
@@ -587,12 +587,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "What is the least integer $x$ for which $(0.000125)(0.0025)(0.00000125) \\cdot 10^x$ is an integer?",
-      options: {,
+      options: {
         a: "$-10$",
         b: "$-5$",
         c: "$0$",
         d: "$-10$",
-        e: "$-18$",
+        e: "$-18$"
       },
       image_url: null,
       image_options: null
@@ -608,12 +608,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "The average (arithmetic mean) length per film for a group of $21$ films is $t$ minutes. If a film that runs for $66$ minutes is removed from the group and replaced by one that runs for $52$ minutes, what is the average length per film, in minutes, for the new group of films, in terms of $t$?",
-      options: {,
+      options: {
         a: "$t + \\frac{2}{3}$",
         b: "$t - \\frac{2}{3}$",
         c: "$21t - 14$",
         d: "$t + \\frac{3}{2}$",
-        e: "$t - \\frac{3}{2}$",
+        e: "$t - \\frac{3}{2}$"
       },
       image_url: null,
       image_options: null
@@ -629,12 +629,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "A garden center sells a certain grass seed in $5$-pound bags at $\\$13.85$ per bag, $10$-pound bags at $\\$20.43$ per bag, and $25$-pound bags at $\\$32.25$ per bag. If a customer is to buy at least $65$ pounds of the grass seed, but no more than $80$ pounds, what is the least possible cost of the grass seed that the customer will buy?",
-      options: {,
+      options: {
         a: "$\\$94.03$",
         b: "$\\$96.75$",
         c: "$\\$98.78$",
         d: "$\\$102.07$",
-        e: "$\\$105.36$",
+        e: "$\\$105.36$"
       },
       image_url: null,
       image_options: null
@@ -650,12 +650,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "If $z = -mn$, which of the following must be true?",
-      options: {,
+      options: {
         a: "$z = -w$",
         b: "$z = w$",
         c: "$z^3 = w$",
         d: "$z^3 = w^3$",
-        e: "$z^4 = w^4$",
+        e: "$z^4 = w^4$"
       },
       image_url: null,
       image_options: null
@@ -671,12 +671,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "A savings account institution reported that its assets totaled $\\$377,366,302$ on a certain day. Of this amount, $\\$31,724,54$ was held in cash. Approximately what percent of the reported assets was held in cash on that day?",
-      options: {,
+      options: {
         a: "$0.00017\\%$",
         b: "$0.0017\\%$",
         c: "$0.017\\%$",
         d: "$0.17\\%$",
-        e: "$1.7\\%$",
+        e: "$1.7\\%$"
       },
       image_url: null,
       image_options: null
@@ -692,12 +692,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "In the correctly worked addition problem shown, where the sum of the two-digit positive integers $AB$ and $BA$ is the three-digit integer $ACB$, and $A$, $B$, and $C$ are different digits, what is the units digit of the integer $ACB$?",
-      options: {,
+      options: {
         a: "$9$",
         b: "$6$",
         c: "$3$",
         d: "$2$",
-        e: "$0$",
+        e: "$0$"
       },
       image_url: null,
       image_options: null
@@ -713,12 +713,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "The hard drive, monitor, and printer for a certain desktop computer system cost a total of $\\$2,500$. The cost of the printer is $\\frac{2}{5}$ the cost of the hard drive. If the cost of the printer is $\\$100$ more than the cost of the monitor, what is the cost of the printer?",
-      options: {,
+      options: {
         a: "$\\$400$",
         b: "$\\$500$",
         c: "$\\$600$",
         d: "$\\$700$",
-        e: "$\\$1,000$",
+        e: "$\\$1,000$"
       },
       image_url: null,
       image_options: null
@@ -734,12 +734,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "David and Ron are ordering food for a business lunch. David thinks that there should be twice as many sandwiches as there are pastries. But Ron thinks the number of pastries should be $12$ more than one-half of the number of sandwiches. How many sandwiches should be ordered so that David and Ron can agree on the number of pastries to order?",
-      options: {,
+      options: {
         a: "$12$",
         b: "$16$",
         c: "$20$",
         d: "$24$",
-        e: "$48$",
+        e: "$48$"
       },
       image_url: null,
       image_options: null
@@ -755,12 +755,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "The cost of purchasing two bags of candy from a certain mail order catalog is $p$ dollars per pound of candy, plus a shipping charge of $s$ dollars per order. If Mohan orders $2$ kilos of candy, what will be the total cost in dollars? $(1$ kilo $= 2.2$ pounds$)$",
-      options: {,
+      options: {
         a: "$p + s(n)$",
         b: "$2p + sn$",
         c: "$2p(n)$",
         d: "$2p + s + (s + t)$",
-        e: "$2p + s(s + t)$",
+        e: "$2p + s(s + t)$"
       },
       image_url: null,
       image_options: null
@@ -776,12 +776,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "If $x = -\\frac{1}{2}$, then $\\frac{6x^2 + 3x - 8x - 4}{2x - 1} = ?$",
-      options: {,
+      options: {
         a: "$3x^2 - \\frac{5}{2}x - 8$",
         b: "$3x^2 - \\frac{5}{2}x - 4$",
         c: "$3x^2 - 4$",
         d: "$3x - 4$",
-        e: "",
+        e: "[Option E - needs manual transcription from source PDF]"
       },
       image_url: null,
       image_options: null
@@ -797,12 +797,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "Each of the $26$ employees at Company $J$ is to receive a year-end bonus this year. Agnes will receive a larger bonus than any of the other employees, and Cheryl will receive a smaller bonus than any of the other employees. If the amount of money to be distributed in bonuses at Company $J$ this year totals $\\$60,000$, what is the largest bonus Agnes can receive?",
-      options: {,
+      options: {
         a: "$\\$0.001$",
         b: "$\\$0.010$",
         c: "$\\$0.025$",
         d: "$\\$0.058$",
-        e: "$\\$0.067$",
+        e: "$\\$0.067$"
       },
       image_url: null,
       image_options: null
@@ -818,12 +818,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "Last year Shannon journeyed to a certain public radio station $10$ hours per week and contributed $\\$35$ to the station. Of the following, which is closest to Shannon's contribution per minute of listening time last year?",
-      options: {,
+      options: {
         a: "$\\$0.001$",
         b: "$\\$0.010$",
         c: "$\\$0.025$",
         d: "$\\$0.058$",
-        e: "$\\$0.067$",
+        e: "$\\$0.067$"
       },
       image_url: null,
       image_options: null
@@ -839,12 +839,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "Each of the $26$ employees at Company $J$ is to receive a year-end bonus this year. Agnes will receive a larger bonus than each of the other $25$ employees. Cheryl will receive a smaller bonus than each of the other employees. If the amount of money to be distributed in bonuses at Company $J$ this year totals $\\$60,000$, what is the largest bonus Agnes can receive?",
-      options: {,
+      options: {
         a: "$\\$3,000$",
         b: "$\\$3,475$",
         c: "$\\$3,500$",
-        d: "",
-        e: "",
+        d: "[Option D - needs manual transcription from source PDF]",
+        e: "[Option E - needs manual transcription from source PDF]"
       },
       image_url: null,
       image_options: null
@@ -860,12 +860,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "If the average (arithmetic mean) of $x$, $y$, and $z$ is $7x$ and $z = \\frac{x}{6}$, what is the ratio of $x$ to the sum of $y$ and $z$?",
-      options: {,
+      options: {
         a: "$1:24$",
         b: "$1:20$",
         c: "$1:6$",
         d: "$6:1$",
-        e: "$20:1$",
+        e: "$20:1$"
       },
       image_url: null,
       image_options: null
@@ -881,12 +881,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "Jonah drove the first half of a $100$-mile trip in $x$ hours and the second half in $y$ hours. Which of the following is equal to Jonah's average speed, in miles per hour, for the entire trip?",
-      options: {,
+      options: {
         a: "$\\frac{50}{x + y}$",
         b: "$\\frac{x + y}{100}$",
         c: "$\\frac{25}{x} + \\frac{25}{y}$",
         d: "$\\frac{50}{x} + \\frac{50}{y}$",
-        e: "$\\frac{100}{x} + \\frac{100}{y}$",
+        e: "$\\frac{100}{x} + \\frac{100}{y}$"
       },
       image_url: null,
       image_options: null
@@ -902,12 +902,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "If the assessed value of a parcel of real estate has risen $\\$1.35$ million in $\\$437,000$ plus $1$ percent of the value of the estate in excess of $\\$1.25$ million, then the federal tax due is approximately what percent of the value of the estate?",
-      options: {,
+      options: {
         a: "$30\\%$",
         b: "$35\\%$",
         c: "$40\\%$",
         d: "$45\\%$",
-        e: "$50\\%$",
+        e: "$50\\%$"
       },
       image_url: null,
       image_options: null
@@ -923,12 +923,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "A manufacturer wants to produce $x$ balls and $y$ boxes. Resource constraints require that $x$ and $y$ satisfy the inequalities shown. What is the maximum number of balls and boxes combined that can be produced given the constraints?",
-      options: {,
+      options: {
         a: "$5,000$",
         b: "$6,000$",
         c: "$7,000$",
         d: "$8,000$",
-        e: "$10,000$",
+        e: "$10,000$"
       },
       image_url: null,
       image_options: null
@@ -944,12 +944,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "If $\\frac{1}{10^2} = n$, then $n = ?$",
-      options: {,
+      options: {
         a: "$0.3$",
         b: "$0.03$",
         c: "$0.003$",
         d: "$0.0003$",
-        e: "$0.00003$",
+        e: "$0.00003$"
       },
       image_url: null,
       image_options: null
@@ -965,12 +965,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "What is the remainder when $3^{74}$ is divided by $5$?",
-      options: {,
+      options: {
         a: "$0$",
         b: "$1$",
         c: "$2$",
         d: "$3$",
-        e: "$4$",
+        e: "$4$"
       },
       image_url: null,
       image_options: null
@@ -986,12 +986,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "José has a collection of $100$ coins, consisting of nickels, dimes, quarters, and half-dollars. If he has a total of $35$ nickels and dimes, a total of $45$ dimes and quarters, and a total of $50$ nickels and quarters, how many half-dollars does he have?",
-      options: {,
+      options: {
         a: "$15$",
         b: "$20$",
         c: "$25$",
         d: "$30$",
-        e: "$35$",
+        e: "$35$"
       },
       image_url: null,
       image_options: null
@@ -1007,12 +1007,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "David used part of $\\$100,000$ to purchase a house. Of the remaining portion, he invested $\\frac{1}{3}$ of it at $4$ percent simple annual interest and $\\frac{2}{3}$ of it at $6$ percent simple annual interest. If after a year the income from the two investments totaled $\\$320$, what was the purchase price of the house?",
-      options: {,
+      options: {
         a: "$\\$96,000$",
         b: "$\\$94,000$",
         c: "$\\$88,000$",
         d: "$\\$75,000$",
-        e: "$\\$40,000$",
+        e: "$\\$40,000$"
       },
       image_url: null,
       image_options: null
@@ -1028,12 +1028,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "A certain manufacturer sells its product to stores in $113$ different regions worldwide, with an average (arithmetic mean) of $181$ stores per region. If last year these stores sold an average of $51,752$ units of the manufacturer's product per store, which of the following is closest to the total number of units of the manufacturer's product sold worldwide last year?",
-      options: {,
+      options: {
         a: "$10^6$",
         b: "$10^7$",
         c: "$10^8$",
         d: "$10^9$",
-        e: "$10^{10}$",
+        e: "$10^{10}$"
       },
       image_url: null,
       image_options: null
@@ -1049,12 +1049,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "Andrew started saving at the beginning of the year and had saved $\\$240$ by the end of the year. He continued to save and by the end of $2$ years had saved a total of $\\$540$. Which of the following is closest to the percent increase in the amount Andrew saved during the second year compared to the amount he saved during the first year?",
-      options: {,
+      options: {
         a: "$11\\%$",
         b: "$25\\%$",
         c: "$44\\%$",
         d: "$56\\%$",
-        e: "$125\\%$",
+        e: "$125\\%$"
       },
       image_url: null,
       image_options: null
@@ -1070,12 +1070,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "Given the inequalities above, which of the following CANNOT be the value of $r$?",
-      options: {,
+      options: {
         a: "$-20$",
         b: "$-5$",
         c: "$0$",
         d: "$5$",
-        e: "",
+        e: "[Option E - needs manual transcription from source PDF]"
       },
       image_url: null,
       image_options: null
@@ -1091,12 +1091,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "If $m$ is an even integer, $n$ is an odd integer, and $m > n > 0$, which of the following represents the number of even integers less than $m$ and greater than $n$?",
-      options: {,
+      options: {
         a: "$\\frac{m - n}{2}$",
         b: "$\\frac{m - n - 1}{2}$",
         c: "$\\frac{m - n}{2} - 1$",
         d: "$m - n - 1$",
-        e: "$m - n - 1$",
+        e: "$m - n - 1$"
       },
       image_url: null,
       image_options: null
@@ -1112,12 +1112,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "An integer $n$ is divisible by $9$ if and only if the sum of its digits is divisible by $9$. If $n$ is a positive integer, which of the following expressions is divisible by $9$?",
-      options: {,
+      options: {
         a: "$9$",
         b: "$16$",
         c: "$23$",
         d: "$30$",
-        e: "$47$",
+        e: "$47$"
       },
       image_url: null,
       image_options: null
@@ -1133,15 +1133,15 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "On the number line, the shaded interval is the graph of which of the following inequalities?",
-      options: {,
+      options: {
         a: "$|x| \\leq 4$",
         b: "$|x| \\leq 8$",
         c: "$|x - 2| \\leq 4$",
         d: "$|x - 2| \\leq 6$",
-        e: "$|x + 2| \\leq 6$",
+        e: "$|x + 2| \\leq 6$"
       },
-      image_url: null  // TODO: Add chart/diagram,
-      image_options: null
+      image_url: null,
+      image_options: null  // TODO: Add chart/diagram
     } as QRQuestionData,
     answers: generateMCAnswers("d"),
     explanation: "",
@@ -1154,12 +1154,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "Last year members of a certain professional organization for teachers consisted of teachers from $49$ different school districts, with an average (arithmetic mean) of $9.8$ schools per district. If the average number of teachers per school in the organization was $22$, which of the following is closest to the total number of members of the organization last year?",
-      options: {,
+      options: {
         a: "$10^4$",
         b: "$10^5$",
         c: "$10^6$",
         d: "$10^7$",
-        e: "$10^8$",
+        e: "$10^8$"
       },
       image_url: null,
       image_options: null
@@ -1175,12 +1175,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "Of all the students in a certain dormitory, $\\frac{1}{2}$ are first-year students and the rest are second-year students. If $\\frac{1}{4}$ of the first-year students and all of the fraction of second-year students who have declared a major, $3$ times the fraction of first-year students who have declared a major, what fraction of all the students in the dormitory are second-year students who have declared a major?",
-      options: {,
+      options: {
         a: "$\\frac{1}{16}$",
         b: "$\\frac{1}{8}$",
         c: "$\\frac{3}{16}$",
         d: "$\\frac{1}{4}$",
-        e: "$\\frac{3}{8}$",
+        e: "$\\frac{3}{8}$"
       },
       image_url: null,
       image_options: null
@@ -1196,12 +1196,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "José has a collection of $100$ coins, consisting of nickels, dimes, quarters, and half-dollars. If he has a total of $35$ nickels and dimes, a total of $45$ dimes and quarters, and a total of $50$ nickels and quarters, how many half-dollars does he have?",
-      options: {,
+      options: {
         a: "$0$",
         b: "$1$",
         c: "$2$",
         d: "$3$",
-        e: "$4$",
+        e: "$4$"
       },
       image_url: null,
       image_options: null
@@ -1217,12 +1217,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "David used part of $\\$100,000$ to purchase a house. Of the remaining portion, he invested $\\frac{1}{3}$ of it at $4$ percent simple annual interest and $\\frac{2}{3}$ of it at $6$ percent simple annual interest. If after a year the income from the two investments totaled $\\$320$, what was the purchase price of the house?",
-      options: {,
+      options: {
         a: "$\\$96,000$",
         b: "$\\$94,000$",
         c: "$\\$88,000$",
         d: "$\\$75,000$",
-        e: "$\\$40,000$",
+        e: "$\\$40,000$"
       },
       image_url: null,
       image_options: null
@@ -1238,12 +1238,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "A certain manufacturer sells its product to stores in $113$ different regions worldwide, with an average (arithmetic mean) of $181$ stores per region. If last year these stores sold an average of $51,752$ units of the manufacturer's product per store, which of the following is closest to the total number of units of the manufacturer's product sold worldwide last year?",
-      options: {,
+      options: {
         a: "$10^6$",
         b: "$10^7$",
         c: "$10^8$",
         d: "$10^9$",
-        e: "$10^{10}$",
+        e: "$10^{10}$"
       },
       image_url: null,
       image_options: null
@@ -1259,12 +1259,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "Andrew started saving at the beginning of the year and had saved $\\$240$ by the end of the year. He continued to save and by the end of $2$ years had saved a total of $\\$540$. Which of the following is closest to the percent increase in the amount Andrew saved during the second year compared to the amount he saved during the first year?",
-      options: {,
+      options: {
         a: "$11\\%$",
         b: "$25\\%$",
         c: "$44\\%$",
         d: "$56\\%$",
-        e: "$125\\%$",
+        e: "$125\\%$"
       },
       image_url: null,
       image_options: null
@@ -1280,12 +1280,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "If $n$ is a positive integer, $n$ is the remainder when $z$ is divided by $5$, and $p$ is the remainder when $z$ is divided by $9$, what is the greatest possible value of $p + n$?",
-      options: {,
+      options: {
         a: "$25$",
         b: "$21$",
         c: "$17$",
         d: "$13$",
-        e: "$11$",
+        e: "$11$"
       },
       image_url: null,
       image_options: null
@@ -1301,12 +1301,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "Each of the nine digits $0, 1, 2, 3, 4, 5, 6, 8, 9$ is used once to form a three-digit integer. What is the greatest possible sum of the $3$ integers?",
-      options: {,
+      options: {
         a: "$2,052$",
         b: "$2,226$",
         c: "$2,607$",
         d: "$2,775$",
-        e: "$2,958$",
+        e: "$2,958$"
       },
       image_url: null,
       image_options: null
@@ -1322,12 +1322,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "Given that $(7^2 - 3^2 + 3^2 + ... + 10^2 - 385)$, what is the value of $3^2 + 6^2 + 9^2 + ... + 30^2$?",
-      options: {,
+      options: {
         a: "$1,155$",
         b: "$1,540$",
         c: "$1,925$",
         d: "$2,310$",
-        e: "$3,465$",
+        e: "$3,465$"
       },
       image_url: null,
       image_options: null
@@ -1343,12 +1343,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "If water is leaking from a certain tank at a constant rate of $1,200$ milliliters per hour, how many seconds does it take for $1$ milliliter of water to leak from the tank?",
-      options: {,
+      options: {
         a: "$\\frac{1}{3}$",
         b: "$\\frac{1}{2}$",
         c: "$2$",
         d: "$3$",
-        e: "$20$",
+        e: "$20$"
       },
       image_url: null,
       image_options: null
@@ -1364,12 +1364,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "When the positive integer $n$ is divided by the positive integer $m$, the remainder is $11$. If $\\frac{n}{m} = 81.2$, what is the value of $n$?",
-      options: {,
+      options: {
         a: "$7$",
         b: "$20$",
         c: "$55$",
         d: "$70$",
-        e: "$81$",
+        e: "$81$"
       },
       image_url: null,
       image_options: null
@@ -1385,12 +1385,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "The total area of a certain container is approximately $4 \\times 10^{18}$ square inches. Which of the following is closest to the area of the container, in square miles? ($1$ square mile is approximately $4.0 \\times 10^9$ square inches.)",
-      options: {,
+      options: {
         a: "$6.7 \\times 10^7$",
         b: "$2.0 \\times 10^8$",
         c: "$3.5 \\times 10^8$",
         d: "$1.1 \\times 10^9$",
-        e: "$9.5 \\times 10^9$",
+        e: "$9.5 \\times 10^9$"
       },
       image_url: null,
       image_options: null
@@ -1406,12 +1406,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "If $xy = 1$, what is the value of $\\frac{2(x + y)^2}{2(x - y)^2}$?",
-      options: {,
+      options: {
         a: "$2$",
         b: "$4$",
         c: "$8$",
         d: "$16$",
-        e: "$32$",
+        e: "$32$"
       },
       image_url: null,
       image_options: null
@@ -1427,12 +1427,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "Of the $20$ members of a kitchen crew, $17$ can use the meat-slicing machine, $18$ can use the bread-slicing machine, and $15$ can use both machines. If one member of the crew will be chosen at random, what is the probability that the member chosen will be someone who cannot use either machine?",
-      options: {,
+      options: {
         a: "$0$",
         b: "$\\frac{1}{10}$",
         c: "$\\frac{1}{5}$",
         d: "$\\frac{1}{4}$",
-        e: "$\\frac{1}{2}$",
+        e: "$\\frac{1}{2}$"
       },
       image_url: null,
       image_options: null
@@ -1448,12 +1448,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "Which of the following is an integer?",
-      options: {,
+      options: {
         a: "$I$. $\\frac{10^2}{10}$",
         b: "$II$. $\\frac{10^3}{3}$",
         c: "$III$. $\\frac{110}{110}$",
         d: "$I$ only",
-        e: "$II$ only",
+        e: "$II$ only"
       },
       image_url: null,
       image_options: null
@@ -1469,12 +1469,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "The function $f_n$ is defined for all integers $n$ by the equation $f(z) = x - \\frac{1}{z}$. If $x \\neq 0$, which of the following equals $f\\left(\\frac{1}{x}\\right)$?",
-      options: {,
+      options: {
         a: "$f(x)$",
         b: "$f(-x)$",
         c: "$-f\\left(-\\frac{1}{x}\\right)$",
         d: "$\\frac{1}{f(x)}$",
-        e: "$\\frac{x}{f(x)}$",
+        e: "$\\frac{x}{f(x)}$"
       },
       image_url: null,
       image_options: null
@@ -1490,12 +1490,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "In the arithmetic sequence $t_1, t_2, t_3, ..., t_n, t_{n+1}, ...$, $t_1 = 23$ and $t_n = t_{n-1} - 3$ for each $n > 1$. What is the value of $n$ when $t_n = -4$?",
-      options: {,
+      options: {
         a: "$6$",
         b: "$7$",
         c: "$8$",
         d: "$14$",
-        e: "$20$",
+        e: "$20$"
       },
       image_url: null,
       image_options: null
@@ -1511,12 +1511,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "How many seconds will it take for a car that is traveling at a constant rate of $45$ miles per hour to travel a distance of $22$ yards? ($1$ mile $= 1,760$ yards)",
-      options: {,
+      options: {
         a: "$8$",
         b: "$9$",
         c: "$10$",
         d: "$11$",
-        e: "$12$",
+        e: "$12$"
       },
       image_url: null,
       image_options: null
@@ -1532,12 +1532,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "A retailer bought a machine at a wholesale price of $\\$2,340$ for a certain computer and sold it at a profit of $40$ percent of the wholesale cost. What selling price would yield a profit of $50$ percent of the computer's cost?",
-      options: {,
+      options: {
         a: "$\\$2,457$",
         b: "$\\$2,464$",
         c: "$\\$2,600$",
         d: "$\\$2,732$",
-        e: "$\\$2,800$",
+        e: "$\\$2,800$"
       },
       image_url: null,
       image_options: null
@@ -1553,12 +1553,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "If a certain coin is flipped, the probability that the coin will land heads up is $\\frac{1}{2}$. If the coin is flipped $3$ times, what is the probability that it will land heads up on the first $3$ flips and not on the last $2$ flips?",
-      options: {,
+      options: {
         a: "$\\frac{3}{5}$",
         b: "$\\frac{1}{2}$",
         c: "$\\frac{1}{5}$",
         d: "$\\frac{1}{8}$",
-        e: "$\\frac{1}{32}$",
+        e: "$\\frac{1}{32}$"
       },
       image_url: null,
       image_options: null
@@ -1574,12 +1574,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "The operation $\\oplus$ is defined for all nonzero numbers $a$ and $b$ by $a \\oplus b = \\frac{a}{b} - \\frac{b}{a}$. If $x$ and $y$ are nonzero numbers, which of the following statements must be true?",
-      options: {,
+      options: {
         a: "$I$. $x \\oplus xy = x(1 \\oplus y)$",
         b: "$II$. $x \\oplus y = -(y \\oplus x)$",
         c: "$III$. $\\frac{1}{x} \\oplus \\frac{1}{y} = y \\oplus x$",
         d: "$I$ only",
-        e: "$II$ only",
+        e: "$II$ only"
       },
       image_url: null,
       image_options: null
@@ -1595,12 +1595,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "If each term in the sum $a_1 + a_2 + a_3 + ... + a_n$ is either $7$ or $77$ and the sum equals $350$, which of the following could be equal to $n$?",
-      options: {,
+      options: {
         a: "$38$",
         b: "$39$",
         c: "$40$",
         d: "$41$",
-        e: "$42$",
+        e: "$42$"
       },
       image_url: null,
       image_options: null
@@ -1616,12 +1616,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "$(1.0001)(0.99999) - (1.0000)(0.99999) = ?$",
-      options: {,
+      options: {
         a: "$0$",
         b: "$10^{-10}$",
         c: "$3(10^{-5})$",
         d: "$10^{-5}$",
-        e: "$3(10^{-4})$",
+        e: "$3(10^{-4})$"
       },
       image_url: null,
       image_options: null
@@ -1637,12 +1637,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "A certain rectangular photograph has an area of ^2$ square feet. What is the area of the photograph in square inches? ($ foot $= 12$ inches)",
-      options: {,
+      options: {
         a: "2p^2$",
         b: "8$",
         c: "32$",
         d: "64$",
-        e: "36$",
+        e: "36$"
       },
       image_url: null,
       image_options: null
@@ -1658,12 +1658,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "One toll for crossing a certain bridge is $$0.75$ each crossing. Drivers who frequently use the bridge may instead purchase a sticker each month for $$13.00$ and then pay only $$0.30$ each crossing during that month. If a particular driver will cross the bridge twice on each of $ days next month and will not cross the bridge on any other day, what is the least value of $ for which this driver can save money by using the sticker?",
-      options: {,
+      options: {
         a: "4$",
         b: "5$",
         c: "6$",
         d: "8$",
-        e: "9$",
+        e: "9$"
       },
       image_url: null,
       image_options: null
@@ -1679,12 +1679,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "Two numbers have a sum of 0$ and a product of 0$. Which of the following is the greater of the numbers in terms of 0",
-      options: {,
+      options: {
         a: "$rac{y}{2} - 1$",
         b: "$rac{y}{2}$",
         c: " - rac{1}{2}$",
         d: "$rac{y}{2} + 1$",
-        e: "$rac{y}{2} + 2$",
+        e: "$rac{y}{2} + 2$"
       },
       image_url: null,
       image_options: null
@@ -1700,12 +1700,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "If $ is an integer and  = 10^{10} - 32$, what is the sum of the digits of 0",
-      options: {,
+      options: {
         a: "57$",
         b: "84$",
         c: "93$",
         d: "95$",
-        e: "92$",
+        e: "92$"
       },
       image_url: null,
       image_options: null
@@ -1721,12 +1721,12 @@ export const quantitativeReasoningPQMedium: QuantitativeReasoningQuestion[] = [
     difficultyLevel: 3,
     questionData: {
       question_text: "In a numerical table with 0$ rows and 0$ columns, each entry is either a $ or a 0$. If the number of  in the  row is  - 1$ for each $ from $ to 0$, what is the average (arithmetic mean) of all the numbers in the table?",
-      options: {,
+      options: {
         a: ".45$",
         b: ".50$",
         c: ".55$",
         d: ".65$",
-        e: ".70$",
+        e: ".70$"
       },
       image_url: null,
       image_options: null
