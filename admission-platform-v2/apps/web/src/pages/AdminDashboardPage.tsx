@@ -43,13 +43,51 @@ export default function AdminDashboardPage() {
 
   async function loadFlaggedCount() {
     try {
-      const { count, error } = await supabase
+      // Get current user profile
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: currentProfile } = await supabase
+        .from('2V_profiles')
+        .select('id')
+        .eq('auth_uid', user.id)
+        .single();
+
+      // Load all flagged questions with test info
+      const { data, error } = await supabase
         .from('2V_questions')
-        .select('*', { count: 'exact', head: true })
+        .select(`
+          id,
+          2V_tests!inner(test_type)
+        `)
         .not('Questions_toReview', 'is', null);
 
       if (error) throw error;
-      setFlaggedCount(count || 0);
+
+      // Filter based on user and test type
+      const ANDREA_ID = 'ed3865f5-9207-4a1e-9534-d57b0f8f15f3';
+      const KLAUDIO_ID = 'ca0a06db-0b50-4edf-a26d-8b5213690413';
+
+      let count = 0;
+
+      if (currentProfile) {
+        if (currentProfile.id === ANDREA_ID) {
+          // Andrea sees everything EXCEPT SAT and GMAT
+          count = (data || []).filter((q: any) => {
+            const testType = q['2V_tests']?.test_type?.toUpperCase();
+            return testType !== 'SAT' && testType !== 'GMAT';
+          }).length;
+        } else if (currentProfile.id === KLAUDIO_ID) {
+          // Klaudio sees ONLY SAT and GMAT
+          count = (data || []).filter((q: any) => {
+            const testType = q['2V_tests']?.test_type?.toUpperCase();
+            return testType === 'SAT' || testType === 'GMAT';
+          }).length;
+        }
+        // Other users see nothing
+      }
+
+      setFlaggedCount(count);
     } catch (err) {
       console.error('Error loading flagged count:', err);
     }
