@@ -1272,7 +1272,6 @@
     "needs_manual_review": false,
     "correct_answer": "c"
   },
-
   {
     "question_number": 72,
     "question_text": "When $24$ is divided by the positive integer $n$, the remainder is $4$. Which of the following statements about $n$ must be true?\nI. $n$ is even.\nII. $n$ is a multiple of $5$.\nIII. $n$ is a factor of $20$.",
@@ -1579,7 +1578,8 @@
     "needs_manual_review": true,
     "reviewed": true,
     "context_text": "Note: Question references a diagram showing 8 light bulbs arranged in a circle.",
-    "correct_answer": "d"
+    "correct_answer": "d",
+    "image_local_location": "admission-platform-v2\\GMAT\\sources\\questions\\QR\\images\\QR_PQ_90.png"
   },
   {
     "question_number": 91,
@@ -1999,7 +1999,8 @@
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": false,
-    "correct_answer": "e"
+    "correct_answer": "e",
+    "image_local_location": "admission-platform-v2\\GMAT\\sources\\questions\\QR\\images\\QR_PQ_115.png"
   },
   {
     "question_number": 116,
@@ -2117,9 +2118,9 @@
   },
   {
     "question_number": 123,
-    "question_text": "If the average (arithmetic mean) of $x$, $y$, and $z$ is $7x$ and $z = \\frac{x}{6}$, what is the ratio of $x$ to the sum of $y$ and $z$?",
+    "question_text": "If the average (arithmetic mean) of $x$, $y$, and $z$ is $7x$, what is the ratio of $x$ to the sum of $y$ and $z$?",
     "options": {
-      "a": "$1:24$",
+      "a": "$1:21$",
       "b": "$1:20$",
       "c": "$1:6$",
       "d": "$6:1$",
@@ -2278,175 +2279,7 @@
   },
   {
     "question_number": 133,
-    "question_text": "Given the inequalities above, which of the following CANNOT be the value of $r$?",
-    "context_text": "Note: Options appear incomplete (only 4 options visible). Question asks about 'r' but constraints use 's'.",
-    "options": {
-      "a": "$-20$",
-      "b": "$-5$",
-      "c": "$0$",
-      "d": "$5$",
-      "e": "[Option E - needs manual transcription from source PDF]"
-    },
-    "difficulty": "medium",
-    "has_table": false,
-    "has_chart": false,
-    "needs_manual_review": true,
-    "correct_answer": "c"
-  },
-  {
-    "question_number": 134,
-    "question_text": "If $m$ is an even integer, $n$ is an odd integer, and $m > n > 0$, which of the following represents the number of even integers less than $m$ and greater than $n$?",
-    "options": {
-      "a": "$\\frac{m - n}{2}$",
-      "b": "$\\frac{m - n - 1}{2}$",
-      "c": "$\\frac{m - n}{2} - 1$",
-      "d": "$m - n - 1$",
-      "e": "$m - n - 1$"
-    },
-    "difficulty": "medium",
-    "has_table": false,
-    "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Options D and E appear identical. Needs verification.",
-    "correct_answer": "c"
-  },
-  {
-    "question_number": 135,
-    "question_text": "An integer $n$ is divisible by $9$ if and only if the sum of its digits is divisible by $9$. If $n$ is a positive integer, which of the following expressions is divisible by $9$?",
-    "options": {
-      "a": "$9$",
-      "b": "$16$",
-      "c": "$23$",
-      "d": "$30$",
-      "e": "$47$"
-    },
-    "difficulty": "medium",
-    "has_table": false,
-    "has_chart": false,
-    "needs_manual_review": false,
-    "correct_answer": "e"
-  },
-  {
-    "question_number": 136,
-    "question_text": "On the number line, the shaded interval is the graph of which of the following inequalities?",
-    "options": {
-      "a": "$|x| \\leq 4$",
-      "b": "$|x| \\leq 8$",
-      "c": "$|x - 2| \\leq 4$",
-      "d": "$|x - 2| \\leq 6$",
-      "e": "$|x + 2| \\leq 6$"
-    },
-    "difficulty": "medium",
-    "has_table": false,
-    "has_chart": true,
-    "needs_manual_review": true,
-    "context_text": "Note: Question references a shaded interval on a number line diagram.",
-    "correct_answer": "d"
-  },
-  {
-    "question_number": 137,
-    "question_text": "Last year members of a certain professional organization for teachers consisted of teachers from $49$ different school districts, with an average (arithmetic mean) of $9.8$ schools per district. If the average number of teachers per school in the organization was $22$, which of the following is closest to the total number of members of the organization last year?",
-    "options": {
-      "a": "$10^4$",
-      "b": "$10^5$",
-      "c": "$10^6$",
-      "d": "$10^7$",
-      "e": "$10^8$"
-    },
-    "difficulty": "medium",
-    "has_table": false,
-    "has_chart": false,
-    "needs_manual_review": false,
-    "correct_answer": "c"
-  },
-  {
-    "question_number": 138,
-    "question_text": "Of all the students in a certain dormitory, $\\frac{1}{2}$ are first-year students and the rest are second-year students. If $\\frac{1}{4}$ of the first-year students and all of the fraction of second-year students who have declared a major, $3$ times the fraction of first-year students who have declared a major, what fraction of all the students in the dormitory are second-year students who have declared a major?",
-    "options": {
-      "a": "$\\frac{1}{16}$",
-      "b": "$\\frac{1}{8}$",
-      "c": "$\\frac{3}{16}$",
-      "d": "$\\frac{1}{4}$",
-      "e": "$\\frac{3}{8}$"
-    },
-    "difficulty": "medium",
-    "has_table": false,
-    "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question text appears garbled or incomplete. Needs verification.",
-    "correct_answer": "c"
-  },
-  {
-    "question_number": 139,
-    "question_text": "José has a collection of $100$ coins, consisting of nickels, dimes, quarters, and half-dollars. If he has a total of $35$ nickels and dimes, a total of $45$ dimes and quarters, and a total of $50$ nickels and quarters, how many half-dollars does he have?",
-    "options": {
-      "a": "$0$",
-      "b": "$1$",
-      "c": "$2$",
-      "d": "$3$",
-      "e": "$4$"
-    },
-    "difficulty": "medium",
-    "has_table": false,
-    "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question 139 appears to be duplicate of Q129 but with different options. Needs verification.",
-    "correct_answer": "d"
-  },
-  {
-    "question_number": 140,
-    "question_text": "David used part of $\\$100,000$ to purchase a house. Of the remaining portion, he invested $\\frac{1}{3}$ of it at $4$ percent simple annual interest and $\\frac{2}{3}$ of it at $6$ percent simple annual interest. If after a year the income from the two investments totaled $\\$320$, what was the purchase price of the house?",
-    "options": {
-      "a": "$\\$96,000$",
-      "b": "$\\$94,000$",
-      "c": "$\\$88,000$",
-      "d": "$\\$75,000$",
-      "e": "$\\$40,000$"
-    },
-    "difficulty": "medium",
-    "has_table": false,
-    "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question 140 appears to be duplicate of Q130. Needs verification.",
-    "correct_answer": "a"
-  },
-  {
-    "question_number": 141,
-    "question_text": "A certain manufacturer sells its product to stores in $113$ different regions worldwide, with an average (arithmetic mean) of $181$ stores per region. If last year these stores sold an average of $51,752$ units of the manufacturer's product per store, which of the following is closest to the total number of units of the manufacturer's product sold worldwide last year?",
-    "options": {
-      "a": "$10^6$",
-      "b": "$10^7$",
-      "c": "$10^8$",
-      "d": "$10^9$",
-      "e": "$10^{10}$"
-    },
-    "difficulty": "medium",
-    "has_table": false,
-    "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question 141 appears to be duplicate of Q131. Needs verification.",
-    "correct_answer": "b"
-  },
-  {
-    "question_number": 142,
-    "question_text": "Andrew started saving at the beginning of the year and had saved $\\$240$ by the end of the year. He continued to save and by the end of $2$ years had saved a total of $\\$540$. Which of the following is closest to the percent increase in the amount Andrew saved during the second year compared to the amount he saved during the first year?",
-    "options": {
-      "a": "$11\\%$",
-      "b": "$25\\%$",
-      "c": "$44\\%$",
-      "d": "$56\\%$",
-      "e": "$125\\%$"
-    },
-    "difficulty": "medium",
-    "has_table": false,
-    "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question 142 appears to be duplicate of Q132. Needs verification.",
-    "correct_answer": "b"
-  },
-  {
-    "question_number": 143,
-    "question_text": "If $n$ is a positive integer, $n$ is the remainder when $z$ is divided by $5$, and $p$ is the remainder when $z$ is divided by $9$, what is the greatest possible value of $p + n$?",
+    "question_text": "If $x$ is a positive integer, $r$ is the remainder when $x$ is divided by 4, and $R$ is the remainder when $x$ is divided by 9, what is the greatest possible value of $r^2 + R$?",
     "options": {
       "a": "$25$",
       "b": "$21$",
@@ -2454,31 +2287,31 @@
       "d": "$13$",
       "e": "$11$"
     },
-    "difficulty": "medium",
+    "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": false,
     "correct_answer": "c"
   },
   {
-    "question_number": 144,
-    "question_text": "Each of the nine digits $0, 1, 2, 3, 4, 5, 6, 8, 9$ is used once to form a three-digit integer. What is the greatest possible sum of the $3$ integers?",
+    "question_number": 134,
+    "question_text": "Each of the nine digits 0, 1, 1, 4, 5, 6, 8, 8, and 9 is used once to form 3 three-digit integers. What is the greatest possible sum of the 3 integers?",
     "options": {
-      "a": "$2,052$",
-      "b": "$2,226$",
-      "c": "$2,607$",
+      "a": "$1,752$",
+      "b": "$2,616$",
+      "c": "$2,652$",
       "d": "$2,775$",
       "e": "$2,958$"
     },
-    "difficulty": "medium",
+    "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": false,
     "correct_answer": "c"
   },
   {
-    "question_number": 145,
-    "question_text": "Given that $(7^2 - 3^2 + 3^2 + ... + 10^2 - 385)$, what is the value of $3^2 + 6^2 + 9^2 + ... + 30^2$?",
+    "question_number": 135,
+    "question_text": "Given that $1^2 + 2^2 + 3^2 + \\ldots + 10^2 = 385$, what is the value of $3^2 + 6^2 + 9^2 + \\ldots + 30^2$?",
     "options": {
       "a": "$1,155$",
       "b": "$1,540$",
@@ -2486,15 +2319,15 @@
       "d": "$2,310$",
       "e": "$3,465$"
     },
-    "difficulty": "medium",
+    "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": false,
-    "correct_answer": "a"
+    "correct_answer": "e"
   },
   {
-    "question_number": 146,
-    "question_text": "If water is leaking from a certain tank at a constant rate of $1,200$ milliliters per hour, how many seconds does it take for $1$ milliliter of water to leak from the tank?",
+    "question_number": 136,
+    "question_text": "If water is leaking from a certain tank at a constant rate of 1,200 milliliters per hour, how many seconds does it take for 1 milliliter of water to leak from the tank?",
     "options": {
       "a": "$\\frac{1}{3}$",
       "b": "$\\frac{1}{2}$",
@@ -2502,46 +2335,46 @@
       "d": "$3$",
       "e": "$20$"
     },
-    "difficulty": "medium",
+    "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": false,
-    "correct_answer": "e"
+    "correct_answer": "d"
   },
   {
-    "question_number": 147,
-    "question_text": "When the positive integer $n$ is divided by the positive integer $m$, the remainder is $11$. If $\\frac{n}{m} = 81.2$, what is the value of $n$?",
+    "question_number": 137,
+    "question_text": "When the positive integer $k$ is divided by the positive integer $n$, the remainder is 11. If $\\frac{k}{n} = 81.2$, what is the value of $n$?",
     "options": {
-      "a": "$7$",
+      "a": "$9$",
       "b": "$20$",
       "c": "$55$",
       "d": "$70$",
       "e": "$81$"
     },
-    "difficulty": "medium",
-    "has_table": false,
-    "has_chart": false,
-    "needs_manual_review": false,
-    "correct_answer": "e"
-  },
-  {
-    "question_number": 148,
-    "question_text": "The total area of a certain container is approximately $4 \\times 10^{18}$ square inches. Which of the following is closest to the area of the container, in square miles? ($1$ square mile is approximately $4.0 \\times 10^9$ square inches.)",
-    "options": {
-      "a": "$6.7 \\times 10^7$",
-      "b": "$2.0 \\times 10^8$",
-      "c": "$3.5 \\times 10^8$",
-      "d": "$1.1 \\times 10^9$",
-      "e": "$9.5 \\times 10^9$"
-    },
-    "difficulty": "medium",
+    "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": false,
     "correct_answer": "c"
   },
   {
-    "question_number": 149,
+    "question_number": 138,
+    "question_text": "The total area of a certain continent is approximately $3.8 \\times 10^{16}$ square inches. Which of the following is closest to the area of the continent, in square miles? (1 square mile is approximately $4.0 \\times 10^9$ square inches.)",
+    "options": {
+      "a": "$6.7 \\times 10^5$",
+      "b": "$2.0 \\times 10^6$",
+      "c": "$9.5 \\times 10^6$",
+      "d": "$1.1 \\times 10^7$",
+      "e": "$9.5 \\times 10^8$"
+    },
+    "difficulty": "hard",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false,
+    "correct_answer": "c"
+  },
+  {
+    "question_number": 139,
     "question_text": "If $xy = 1$, what is the value of $\\frac{2(x + y)^2}{2(x - y)^2}$?",
     "options": {
       "a": "$2$",
@@ -2550,80 +2383,79 @@
       "d": "$16$",
       "e": "$32$"
     },
-    "difficulty": "medium",
+    "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": false,
-    "correct_answer": "c"
+    "correct_answer": "d"
   },
   {
-    "question_number": 150,
-    "question_text": "Of the $20$ members of a kitchen crew, $17$ can use the meat-slicing machine, $18$ can use the bread-slicing machine, and $15$ can use both machines. If one member of the crew will be chosen at random, what is the probability that the member chosen will be someone who cannot use either machine?",
+    "question_number": 140,
+    "question_text": "Of the 20 members of a kitchen crew, 17 can use the meat-cutting machine, 18 can use the bread-slicing machine, and 15 can use both machines. If one member of the crew is to be chosen at random, what is the probability that the member chosen will be someone who cannot use either machine?",
     "options": {
       "a": "$0$",
       "b": "$\\frac{1}{10}$",
-      "c": "$\\frac{1}{5}$",
+      "c": "$\\frac{1}{7}$",
       "d": "$\\frac{1}{4}$",
-      "e": "$\\frac{1}{2}$"
+      "e": "$\\frac{1}{3}$"
     },
-    "difficulty": "medium",
+    "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": false,
     "correct_answer": "a"
   },
   {
-    "question_number": 151,
-    "question_text": "Which of the following is an integer?",
+    "question_number": 141,
+    "question_text": "Which of the following is an integer?\\n\\nI. $\\frac{12!}{6!}$\\n\\nII. $\\frac{12!}{8!}$\\n\\nIII. $\\frac{12!}{7!5!}$",
     "options": {
-      "a": "$I$. $\\frac{10^2}{10}$",
-      "b": "$II$. $\\frac{10^3}{3}$",
-      "c": "$III$. $\\frac{110}{110}$",
-      "d": "$I$ only",
-      "e": "$II$ only"
+      "a": "I only",
+      "b": "II only",
+      "c": "III only",
+      "d": "I and II only",
+      "e": "I, II, and III"
     },
-    "difficulty": "medium",
+    "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question has Roman numeral statements. Options format may need adjustment.",
-    "correct_answer": "b"
+    "needs_manual_review": false,
+    "correct_answer": "e"
   },
   {
-    "question_number": 152,
-    "question_text": "The function $f_n$ is defined for all integers $n$ by the equation $f(z) = x - \\frac{1}{z}$. If $x \\neq 0$, which of the following equals $f\\left(\\frac{1}{x}\\right)$?",
+    "question_number": 142,
+    "question_text": "The function $f$ is defined for all nonzero $x$ by the equation $f(x) = x - \\frac{1}{x}$. If $x \\neq 0$, which of the following equals $f\\left(\\frac{1}{x}\\right)$?",
     "options": {
       "a": "$f(x)$",
       "b": "$f(-x)$",
-      "c": "$-f\\left(-\\frac{1}{x}\\right)$",
+      "c": "$f\\left(-\\frac{1}{x}\\right)$",
       "d": "$\\frac{1}{f(x)}$",
-      "e": "$\\frac{x}{f(x)}$"
+      "e": "$-\\frac{1}{f(x)}$"
     },
-    "difficulty": "medium",
+    "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": false,
-    "correct_answer": "d"
+    "correct_answer": "b"
   },
   {
-    "question_number": 153,
-    "question_text": "In the arithmetic sequence $t_1, t_2, t_3, ..., t_n, t_{n+1}, ...$, $t_1 = 23$ and $t_n = t_{n-1} - 3$ for each $n > 1$. What is the value of $n$ when $t_n = -4$?",
+    "question_number": 143,
+    "question_text": "In the arithmetic sequence $t_1, t_2, t_3, \\ldots, t_n, \\ldots$, $t_1 = 23$ and $t_n = t_{n-1} - 3$ for each $n > 1$. What is the value of $n$ when $t_n = -4$?",
     "options": {
-      "a": "$6$",
+      "a": "$-1$",
       "b": "$7$",
-      "c": "$8$",
+      "c": "$10$",
       "d": "$14$",
       "e": "$20$"
     },
-    "difficulty": "medium",
+    "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": false,
-    "correct_answer": "d"
+    "correct_answer": "c"
   },
   {
-    "question_number": 154,
-    "question_text": "How many seconds will it take for a car that is traveling at a constant rate of $45$ miles per hour to travel a distance of $22$ yards? ($1$ mile $= 1,760$ yards)",
+    "question_number": 144,
+    "question_text": "How many seconds will it take for a car that is traveling at a constant rate of 45 miles per hour to travel a distance of 220 yards? (1 mile = 1,760 yards)",
     "options": {
       "a": "$8$",
       "b": "$9$",
@@ -2631,31 +2463,31 @@
       "d": "$11$",
       "e": "$12$"
     },
-    "difficulty": "medium",
+    "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": false,
     "correct_answer": "c"
   },
   {
-    "question_number": 155,
-    "question_text": "A retailer bought a machine at a wholesale price of $\\$2,340$ for a certain computer and sold it at a profit of $40$ percent of the wholesale cost. What selling price would yield a profit of $50$ percent of the computer's cost?",
+    "question_number": 145,
+    "question_text": "A store's selling price of $\\$2,240$ for a certain computer would yield a profit of 40 percent of the store's cost for the computer. What selling price would yield a profit of 50 percent of the computer's cost?",
     "options": {
-      "a": "$\\$2,457$",
+      "a": "$\\$2,400$",
       "b": "$\\$2,464$",
-      "c": "$\\$2,600$",
+      "c": "$\\$2,650$",
       "d": "$\\$2,732$",
       "e": "$\\$2,800$"
     },
-    "difficulty": "medium",
+    "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": false,
     "correct_answer": "a"
   },
   {
-    "question_number": 156,
-    "question_text": "If a certain coin is flipped, the probability that the coin will land heads up is $\\frac{1}{2}$. If the coin is flipped $3$ times, what is the probability that it will land heads up on the first $3$ flips and not on the last $2$ flips?",
+    "question_number": 146,
+    "question_text": "If a certain coin is flipped, the probability that the coin will land heads up is $\\frac{1}{2}$. If the coin is flipped 5 times, what is the probability that it will land heads up on the first 3 flips and not on the last 2 flips?",
     "options": {
       "a": "$\\frac{3}{5}$",
       "b": "$\\frac{1}{2}$",
@@ -2663,32 +2495,31 @@
       "d": "$\\frac{1}{8}$",
       "e": "$\\frac{1}{32}$"
     },
-    "difficulty": "medium",
+    "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": false,
-    "correct_answer": "c"
+    "correct_answer": "e"
   },
   {
-    "question_number": 157,
-    "question_text": "The operation $\\oplus$ is defined for all nonzero numbers $a$ and $b$ by $a \\oplus b = \\frac{a}{b} - \\frac{b}{a}$. If $x$ and $y$ are nonzero numbers, which of the following statements must be true?",
+    "question_number": 147,
+    "question_text": "The operation $\\otimes$ is defined for all nonzero numbers $a$ and $b$ by $a \\otimes b = \\frac{a}{b} - \\frac{b}{a}$. If $x$ and $y$ are nonzero numbers, which of the following statements must be true?\\n\\nI. $x \\otimes xy = x(1 \\otimes y)$\\n\\nII. $x \\otimes y = -(y \\otimes x)$\\n\\nIII. $\\frac{1}{x} \\otimes \\frac{1}{y} = y \\otimes x$",
     "options": {
-      "a": "$I$. $x \\oplus xy = x(1 \\oplus y)$",
-      "b": "$II$. $x \\oplus y = -(y \\oplus x)$",
-      "c": "$III$. $\\frac{1}{x} \\oplus \\frac{1}{y} = y \\oplus x$",
-      "d": "$I$ only",
-      "e": "$II$ only"
+      "a": "I only",
+      "b": "II only",
+      "c": "III only",
+      "d": "I and II",
+      "e": "II and III"
     },
-    "difficulty": "medium",
+    "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question has Roman numeral statements. Options format may need adjustment.",
-    "correct_answer": "b"
+    "needs_manual_review": false,
+    "correct_answer": "e"
   },
   {
-    "question_number": 158,
-    "question_text": "If each term in the sum $a_1 + a_2 + a_3 + ... + a_n$ is either $7$ or $77$ and the sum equals $350$, which of the following could be equal to $n$?",
+    "question_number": 148,
+    "question_text": "If each term in the sum $a_1 + a_2 + \\ldots + a_n$ is either 7 or 77 and the sum equals 350, which of the following could be equal to $n$?",
     "options": {
       "a": "$38$",
       "b": "$39$",
@@ -2696,7 +2527,167 @@
       "d": "$41$",
       "e": "$42$"
     },
-    "difficulty": "medium",
+    "difficulty": "hard",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false,
+    "correct_answer": "c"
+  },
+  {
+    "question_number": 149,
+    "question_text": "$(1.00001)(0.99999) - (1.00002)(0.99998) =$",
+    "options": {
+      "a": "$0$",
+      "b": "$10^{-10}$",
+      "c": "$3(10^{-10})$",
+      "d": "$10^{-5}$",
+      "e": "$3(10^{-5})$"
+    },
+    "difficulty": "hard",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false,
+    "correct_answer": "c"
+  },
+  {
+    "question_number": 150,
+    "question_text": "A certain rectangular photograph has an area of $6 \\frac{1}{2}$ square feet. What is the area of the photograph in square inches? (1 foot = 12 inches)",
+    "options": {
+      "a": "$36$",
+      "b": "$78$",
+      "c": "$432$",
+      "d": "$864$",
+      "e": "$936$"
+    },
+    "difficulty": "hard",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false,
+    "correct_answer": "e"
+  },
+  {
+    "question_number": 151,
+    "question_text": "The toll for crossing a certain bridge is $\\$0.75$ each crossing. Drivers who frequently use the bridge may instead purchase a sticker each month for $\\$13.00$ and then pay only $\\$0.30$ each crossing during that month. If a particular driver will cross the bridge twice on each of $x$ days next month and will not cross the bridge on any other day, what is the least value of $x$ for which this driver can save money by using the sticker?",
+    "options": {
+      "a": "$14$",
+      "b": "$15$",
+      "c": "$16$",
+      "d": "$28$",
+      "e": "$29$"
+    },
+    "difficulty": "hard",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false,
+    "correct_answer": "b"
+  },
+  {
+    "question_number": 152,
+    "question_text": "Two numbers differ by 2 and sum to $S$. Which of the following is the greater of the numbers in terms of $S$?",
+    "options": {
+      "a": "$\\frac{S}{2} - 1$",
+      "b": "$\\frac{S}{2}$",
+      "c": "$\\frac{S + 1}{2}$",
+      "d": "$\\frac{S}{2} + 1$",
+      "e": "$\\frac{S}{2} + 2$"
+    },
+    "difficulty": "hard",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false,
+    "correct_answer": "d"
+  },
+  {
+    "question_number": 153,
+    "question_text": "If $m$ is an integer and $m = 10^{82} - 32$, what is the sum of the digits of $m$?",
+    "options": {
+      "a": "$257$",
+      "b": "$264$",
+      "c": "$275$",
+      "d": "$284$",
+      "e": "$292$"
+    },
+    "difficulty": "hard",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false,
+    "correct_answer": "d"
+  },
+  {
+    "question_number": 154,
+    "question_text": "In a numerical table with 10 rows and 10 columns, each entry is either a 9 or a 10. If the number of 9s in the nth row is $n - 1$ for each $n$ from 1 to 10, what is the average (arithmetic mean) of all the numbers in the table?",
+    "options": {
+      "a": "$9.45$",
+      "b": "$9.50$",
+      "c": "$9.55$",
+      "d": "$9.65$",
+      "e": "$9.70$"
+    },
+    "difficulty": "hard",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false,
+    "correct_answer": "c"
+  },
+  {
+    "question_number": 155,
+    "question_text": "In 2004, the cost of 1 year-long print subscription to a certain newspaper was $\\$4$ per week. In 2005, the newspaper introduced a new rate plan for 1 year-long print subscription: $\\$3$ per week for the first 40 weeks of 2005 and $\\$2$ per week for the remaining weeks of 2005. How much less did 1 year-long print subscription to this newspaper cost in 2005 than in 2004?",
+    "options": {
+      "a": "$\\$64$",
+      "b": "$\\$78$",
+      "c": "$\\$112$",
+      "d": "$\\$144$",
+      "e": "$\\$304$"
+    },
+    "difficulty": "hard",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false,
+    "correct_answer": "a"
+  },
+  {
+    "question_number": 156,
+    "question_text": "A positive integer $n$ is a perfect number provided that the sum of all the positive factors of $n$, including 1 and $n$, is equal to $2n$. What is the sum of the reciprocals of all the positive factors of the perfect number 28?",
+    "options": {
+      "a": "$\\frac{1}{4}$",
+      "b": "$\\frac{56}{27}$",
+      "c": "$2$",
+      "d": "$3$",
+      "e": "$4$"
+    },
+    "difficulty": "hard",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false,
+    "correct_answer": "c"
+  },
+  {
+    "question_number": 157,
+    "question_text": "The infinite sequence $a_1, a_2, \\ldots, a_n, \\ldots$ is such that $a_1 = 2$, $a_2 = -3$, $a_3 = 5$, $a_4 = -1$, and $a_n = a_{n-4}$ for $n > 4$. What is the sum of the first 97 terms of the sequence?",
+    "options": {
+      "a": "$72$",
+      "b": "$74$",
+      "c": "$75$",
+      "d": "$78$",
+      "e": "$80$"
+    },
+    "difficulty": "hard",
+    "has_table": false,
+    "has_chart": false,
+    "needs_manual_review": false,
+    "correct_answer": "b"
+  },
+  {
+    "question_number": 158,
+    "question_text": "The sequence $a_1, a_2, \\ldots a_n, \\ldots$ is such that $a_n = 2a_{n-1} - x$ for all positive integers $n \\geq 2$ and for a certain number $x$. If $a_5 = 99$ and $a_3 = 27$, what is the value of $x$?",
+    "options": {
+      "a": "$3$",
+      "b": "$9$",
+      "c": "$18$",
+      "d": "$36$",
+      "e": "$45$"
+    },
+    "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": false,
@@ -2704,15 +2695,15 @@
   },
   {
     "question_number": 159,
-    "question_text": "$(1.0001)(0.99999) - (1.0000)(0.99999) = ?$",
+    "question_text": "In a certain medical survey, 45 percent of the people surveyed had the type A antigen in their blood and 3 percent had both the type A antigen and the type B antigen. Which of the following is closest to the percent of those with the type A antigen who also had the type B antigen?",
     "options": {
-      "a": "$0$",
-      "b": "$10^{-10}$",
-      "c": "$3(10^{-5})$",
-      "d": "$10^{-5}$",
-      "e": "$3(10^{-4})$"
+      "a": "$1.35\\%$",
+      "b": "$6.67\\%$",
+      "c": "$13.50\\%$",
+      "d": "$15.00\\%$",
+      "e": "$42.00\\%$"
     },
-    "difficulty": "medium",
+    "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": false,
@@ -2720,15 +2711,15 @@
   },
   {
     "question_number": 160,
-    "question_text": "A certain rectangular photograph has an area of ^2$ square feet. What is the area of the photograph in square inches? ($ foot $= 12$ inches)",
+    "question_text": "On a certain transatlantic crossing, 20 percent of a ship's passengers held round-trip tickets and also took their cars aboard the ship. If 60 percent of the passengers with round-trip tickets did not take their cars aboard the ship, what percent of the ship's passengers held round-trip tickets?",
     "options": {
-      "a": "2p^2$",
-      "b": "8$",
-      "c": "32$",
-      "d": "64$",
-      "e": "36$"
+      "a": "$33\\frac{1}{3}\\%$",
+      "b": "$40\\%$",
+      "c": "$50\\%$",
+      "d": "$60\\%$",
+      "e": "$66\\frac{2}{3}\\%$"
     },
-    "difficulty": "medium",
+    "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": false,
@@ -2736,15 +2727,15 @@
   },
   {
     "question_number": 161,
-    "question_text": "One toll for crossing a certain bridge is $$0.75$ each crossing. Drivers who frequently use the bridge may instead purchase a sticker each month for $$13.00$ and then pay only $$0.30$ each crossing during that month. If a particular driver will cross the bridge twice on each of $ days next month and will not cross the bridge on any other day, what is the least value of $ for which this driver can save money by using the sticker?",
+    "question_text": "If $x$ and $k$ are integers and $(12^x)(4^{2x+1}) = (2^k)(3^2)$, what is the value of $k$?",
     "options": {
-      "a": "4$",
-      "b": "5$",
-      "c": "6$",
-      "d": "8$",
-      "e": "9$"
+      "a": "$5$",
+      "b": "$7$",
+      "c": "$10$",
+      "d": "$12$",
+      "e": "$14$"
     },
-    "difficulty": "medium",
+    "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": false,
@@ -2752,15 +2743,15 @@
   },
   {
     "question_number": 162,
-    "question_text": "Two numbers have a sum of 0$ and a product of 0$. Which of the following is the greater of the numbers in terms of 0",
+    "question_text": "If $S$ is the sum of the reciprocals of the 10 consecutive integers from 21 to 30, then $S$ is between which of the following two fractions?",
     "options": {
-      "a": "$\frac{y}{2} - 1$",
-      "b": "$\frac{y}{2}$",
-      "c": " - \frac{1}{2}$",
-      "d": "$\frac{y}{2} + 1$",
-      "e": "$\frac{y}{2} + 2$"
+      "a": "$\\frac{1}{3}$ and $\\frac{1}{2}$",
+      "b": "$\\frac{1}{4}$ and $\\frac{1}{3}$",
+      "c": "$\\frac{1}{5}$ and $\\frac{1}{4}$",
+      "d": "$\\frac{1}{6}$ and $\\frac{1}{5}$",
+      "e": "$\\frac{1}{7}$ and $\\frac{1}{6}$"
     },
-    "difficulty": "medium",
+    "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": false,
@@ -2768,31 +2759,31 @@
   },
   {
     "question_number": 163,
-    "question_text": "If $ is an integer and  = 10^{10} - 32$, what is the sum of the digits of 0",
+    "question_text": "For every even positive integer $m$, $f(m)$ represents the product of all even integers from 2 to $m$, inclusive. For example, $f(12) = 2 \\times 4 \\times 6 \\times 8 \\times 10 \\times 12$. What is the greatest prime factor of $f(24)$?",
     "options": {
-      "a": "57$",
-      "b": "84$",
-      "c": "93$",
-      "d": "95$",
-      "e": "92$"
+      "a": "$23$",
+      "b": "$19$",
+      "c": "$17$",
+      "d": "$13$",
+      "e": "$11$"
     },
-    "difficulty": "medium",
+    "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": false,
-    "correct_answer": "b"
+    "correct_answer": "e"
   },
   {
     "question_number": 164,
-    "question_text": "In a numerical table with 0$ rows and 0$ columns, each entry is either a $ or a 0$. If the number of  in the  row is  - 1$ for each $ from $ to 0$, what is the average (arithmetic mean) of all the numbers in the table?",
+    "question_text": "The arithmetic mean of the list of numbers above is 4. If $k$ and $m$ are integers and $k \\neq m$, what is the median of the list?\\n\\n$3, k, 2, 8, m, 3$",
     "options": {
-      "a": ".45$",
-      "b": ".50$",
-      "c": ".55$",
-      "d": ".65$",
-      "e": ".70$"
+      "a": "$2$",
+      "b": "$2.5$",
+      "c": "$3$",
+      "d": "$3.5$",
+      "e": "$4$"
     },
-    "difficulty": "medium",
+    "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
     "needs_manual_review": false,
@@ -2800,7 +2791,7 @@
   },
   {
     "question_number": 165,
-    "question_text": "Variables $X$ and $Y$ take on only the values $10, 20, 30, 40, 50, 60, 70$ with frequencies indicated by the shaded regions in the frequency polygons shown in the rectangular grid. What is the median of the values of $X$?",
+    "question_text": "If the variables $X$, $Y$, and $Z$ take on only the values 10, 20, 30, 40, 50, 60, or 70 with frequencies indicated by the shaded regions above, for which of the frequency distributions is the mean equal to the median?",
     "options": {
       "a": "$X$ only",
       "b": "$Y$ only",
@@ -2811,9 +2802,9 @@
     "difficulty": "hard",
     "has_table": false,
     "has_chart": true,
-    "needs_manual_review": true,
-    "context_text": "Note: Question references frequency polygon diagrams. Charts should be included as images.",
-    "correct_answer": "e"
+    "needs_manual_review": false,
+    "correct_answer": "e",
+    "image_local_location": "admission-platform-v2\\GMAT\\sources\\questions\\QR\\images\\QR_PQ_165.png"
   },
   {
     "question_number": 166,
@@ -2834,19 +2825,18 @@
   },
   {
     "question_number": 167,
-    "question_text": "The United States Mint produces coins in $1$-cent, $5$-cent, $10$-cent, $25$-cent, and $50$-cent denominations. If a jar contains exactly $100$ coins worth of these denominations with a total value of the following could be the total number of coins in the jar?",
+    "question_text": "The United States Mint produces coins in 1-cent, 5-cent, 10-cent, 25-cent, and 50-cent denominations. If a jar contains exactly 100 cents worth of these coins, which of the following could be the total number of coins in the jar?\\n\\nI. 91\\n\\nII. 81\\n\\nIII. 76",
     "options": {
-      "a": "$I$. $91$",
-      "b": "$II$. $81$",
-      "c": "$III$. $76$",
-      "d": "$I$ only",
-      "e": "$III$ only"
+      "a": "I only",
+      "b": "II only",
+      "c": "III only",
+      "d": "I and III only",
+      "e": "I, II, and III"
     },
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question has Roman numeral statements. Options format may need adjustment. Question text appears incomplete.",
+    "needs_manual_review": false,
     "correct_answer": "d"
   },
   {
@@ -2883,36 +2873,34 @@
   },
   {
     "question_number": 170,
-    "question_text": "The values of the set $(x, y) = \\{(x', y'), (x'', y''), (x''', y'''), (w, w), (w', w'), (w'', w''), (w''', w''')\\}$ and $1$ (the empty set) satisfy values of the set $\\{x, y, xy\\}$ contain $2$?",
+    "question_text": "The subsets of the set $\\{w, x, y\\}$ are $\\{w\\}$, $\\{x\\}$, $\\{y\\}$, $\\{w, x\\}$, $\\{w, y\\}$, $\\{x, y\\}$, $\\{w, x, y\\}$, and $\\{\\}$ (the empty set). How many subsets of the set $\\{w, x, y, z\\}$ contain $w$?",
     "options": {
-      "a": "$Four$",
-      "b": "$Five$",
-      "c": "$Seven$",
-      "d": "$Eight$",
-      "e": "$Sixteen$"
+      "a": "Four",
+      "b": "Five",
+      "c": "Seven",
+      "d": "Eight",
+      "e": "Sixteen"
     },
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question text appears garbled or incomplete. Needs verification.",
+    "needs_manual_review": false,
     "correct_answer": "d"
   },
   {
     "question_number": 171,
-    "question_text": "The number $\\sqrt{63 - 36\\sqrt{3}}$ can be expressed as $x - y\\sqrt{3}$ for some integers $x$ and $y$. What is the value of $xy$?",
+    "question_text": "The number $\\sqrt{63 - 36\\sqrt{3}}$ can be expressed as $x + y\\sqrt{3}$ for some integers $x$ and $y$. What is the value of $xy$?",
     "options": {
       "a": "$-18$",
       "b": "$-6$",
       "c": "$6$",
       "d": "$18$",
-      "e": "[Option E - needs manual transcription from source PDF]"
+      "e": "$27$"
     },
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Options appear incomplete (only 4 options visible).",
+    "needs_manual_review": false,
     "correct_answer": "a"
   },
   {
@@ -2933,19 +2921,18 @@
   },
   {
     "question_number": 173,
-    "question_text": "If $x$ is chosen at random from the set $\\{1, 2, 3, 4\\}$ and $y$ is to be chosen at random from the set $\\{5, 6, 7\\}$, what is the probability that $xy$ will be even?",
+    "question_text": "If $x$ is to be chosen at random from the set $\\{1, 2, 3, 4\\}$ and $y$ is to be chosen at random from the set $\\{5, 6, 7\\}$, what is the probability that $xy$ will be even?",
     "options": {
       "a": "$\\frac{1}{6}$",
       "b": "$\\frac{1}{3}$",
       "c": "$\\frac{1}{2}$",
       "d": "$\\frac{2}{3}$",
-      "e": "[Option E - needs manual transcription from source PDF]"
+      "e": "$\\frac{5}{6}$"
     },
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Options appear incomplete (only 4 options visible).",
+    "needs_manual_review": false,
     "correct_answer": "d"
   },
   {
@@ -3004,30 +2991,28 @@
       "b": "$6$",
       "c": "$9$",
       "d": "$10$",
-      "e": "[Option E - needs manual transcription from source PDF]"
+      "e": "$12$"
     },
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Options appear incomplete (only 4 options visible).",
+    "needs_manual_review": false,
     "correct_answer": "b"
   },
   {
     "question_number": 178,
-    "question_text": "If $x < \\frac{7 - x}{3}$, which of the following must be true?",
+    "question_text": "If $4 < \\frac{7 - x}{3}$, which of the following must be true?\\n\\nI. $5 < x$\\n\\nII. $|x + 3| > 2$\\n\\nIII. $-(x + 5)$ is positive.",
     "options": {
-      "a": "$I$. $5 < x$",
-      "b": "$II$. $|x + 3| > 2$",
-      "c": "$III$. $-(x + 5)$ is positive.",
-      "d": "$II$ only",
-      "e": "$III$ only"
+      "a": "II only",
+      "b": "III only",
+      "c": "I and II only",
+      "d": "II and III only",
+      "e": "I, II, and III"
     },
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question has Roman numeral statements. Options format may need adjustment.",
+    "needs_manual_review": false,
     "correct_answer": "d"
   },
   {
@@ -3048,19 +3033,18 @@
   },
   {
     "question_number": 180,
-    "question_text": "A set of numbers has the property that for any number $t$ in the set, $t + 2$ is in the set. If $-1$ is in the set, which of the following must also be in the set?",
+    "question_text": "A set of numbers has the property that for any number $t$ in the set, $t + 2$ is in the set. If $-1$ is in the set, which of the following must also be in the set?\\n\\nI. $-3$\\n\\nII. $1$\\n\\nIII. $5$",
     "options": {
-      "a": "$I$. $-3$",
-      "b": "$II$. $1$",
-      "c": "$III$. $5$",
-      "d": "$I$ only",
-      "e": "$II$ only"
+      "a": "I only",
+      "b": "II only",
+      "c": "I and II only",
+      "d": "II and III only",
+      "e": "I, II, and III"
     },
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question has Roman numeral statements. Options format may need adjustment.",
+    "needs_manual_review": false,
     "correct_answer": "d"
   },
   {
@@ -3097,19 +3081,18 @@
   },
   {
     "question_number": 183,
-    "question_text": "How many different positive integers are factors of $441$?",
+    "question_text": "How many different positive integers are factors of 441?",
     "options": {
       "a": "$4$",
       "b": "$6$",
       "c": "$7$",
       "d": "$9$",
-      "e": "[Option E - needs manual transcription from source PDF]"
+      "e": "$11$"
     },
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Options appear incomplete (only 4 options visible).",
+    "needs_manual_review": false,
     "correct_answer": "d"
   },
   {
@@ -3178,20 +3161,19 @@
   },
   {
     "question_number": 188,
-    "question_text": "What is the greatest positive integer $n$ such that $3^n$ divides $10! - (2)(5!)$?",
+    "question_text": "What is the greatest positive integer $n$ such that $5^n$ divides $10! - (2)(5!)^2$?",
     "options": {
       "a": "$2$",
       "b": "$3$",
       "c": "$4$",
       "d": "$5$",
-      "e": "[Option E - needs manual transcription from source PDF]"
+      "e": "$6$"
     },
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Options appear incomplete (only 4 options visible).",
-    "correct_answer": "c"
+    "needs_manual_review": false,
+    "correct_answer": "d"
   },
   {
     "question_number": 189,
@@ -3243,36 +3225,34 @@
   },
   {
     "question_number": 192,
-    "question_text": "Jess's bank statement showed a balance of $\\$5.54$ more than what his records showed. He discovered that the bank had recorded a check for $\\$1.50$ what his records showed, a check for $\\$1.50$ what his records showed, where each of $x, y$, and $z$ represents a digit from $0$ through $9$. Which of the following could be the value of $z$?",
+    "question_text": "Jorge's bank statement showed a balance that was $\\$0.54$ greater than what his records showed. He discovered that he had written a check for $\\$x.yz$ and had recorded it as $\\$x.zy$, where each of $x$, $y$, and $z$ represents a digit from 0 though 9. Which of the following could be the value of $z$?",
     "options": {
-      "a": "$4$",
-      "b": "$5$",
-      "c": "$6$",
-      "d": "$7$",
-      "e": "$8$"
+      "a": "$2$",
+      "b": "$3$",
+      "c": "$4$",
+      "d": "$5$",
+      "e": "$6$"
     },
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question text appears garbled or incomplete. Needs verification.",
+    "needs_manual_review": false,
     "correct_answer": "e"
   },
   {
     "question_number": 193,
-    "question_text": "One side of a parking lot is defined by a straight stripe that consists of $4$ painted sections of equal length with an unpainted section of $\\frac{3}{16}$ inch between each $2$ consecutive painted sections. The total length of the stripe from the beginning of the first painted section to the end of the last painted section is $203$ inches. If $n$ is an integer and the length, in inches, of each unpainted section is an integer greater than $2$, what is the value of $n$?",
+    "question_text": "One side of a parking stall is defined by a straight stripe that consists of $n$ painted sections of equal length with an unpainted section $\\frac{1}{2}$ as long between each pair of consecutive painted sections. The total length of the stripe from the beginning of the first painted section to the end of the last painted section is 203 inches. If $n$ is an integer and the length, in inches, of each unpainted section is an integer greater than 2, what is the value of $n$?",
     "options": {
       "a": "$5$",
       "b": "$9$",
       "c": "$10$",
-      "d": "[Option D - needs manual transcription from source PDF]",
-      "e": "[Option E - needs manual transcription from source PDF]"
+      "d": "$14$",
+      "e": "$29$"
     },
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Options appear incomplete (only 3 options visible).",
+    "needs_manual_review": false,
     "correct_answer": "c"
   },
   {
@@ -3348,7 +3328,7 @@
   },
   {
     "question_number": 197,
-    "question_text": "There are $8$ teams of members in a company. If each of $2$ kilograms and a median weight of $3$ kilograms. What is the maximum possible weight, in kilograms, of the lightest box?",
+    "question_text": "Three boxes of supplies have an average (arithmetic mean) weight of 7 kilograms and a median weight of 9 kilograms. What is the maximum possible weight, in kilograms, of the lightest box?",
     "options": {
       "a": "$1$",
       "b": "$2$",
@@ -3359,13 +3339,12 @@
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question text appears garbled. Needs verification.",
+    "needs_manual_review": false,
     "correct_answer": "c"
   },
   {
     "question_number": 198,
-    "question_text": "A certain list of numbers has a median of $3$ and a mode of $8$. Which of the following are possible values for $n$ when this list of numbers is ordered from least to greatest?",
+    "question_text": "The table shows the number of shares of each of the 5 stocks owned by Mr. Sami. If Mr. Sami were to sell 20 shares of Stock $X$ and buy 24 shares of Stock $Y$, what would be the increase in the range of the numbers of shares of the 5 stocks owned by Mr. Sami?",
     "table_title": "Stock, Number of Shares",
     "column_headers": [
       "Stock",
@@ -3383,173 +3362,171 @@
       [
         "$X$",
         "$56$"
+      ],
+      [
+        "$Y$",
+        "$94$"
+      ],
+      [
+        "$Z$",
+        "$45$"
       ]
     ],
     "options": {
-      "a": "$68$",
-      "b": "$112$",
-      "c": "$56$",
-      "d": "[Option D - needs manual transcription from source PDF]",
-      "e": "[Option E - needs manual transcription from source PDF]"
+      "a": "$4$",
+      "b": "$6$",
+      "c": "$9$",
+      "d": "$15$",
+      "e": "$20$"
     },
     "difficulty": "hard",
     "has_table": true,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question text and table don't match. Options appear incomplete. Needs verification.",
+    "needs_manual_review": false,
     "correct_answer": "d"
   },
   {
     "question_number": 199,
-    "question_text": "Question 199 - Difficulty: Hard",
+    "question_text": "Last year, sales at Company $X$ were 10% greater in February than in January, 15% less in March than in February, 20% greater in April than in March, 10% less in May than in April, and 5% greater in June than in May. In which month were sales closest to the sales in January?",
     "options": {
-      "a": "Option A",
-      "b": "Option B",
-      "c": "Option C",
-      "d": "Option D",
-      "e": "Option E"
+      "a": "February",
+      "b": "March",
+      "c": "April",
+      "d": "May",
+      "e": "June"
     },
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question 199 content not clearly transcribed. Needs manual verification.",
+    "needs_manual_review": false,
     "correct_answer": "d"
   },
   {
     "question_number": 200,
-    "question_text": "Question 200 - Difficulty: Hard",
+    "question_text": "If $s$ and $t$ are integers greater than 1 and each is a factor of the integer $n$, which of the following must be a factor of $n^{st}$?\n\nI. $s^t$\n\nII. $(st)^2$\n\nIII. $s + t$",
     "options": {
-      "a": "Option A",
-      "b": "Option B",
-      "c": "Option C",
-      "d": "Option D",
-      "e": "Option E"
+      "a": "None",
+      "b": "I only",
+      "c": "II only",
+      "d": "III only",
+      "e": "I and II"
     },
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question 200 content not clearly transcribed. Needs manual verification.",
+    "needs_manual_review": false,
     "correct_answer": "e"
   },
   {
     "question_number": 201,
-    "question_text": "Question 201 - Difficulty: Hard",
+    "question_text": "How many 4-digit positive integers are there in which all 4 digits are even?",
     "options": {
-      "a": "Option A",
-      "b": "Option B",
-      "c": "Option C",
-      "d": "Option D",
-      "e": "Option E"
+      "a": "$625$",
+      "b": "$600$",
+      "c": "$500$",
+      "d": "$400$",
+      "e": "$256$"
     },
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question 201 content not clearly transcribed. Needs manual verification.",
+    "needs_manual_review": false,
     "correct_answer": "c"
   },
   {
     "question_number": 202,
-    "question_text": "Question 202 - Difficulty: Hard",
+    "question_text": "If $0 < r < 1 < s < 2$, which of the following must be less than 1?\n\nI. $\\frac{r}{s}$\n\nII. $rs$\n\nIII. $s - r$",
     "options": {
-      "a": "Option A",
-      "b": "Option B",
-      "c": "Option C",
-      "d": "Option D",
-      "e": "Option E"
+      "a": "I only",
+      "b": "II only",
+      "c": "III only",
+      "d": "I and II",
+      "e": "I and III"
     },
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question 202 content not clearly transcribed. Needs manual verification.",
+    "needs_manual_review": false,
     "correct_answer": "a"
   },
   {
     "question_number": 203,
-    "question_text": "Question 203 - Difficulty: Hard",
+    "question_text": "Last month, 15 homes were sold in Town X. The average (arithmetic mean) sale price of the homes was $\\$150,000$ and the median sale price was $\\$130,000$. Which of the following statements must be true?\n\nI. At least one of the homes was sold for more than $\\$165,000$.\n\nII. At least one of the homes was sold for more than $\\$130,000$ and less than $\\$150,000$.\n\nIII. At least one of the homes was sold for less than $\\$130,000$.",
     "options": {
-      "a": "Option A",
-      "b": "Option B",
-      "c": "Option C",
-      "d": "Option D",
-      "e": "Option E"
+      "a": "I only",
+      "b": "II only",
+      "c": "III only",
+      "d": "I and II",
+      "e": "I and III"
     },
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question 203 content not clearly transcribed. Needs manual verification.",
+    "needs_manual_review": false,
     "correct_answer": "a"
   },
   {
     "question_number": 204,
-    "question_text": "Question 204 - Difficulty: Hard",
+    "question_text": "Pumps A, B, and C operate at their respective constant rates. Pumps A and B, operating simultaneously, can fill a certain tank in $\\frac{6}{5}$ hours; Pumps A and C, operating simultaneously, can fill the tank in $\\frac{3}{2}$ hours; and Pumps B and C, operating simultaneously, can fill the tank in $2$ hours. How many hours does it take Pumps A, B, and C, operating simultaneously, to fill the tank?",
     "options": {
-      "a": "Option A",
-      "b": "Option B",
-      "c": "Option C",
-      "d": "Option D",
-      "e": "Option E"
+      "a": "$\\frac{1}{3}$",
+      "b": "$\\frac{1}{2}$",
+      "c": "$\\frac{2}{3}$",
+      "d": "$\\frac{5}{6}$",
+      "e": "$1$"
     },
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question 204 content not clearly transcribed. Needs manual verification.",
+    "needs_manual_review": false,
     "correct_answer": "e"
   },
   {
     "question_number": 205,
-    "question_text": "Question 205 - Difficulty: Hard",
+    "question_text": "If $n$ is a positive integer, then $(-2^n)^{-2} + (2^{-n})^2 = $",
     "options": {
-      "a": "Option A",
-      "b": "Option B",
-      "c": "Option C",
-      "d": "Option D",
-      "e": "Option E"
+      "a": "$0$",
+      "b": "$2^{-2n}$",
+      "c": "$2^{2n}$",
+      "d": "$2^{-2n+1}$",
+      "e": "$2^{2n+1}$"
     },
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question 205 content not clearly transcribed. Needs manual verification.",
+    "needs_manual_review": false,
     "correct_answer": "d"
   },
   {
     "question_number": 206,
-    "question_text": "Question 206 - Difficulty: Hard",
+    "question_text": "Which of the following is equal to $\\left(\\frac{2\\sqrt[3]{3}}{\\sqrt{2}}\\right)^3$?",
     "options": {
-      "a": "Option A",
-      "b": "Option B",
-      "c": "Option C",
-      "d": "Option D",
-      "e": "Option E"
+      "a": "$\\frac{3\\sqrt{2}}{2}$",
+      "b": "$3\\sqrt{2}$",
+      "c": "$6\\sqrt{2}$",
+      "d": "$12$",
+      "e": "$12\\sqrt{2}$"
     },
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question 206 content not clearly transcribed. Needs manual verification.",
+    "needs_manual_review": false,
     "correct_answer": "c"
   },
   {
     "question_number": 207,
-    "question_text": "Question 207 - Difficulty: Hard",
+    "question_text": "Dara ran on a treadmill that had a readout indicating the time remaining in her exercise session. When the readout indicated 24 min 18 sec, she had completed 10% of her exercise session. The readout indicated which of the following when she had completed 40% of her exercise session?",
     "options": {
-      "a": "Option A",
-      "b": "Option B",
-      "c": "Option C",
-      "d": "Option D",
-      "e": "Option E"
+      "a": "$10$ min $48$ sec",
+      "b": "$14$ min $52$ sec",
+      "c": "$14$ min $58$ sec",
+      "d": "$16$ min $6$ sec",
+      "e": "$16$ min $12$ sec"
     },
     "difficulty": "hard",
     "has_table": false,
     "has_chart": false,
-    "needs_manual_review": true,
-    "context_text": "Note: Question 207 content not clearly transcribed. Needs manual verification.",
+    "needs_manual_review": false,
     "correct_answer": "e"
   }
 ]

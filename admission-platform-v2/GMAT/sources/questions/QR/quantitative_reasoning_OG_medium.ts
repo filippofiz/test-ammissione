@@ -125,7 +125,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("a"),
-    explanation: "Determine the cost to rent a tractor for 36 hours if the cost is x dollars for the first 24 hours and y dollars for each hour in excess of 24 hours. The cost will be x dollars for the first 24 hours plus y dollars for each of 36 − 24 = 12 hours. Thus, the total cost of renting the tractor for 36 hours is (x + 12y) dollars. The correct answer is A.",
+    explanation: "Determine the cost to rent a tractor for 36 hours if the cost is x dollars for the first 24 hours and y dollars for each hour in excess of 24 hours. The cost will be x dollars for the first 24 hours plus y dollars for each of 36 - 24 = 12 hours. Thus, the total cost of renting the tractor for 36 hours is (x + 12y) dollars. The correct answer is A.",
     categories: ["Algebra", "Algebraic expressions"],
   },
   {
@@ -217,7 +217,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("b"),
-    explanation: "The table shows that the total number of students who each had at least 1 absence was 3 + 10 + 3 + 5 + 3 = 24. To find the median number of absences for these 24 students, we list the students' numbers of absences from least to greatest, giving us a list of 24 numbers (one per student): three 1s, ten 2s, three 3s, five 4s, and three numbers that are each at least 5. Since 24 is even, the median is the mean of the two middle numbers in the list—the twelfth number and the thirteenth number. These numbers are both 2s. So, 2 is the median. The correct answer is B.",
+    explanation: "The table shows that the total number of students who each had at least 1 absence was 3 + 10 + 3 + 5 + 3 = 24. To find the median number of absences for these 24 students, we list the students' numbers of absences from least to greatest, giving us a list of 24 numbers (one per student): three 1s, ten 2s, three 3s, five 4s, and three numbers that are each at least 5. Since 24 is even, the median is the mean of the two middle numbers in the list-the twelfth number and the thirteenth number. These numbers are both 2s. So, 2 is the median. The correct answer is B.",
     categories: ["Arithmetic", "Statistics"],
   },
   {
@@ -332,7 +332,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("b"),
-    explanation: "For each of the first 4 months, total costs exceeded total income by $32,000, and hence for each of 4 months total profit was −$32,000. Also, for each of the next 3 months, total income exceeded total costs by $36,000, and hence for each of 3 months total profit was $36,000. Finally, for each of the remaining 5 months, total income exceeded total costs by $10,000, and hence for each of 5 months total profit was $10,000. Therefore, the total profit for the 12-month year was 4(−$32,000) + 3($36,000) + 5($10,000) = $30,000. The correct answer is B.",
+    explanation: "For each of the first 4 months, total costs exceeded total income by $32,000, and hence for each of 4 months total profit was -$32,000. Also, for each of the next 3 months, total income exceeded total costs by $36,000, and hence for each of 3 months total profit was $36,000. Finally, for each of the remaining 5 months, total income exceeded total costs by $10,000, and hence for each of 5 months total profit was $10,000. Therefore, the total profit for the 12-month year was 4(-$32,000) + 3($36,000) + 5($10,000) = $30,000. The correct answer is B.",
     categories: ["Algebra", "Applied problems"],
   },
   {
@@ -378,7 +378,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("b"),
-    explanation: "Carrying 4 jugs per trip, the worker carries a total of 4(17) = 68 jugs in 17 trips. At 7 jugs per carton, these jugs will completely fill 9 cartons with 5 jugs left over since (9)(7) + 5 = 68. To fill the 10th carton, 7 − 5 = 2 jugs are needed. The correct answer is B.",
+    explanation: "Carrying 4 jugs per trip, the worker carries a total of 4(17) = 68 jugs in 17 trips. At 7 jugs per carton, these jugs will completely fill 9 cartons with 5 jugs left over since (9)(7) + 5 = 68. To fill the 10th carton, 7 - 5 = 2 jugs are needed. The correct answer is B.",
     categories: ["Arithmetic", "Applied problems"],
   },
   {
@@ -447,7 +447,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("b"),
-    explanation: "Using 2.7 billion = 2,700 million, the amount of increase in millions of gallons can be calculated as follows. The amount of increase is: (2,700 − 980) million pounds = 1,720 million pounds. To convert pounds into gallons: (1,720 million pounds)(1 gallon / 8.6 pounds) = 200 million gallons. The correct answer is B.",
+    explanation: "Using 2.7 billion = 2,700 million, the amount of increase in millions of gallons can be calculated as follows. The amount of increase is: (2,700 - 980) million pounds = 1,720 million pounds. To convert pounds into gallons: (1,720 million pounds)(1 gallon / 8.6 pounds) = 200 million gallons. The correct answer is B.",
     categories: ["Arithmetic", "Unit conversions"],
   },
   {
@@ -481,7 +481,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
     difficultyLevel: 3,
     questionData: {
       question_text:
-        "The symbol Δ denotes one of the four arithmetic operations: addition, subtraction, multiplication, or division. If 6 Δ 3 ≤ 3, which of the following must be true?\n\nI. 2 Δ 2 = 0\nII. 2 Δ 2 = 1\nIII. 4 Δ 2 = 2",
+        "The symbol Δ denotes one of the four arithmetic operations: addition, subtraction, multiplication, or division. If 6 Δ 3 $\\leq$ 3, which of the following must be true?\n\nI. 2 Δ 2 = 0\nII. 2 Δ 2 = 1\nIII. 4 Δ 2 = 2",
       options: {
         a: "I only",
         b: "II only",
@@ -539,7 +539,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("a"),
-    explanation: "Suppose N > M. Let's represent N with its digits abc and M with its digits def, where each of a, b, c, d, e, and f is a different one of the numbers 1, 2, 3, 6, 7, or 8. We want to assign these numbers to the letters to minimize the difference between abc and def. To do this, first we minimize the difference between a and d. That is, a − d must equal 1. Thus, {a, d} must be either {2, 1}, {3, 2}, {7, 6}, or {8, 7}. Next, to make the larger number abc as close as possible to the smaller number def, we assign the smallest available digit to b and the largest to e. That is, we set b = 1 and e = 8. Since each digit can occur only once, this means {a, d} cannot contain 8 or 1. That means {a, d} cannot be {2, 1} or {8, 7}, so it must be either {3, 2} or {7, 6}. Finally, the last two digits f and c must be whichever two digits have not yet been assigned as values of a, b, d, or e. We again minimize the difference between the larger number abc and the smaller number def by assigning the smaller of these two remaining digits to c and the larger to f, so f > c. Given these constraints, we find that either N = 316 and M = 287 or else N = 712 and M = 683. In either case, N − M = 29. Therefore, 29 is the smallest possible positive difference between N and M. The correct answer is A.",
+    explanation: "Suppose N > M. Let's represent N with its digits abc and M with its digits def, where each of a, b, c, d, e, and f is a different one of the numbers 1, 2, 3, 6, 7, or 8. We want to assign these numbers to the letters to minimize the difference between abc and def. To do this, first we minimize the difference between a and d. That is, a - d must equal 1. Thus, {a, d} must be either {2, 1}, {3, 2}, {7, 6}, or {8, 7}. Next, to make the larger number abc as close as possible to the smaller number def, we assign the smallest available digit to b and the largest to e. That is, we set b = 1 and e = 8. Since each digit can occur only once, this means {a, d} cannot contain 8 or 1. That means {a, d} cannot be {2, 1} or {8, 7}, so it must be either {3, 2} or {7, 6}. Finally, the last two digits f and c must be whichever two digits have not yet been assigned as values of a, b, d, or e. We again minimize the difference between the larger number abc and the smaller number def by assigning the smaller of these two remaining digits to c and the larger to f, so f > c. Given these constraints, we find that either N = 316 and M = 287 or else N = 712 and M = 683. In either case, N - M = 29. Therefore, 29 is the smallest possible positive difference between N and M. The correct answer is A.",
     categories: ["Arithmetic", "Properties of numbers"],
   },
   {
@@ -930,7 +930,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("d"),
-    explanation: "The following table shows the percent change from each day to the next and the magnitude of the percent change. From Day 1 to Day 2: ((12−20)/20 × 100)% = (−8/20 × 100)% = −40%, magnitude 40. From Day 2 to Day 3: ((18−12)/12 × 100)% = (6/12 × 100)% = 50%, magnitude 50. From Day 3 to Day 4: ((10−18)/18 × 100)% = (−8/18 × 100)% ≈ −44%, magnitude 44. From Day 4 to Day 5: ((16−10)/10 × 100)% = (6/10 × 100)% = 60%, magnitude 60. From Day 5 to Day 6: ((8−16)/16 × 100)% = (−8/16 × 100)% = −50%, magnitude 50. The correct answer is D.",
+    explanation: "The following table shows the percent change from each day to the next and the magnitude of the percent change. From Day 1 to Day 2: ((12−20)/20 $\\times$ 100)% = (−8/20 $\\times$ 100)% = −40%, magnitude 40. From Day 2 to Day 3: ((18−12)/12 $\\times$ 100)% = (6/12 $\\times$ 100)% = 50%, magnitude 50. From Day 3 to Day 4: ((10−18)/18 $\\times$ 100)% = (−8/18 $\\times$ 100)% $\\approx$ −44%, magnitude 44. From Day 4 to Day 5: ((16−10)/10 $\\times$ 100)% = (6/10 $\\times$ 100)% = 60%, magnitude 60. From Day 5 to Day 6: ((8−16)/16 $\\times$ 100)% = (−8/16 $\\times$ 100)% = −50%, magnitude 50. The correct answer is D.",
     categories: ["Arithmetic", "Percents"],
   },
   {
@@ -976,7 +976,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("d"),
-    explanation: "Given that $1 = 1.6 marks, it follows that $1/1.6 = 1 mark and 480 marks = 480($1/1.6) = $300. Similarly, given that $1 = 5.3 francs, it follows that $1/5.3 = 1 franc and 2,385 francs = 2,385($1/5.3) = $450. The gross profit on the two transactions is $450 − $300 = $150. The correct answer is D.",
+    explanation: "Given that $1 = 1.6 marks, it follows that $1/1.6 = 1 mark and 480 marks = 480($1/1.6) = $300. Similarly, given that $1 = 5.3 francs, it follows that $1/5.3 = 1 franc and 2,385 francs = 2,385($1/5.3) = $450. The gross profit on the two transactions is $450 - $300 = $150. The correct answer is D.",
     categories: ["Arithmetic", "Applied problems"],
   },
   {
@@ -1160,7 +1160,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("e"),
-    explanation: "Since the average number of dealers per region is 98, it follows that number of dealers / 403 = 98, and thus the number of dealers is (98)(403). Also, since the average number of pairs sold per dealer is 2,488, it follows that number of pairs sold / (98)(403) = 2,488, and thus the number of pairs sold is (98)(403)(2,488), which is approximately (100)(400)(2500) = (10²)(4 × 10²)(25 × 10²). Therefore, the total number of pairs sold is approximately (4)(25) × 10^(2+2+2) = 100 × 10⁶ = 10⁸. The correct answer is E.",
+    explanation: "Since the average number of dealers per region is 98, it follows that number of dealers / 403 = 98, and thus the number of dealers is (98)(403). Also, since the average number of pairs sold per dealer is 2,488, it follows that number of pairs sold / (98)(403) = 2,488, and thus the number of pairs sold is (98)(403)(2,488), which is approximately (100)(400)(2500) = (10^2)(4 $\\times$ 10^2)(25 $\\times$ 10^2). Therefore, the total number of pairs sold is approximately (4)(25) $\\times$ 10^(2+2+2) = 100 $\\times$ 10^6 = 10^8. The correct answer is E.",
     categories: ["Arithmetic", "Estimation"],
   },
   {
@@ -1217,7 +1217,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
     difficultyLevel: 2,
     questionData: {
       question_text:
-        "The table above gives the age categories of the 161 employees at Company X and the number of employees in each category. According to the table, if $m$ is the median age, in years, of the employees at Company X, then $m$ must satisfy which of the following?\n\n| Age Category (in years) | Number of Employees |\n|-------------------------|---------------------|\n| Less than 20            | 29                  |\n| 20–29                   | 58                  |\n| 30–39                   | 36                  |\n| 40–49                   | 21                  |\n| 50–59                   | 10                  |\n| 60–69                   | 5                   |\n| 70 and over             | 2                   |",
+        "The table above gives the age categories of the 161 employees at Company X and the number of employees in each category. According to the table, if $m$ is the median age, in years, of the employees at Company X, then $m$ must satisfy which of the following?\n\n| Age Category (in years) | Number of Employees |\n|-------------------------|---------------------|\n| Less than 20            | 29                  |\n| 20-29                   | 58                  |\n| 30-39                   | 36                  |\n| 40-49                   | 21                  |\n| 50-59                   | 10                  |\n| 60-69                   | 5                   |\n| 70 and over             | 2                   |",
       options: {
         a: "$20 \\leq m \\leq 29$",
         b: "$25 \\leq m \\leq 34$",
@@ -1252,7 +1252,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("e"),
-    explanation: "k! + (n − k) · (k − 1)! Given that k! = k · (k − 1)!, we have: k · (k − 1)! + (n − k) · (k − 1)!. Factor out (k − 1)!: [k + (n − k)] · (k − 1)!. Combine like terms: n · (k − 1)!. The correct answer is E.",
+    explanation: "k! + (n - k) $\\cdot$ (k - 1)! Given that k! = k $\\cdot$ (k - 1)!, we have: k $\\cdot$ (k - 1)! + (n - k) $\\cdot$ (k - 1)!. Factor out (k - 1)!: [k + (n - k)] $\\cdot$ (k - 1)!. Combine like terms: n $\\cdot$ (k - 1)!. The correct answer is E.",
     categories: ["Arithmetic", "Counting"],
   },
   {
@@ -1275,7 +1275,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("e"),
-    explanation: "Let R, A, and B be the heights, respectively and in inches, of Ron, Amy, and Barbara. It is given that R = 4 + A, B = 1 + R, and B = 65. Therefore, R = B − 1 = 65 − 1 = 64 and A = R − 4 = 64 − 4 = 60. From this it follows that the three heights, in inches, are 60, 64, and 65. The median of these three heights is 64. The correct answer is E.",
+    explanation: "Let R, A, and B be the heights, respectively and in inches, of Ron, Amy, and Barbara. It is given that R = 4 + A, B = 1 + R, and B = 65. Therefore, R = B - 1 = 65 - 1 = 64 and A = R - 4 = 64 - 4 = 60. From this it follows that the three heights, in inches, are 60, 64, and 65. The median of these three heights is 64. The correct answer is E.",
     categories: ["Arithmetic", "Statistics"],
   },
   {
@@ -1298,7 +1298,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("e"),
-    explanation: "Since x + y = 1, then y = 1 − x and 100x + 200y can be expressed as 100x + 200(1 − x) = 200 − 100x. Test each value. I. If 200 − 100x = 80, then x = (200 − 80)/100 = 1.2 and y = 1 − 1.2 = −0.2. Since y must be positive, 80 cannot be a value of 100x + 200y. II. If 200 − 100x = 140, then x = (200 − 140)/100 = 0.6 and y = 1 − 0.6 = 0.4, so 140 can be a value of 100x + 200y. III. If 200 − 100x = 199, then x = (200 − 199)/100 = 0.01 and y = 1 − 0.01 = 0.99, so 199 can be a value of 100x + 200y. The correct answer is E.",
+    explanation: "Since x + y = 1, then y = 1 - x and 100x + 200y can be expressed as 100x + 200(1 - x) = 200 - 100x. Test each value. I. If 200 - 100x = 80, then x = (200 - 80)/100 = 1.2 and y = 1 - 1.2 = −0.2. Since y must be positive, 80 cannot be a value of 100x + 200y. II. If 200 - 100x = 140, then x = (200 - 140)/100 = 0.6 and y = 1 - 0.6 = 0.4, so 140 can be a value of 100x + 200y. III. If 200 - 100x = 199, then x = (200 - 199)/100 = 0.01 and y = 1 - 0.01 = 0.99, so 199 can be a value of 100x + 200y. The correct answer is E.",
     categories: ["Algebra", "Inequalities"],
   },
   {
@@ -1321,7 +1321,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("d"),
-    explanation: "The greatest possible value of 0.1X/0.02Y will occur when 0.1X has the greatest possible value and 0.02Y has the least possible value. Since X and Y are nonzero digits, this means that X must be 9 and Y must be 1. The greatest possible value of 0.1X/0.02Y is then 0.19/0.021 ≈ 9.05, which is closest to 9. The correct answer is D.",
+    explanation: "The greatest possible value of 0.1X/0.02Y will occur when 0.1X has the greatest possible value and 0.02Y has the least possible value. Since X and Y are nonzero digits, this means that X must be 9 and Y must be 1. The greatest possible value of 0.1X/0.02Y is then 0.19/0.021 $\\approx$ 9.05, which is closest to 9. The correct answer is D.",
     categories: ["Arithmetic", "Properties of numbers"],
   },
   {
@@ -1344,7 +1344,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("c"),
-    explanation: "Since each of the 12 teams will play exactly one game with each of the other teams, the number of games that will be played is equal to the number of selections of 2 teams, without regard to order, from 12 teams. This is the number of combinations of 12 teams taken 2 at a time, which is equal to 12!/(2!(12 − 2)!) = (10!)(11)(12)/(2) = 66. Alternatively, each of the 12 teams will play each of the 11 other teams. The product (12)(11) counts each of the games twice since, for example, this product separately counts 'Team A plays Team B' and 'Team B plays Team A.' Therefore, the number of games that will be played is (12)(11)/2 = 66. The correct answer is C.",
+    explanation: "Since each of the 12 teams will play exactly one game with each of the other teams, the number of games that will be played is equal to the number of selections of 2 teams, without regard to order, from 12 teams. This is the number of combinations of 12 teams taken 2 at a time, which is equal to 12!/(2!(12 - 2)!) = (10!)(11)(12)/(2) = 66. Alternatively, each of the 12 teams will play each of the 11 other teams. The product (12)(11) counts each of the games twice since, for example, this product separately counts 'Team A plays Team B' and 'Team B plays Team A.' Therefore, the number of games that will be played is (12)(11)/2 = 66. The correct answer is C.",
     categories: ["Arithmetic", "Counting"],
   },
   {
@@ -1367,7 +1367,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("e"),
-    explanation: "For the difference between two numbers to be a real number, those two numbers must both be real themselves. So, for √(1 − √(2 − √x)) to be a real number, √(2 − √x) must be a real number. Thus, since only a nonnegative real number has a real square root, 2 − √x must be a nonnegative real number. It follows that √x must be a real number no greater than 2, so x must be a real number no greater than 4. Therefore, for x = 5, √(1 − √(2 − √x)) is not defined as a real number. The correct answer is E.",
+    explanation: "For the difference between two numbers to be a real number, those two numbers must both be real themselves. So, for $\\sqrt{}$(1 - $\\sqrt{}$(2 - $\\sqrt{}$x)) to be a real number, $\\sqrt{}$(2 - $\\sqrt{}$x) must be a real number. Thus, since only a nonnegative real number has a real square root, 2 - $\\sqrt{}$x must be a nonnegative real number. It follows that $\\sqrt{}$x must be a real number no greater than 2, so x must be a real number no greater than 4. Therefore, for x = 5, $\\sqrt{}$(1 - $\\sqrt{}$(2 - $\\sqrt{}$x)) is not defined as a real number. The correct answer is E.",
     categories: ["Algebra", "Radicals"],
   },
   {
@@ -1413,7 +1413,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("e"),
-    explanation: "From the given information, (0.8)(200) = 160 of the people surveyed own a cellular phone and (0.45)(200) = 90 of the people surveyed own a pager. The Venn diagram shows this information, where N denotes the number of people who own both. Since a total of 200 people were surveyed, it follows that (160 − N) + N + (90 − N) = 200, or N = 50. Therefore, the number of people surveyed who do not own a cellular phone is 90 − 50 = 40 and the number of people surveyed who do not own a pager is 160 − 50 = 110, which together account for 40 + 110 = 150 of the 200 people surveyed, or (150/200) × 100% = 75% of the people surveyed. The correct answer is E.",
+    explanation: "From the given information, (0.8)(200) = 160 of the people surveyed own a cellular phone and (0.45)(200) = 90 of the people surveyed own a pager. The Venn diagram shows this information, where N denotes the number of people who own both. Since a total of 200 people were surveyed, it follows that (160 - N) + N + (90 - N) = 200, or N = 50. Therefore, the number of people surveyed who do not own a cellular phone is 90 - 50 = 40 and the number of people surveyed who do not own a pager is 160 - 50 = 110, which together account for 40 + 110 = 150 of the 200 people surveyed, or (150/200) $\\times$ 100% = 75% of the people surveyed. The correct answer is E.",
     categories: ["Arithmetic", "Sets"],
   },
   {
@@ -1436,7 +1436,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("b"),
-    explanation: "Let P be the sale price of the mutual fund at the beginning of the year. Then at the end of the first quarter the sale price was 1.2P, and at the end of the second quarter the sale price was 1.5P. Therefore, the percent increase in the sale price from the end of the first quarter to the end of the second quarter is ((1.5P − 1.2P)/1.2P) × 100% = ((15 − 12)/12) × 100% = 25%. The correct answer is B.",
+    explanation: "Let P be the sale price of the mutual fund at the beginning of the year. Then at the end of the first quarter the sale price was 1.2P, and at the end of the second quarter the sale price was 1.5P. Therefore, the percent increase in the sale price from the end of the first quarter to the end of the second quarter is ((1.5P - 1.2P)/1.2P) $\\times$ 100% = ((15 - 12)/12) $\\times$ 100% = 25%. The correct answer is B.",
     categories: ["Arithmetic", "Percents"],
   },
   {
@@ -1482,7 +1482,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("e"),
-    explanation: "xy + z = x(y + z) [given]; xy + z = xy + xz [distributive property]; z = xz [subtract xy from both sides]; 0 = xz − z [subtract z from both sides]; 0 = (x − 1)z [factor]; x − 1 = 0 or z = 0 [property of 0]; x = 1 or z = 0 [solve for x]. The correct answer is E.",
+    explanation: "xy + z = x(y + z) [given]; xy + z = xy + xz [distributive property]; z = xz [subtract xy from both sides]; 0 = xz - z [subtract z from both sides]; 0 = (x - 1)z [factor]; x - 1 = 0 or z = 0 [property of 0]; x = 1 or z = 0 [solve for x]. The correct answer is E.",
     categories: ["Algebra", "Equations"],
   },
   {
@@ -1505,7 +1505,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("e"),
-    explanation: "Let t be the number of hours it would take the slower pump to fill the pool working alone. Since the faster pump works 1.5 = 3/2 times faster than the slower pump, the faster pump will take (1/1.5)t = (2/3)t hours to fill the pool working alone. It follows that 1/t + 1/((2/3)t) = 1/4, or (1 + 3/2)(1/t) = 1/4. Solving, we get 1/t = (1/4) ÷ (5/2) = 1/10, and hence t = 10. Therefore, the faster pump would have taken (2/3)t = (2/3) × 10 = 20/3 hours to fill the pool if it had worked alone. Alternatively, let r and 1.5r = (3/2)r be the rates, respectively, at which the slower and faster pumps work. Working together, the pumps work at a combined rate of r + (3/2)r = (5/2)r and can fill 1 pool in 4 hours. Therefore, when working alone, the faster pump, which works at a rate that is (3/2)r / ((5/2)r) = 3/5 times as fast as their combined rate, will take 5/3 × 4 = 20/3 hours to fill the pool. The correct answer is E.",
+    explanation: "Let t be the number of hours it would take the slower pump to fill the pool working alone. Since the faster pump works 1.5 = 3/2 times faster than the slower pump, the faster pump will take (1/1.5)t = (2/3)t hours to fill the pool working alone. It follows that 1/t + 1/((2/3)t) = 1/4, or (1 + 3/2)(1/t) = 1/4. Solving, we get 1/t = (1/4) $\\div$ (5/2) = 1/10, and hence t = 10. Therefore, the faster pump would have taken (2/3)t = (2/3) $\\times$ 10 = 20/3 hours to fill the pool if it had worked alone. Alternatively, let r and 1.5r = (3/2)r be the rates, respectively, at which the slower and faster pumps work. Working together, the pumps work at a combined rate of r + (3/2)r = (5/2)r and can fill 1 pool in 4 hours. Therefore, when working alone, the faster pump, which works at a rate that is (3/2)r / ((5/2)r) = 3/5 times as fast as their combined rate, will take 5/3 $\\times$ 4 = 20/3 hours to fill the pool. The correct answer is E.",
     categories: ["Algebra", "Rate problems"],
   },
   {
@@ -1528,7 +1528,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("a"),
-    explanation: "Since we can assume the correct answer choice does not depend on the value of x between 0 and 1 that is used, choose a value of x between 0 and 1 for which all of these expressions can be easily evaluated, such as x = 1/4. For x = 1/4: x = 1/4, x^(-1) = 4, x² = 1/16, √x = 1/2, x³ = 1/64. When these values are arranged in ascending order: 1/64, 1/16, 1/4, 1/2, 4. The median of the values will be the middle value, which is x = 1/4. The correct answer is A.",
+    explanation: "Since we can assume the correct answer choice does not depend on the value of x between 0 and 1 that is used, choose a value of x between 0 and 1 for which all of these expressions can be easily evaluated, such as x = 1/4. For x = 1/4: x = 1/4, x^(-1) = 4, x^2 = 1/16, $\\sqrt{}$x = 1/2, x^3 = 1/64. When these values are arranged in ascending order: 1/64, 1/16, 1/4, 1/2, 4. The median of the values will be the middle value, which is x = 1/4. The correct answer is A.",
     categories: ["Arithmetic", "Statistics"],
   },
   {
@@ -1551,7 +1551,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("c"),
-    explanation: "Let x be the number of stamps Alberto had at first. Then Kaye had (5x/3) stamps at first. So, after Kaye gave Alberto 10 of her stamps, she had (5x/3) − 10 stamps and Alberto had x + 10 stamps. Since Kaye then had 7 stamps for every 5 Alberto had, 7(x + 10) = 5((5x/3) − 10) = 7x + 70 = (25x/3) − 50. Thus, 120 = ((25 − 21)x/3) = 4x/3, so 360 = 4x, and x = 90. Therefore, after Kaye gave Alberto 10 of her stamps, she had (5(90)/3) − 10 = 5(30) − 10 = 140 stamps, while Alberto had 90 + 10 = 100 stamps. So, as a result of the gift, Kaye had 140 − 100 = 40 more stamps than Alberto. The correct answer is C.",
+    explanation: "Let x be the number of stamps Alberto had at first. Then Kaye had (5x/3) stamps at first. So, after Kaye gave Alberto 10 of her stamps, she had (5x/3) - 10 stamps and Alberto had x + 10 stamps. Since Kaye then had 7 stamps for every 5 Alberto had, 7(x + 10) = 5((5x/3) - 10) = 7x + 70 = (25x/3) - 50. Thus, 120 = ((25 - 21)x/3) = 4x/3, so 360 = 4x, and x = 90. Therefore, after Kaye gave Alberto 10 of her stamps, she had (5(90)/3) - 10 = 5(30) - 10 = 140 stamps, while Alberto had 90 + 10 = 100 stamps. So, as a result of the gift, Kaye had 140 - 100 = 40 more stamps than Alberto. The correct answer is C.",
     categories: ["Algebra", "Ratio and proportion"],
   },
   {
@@ -1574,7 +1574,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("d"),
-    explanation: "Since 1.5 standard deviations is equal to (1.5)(0.3) = 0.45, it follows that a recorded number of ounces of coffee is within 1.5 standard deviations of the mean if that number of ounces is within 0.45 of 8.1, or between 8.1 − 0.45 = 7.65 and 8.1 + 0.45 = 8.55. Since 7.51 and 8.53 are the only ones of the 12 listed amounts that are not between 7.65 and 8.55, there are 12 − 2 = 10 listed amounts that are between 7.65 and 8.55. The correct answer is D.",
+    explanation: "Since 1.5 standard deviations is equal to (1.5)(0.3) = 0.45, it follows that a recorded number of ounces of coffee is within 1.5 standard deviations of the mean if that number of ounces is within 0.45 of 8.1, or between 8.1 - 0.45 = 7.65 and 8.1 + 0.45 = 8.55. Since 7.51 and 8.53 are the only ones of the 12 listed amounts that are not between 7.65 and 8.55, there are 12 - 2 = 10 listed amounts that are between 7.65 and 8.55. The correct answer is D.",
     categories: ["Arithmetic", "Statistics"],
   },
   {
@@ -1620,7 +1620,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("b"),
-    explanation: "An hour is 3,600 seconds. At 75 kilometers per hour, the car would take 3,600 seconds to travel 75 kilometers, so it would take 3600/75 = 48 seconds to travel 1 kilometer. But we're told that the car actually takes 2 seconds longer than that, or 50 seconds, to travel 1 kilometer. Therefore, in 1 hour, or 3,600 seconds, it travels 3600/50 × 1 kilometer/hour = 72 kilometers/hour. The correct answer is B.",
+    explanation: "An hour is 3,600 seconds. At 75 kilometers per hour, the car would take 3,600 seconds to travel 75 kilometers, so it would take 3600/75 = 48 seconds to travel 1 kilometer. But we're told that the car actually takes 2 seconds longer than that, or 50 seconds, to travel 1 kilometer. Therefore, in 1 hour, or 3,600 seconds, it travels 3600/50 $\\times$ 1 kilometer/hour = 72 kilometers/hour. The correct answer is B.",
     categories: ["Algebra", "Rate problems"],
   },
   {
@@ -1643,7 +1643,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("c"),
-    explanation: "We are given that y kilometers per hour is the same speed as x meters per second. By converting from meters to kilometers using 1 km = 1,000 m and seconds to hours using 1 hr = 3,600 sec, we can obtain y in terms of x. y km/hr = x m/sec × (1 km / 1,000 m) × (3,600 sec / 1 hr) = (3,600/1,000)x km/hr = (18x/5) km/hr. From the last equality above it follows that y = 18x/5. The correct answer is C.",
+    explanation: "We are given that y kilometers per hour is the same speed as x meters per second. By converting from meters to kilometers using 1 km = 1,000 m and seconds to hours using 1 hr = 3,600 sec, we can obtain y in terms of x. y km/hr = x m/sec $\\times$ (1 km / 1,000 m) $\\times$ (3,600 sec / 1 hr) = (3,600/1,000)x km/hr = (18x/5) km/hr. From the last equality above it follows that y = 18x/5. The correct answer is C.",
     categories: ["Arithmetic", "Unit conversions"],
   },
   {
@@ -1689,7 +1689,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("c"),
-    explanation: "A strategy that is useful in rewriting sums and/or differences of exponential terms having the same base is to use the term with the least exponent as a common factor. For example, in 5^x − 5^(x−3), factor out 5^(x−3) since x − 3 is less than x. This gives 5^x − 5^(x−3) = 5^(x−3)(5³ − 1). Therefore, the given equation is equivalent to 5^(x−3)(5³ − 1) = (124)(5^y), or 5^(x−3)(124) = (124)(5^y). Dividing both sides of the last equation by 124 gives 5^(x−3) = 5^y, and hence y = x − 3. The correct answer is C.",
+    explanation: "A strategy that is useful in rewriting sums and/or differences of exponential terms having the same base is to use the term with the least exponent as a common factor. For example, in 5^x - 5^(x−3), factor out 5^(x−3) since x - 3 is less than x. This gives 5^x - 5^(x−3) = 5^(x−3)(5^3 - 1). Therefore, the given equation is equivalent to 5^(x−3)(5^3 - 1) = (124)(5^y), or 5^(x−3)(124) = (124)(5^y). Dividing both sides of the last equation by 124 gives 5^(x−3) = 5^y, and hence y = x - 3. The correct answer is C.",
     categories: ["Algebra", "Exponents"],
   },
   {

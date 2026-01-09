@@ -538,7 +538,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("c"),
-    explanation: "The retailer's cost was \\$2.80 per dozen eggs and the retailer's revenue was \\$0.90 per 3 eggs, or $4(\\$0.90) = \\$3.60$ per dozen eggs. Therefore, the retailer's profit for 5 dozen eggs—revenue minus cost for 5 dozen eggs—was $5(\\$3.60 - \\$2.80) = 5(\\$0.80) = \\$4.00$. The correct answer is C.",
+    explanation: "The retailer's cost was \\$2.80 per dozen eggs and the retailer's revenue was \\$0.90 per 3 eggs, or $4(\\$0.90) = \\$3.60$ per dozen eggs. Therefore, the retailer's profit for 5 dozen eggs-revenue minus cost for 5 dozen eggs-was $5(\\$3.60 - \\$2.80) = 5(\\$0.80) = \\$4.00$. The correct answer is C.",
     categories: ["Arithmetic", "Applied problems"],
   },
   {
@@ -883,7 +883,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("b"),
-    explanation: "This can be solved by calculating the value of $4^x - 3$ for the first few positive integer values of $x$: $x = 1$: $4^1 = 4$, $4^1 - 3 = 1$ (answer choice A); $x = 2$: $4^2 = 16$, $4^2 - 3 = 13$ (answer choice C); $x = 3$: $4^3 = 64$, $4^3 - 3 = 61$ (answer choice D); $x = 4$: $4^4 = 256$, $4^4 - 3 = 253$ (answer choice E). Alternatively, this can be solved by observing that $4^x$ always has units digit 4 or 6—the product of two integers with units digit 4 has units digit 6, the product of two integers with units digit 6 has units digit 4, etc.—and therefore any integer that does not have units digit $4 - 3 = 1$ or $6 - 3 = 3$ cannot be the value of $4^x - 3$ for some positive integer value of $x$. The correct answer is B.",
+    explanation: "This can be solved by calculating the value of $4^x - 3$ for the first few positive integer values of $x$: $x = 1$: $4^1 = 4$, $4^1 - 3 = 1$ (answer choice A); $x = 2$: $4^2 = 16$, $4^2 - 3 = 13$ (answer choice C); $x = 3$: $4^3 = 64$, $4^3 - 3 = 61$ (answer choice D); $x = 4$: $4^4 = 256$, $4^4 - 3 = 253$ (answer choice E). Alternatively, this can be solved by observing that $4^x$ always has units digit 4 or 6-the product of two integers with units digit 4 has units digit 6, the product of two integers with units digit 6 has units digit 4, etc.-and therefore any integer that does not have units digit $4 - 3 = 1$ or $6 - 3 = 3$ cannot be the value of $4^x - 3$ for some positive integer value of $x$. The correct answer is B.",
     categories: ["Arithmetic", "Properties of numbers"],
   },
   {
@@ -1711,7 +1711,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("b"),
-    explanation: "Book 1: 6 days—50 pages on each of Days 1–5, 3 pages on Day 6 [5(50) + 3 = 253]. Book 2: 3 days—50 pages on each of Days 7 and 8, 10 pages on Day 9 [2(50) + 10 = 110]. Book 3: 3 days—50 pages on each of Days 10 and 11, 17 pages on Day 12 [2(50) + 17 = 117]. Book 4: 4 days—50 pages on each of Days 13–15, 20 pages on Day 16 [3(50) + 20 = 170]. Book 5: 4 days—50 pages on each of Days 17–19, 5 pages on Day 20 [3(50) + 5 = 155]. Book 6: 1 day—50 pages on Day 21 [1(50) = 50]. Book 7: 5 days—50 pages on each of Days 22–25, 5 pages on Day 26 [4(50) + 5 = 205]. Book 8: 2 days—50 pages on Day 27, 20 pages on Day 28 [50 + 20 = 70]. At this point, Shawana has read on a total of 28 days and has finished 8 books. The correct answer is B.",
+    explanation: "Book 1: 6 days-50 pages on each of Days 1-5, 3 pages on Day 6 [5(50) + 3 = 253]. Book 2: 3 days-50 pages on each of Days 7 and 8, 10 pages on Day 9 [2(50) + 10 = 110]. Book 3: 3 days-50 pages on each of Days 10 and 11, 17 pages on Day 12 [2(50) + 17 = 117]. Book 4: 4 days-50 pages on each of Days 13-15, 20 pages on Day 16 [3(50) + 20 = 170]. Book 5: 4 days-50 pages on each of Days 17-19, 5 pages on Day 20 [3(50) + 5 = 155]. Book 6: 1 day-50 pages on Day 21 [1(50) = 50]. Book 7: 5 days-50 pages on each of Days 22-25, 5 pages on Day 26 [4(50) + 5 = 205]. Book 8: 2 days-50 pages on Day 27, 20 pages on Day 28 [50 + 20 = 70]. At this point, Shawana has read on a total of 28 days and has finished 8 books. The correct answer is B.",
     categories: ["Arithmetic", "Applied problems"],
   },
   {
@@ -1883,7 +1883,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
     difficultyLevel: 1,
     questionData: {
       question_text:
-        "A salesperson who had been driving at a speed of 100 kilometers per hour slowed down to a speed of 47 kilometers per hour. Approximately how many miles per hour was the speed reduced? (1 kilometer ≈ 0.625 mile)",
+        "A salesperson who had been driving at a speed of 100 kilometers per hour slowed down to a speed of 47 kilometers per hour. Approximately how many miles per hour was the speed reduced? (1 kilometer $\\approx$ 0.625 mile)",
       options: {
         a: "29",
         b: "33",
@@ -1895,7 +1895,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("b"),
-    explanation: "The amount of speed reduction is (100 − 47) km/hr = 53 km/hr. Converting to miles per hour: (53 km/hr)(0.625 mi/km) ≈ (50)(0.6) mi/hr = 30 mi/hr. From the calculations it follows that speed was reduced, in miles per hour, by a little more than 30; among the answer choices, only 33 is a reasonable choice. The exact value is 33.125. The correct answer is B.",
+    explanation: "The amount of speed reduction is (100 − 47) km/hr = 53 km/hr. Converting to miles per hour: (53 km/hr)(0.625 mi/km) $\\approx$ (50)(0.6) mi/hr = 30 mi/hr. From the calculations it follows that speed was reduced, in miles per hour, by a little more than 30; among the answer choices, only 33 is a reasonable choice. The exact value is 33.125. The correct answer is B.",
     categories: ["Arithmetic", "Unit conversions"],
   },
   {

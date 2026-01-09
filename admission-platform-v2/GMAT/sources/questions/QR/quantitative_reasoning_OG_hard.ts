@@ -999,7 +999,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("b"),
-    explanation: "For ease of calculation later, note that 336 = 6 × 7 × 8. To avoid fairly extensive algebraic manipulation, consider starting with the answer choices by checking to see which one satisfies the conditions of the problem. If Don estimated 24 hours, his regular hourly rate was $336/24 = $14. The actual time was 24 + 4 = 28 hours. His actual hourly rate was $336/28 = $12. Since $14 − $12 = $2, this satisfies the condition that he earned $2 per hour less. The correct answer is B.",
+    explanation: "For ease of calculation later, note that 336 = 6 $\\times$ 7 $\\times$ 8. To avoid fairly extensive algebraic manipulation, consider starting with the answer choices by checking to see which one satisfies the conditions of the problem. If Don estimated 24 hours, his regular hourly rate was $336/24 = $14. The actual time was 24 + 4 = 28 hours. His actual hourly rate was $336/28 = $12. Since $14 − $12 = $2, this satisfies the condition that he earned $2 per hour less. The correct answer is B.",
     categories: ["Algebra", "Applied problems"],
   },
   {
@@ -1505,7 +1505,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("d"),
-    explanation: "Given that $250 is 20% greater than a camera's initial cost, it follows that the initial cost for each camera was $(250/1.2). Therefore, the initial cost for the 60 cameras was 60($(250/1.2)). The total revenue is the sum of the amount obtained from selling 60 − 6 = 54 cameras for $250 each and the (1/2)($(250/1.2)) refund for each of 6 cameras, or (54)($250) + (6)(1/2)($(250/1.2)). The total profit, as a percent of the total initial cost, is ((total revenue)/(total initial cost) − 1) × 100%. Computing: (total revenue)/(total initial cost) − 1 = [(54)(250) + 6(1/2)(250/1.2)]/[60(250/1.2)] − 1 = [54 + 3(1/1.2)]/[60(1/1.2)] − 1 = [54(1.2) + 3]/60 − 1 = 67.8/60 − 1 = 1.13 − 1 = 0.13. Finally, (0.13 × 100)% = 13%, which represents a profit since it is positive. The correct answer is D.",
+    explanation: "Given that $250 is 20% greater than a camera's initial cost, it follows that the initial cost for each camera was $(250/1.2). Therefore, the initial cost for the 60 cameras was 60($(250/1.2)). The total revenue is the sum of the amount obtained from selling 60 − 6 = 54 cameras for $250 each and the (1/2)($(250/1.2)) refund for each of 6 cameras, or (54)($250) + (6)(1/2)($(250/1.2)). The total profit, as a percent of the total initial cost, is ((total revenue)/(total initial cost) − 1) $\\times$ 100%. Computing: (total revenue)/(total initial cost) − 1 = [(54)(250) + 6(1/2)(250/1.2)]/[60(250/1.2)] − 1 = [54 + 3(1/1.2)]/[60(1/1.2)] − 1 = [54(1.2) + 3]/60 − 1 = 67.8/60 − 1 = 1.13 − 1 = 0.13. Finally, (0.13 $\\times$ 100)% = 13%, which represents a profit since it is positive. The correct answer is D.",
     categories: ["Arithmetic", "Percents"],
   },
   {
@@ -1551,7 +1551,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("e"),
-    explanation: "According to the given formula, the sixth term of the sequence is 6 + 2⁶⁻¹ = 6 + 25 and the fifth term is 5 + 2⁵⁻¹ = 5 + 2⁴. Then, (6 + 2⁵) − (5 + 2⁴) = (6 − 5) + (2⁵ − 2⁴) = 1 + 2⁴(2 − 1) = 1 + 2⁴ = 1 + 16 = 17. The correct answer is E.",
+    explanation: "According to the given formula, the sixth term of the sequence is 6 + 2^6⁻^1 = 6 + 25 and the fifth term is 5 + 2^5⁻^1 = 5 + 2^4. Then, (6 + 2^5) − (5 + 2^4) = (6 − 5) + (2^5 − 2^4) = 1 + 2^4(2 − 1) = 1 + 2^4 = 1 + 16 = 17. The correct answer is E.",
     categories: ["Algebra", "Sequences"],
   },
   {
@@ -1574,7 +1574,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("e"),
-    explanation: "If −10 is chosen an odd number of times and 10 is chosen the remaining number of times (for example, choose −10 once and choose 10 nineteen times, or choose −10 three times and choose 10 seventeen times), then the product of the 20 chosen numbers will be (−10)²⁰. Note that (−10)²⁰ is less than −(10)¹⁹, the only other negative value among the answer choices. The correct answer is E.",
+    explanation: "If −10 is chosen an odd number of times and 10 is chosen the remaining number of times (for example, choose −10 once and choose 10 nineteen times, or choose −10 three times and choose 10 seventeen times), then the product of the 20 chosen numbers will be (−10)^2^0. Note that (−10)^2^0 is less than −(10)^1^9, the only other negative value among the answer choices. The correct answer is E.",
     categories: ["Arithmetic", "Properties of numbers"],
   },
   {
@@ -1620,7 +1620,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("d"),
-    explanation: "Calculations with lengthy decimals can be avoided by writing 0.99999999 as 1 − 10⁻⁸, 0.99999991 as 1 − 9(10⁻⁸), 1.0001 as 1 + 10⁻⁴, and 1.0003 as 1 + 3(10⁻⁴). Doing this gives (1 − 10⁻⁸)/(1 + 10⁻⁴) − (1 − 9(10⁻⁸))/(1 + 3(10⁻⁴)) = [(1 + 10⁻⁴)(1 − 10⁻⁴)]/(1 + 10⁻⁴) − (1 − 9(10⁻⁸))/(1 + 3(10⁻⁴)) = (1 − 10⁻⁴) − (1 − 9(10⁻⁸))/(1 + 3(10⁻⁴)) = [(1 − 10⁻⁴)(1 + 3(10⁻⁴)) − (1 − 9(10⁻⁸))]/(1 + 3(10⁻⁴)) = [1 + 3(10⁻⁴) − 10⁻⁴ − 3(10⁻⁸) − 1 + 9(10⁻⁸)]/(1 + 3(10⁻⁴)) = [2(10⁻⁴) + 6(10⁻⁸)]/(1 + 3(10⁻⁴)) = [2(10⁻⁴)][1 + 3(10⁻⁴)]/(1 + 3(10⁻⁴)) = 2(10⁻⁴). The correct answer is D.",
+    explanation: "Calculations with lengthy decimals can be avoided by writing 0.99999999 as 1 − 10⁻^8, 0.99999991 as 1 − 9(10⁻^8), 1.0001 as 1 + 10⁻^4, and 1.0003 as 1 + 3(10⁻^4). Doing this gives (1 − 10⁻^8)/(1 + 10⁻^4) − (1 − 9(10⁻^8))/(1 + 3(10⁻^4)) = [(1 + 10⁻^4)(1 − 10⁻^4)]/(1 + 10⁻^4) − (1 − 9(10⁻^8))/(1 + 3(10⁻^4)) = (1 − 10⁻^4) − (1 − 9(10⁻^8))/(1 + 3(10⁻^4)) = [(1 − 10⁻^4)(1 + 3(10⁻^4)) − (1 − 9(10⁻^8))]/(1 + 3(10⁻^4)) = [1 + 3(10⁻^4) − 10⁻^4 − 3(10⁻^8) − 1 + 9(10⁻^8)]/(1 + 3(10⁻^4)) = [2(10⁻^4) + 6(10⁻^8)]/(1 + 3(10⁻^4)) = [2(10⁻^4)][1 + 3(10⁻^4)]/(1 + 3(10⁻^4)) = 2(10⁻^4). The correct answer is D.",
     categories: ["Arithmetic", "Operations on rational numbers"],
   },
   {
@@ -1643,7 +1643,7 @@ export const quantitativeReasoningQuestionsOG: QuantitativeReasoningQuestion[] =
       image_options: null,
     } as QRQuestionData,
     answers: generateMCAnswers("d"),
-    explanation: "Because the number of newspapers sold at the store last Sunday is not given, assume for simplicity that number is 1,000. Also, the value of p is not given, so choose a convenient value to work with, say p = 60. Then Newspaper A: 60% of papers sold = 600 papers, revenue = 600($1) = $600. Newspaper B: 40% of papers sold = 400 papers, revenue = 400($1.25) = $500. Total revenue = $1,100. Percent of revenue from A: r = (600/1,100) × 100 = 600/11. Now, check the answer choices using p = 60 to see which one yields 600/11. A: 100p/(125 − p) = 100(60)/(125 − 60) = 6,000/65 NO. B: 150p/(250 − p) = 150(60)/(250 − 60) = 9,000/190 NO. C: 300p/(375 − p) = 300(60)/(375 − 60) = 18,000/315 NO. D: 400p/(500 − p) = 400(60)/(500 − 60) = 24,000/440 YES (440 has 11 as a factor) = 600/11. The correct answer is D.",
+    explanation: "Because the number of newspapers sold at the store last Sunday is not given, assume for simplicity that number is 1,000. Also, the value of p is not given, so choose a convenient value to work with, say p = 60. Then Newspaper A: 60% of papers sold = 600 papers, revenue = 600($1) = $600. Newspaper B: 40% of papers sold = 400 papers, revenue = 400($1.25) = $500. Total revenue = $1,100. Percent of revenue from A: r = (600/1,100) $\\times$ 100 = 600/11. Now, check the answer choices using p = 60 to see which one yields 600/11. A: 100p/(125 − p) = 100(60)/(125 − 60) = 6,000/65 NO. B: 150p/(250 − p) = 150(60)/(250 − 60) = 9,000/190 NO. C: 300p/(375 − p) = 300(60)/(375 − 60) = 18,000/315 NO. D: 400p/(500 − p) = 400(60)/(500 − 60) = 24,000/440 YES (440 has 11 as a factor) = 600/11. The correct answer is D.",
     categories: ["Algebra", "Applied problems"],
   },
   {
