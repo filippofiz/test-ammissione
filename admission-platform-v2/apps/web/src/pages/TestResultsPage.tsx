@@ -3,7 +3,7 @@
  * Shows detailed analysis of student's test attempt with answers, corrections, etc.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -46,6 +46,12 @@ interface Question {
   correct_answer: any;
   options?: any;
   difficulty?: number | string;
+  Questions_toReview?: {
+    needs_review: boolean;
+    notes: string;
+    flagged_by: string;
+    flagged_at: string;
+  } | null;
 }
 
 interface StudentAnswer {
@@ -96,10 +102,30 @@ export default function TestResultsPage() {
   const [algorithmConfig, setAlgorithmConfig] = useState<any>(null);
   const [showScoreReport, setShowScoreReport] = useState(false);
   const [showTimeManagement, setShowTimeManagement] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [reviewChanges, setReviewChanges] = useState<Map<string, { needs_review: boolean; notes: string }>>(new Map());
+  const reviewTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   useEffect(() => {
     loadTestResults();
   }, [assignmentId, selectedAttempt]);
+
+  useEffect(() => {
+    async function loadCurrentUser() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('2V_profiles')
+          .select('id')
+          .eq('auth_uid', user.id)
+          .single();
+        if (profile) {
+          setCurrentUserId(profile.id);
+        }
+      }
+    }
+    loadCurrentUser();
+  }, []);
 
   useEffect(() => {
     if (assignment && assignment.total_attempts > 1) {
@@ -668,6 +694,26 @@ export default function TestResultsPage() {
       alert('An error occurred. Please try again.');
     } finally {
       setTogglingViewability(false);
+    }
+  }
+
+  async function saveQuestionReview(questionId: string, needsReview: boolean, notes: string) {
+    if (!currentUserId) return;
+
+    const reviewData = needsReview ? {
+      needs_review: needsReview,
+      notes: notes || '',
+      flagged_by: currentUserId,
+      flagged_at: new Date().toISOString()
+    } : null;
+
+    const { error } = await supabase
+      .from('2V_questions')
+      .update({ Questions_toReview: reviewData } as any)
+      .eq('id', questionId);
+
+    if (error) {
+      console.error('Failed to save question review:', error);
     }
   }
 
@@ -1963,26 +2009,79 @@ export default function TestResultsPage() {
                       </div>
                     </div>
 
-                    {/* Tutor Feedback Section - Only editable for tutors */}
-                    {!isStudentView ? (
-                      <div className="px-6 pb-6 pt-4 border-t border-gray-200">
-                        <div className="text-sm font-semibold text-gray-600 mb-2">{t('testResults.tutorNotes')}</div>
-                        <textarea
-                          placeholder={t('testResults.addFeedback')}
-                          className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-brand-green outline-none resize-none"
-                          rows={2}
-                          defaultValue={result.studentAnswer?.tutor_feedback || ''}
-                        />
-                      </div>
-                    ) : (
-                      result.studentAnswer?.tutor_feedback && (
-                        <div className="px-6 pb-6 pt-4 border-t border-gray-200">
-                          <div className="text-sm font-semibold text-gray-600 mb-2">{t('testResults.tutorNotes')}</div>
-                          <div className="p-3 bg-gray-50 border-2 border-gray-200 rounded-lg text-gray-700">
-                            {result.studentAnswer.tutor_feedback}
+                    {/* Question Review Section - Flag questions that need fixing (Tutor only) */}
+                    {!isStudentView && (
+                        <div className="px-6 pb-6 pt-2 border-t border-gray-200 bg-orange-50">
+                          <div className="flex items-center gap-3 mb-3">
+                            <input
+                              type="checkbox"
+                              id={`review-${result.question.id}`}
+                              checked={
+                                reviewChanges.get(result.question.id)?.needs_review ??
+                                result.question.Questions_toReview?.needs_review ??
+                                false
+                              }
+                              onChange={(e) => {
+                                const needsReview = e.target.checked;
+                                const currentNotes = reviewChanges.get(result.question.id)?.notes ??
+                                                    result.question.Questions_toReview?.notes ?? '';
+
+                                setReviewChanges(prev => {
+                                  const newMap = new Map(prev);
+                                  newMap.set(result.question.id, { needs_review: needsReview, notes: currentNotes });
+                                  return newMap;
+                                });
+
+                                // Auto-save immediately when toggling checkbox
+                                saveQuestionReview(result.question.id, needsReview, currentNotes);
+                              }}
+                              className="w-5 h-5 text-orange-600 border-orange-300 rounded focus:ring-orange-500 cursor-pointer"
+                            />
+                            <label htmlFor={`review-${result.question.id}`} className="text-sm font-semibold text-orange-700 cursor-pointer">
+                              Flag this question for review (internal)
+                            </label>
                           </div>
+
+                          {(reviewChanges.get(result.question.id)?.needs_review ?? result.question.Questions_toReview?.needs_review) && (
+                            <textarea
+                              placeholder="Add notes about what needs to be fixed in this question..."
+                              className="w-full p-3 border-2 border-orange-300 rounded-lg focus:border-orange-500 outline-none resize-none bg-white"
+                              rows={2}
+                              value={
+                                reviewChanges.get(result.question.id)?.notes ??
+                                result.question.Questions_toReview?.notes ??
+                                ''
+                              }
+                              onChange={(e) => {
+                                const notes = e.target.value;
+                                const questionId = result.question.id;
+                                const needsReview = reviewChanges.get(questionId)?.needs_review ??
+                                                   result.question.Questions_toReview?.needs_review ??
+                                                   false;
+
+                                setReviewChanges(prev => {
+                                  const newMap = new Map(prev);
+                                  newMap.set(questionId, { needs_review: needsReview, notes });
+                                  return newMap;
+                                });
+
+                                // Clear existing timeout for this question
+                                const existingTimeout = reviewTimeoutsRef.current.get(questionId);
+                                if (existingTimeout) {
+                                  clearTimeout(existingTimeout);
+                                }
+
+                                // Debounce auto-save for textarea
+                                const timeoutId = setTimeout(() => {
+                                  saveQuestionReview(questionId, needsReview, notes);
+                                  reviewTimeoutsRef.current.delete(questionId);
+                                }, 1000);
+
+                                reviewTimeoutsRef.current.set(questionId, timeoutId);
+                              }}
+                            />
+                          )}
                         </div>
-                      )
                     )}
                   </div>
                 ))}

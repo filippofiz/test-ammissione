@@ -22,20 +22,37 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import type { Profile } from '../lib/database.types';
+import { supabase } from '../lib/supabase';
 
 export default function AdminDashboardPage() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [flaggedCount, setFlaggedCount] = useState<number>(0);
 
   useEffect(() => {
     loadProfile();
+    loadFlaggedCount();
   }, []);
 
   async function loadProfile() {
     const userProfile = await getCurrentProfile();
     setProfile(userProfile);
     setLoading(false);
+  }
+
+  async function loadFlaggedCount() {
+    try {
+      const { count, error } = await supabase
+        .from('2V_questions')
+        .select('*', { count: 'exact', head: true })
+        .not('Questions_toReview', 'is', null);
+
+      if (error) throw error;
+      setFlaggedCount(count || 0);
+    } catch (err) {
+      console.error('Error loading flagged count:', err);
+    }
   }
 
   if (loading) {
@@ -253,6 +270,13 @@ export default function AdminDashboardPage() {
                 onClick={() => navigate('/admin/review-questions')}
                 className="group relative bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 border-2 border-gray-100 hover:border-teal-500 transform hover:scale-105"
               >
+                {/* Flagged Badge */}
+                {flaggedCount > 0 && (
+                  <div className="absolute top-4 right-4 bg-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
+                    {flaggedCount} flagged
+                  </div>
+                )}
+
                 {/* Icon */}
                 <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-teal-500 to-teal-700 rounded-full flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
                   <FontAwesomeIcon icon={faListCheck} className="text-4xl text-white" />
