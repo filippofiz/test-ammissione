@@ -1,0 +1,956 @@
+[
+  {
+    "question_number": 1,
+    "difficulty": "easy",
+    "problem": "Each car at a certain dealership is either blue or white. What is the average (arithmetic mean) sticker price of all the cars at the dealership?",
+    "statement1": "Of all the cars at the dealership, $\\frac{1}{3}$ are blue and have an average sticker price of $21,000.",
+    "statement2": "Of all the cars at the dealership, $\\frac{2}{3}$ are white and have an average sticker price of $24,000.",
+    "correct_answer": "C"
+  },
+  {
+    "question_number": 2,
+    "difficulty": "easy",
+    "problem": "A box contains only white balls and black balls. What is the probability that a ball selected at random from the box is white?",
+    "statement1": "There are 100 balls in the box.",
+    "statement2": "There are 40 black balls in the box.",
+    "correct_answer": "C"
+  },
+  {
+    "question_number": 3,
+    "difficulty": "easy",
+    "problem": "A certain bag contains only red balls, blue balls, and green balls. What percent of all the balls in the bag are red?",
+    "statement1": "The ratio of the number of red balls to the number of blue balls in the bag is 1:3.",
+    "statement2": "There are 2 green balls in the bag.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 4,
+    "difficulty": "easy",
+    "problem": "Each of the 120 students in a certain dormitory is either a junior or a senior. How many of the juniors have credit cards?",
+    "statement1": "$\\frac{2}{3}$ of the 120 juniors and seniors have credit cards.",
+    "statement2": "The number of seniors who have credit cards is 20 more than the number of juniors who have credit cards.",
+    "correct_answer": "C"
+  },
+  {
+    "question_number": 5,
+    "difficulty": "easy",
+    "problem": "If the average (arithmetic mean) cost per sweater for 3 pullover sweaters and 1 cardigan sweater was $65, what was the cost of the cardigan sweater?",
+    "statement1": "The average cost per sweater for the 3 pullover sweaters was $55.",
+    "statement2": "The most expensive of the 3 pullover sweaters cost $30 more than the least expensive.",
+    "correct_answer": "A"
+  },
+  {
+    "question_number": 6,
+    "difficulty": "easy",
+    "problem": "In each quarter of 1998, Company M earned more money than in the previous quarter. What was the range of Company M's quarterly earnings in 1998?",
+    "statement1": "In the 2nd and 3rd quarters of 1998, Company M earned $4.0 million and $4.6 million, respectively.",
+    "statement2": "In the 1st and 4th quarters of 1998, Company M earned $3.8 million and $4.9 million, respectively.",
+    "correct_answer": "B"
+  },
+  {
+    "question_number": 7,
+    "difficulty": "easy",
+    "problem": "The range of the heights of a group of high school juniors and seniors is 20 centimeters. What is the average (arithmetic mean) of the height of the tallest senior in the group and the height of the shortest junior in the group?",
+    "statement1": "The average of the heights of the juniors in the group is 165 centimeters.",
+    "statement2": "The average of the heights of the seniors in the group is 179 centimeters.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 8,
+    "difficulty": "easy",
+    "problem": "In a certain factory, hours worked by each employee in excess of 40 hours per week are overtime hours and are paid for at $1\\frac{1}{2}$ times the employee's regular hourly pay rate. If an employee worked a total of 42 hours last week, how much was the employee's gross pay for the hours worked last week?",
+    "statement1": "The employee's gross pay for overtime hours worked last week was $30.",
+    "statement2": "The employee's gross pay for all hours worked last week was $30 more than for the previous week.",
+    "correct_answer": "A"
+  },
+  {
+    "question_number": 9,
+    "difficulty": "easy",
+    "problem": "Did Insurance Company K have more than $300 million in total net profits last year?",
+    "statement1": "Last year Company K paid out $0.95 in claims for every dollar of premiums collected.",
+    "statement2": "Last year Company K earned a total of $150 million in profits from the investment of accumulated surplus premiums from previous years.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 10,
+    "difficulty": "easy",
+    "problem": "How many hours would it take Pump A and Pump B working together, each at its own constant rate, to empty a tank that was initially full?",
+    "statement1": "Working alone at its constant rate, Pump A would empty the full tank in 4 hours 20 minutes.",
+    "statement2": "Working alone, Pump B would empty the full tank at its constant rate of 72 liters per minute.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 11,
+    "difficulty": "easy",
+    "problem": "Maria left home $\\frac{1}{4}$ hour after her husband and drove over the same route as he had in order to overtake him. From the time she left, how many hours did it take Maria to overtake her husband?",
+    "statement1": "Maria drove 60 miles before overtaking her husband.",
+    "statement2": "While overtaking her husband, Maria drove at an average rate of 60 miles per hour, which was 12 miles per hour faster than her husband's average rate.",
+    "correct_answer": "B"
+  },
+  {
+    "question_number": 12,
+    "difficulty": "easy",
+    "problem": "How many people received a certain survey?",
+    "statement1": "Six-tenths of those who received the survey responded.",
+    "statement2": "Of those who received the survey, 42 responded.",
+    "correct_answer": "C"
+  },
+  {
+    "question_number": 13,
+    "difficulty": "easy",
+    "problem": "From 1985 to 1994, what was the percent increase in total United States trade?",
+    "statement1": "Total United States trade in 1985 was 17 percent of gross domestic product in 1985.",
+    "statement2": "Total United States trade in 1994 was 23 percent of gross domestic product in 1994.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 14,
+    "difficulty": "easy",
+    "problem": "Company X's profits this year increased by 25% over last year's profits. Was the dollar amount of Company X's profits this year greater than the dollar amount of Company Y's?",
+    "statement1": "Last year, the ratio of Company Y's profits to Company X's profits was 5:2.",
+    "statement2": "Company Y experienced a 40% drop in profits from last year to this year.",
+    "correct_answer": "C"
+  },
+  {
+    "question_number": 15,
+    "difficulty": "easy",
+    "problem": "A certain company consists of three divisions, A, B, and C. Of the employees in the three divisions, the employees in Division C have the greatest average (arithmetic mean) annual salary. Is the average annual salary of the employees in the three divisions combined less than $55,000?",
+    "statement1": "The average annual salary of the employees in Divisions A and B combined is $45,000.",
+    "statement2": "The average annual salary of the employees in Division C is $55,000.",
+    "correct_answer": "B"
+  },
+  {
+    "question_number": 16,
+    "difficulty": "easy",
+    "problem": "A candle company determines that, for a certain specialty candle, the supply function is $p = m_1 x + b_1$ and the demand function is $p = m_2 x + b_2$, where $p$ is the price of each candle, $x$ is the number of candles supplied or demanded, and $m_1$, $m_2$, $b_1$, and $b_2$ are constants. At what value of $x$ do the graphs of the supply function and demand function intersect?",
+    "statement1": "$m_1 = -m_2 = 0.005$",
+    "statement2": "$b_2 - b_1 = 6$",
+    "correct_answer": "C"
+  },
+  {
+    "question_number": 17,
+    "difficulty": "easy",
+    "problem": "A certain ski shop sold 125 pairs of skis and 100 pairs of ski boots for a total of $75,000. What was the average (arithmetic mean) selling price of a pair of the ski boots?",
+    "statement1": "The average selling price of a pair of skis was $300.",
+    "statement2": "The selling price of a pair of ski boots varied from $150 to $900.",
+    "correct_answer": "A"
+  },
+  {
+    "question_number": 18,
+    "difficulty": "easy",
+    "problem": "Last year Publisher X published 1,100 books, consisting of first editions, revised editions, and reprints. How many first editions did Publisher X publish last year?",
+    "statement1": "The number of first editions published was 50 more than twice the number of reprints published.",
+    "statement2": "The number of revised editions published was half the number of reprints published.",
+    "correct_answer": "C"
+  },
+  {
+    "question_number": 19,
+    "difficulty": "easy",
+    "problem": "How old is Jane?",
+    "statement1": "Ten years ago she was one-third as old as she is now.",
+    "statement2": "In 15 years, she will be twice as old as she is now.",
+    "correct_answer": "D"
+  },
+  {
+    "question_number": 20,
+    "difficulty": "easy",
+    "problem": "What was the population of City X in 2002?",
+    "statement1": "X's population in 2002 increased by 2 percent, or 20,000 people, over 2001.",
+    "statement2": "In 2001, X's population was 1,000,000.",
+    "correct_answer": "A"
+  },
+  {
+    "question_number": 21,
+    "difficulty": "easy",
+    "problem": "Yesterday Bookstore B sold twice as many softcover books as hardcover books. Was Bookstore B's revenue from the sale of softcover books yesterday greater than its revenue from the sale of hardcover books yesterday?",
+    "statement1": "The average (arithmetic mean) price of the hardcover books sold at the store yesterday was $10 more than the average price of the softcover books sold at the store yesterday.",
+    "statement2": "The average price of the softcover and hardcover books sold at the store yesterday was greater than $14.",
+    "correct_answer": "C"
+  },
+  {
+    "question_number": 22,
+    "difficulty": "easy",
+    "problem": "At a certain refreshment stand, all hot dogs are the same price, and all sodas are the same price. What is the total price of 3 hot dogs and 2 sodas at the refreshment stand?",
+    "statement1": "The total price of 5 sodas at the stand is less than the total price of 2 hot dogs.",
+    "statement2": "The total price of 9 hot dogs and 6 sodas at the stand is $21.",
+    "correct_answer": "B"
+  },
+  {
+    "question_number": 23,
+    "difficulty": "easy",
+    "problem": "If a certain school will buy computers at a fixed price of $x$ dollars each and computer desks at a fixed price of $y$ dollars each, how many dollars will the school pay for each computer?",
+    "statement1": "The school will pay a total of $2,200 if it buys 2 computers and 1 computer desk at these fixed prices.",
+    "statement2": "The school will pay a total of $5,400 if it buys 5 computers and 2 computer desks at these fixed prices.",
+    "correct_answer": "C"
+  },
+  {
+    "question_number": 24,
+    "difficulty": "easy",
+    "problem": "An initial investment of $10,000 was deposited in a bank account one year ago, and additional deposits were made during the year. If no withdrawals were made, what was the total amount of interest earned on this account during the year?",
+    "statement1": "The additional deposits during the year totaled $5,000.",
+    "statement2": "The account earned interest at the annual rate of 6 percent compounded quarterly.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 25,
+    "difficulty": "easy",
+    "problem": "A poplar tree was 3 feet high when it was planted on January 1, 1970. During what year did it pass the height of 20 feet?",
+    "statement1": "On January 1, 1973, it was 24 feet high.",
+    "statement2": "It doubled its height during each year.",
+    "correct_answer": "B"
+  },
+  {
+    "question_number": 26,
+    "difficulty": "easy",
+    "problem": "Which weighs more, a cubic unit of water or a cubic unit of liquid X?",
+    "statement1": "A cubic unit of water weighs more than $\\frac{1}{3}$ cubic unit of liquid X.",
+    "statement2": "A cubic unit of liquid X weighs less than 3 cubic units of water.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 27,
+    "difficulty": "easy",
+    "problem": "What were the individual prices of the vases that an antique dealer bought at store $X$?",
+    "statement1": "The antique dealer bought exactly 3 vases at store $X$.",
+    "statement2": "The antique dealer's total bill at store $X$ was $225.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 28,
+    "difficulty": "easy",
+    "problem": "Was the average (arithmetic mean) sale price of a new home in region $R$ last month at least $100,000?",
+    "statement1": "Last month the median sale price of a new home in region $R$ was at least $100,000.",
+    "statement2": "Last month the sale prices of new homes in region $R$ ranged from $75,000 to $150,000.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 29,
+    "difficulty": "easy",
+    "problem": "If the capacity of tank X is less than the capacity of tank Y and both tanks begin to fill at the same time, which tank will be filled first?",
+    "statement1": "Tank X is filled at a constant rate of 1.5 liters per minute.",
+    "statement2": "Tank Y is filled at a constant rate of 120 liters per hour.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 30,
+    "difficulty": "easy",
+    "problem": "At a certain company, 30 percent of the employees live in City R. If 25 percent of the company's employees live in apartments in City R, what is the number of the employees who live in apartments in City R?",
+    "statement1": "Of the employees who live in City R, 6 do not live in apartments.",
+    "statement2": "Of the employees, 84 do not live in City R.",
+    "correct_answer": "D"
+  },
+  {
+    "question_number": 31,
+    "difficulty": "easy",
+    "problem": "What was Mary's average (arithmetic mean) score on 4 tests?",
+    "statement1": "Her average (arithmetic mean) score on 3 of the tests was 97.",
+    "statement2": "Her score on one of the tests was 96.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 32,
+    "difficulty": "easy",
+    "problem": "Is there a causal relationship between smoking and lung cancer?",
+    "statement1": "Research consistently shows a strong correlation between smoking and the development of lung cancer.",
+    "statement2": "Some medical researchers support a proposed mechanism by which smoking could cause lung cancer.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 33,
+    "difficulty": "easy",
+    "problem": "A research project has a successful outcome if its research is reported in a blind peer-reviewed academic publication. Can interdisciplinary collaborations on research projects at least sometimes produce a successful outcome?",
+    "statement1": "Some interdisciplinary research groups experience conflict and rivalry.",
+    "statement2": "A peer-reviewed and well-regarded interdisciplinary review of published papers on urban greening trends found that there was little if any evidence that planting more trees in an urban area significantly improved air quality there.",
+    "correct_answer": "B"
+  },
+  {
+    "question_number": 34,
+    "difficulty": "easy",
+    "problem": "It has been proposed that teenagers aged 10 to 15 years be restricted to less than 2 hours per day engaging with social media. Would a significant number of teens aged 10 to 15 years get an overall developmental or health benefit from such a restriction?",
+    "statement1": "A peer-reviewed study indicates a 23% increase in the incidence of chronic anxiety or depression among teenagers aged 10 to 15 years who average 2 or more hours per day engaging with social media.",
+    "statement2": "Certain kinds of engagement with social media averaging 2 or more hours per day by teenagers aged 10 to 15 years lead, in about 28% of cases, to meaningful friendships and social and emotional learning, both of which are valuable for development at those ages.",
+    "correct_answer": "B"
+  },
+  {
+    "question_number": 35,
+    "difficulty": "easy",
+    "problem": "A milk vendor mixes water with milk and sells the mixture at the same price per liter as if it were undiluted milk. The selling price per liter of the mixture is the vendor's cost per liter of the milk plus a markup of $x$%. The water costs the vendor nothing. If the vendor gets a 50% profit on the sale of the mixture, what is the value of $x$?",
+    "statement1": "If the vendor mixes half the intended quantity of water and sells every liter of the mixture at the cost price per liter of the undiluted milk, the vendor will get a 10% profit.",
+    "statement2": "The concentration of milk in the mixture after adding water is 5/6.",
+    "correct_answer": "D"
+  },
+  {
+    "question_number": 36,
+    "difficulty": "easy",
+    "problem": "Does it benefit a company overall to invest in employee training?",
+    "statement1": "Companies that invest in comprehensive employee training programs often observe improved job performance among their workforce.",
+    "statement2": "Well-trained employees are likely to excel in their roles and take the company forward.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 37,
+    "difficulty": "easy",
+    "problem": "Can regular exercise reduce the risk of chronic diseases?",
+    "statement1": "Regular exercise is often associated with better physical health.",
+    "statement2": "Engaging in regular physical activity contributes to overall well-being.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 38,
+    "difficulty": "easy",
+    "problem": "Does effective advertising require a higher budget expense than ineffective advertising?",
+    "statement1": "Companies that allocate higher budgets to advertising tend to experience increased sales revenue.",
+    "statement2": "Effective advertising can drive higher consumer demand.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 39,
+    "difficulty": "medium",
+    "problem": "If a certain store purchased a computer game and then sold it for $50, was the store's profit from the purchase and sale of the game less than $8?",
+    "statement1": "The store's profit from the purchase and sale of the game was less than 25 percent of the amount for which the store purchased the game.",
+    "statement2": "The store's profit from the purchase and sale of the game was greater than 10 percent of the amount for which the store purchased the game.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 40,
+    "difficulty": "medium",
+    "problem": "An estimate of an actual data value has an error of $p$ percent if $p = \\frac{100|e - a|}{a}$, where $e$ is the estimated value and $a$ is the actual value. Emma's estimate for her total income last year had an error of less than 20 percent. Emma's estimate of her income from tutoring last year also had an error of less than 20 percent. Was Emma's actual income from tutoring last year at most 45 percent of her actual total income last year?",
+    "statement1": "Emma's estimated income last year from tutoring was 30 percent of her estimated total income last year.",
+    "statement2": "Emma's estimated total income last year was $40,000.",
+    "correct_answer": "A"
+  },
+  {
+    "question_number": 41,
+    "difficulty": "medium",
+    "problem": "Was Store K's profit last month at least 10 percent greater than its profit the previous month?",
+    "statement1": "Store K's expenses last month were 5 percent greater than its expenses the previous month.",
+    "statement2": "Store K's revenues last month were 10 percent greater than its revenues the previous month.",
+    "correct_answer": "C"
+  },
+  {
+    "question_number": 42,
+    "difficulty": "medium",
+    "problem": "Yesterday, Diana spent a total of 240 minutes attending a training class, responding to emails, and talking on the phone. If she did no two of these three activities at the same time, how much time did she spend talking on the phone?",
+    "statement1": "Yesterday, the amount of time that Diana spent attending the training class was 90 percent of the amount of time that she spent responding to emails.",
+    "statement2": "Yesterday, the amount of time that Diana spent attending the training class was 60 percent of the total amount of time that she spent responding to emails and talking on the phone.",
+    "correct_answer": "C"
+  },
+  {
+    "question_number": 43,
+    "difficulty": "medium",
+    "problem": "When the wind speed is 9 miles per hour, the wind-chill factor $w$ is given by $w = -17.366 + 1.19t$, where $t$ is the temperature in degrees Fahrenheit. If at noon yesterday the wind speed was 9 miles per hour, was the wind-chill factor greater than 0?",
+    "statement1": "The temperature at noon yesterday was greater than 10 degrees Fahrenheit.",
+    "statement2": "The temperature at noon yesterday was less than 20 degrees Fahrenheit.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 44,
+    "difficulty": "medium",
+    "problem": "How many members of a certain legislature voted against the measure to raise their salaries?",
+    "statement1": "$\\frac{1}{4}$ of the members of the legislature did not vote on the measure.",
+    "statement2": "If 5 additional members of the legislature had voted against the measure, then the fraction of members of the legislature voting against the measure would have been $\\frac{1}{3}$.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 45,
+    "difficulty": "medium",
+    "problem": "During a certain bicycle ride, was Sherry's average speed faster than 24 kilometers per hour? (1 kilometer = 1,000 meters)",
+    "statement1": "Sherry's average speed during the bicycle ride was faster than 7 meters per second.",
+    "statement2": "Sherry's average speed during the bicycle ride was slower than 8 meters per second.",
+    "correct_answer": "A"
+  },
+  {
+    "question_number": 46,
+    "difficulty": "medium",
+    "problem": "At a two-day seminar, 90 percent of those registered attended the seminar on the first day. What percent of those registered did not attend the seminar on either day?",
+    "statement1": "A total of 1,000 people registered for the two-day seminar.",
+    "statement2": "Of those registered, 80 percent attended the seminar on the second day.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 47,
+    "difficulty": "medium",
+    "problem": "Yesterday between 9:00 a.m. and 6:00 p.m. at Airport X, all flights to Atlanta departed at equally spaced times and all flights to New York City departed at equally spaced times. A flight to Atlanta and a flight to New York City both departed from Airport X at 1:00 p.m. yesterday. Between 1:00 p.m. and 3:00 p.m. yesterday, did another pair of flights to these 2 cities depart from Airport X at the same time?",
+    "statement1": "Yesterday at Airport X, a flight to Atlanta and a flight to New York City both departed at 10:00 a.m.",
+    "statement2": "Yesterday at Airport X, flights to New York City departed every 15 minutes between 9:00 a.m. and 6:00 p.m.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 48,
+    "difficulty": "medium",
+    "problem": "A bank account earned 2% annual interest, compounded daily, for as long as the balance was under $1,000, starting when the account was opened. Once the balance reached $1,000, the account earned 2.5% annual interest, compounded daily, until the account was closed. No deposits or withdrawals were made. Was the total amount of interest earned at the 2% rate greater than the total amount earned at the 2.5% rate?",
+    "statement1": "The account earned exactly $25 in interest at the 2.5% rate.",
+    "statement2": "The account was open for exactly 3 years.",
+    "correct_answer": "C"
+  },
+  {
+    "question_number": 49,
+    "difficulty": "medium",
+    "problem": "What is the average (arithmetic mean) annual salary of the 6 employees of a toy company?",
+    "statement1": "If the 6 annual salaries were ordered from least to greatest, each annual salary would be $6,300 greater than the preceding annual salary.",
+    "statement2": "The range of the 6 annual salaries is $31,500.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 50,
+    "difficulty": "medium",
+    "problem": "Each person attending a fundraising party for a certain club was charged the same admission fee. How many people attended the party?",
+    "statement1": "If the admission fee had been $0.75 less and 100 more people had attended, the club would have received the same amount in admission fees.",
+    "statement2": "If the admission fee had been $1.50 more and 100 fewer people had attended, the club would have received the same amount in admission fees.",
+    "correct_answer": "C"
+  },
+  {
+    "question_number": 51,
+    "difficulty": "medium",
+    "problem": "A total of 20 amounts are entered on a spreadsheet that has 5 rows and 4 columns; each of the 20 positions in the spreadsheet contains one amount. The average (arithmetic mean) of the amounts in row $i$ is $R_i$ $(1 \\le i \\le 5)$. The average of the amounts in column $j$ is $C_j$ $(1 \\le j \\le 4)$. What is the average of all 20 amounts on the spreadsheet?",
+    "statement1": "$R_1 + R_2 + R_3 + R_4 + R_5 = 550$",
+    "statement2": "$C_1 + C_2 + C_3 + C_4 = 440$",
+    "correct_answer": "D"
+  },
+  {
+    "question_number": 52,
+    "difficulty": "medium",
+    "problem": "Was the range of the amounts of money that Company Y budgeted for its projects last year equal to the range of the amounts of money that it budgeted for its projects this year?",
+    "statement1": "Both last year and this year, Company Y budgeted money for 12 projects and the least amount of money that it budgeted for a project was $400.",
+    "statement2": "Both last year and this year, the average (arithmetic mean) amount of money that Company Y budgeted per project was $2,000.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 53,
+    "difficulty": "medium",
+    "problem": "What is the probability that Lee will make exactly 5 errors on a certain typing test?",
+    "statement1": "The probability that Lee will make 5 or more errors on the test is 0.27.",
+    "statement2": "The probability that Lee will make 5 or fewer errors on the test is 0.85.",
+    "correct_answer": "C"
+  },
+  {
+    "question_number": 54,
+    "difficulty": "medium",
+    "problem": "Last month, Grace worked, and was paid for, a total of $x$ hours. Some of the hours were on the day shift, and the remainder of the hours were on the night shift. Her hourly pay is 20% higher for the night shift than for the day shift. How many hours did Grace work on the day shift last month?",
+    "statement1": "$x = 55$",
+    "statement2": "Grace's gross pay for the hours she worked on the day shift last month was exactly 50% of her total gross pay for last month.",
+    "correct_answer": "C"
+  },
+  {
+    "question_number": 55,
+    "difficulty": "medium",
+    "problem": "The graphs show the distribution of salespersons by gender in three sectors (Real Estate, Securities, and Insurance) in Year X. In year $X$, were there more female salespersons in the securities sector than in the insurance sector?",
+    "chart_config": [
+      {
+        "type": "pie",
+        "title": "Real Estate",
+        "datasets": [
+          {
+            "label": "Gender Distribution",
+            "data": [50.2, 49.8],
+            "color": "#4A90E2"
+          }
+        ],
+        "labels": ["Females 50.2%", "Males"]
+      },
+      {
+        "type": "pie",
+        "title": "Securities",
+        "datasets": [
+          {
+            "label": "Gender Distribution",
+            "data": [37.1, 62.9],
+            "color": "#4A90E2"
+          }
+        ],
+        "labels": ["Females 37.1%", "Males"]
+      },
+      {
+        "type": "pie",
+        "title": "Insurance",
+        "datasets": [
+          {
+            "label": "Gender Distribution",
+            "data": [26.2, 73.8],
+            "color": "#4A90E2"
+          }
+        ],
+        "labels": ["Females 26.2%", "Males"]
+      }
+    ],
+    "statement1": "There were more male salespersons in the insurance sector than in the securities sector.",
+    "statement2": "The total number of salespersons was greater in the securities sector than in the insurance sector.",
+    "correct_answer": "B"
+  },
+  {
+    "question_number": 56,
+    "difficulty": "medium",
+    "problem": "If a club made a gross profit of $0.25 for each candy bar it sold, how many candy bars did the club sell?",
+    "statement1": "The total revenue from the sale of the candy bars was $300.",
+    "statement2": "If the club had sold 80 more candy bars, its gross profits would have increased by 20 percent.",
+    "correct_answer": "B"
+  },
+  {
+    "question_number": 57,
+    "difficulty": "medium",
+    "problem": "In one year 2,100 malpractice claims were filed with insurance company X, and of these $\\frac{1}{4}$ resulted in a financial settlement. Of those resulting in a financial settlement of less than $400,000, what was the average payment per claim?",
+    "statement1": "Company X paid a total of 24.5 million dollars to the claimants.",
+    "statement2": "Only 5 claims resulted in payments of $400,000 or more.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 58,
+    "difficulty": "medium",
+    "problem": "If there are 13 boys in club X, what is the average age of these boys?",
+    "statement1": "The oldest boy is 13 years old and the youngest boy is 9 years old.",
+    "statement2": "Eleven of the boys are either 10 years old or 11 years old.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 59,
+    "difficulty": "medium",
+    "problem": "If all the employees of a company fall into one and only one of 3 groups, X, Y, or Z, with 250, 100, and 20 members in each group, respectively, what is the average (arithmetic mean) weekly salary of all the employees of this company, if all employees are paid every week of the year?",
+    "statement1": "The average (arithmetic mean) annual salary of the employees in Group X is $10,000, in Group Y $15,000 and in Group Z $20,000.",
+    "statement2": "The total annual payroll is $4,400,000.",
+    "correct_answer": "D"
+  },
+  {
+    "question_number": 60,
+    "difficulty": "medium",
+    "problem": "The pie chart shows the distribution of sales income for Store S last week, where the total sales income was $100,000 (100%). The categories shown are: Meat, Fish, and Poultry (40%), Dairy Products (28%), Other (8%), Fruits and Vegetables ($x$%), and Baked Goods ($y$%). According to the graph, the sale of fruits and vegetables in Store $S$ last week accounted for what percent of the total sales income for the week?",
+    "chart_config": {
+      "type": "pie",
+      "title": "Distribution of Sales Income for Store S Last Week",
+      "datasets": [
+        {
+          "label": "Sales Distribution",
+          "data": [40, 28, 8, 0, 0],
+          "color": "#4A90E2"
+        }
+      ],
+      "labels": ["Meat, Fish, and Poultry 40%", "Dairy Products 28%", "Other 8%", "Fruits and Vegetables x%", "Baked Goods y%"]
+    },
+    "statement1": "Last week the total income from the sale of fruits and vegetables in Store $S$ was $16,000.",
+    "statement2": "$x = 2y$",
+    "correct_answer": "D"
+  },
+  {
+    "question_number": 61,
+    "difficulty": "medium",
+    "problem": "Larry saves $x$ dollars per month. Will Larry's total savings one year from now exceed his present savings by at least $500? (Assume that there is no interest.)",
+    "statement1": "In 6 months Larry's total savings will be $900.",
+    "statement2": "In 3 months Larry's total savings will exceed his present savings by $150.",
+    "correct_answer": "B"
+  },
+  {
+    "question_number": 62,
+    "difficulty": "medium",
+    "problem": "If Randy has twice as many coins as Alice, and if Maria has 7 times as many coins as Alice, what is the combined number of coins that all three of them have?",
+    "statement1": "Alice has 4 fewer coins than Randy.",
+    "statement2": "Maria has 20 more coins than Randy.",
+    "correct_answer": "D"
+  },
+  {
+    "question_number": 63,
+    "difficulty": "medium",
+    "problem": "A line of people waiting to enter a theater consists of seven separate and successive groups. The first person in each group purchases one ticket for each person in the group and for no one else. If $n$ is the total number of tickets sold for the first six groups, is $n$ an even number?",
+    "statement1": "There are no more than 4 people in each group.",
+    "statement2": "The 19th person in line purchases the tickets for the seventh group.",
+    "correct_answer": "B"
+  },
+  {
+    "question_number": 64,
+    "difficulty": "medium",
+    "problem": "If John has exactly 10 coins each of which was minted in 1910 or 1920 or 1930, how many of his coins were minted in 1920?",
+    "statement1": "Exactly 6 of his coins were minted in 1910 or 1920.",
+    "statement2": "Exactly 7 of his coins were minted in 1920 or 1930.",
+    "correct_answer": "C"
+  },
+  {
+    "question_number": 65,
+    "difficulty": "medium",
+    "problem": "The total profit of corporation K was $3,400,000 in year X. What was the total profit in year Y?",
+    "statement1": "Income in year Y was 30 percent more than in year X.",
+    "statement2": "Costs in year Y were 40 percent more than in year X.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 66,
+    "difficulty": "medium",
+    "problem": "Zelma scored 90, 88, and 92 on 3 of the 6 mathematics tests that she took. What was her average (arithmetic mean) score on the 6 tests?",
+    "statement1": "Her average (arithmetic mean) score on 5 of the tests was 90.",
+    "statement2": "Her score on one of the tests was 91.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 67,
+    "difficulty": "medium",
+    "problem": "Will a company lose sales if its strategy focuses on consumer well-being rather than exploiting consumer fears?",
+    "statement1": "The company's current marketing strategy exploits its consumers' fears to drive sales, resulting in increased profits.",
+    "statement2": "From an ethical standpoint, the company should prioritize consumer well-being over short-term profits and refrain from exploiting their fears.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 68,
+    "difficulty": "medium",
+    "problem": "Should a holistic approach be used to measure academic success?",
+    "statement1": "Traditional education policies focus on standardized testing as the primary measure of academic success.",
+    "statement2": "To foster holistic learning, education policies should prioritize a well-rounded curriculum that includes critical thinking, creativity, and practical skills.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 69,
+    "difficulty": "medium",
+    "problem": "Can financial budgeting help individuals avoid debt?",
+    "statement1": "Many individuals struggle with mounting debt due to excessive spending resulting from a lack of financial planning.",
+    "statement2": "To avoid taking out loans, individuals should practice responsible budgeting, enabling them to save for emergencies and achieve financial stability.",
+    "correct_answer": "D"
+  },
+  {
+    "question_number": 70,
+    "difficulty": "medium",
+    "problem": "What kind of behavior is usually displayed by conflicting factions?",
+    "statement1": "In conflicts, some factions resort to aggression and hostility, which escalates the situation.",
+    "statement2": "To promote peaceful resolutions, factions should engage in open communication, empathy, and compromise to find mutually beneficial solutions.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 71,
+    "difficulty": "medium",
+    "problem": "What is the probability of landing on tails at least once in a sequence of 100 tosses of a specific coin?",
+    "statement1": "When tossing the coin, there are only two possible outcomes, heads or tails, and both have an equal chance of occurring.",
+    "statement2": "In a series of 100 tosses of the coin, we can expect almost 50 heads.",
+    "correct_answer": "A"
+  },
+  {
+    "question_number": 72,
+    "difficulty": "medium",
+    "problem": "What are some possible signs of impending rainfall in Exville today?",
+    "statement1": "The weather forecast correctly predicts a 90% chance of rain in Exville today based on heavy cloud cover and low-pressure systems moving into the region.",
+    "statement2": "Given the darkening sky, the sudden drop in temperature, and strong winds, it is highly likely that a rainstorm is imminent in Exville today.",
+    "correct_answer": "D"
+  },
+  {
+    "question_number": 73,
+    "difficulty": "medium",
+    "problem": "A patient experiencing cold-like symptoms goes to a doctor. Is the patient suffering from a viral infection?",
+    "statement1": "Based on their symptoms and medical history, the patient thinks they are suffering from a viral infection.",
+    "statement2": "Due to their knowledge of common illnesses in the local area, the doctor thinks it is more likely that seasonal allergies are the cause of the patient's symptoms.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 74,
+    "difficulty": "medium",
+    "problem": "What should generally be expected if you venture into areas surrounding a road closure?",
+    "statement1": "With a major G20 event happening at the Jawahar Lal Nehru Stadium tonight and reports of road closures in the area, there's a strong likelihood of congestion.",
+    "statement2": "Given the large number of attendees expected at an event at the Jawahar Lal Nehru Stadium tonight, shuttle buses will be provided between the stadium and the International Media Centre.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 75,
+    "difficulty": "medium",
+    "problem": "To fill an order on schedule, a manufacturer had to produce an average (arithmetic mean) of 1,000 tools per day for $n$ days. What is the value of $n$?",
+    "statement1": "Because of production problems, the manufacturer produced only 600 tools per day during the first 5 days.",
+    "statement2": "Because of production problems, the manufacturer had to produce 1,500 tools per day on each of the last 4 days in order to meet the schedule.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 76,
+    "difficulty": "hard",
+    "problem": "The only types of vehicles sold at a certain dealership last month were sedans, trucks, and vans. If the ratio of the number of sedans to the number of trucks to the number of vans sold at the dealership last month was 4:5:7, respectively, what was the total number of vehicles sold at the dealership last month?",
+    "statement1": "The number of vans sold at the dealership last month was between 10 and 20.",
+    "statement2": "The number of sedans sold at the dealership last month was less than 10.",
+    "correct_answer": "A"
+  },
+  {
+    "question_number": 77,
+    "difficulty": "hard",
+    "problem": "Machine M, working alone at its constant rate, produces $x$ widgets every 4 minutes. Machine N, working alone at its constant rate, produces $y$ widgets every 5 minutes. If machines M and N work simultaneously at their respective constant rates for 20 minutes, does machine M produce more widgets than machine N in that time?",
+    "statement1": "$x > 0.8y$",
+    "statement2": "$y = x + 1$",
+    "correct_answer": "A"
+  },
+  {
+    "question_number": 78,
+    "difficulty": "hard",
+    "problem": "What percent of the students at University X are enrolled in a science course but are not enrolled in a biology course?",
+    "statement1": "28 percent of the students at University X are enrolled in a biology course.",
+    "statement2": "70 percent of the students at University X who are enrolled in a science course are enrolled in a biology course.",
+    "correct_answer": "C"
+  },
+  {
+    "question_number": 79,
+    "difficulty": "hard",
+    "problem": "Each Type A machine fills 400 cans per minute, each Type B machine fills 600 cans per minute, and each Type C machine installs 2,400 lids per minute. A lid is installed on each can that is filled and on no can that is not filled. For a particular minute, what is the total number of machines working?",
+    "statement1": "A total of 4,800 cans are filled that minute.",
+    "statement2": "For that minute, there are 2 Type B machines working for every Type C machine working.",
+    "correct_answer": "C"
+  },
+  {
+    "question_number": 80,
+    "difficulty": "hard",
+    "problem": "In a two-month survey of shoppers, each shopper bought one of two brands of detergent, X or Y, in the first month and again bought one of these brands in the second month. In the survey, 90 percent of the shoppers who bought Brand X in the first month bought Brand X again in the second month, while 60 percent of the shoppers who bought Brand Y in the first month bought Brand Y again in the second month. What percent of the shoppers bought Brand Y in the second month?",
+    "statement1": "In the first month, 50 percent of the shoppers bought Brand X.",
+    "statement2": "The total number of shoppers surveyed was 5,000.",
+    "correct_answer": "A"
+  },
+  {
+    "question_number": 81,
+    "difficulty": "hard",
+    "problem": "If the total price of $n$ equally priced shares of a certain stock was $12,000, what was the price per share of the stock?",
+    "statement1": "If the price per share of the stock had been $1 more, the total price of the $n$ shares would have been $300 more.",
+    "statement2": "If the price per share of the stock had been $2 less, the total price of the $n$ shares would have been 5 percent less.",
+    "correct_answer": "D"
+  },
+  {
+    "question_number": 82,
+    "difficulty": "hard",
+    "problem": "In Year X, 8.7 percent of the men in the labor force were unemployed in June compared with 8.4 percent in May. If the number of men in the labor force was the same for both months, how many men were unemployed in June of that year?",
+    "statement1": "In May of Year X, the number of unemployed men in the labor force was 3.36 million.",
+    "statement2": "In Year X, 120,000 more men in the labor force were unemployed in June than in May.",
+    "correct_answer": "D"
+  },
+  {
+    "question_number": 83,
+    "difficulty": "hard",
+    "problem": "On Monday morning a certain machine ran continuously at a uniform rate to fill a production order. At what time did it completely fill the order that morning?",
+    "statement1": "The machine began filling the order at 9:30 a.m.",
+    "statement2": "The machine had filled $\\frac{1}{2}$ of the order by 10:30 a.m. and $\\frac{5}{6}$ of the order by 11:10 a.m.",
+    "correct_answer": "B"
+  },
+  {
+    "question_number": 84,
+    "difficulty": "hard",
+    "problem": "After winning 50 percent of the first 20 games it played, Team A won all of the remaining games it played. What was the total number of games that Team A won?",
+    "statement1": "Team A played 25 games altogether.",
+    "statement2": "Team A won 60 percent of all the games it played.",
+    "correct_answer": "D"
+  },
+  {
+    "question_number": 85,
+    "difficulty": "hard",
+    "problem": "Michael arranged all his books in a bookcase with 10 books on each shelf and no books left over. After Michael acquired 10 additional books, he arranged all his books in a new bookcase with 12 books on each shelf and no books left over. How many books did Michael have before he acquired the 10 additional books?",
+    "statement1": "Before Michael acquired the 10 additional books, he had fewer than 96 books.",
+    "statement2": "Before Michael acquired the 10 additional books, he had more than 24 books.",
+    "correct_answer": "A"
+  },
+  {
+    "question_number": 86,
+    "difficulty": "hard",
+    "problem": "Last year in a group of 30 businesses, 21 reported a net profit and 15 had investments in foreign markets. How many of the businesses did not report a net profit nor invest in foreign markets last year?",
+    "statement1": "Last year 12 of the 30 businesses reported a net profit and had investments in foreign markets.",
+    "statement2": "Last year 24 of the 30 businesses reported a net profit or invested in foreign markets, or both.",
+    "correct_answer": "D"
+  },
+  {
+    "question_number": 87,
+    "difficulty": "hard",
+    "problem": "For each landscaping job that takes more than 4 hours, a certain contractor charges a total of $r$ dollars for the first 4 hours plus $0.2r$ dollars for each additional hour or fraction of an hour, where $r > 100$. Did a particular landscaping job take more than 10 hours?",
+    "statement1": "The contractor charged a total of $288 for the job.",
+    "statement2": "The contractor charged a total of $2.4r$ dollars for the job.",
+    "correct_answer": "B"
+  },
+  {
+    "question_number": 88,
+    "difficulty": "hard",
+    "problem": "If 75 percent of the guests at a certain banquet ordered dessert, what percent of the guests ordered coffee?",
+    "statement1": "60 percent of the guests who ordered dessert also ordered coffee.",
+    "statement2": "90 percent of the guests who ordered coffee also ordered dessert.",
+    "correct_answer": "C"
+  },
+  {
+    "question_number": 89,
+    "difficulty": "hard",
+    "problem": "A tank containing water started to leak. Did the tank contain more than 30 gallons of water when it started to leak? (Note: 1 gallon = 128 ounces)",
+    "statement1": "The water leaked from the tank at a constant rate of 6.4 ounces per minute.",
+    "statement2": "The tank became empty less than 12 hours after it started to leak.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 90,
+    "difficulty": "hard",
+    "problem": "Each of the 45 books on a shelf is written either in English or in Spanish, and each of the books is either a hardcover book or a paperback. If a book is to be selected at random from the books on the shelf, is the probability less than $\\frac{1}{2}$ that the book selected will be a paperback written in Spanish?",
+    "statement1": "Of the books on the shelf, 30 are paperbacks.",
+    "statement2": "Of the books on the shelf, 15 are written in Spanish.",
+    "correct_answer": "B"
+  },
+  {
+    "question_number": 91,
+    "difficulty": "hard",
+    "problem": "A small school has three foreign language classes, one in French, one in Spanish, and one in German. How many of the 34 students enrolled in the Spanish class are also enrolled in the French class?",
+    "statement1": "There are 27 students enrolled in the French class, and 49 students enrolled in either the French class, the Spanish class, or both of these classes.",
+    "statement2": "One-half of the students enrolled in the Spanish class are enrolled in more than one foreign language class.",
+    "correct_answer": "A"
+  },
+  {
+    "question_number": 92,
+    "difficulty": "hard",
+    "problem": "Last year $\\frac{3}{5}$ of the members of a certain club were males. This year the members of the club include all the members from last year plus some new members. Is the fraction of the members of the club who are males greater this year than last year?",
+    "statement1": "More than half of the new members are male.",
+    "statement2": "The number of members of the club this year is $\\frac{6}{5}$ the number of members last year.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 93,
+    "difficulty": "hard",
+    "problem": "Machines K, M, and N, each working alone at its constant rate, produce 1 widget in $x$, $y$, and 2 minutes, respectively. If Machines K, M, and N work simultaneously at their respective constant rates, does it take them less than 1 hour to produce a total of 50 widgets?",
+    "statement1": "$x < 1.5$",
+    "statement2": "$y < 1.2$",
+    "correct_answer": "D"
+  },
+  {
+    "question_number": 94,
+    "difficulty": "hard",
+    "problem": "Stations X and Y are connected by two separate, straight, parallel rail lines that are 250 miles long. Train P and train Q simultaneously left Station X and Station Y, respectively, and each train traveled to the other's point of departure. The two trains passed each other after traveling for 2 hours. When the two trains passed, which train was nearer to its destination?",
+    "statement1": "At the time when the two trains passed, train P had averaged a speed of 70 miles per hour.",
+    "statement2": "Train Q averaged a speed of 55 miles per hour for the entire trip.",
+    "correct_answer": "A"
+  },
+  {
+    "question_number": 95,
+    "difficulty": "hard",
+    "problem": "In a two-story apartment complex, each apartment on the upper floor rents for 75 percent as much as each apartment on the lower floor. If the total monthly rent is $15,300 when rent is collected on all of the apartments, what is the monthly rent on each apartment on the lower floor?",
+    "statement1": "An apartment on the lower floor rents for $150 more per month than an apartment on the upper floor.",
+    "statement2": "There are 6 more apartments on the upper floor than on the lower floor.",
+    "correct_answer": "A"
+  },
+  {
+    "question_number": 96,
+    "difficulty": "hard",
+    "problem": "A motorboat, which is set to travel at $k$ kilometers per hour in still water, travels directly up and down the center of a straight river so that the change in the boat's speed relative to the shore depends only on the speed and direction of the current. What is the value of $k$?",
+    "statement1": "It takes the same amount of time for the boat to travel 4 kilometers directly downstream as it takes for it to travel 3 kilometers directly upstream.",
+    "statement2": "The current flows directly downstream at a constant rate of 2.5 kilometers per hour.",
+    "correct_answer": "C"
+  },
+  {
+    "question_number": 97,
+    "difficulty": "hard",
+    "problem": "If the book value of a certain piece of equipment was $5,000 exactly 5 years ago, what is its present book value?",
+    "statement1": "From the time the piece of equipment was purchased, its book value decreased by 10 percent of its purchase price each year of its life.",
+    "statement2": "The present book value of another piece of equipment is $2,000.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 98,
+    "difficulty": "hard",
+    "problem": "The total cost to charter a bus was shared equally by the people who went on a certain trip. If the total cost to charter the bus was $360, how many people went on the trip?",
+    "statement1": "Each person who went on the trip paid $9 to charter the bus.",
+    "statement2": "If 4 fewer people had gone on the trip, each person's share of the total cost to charter the bus would have increased by $1.",
+    "correct_answer": "D"
+  },
+  {
+    "question_number": 99,
+    "difficulty": "hard",
+    "problem": "If each of the stamps Carla bought cost 20, 25, or 30 cents and she bought at least one of each denomination, what is the number of 25-cent stamps that she bought?",
+    "statement1": "She spent a total of $1.45 for stamps.",
+    "statement2": "She bought exactly 6 stamps.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 100,
+    "difficulty": "hard",
+    "problem": "A car traveled a distance of $d$ miles in $t$ minutes at an average rate of $r$ miles per minute. What is the ratio of $d$ to $r$?",
+    "statement1": "$t = 30$",
+    "statement2": "$d = 25$",
+    "correct_answer": "A"
+  },
+  {
+    "question_number": 101,
+    "difficulty": "hard",
+    "problem": "Pat is reading a book that has a total of 15 chapters. Has Pat read at least $\\frac{1}{3}$ of the pages in the book?",
+    "statement1": "Pat has just finished reading the first 5 chapters.",
+    "statement2": "Each of the first 3 chapters has more pages than each of the other 12 chapters in the book.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 102,
+    "difficulty": "hard",
+    "problem": "Should the choices made by 100 participants in a survey about Product X be said to proportionately represent the preferences of the entire population?",
+    "statement1": "In the survey of 100 participants, 70% said they preferred Product X.",
+    "statement2": "While the survey provided valuable insights into Product X, the small sample may not be representative of the entire population's preferences.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 103,
+    "difficulty": "hard",
+    "problem": "What is a limiting factor when it comes to us using the most effective solution?",
+    "statement1": "We have identified several potential solutions, but a lack of funding hinders their implementation.",
+    "statement2": "As the most effective solution requires extensive resources, we must opt for a more affordable option given our budget.",
+    "correct_answer": "B"
+  },
+  {
+    "question_number": 104,
+    "difficulty": "hard",
+    "problem": "What are all the important considerations for making accurate projections?",
+    "statement1": "Based on the available data, we believe that the market demand for our product will increase by 20% in the next quarter.",
+    "statement2": "Without comprehensive market research, our projection may not account for external factors that could influence fluctuations in demand.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 105,
+    "difficulty": "hard",
+    "problem": "Does Company X strive to maintain a low defect rate in order to ensure product quality?",
+    "statement1": "Company X's manufacturing process has a defect rate of 2% according to quality control data.",
+    "statement2": "Monitoring the defect rate in a manufacturing process is essential to ensure product quality, and a low percentage indicates a well-maintained production process.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 106,
+    "difficulty": "hard",
+    "problem": "How might career advancement be described as potentially linked to both growth and decline?",
+    "statement1": "Working long hours and overtime may lead to higher productivity and career advancement but is likely to cause a decline in physical and mental well-being.",
+    "statement2": "Maintaining a work-life balance is important to reduce the negative effect that working too much has on a person's quality of life.",
+    "correct_answer": "A"
+  },
+  {
+    "question_number": 107,
+    "difficulty": "hard",
+    "problem": "What is an example of how investment in healthcare resources might sometimes create a challenge?",
+    "statement1": "Investment in both advanced medical technology and specialized treatments can improve patient outcomes for certain conditions. Nevertheless, it may put a strain on healthcare budgets.",
+    "statement2": "When it comes to allocating resources in the healthcare sector, directing money toward the purchase of advanced medical equipment could potentially limit access to other essential services and treatments.",
+    "correct_answer": "D"
+  },
+  {
+    "question_number": 108,
+    "difficulty": "hard",
+    "problem": "A person bought $x$ number of apples, $y$ number of oranges, and $z$ number of mangoes from a shop. What is the total price of this transaction if each apple costs $2, each orange costs $2.50, and each mango costs $3?",
+    "statement1": "The number of apples bought is 12 more than the number of oranges bought. The number of mangoes bought is half the number of apples bought.",
+    "statement2": "The average number of fruits purchased from the three varieties is greater than 29 and less than 33.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 109,
+    "difficulty": "hard",
+    "problem": "Adam received a certain monetary amount in bills having only three denominations: $1, $5, and $10. What is the total monetary amount in bills that he received?",
+    "statement1": "The numbers of $1, $5, and $10 bills Adam received, respectively, are in the ratio 3:5:8.",
+    "statement2": "The ratio of the monetary amount Adam received in $1 bills to the monetary amount he received in $10 bills is 3:80.",
+    "correct_answer": "E"
+  },
+  {
+    "question_number": 110,
+    "difficulty": "hard",
+    "problem": "Exactly 3 investors—A, B, and C—invested in a certain business, each for a certain number of months. For these investments, what is the ratio of the profit earned by A to the profit earned by B to the profit earned by C? (Note: Profit earned is proportional to the product of investment amount and investment duration.)",
+    "statement1": "A invested twice as much as B, and C invested half as much as A and B together.",
+    "statement2": "All 3 investments were for the same number of months.",
+    "correct_answer": "B"
+  },
+  {
+    "question_number": 111,
+    "difficulty": "hard",
+    "problem": "The ratio of A's current age to B's current age is 5:8. What will be the sum of their ages 10 years from now? (Note: Assume that neither A nor B dies in the next 10 years.)",
+    "statement1": "If A had been born 2 years later and B had been born 2 years earlier, then the ratio of A's current age to B's current age would be 14:25.",
+    "statement2": "A's age 5 years ago was half the age that B will be 2 years from now.",
+    "correct_answer": "D"
+  },
+  {
+    "question_number": 112,
+    "difficulty": "hard",
+    "problem": "A's father is 6 years older than her mother. The ratio of A's age to her mother's age is 1:4. What is the age of A's father?",
+    "statement1": "A's father is 30 years older than A.",
+    "statement2": "The ratio of A's age to her father's age is 4:19.",
+    "correct_answer": "A"
+  },
+  {
+    "question_number": 113,
+    "difficulty": "hard",
+    "problem": "The salary of A is what percentage of the combined salaries of B and C?",
+    "statement1": "Twice the salary of A is equal to three times the salary of B.",
+    "statement2": "150% of B's salary is $160 more than 120% of C's salary.",
+    "correct_answer": "E"
+  }
+]
