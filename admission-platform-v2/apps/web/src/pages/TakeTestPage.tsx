@@ -1353,12 +1353,40 @@ export default function TakeTestPage() {
 
       setConfig(configData);
 
+      // Check if this is GMAT Assessment Iniziale test 1 - if so, pull from general question pool
+      const isGMATAssessmentInitial1 =
+        testType === 'GMAT' &&
+        exerciseType === 'Assessment Iniziale' &&
+        testInfo.test_number === 1;
+
+      console.log('🎯 [PREVIEW] Question Fetching Debug:', {
+        testType,
+        exerciseType,
+        test_number: testInfo.test_number,
+        isGMATAssessmentInitial1
+      });
+
       // Load questions - SEQUENTIAL ORDER (no randomization in preview)
-      const { data: questions, error: questionsError } = await supabase
+      const questionsQuery = supabase
         .from('2V_questions')
-        .select('*')
-        .eq('test_id', previewTestId)
-        .order('question_number', { ascending: true });
+        .select('*');
+
+      // For GMAT Assessment Iniziale 1, fetch from general pool by test_type
+      // For all other tests, fetch by test_id
+      if (isGMATAssessmentInitial1) {
+        console.log('✅ [PREVIEW] Fetching from GMAT question pool (all test_type=GMAT questions)');
+        questionsQuery.eq('test_type', testType);
+      } else {
+        console.log('📋 [PREVIEW] Fetching questions for specific test_id:', previewTestId);
+        questionsQuery.eq('test_id', previewTestId);
+      }
+
+      const { data: questions, error: questionsError } = await questionsQuery.order('question_number', { ascending: true });
+
+      console.log('📊 [PREVIEW] Questions fetched:', {
+        count: questions?.length || 0,
+        sections: questions ? [...new Set(questions.map(q => q.section))].filter(Boolean) : []
+      });
 
       if (questionsError) throw questionsError;
       if (!questions || questions.length === 0) {
@@ -1407,7 +1435,7 @@ export default function TakeTestPage() {
       const tableSuffix = isTestMode ? '_test' : '';
       const { data: assignment, error: assignmentError } = await db
         .from(`2V_test_assignments${tableSuffix}`)
-        .select(`*, 2V_tests${tableSuffix}(id, test_type, exercise_type, format)`)
+        .select(`*, 2V_tests${tableSuffix}(id, test_type, exercise_type, format, test_number)`)
         .eq('id', assignmentId)
         .single() as { data: TestAssignment | null; error: unknown };
 
@@ -1593,11 +1621,33 @@ export default function TakeTestPage() {
       // Questions are linked by test_id
       const testId = testInfo.id;
 
+      // Check if this is GMAT Assessment Iniziale test 1 - if so, pull from general question pool
+      const isGMATAssessmentInitial1 =
+        testType === 'GMAT' &&
+        exerciseType === 'Assessment Iniziale' &&
+        testInfo.test_number === 1;
+
+      console.log('🎯 Question Fetching Debug:', {
+        testType,
+        exerciseType,
+        test_number: testInfo.test_number,
+        isGMATAssessmentInitial1
+      });
+
       // For no_sections mode, order only by question_number; otherwise by section then question_number
       const questionsQuery = supabase
         .from('2V_questions')
-        .select('*')
-        .eq('test_id', testId);
+        .select('*');
+
+      // For GMAT Assessment Iniziale 1, fetch from general pool by test_type
+      // For all other tests, fetch by test_id
+      if (isGMATAssessmentInitial1) {
+        console.log('✅ Fetching from GMAT question pool (all test_type=GMAT questions)');
+        questionsQuery.eq('test_type', testType);
+      } else {
+        console.log('📋 Fetching questions for specific test_id:', testId);
+        questionsQuery.eq('test_id', testId);
+      }
 
       if (configData.section_order_mode === 'no_sections') {
         questionsQuery.order('question_number');
@@ -1606,6 +1656,15 @@ export default function TakeTestPage() {
       }
 
       const { data: questions, error: questionsError } = await questionsQuery as { data: Question[] | null; error: unknown };
+
+      console.log('📊 Questions fetched:', {
+        count: questions?.length || 0,
+        firstQuestion: questions?.[0] ? {
+          id: questions[0].id,
+          section: questions[0].section,
+          question_number: questions[0].question_number
+        } : null
+      });
 
       if (questionsError) throw questionsError;
 
