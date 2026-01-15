@@ -286,10 +286,25 @@ export type QuestionData = QRQuestionData | VRQuestionData | DIQuestionData;
 
 /**
  * Converts a parsed question to database row format
+ * Includes explanation in question_data JSONB for display in TestResultsPage
  */
 export function toDBRow(question: GMATQuestion): Omit<BaseQuestionRow, "id" | "created_at" | "updated_at"> {
   const questionType: QuestionType =
     question.section === "Data Insights" ? "data_insights" : "multiple_choice";
+
+  // Extract explanation from question (QR/VR) or from questionData (DS)
+  let explanation: string | null = null;
+  if ("explanation" in question && question.explanation) {
+    explanation = question.explanation;
+  } else if ("questionData" in question && "explanation" in question.questionData) {
+    explanation = (question.questionData as { explanation?: string }).explanation ?? null;
+  }
+
+  // Include explanation inside question_data JSONB
+  const questionDataWithExplanation = {
+    ...question.questionData,
+    explanation: explanation,
+  };
 
   return {
     test_type: "GMAT",
@@ -299,7 +314,7 @@ export function toDBRow(question: GMATQuestion): Omit<BaseQuestionRow, "id" | "c
     materia: null,
     difficulty: question.difficulty ?? null,
     difficulty_level: question.difficultyLevel ?? null,
-    question_data: JSON.stringify(question.questionData),
+    question_data: JSON.stringify(questionDataWithExplanation),
     answers: JSON.stringify(question.answers),
     is_active: true,
     duplicate_question_ids: "[]",

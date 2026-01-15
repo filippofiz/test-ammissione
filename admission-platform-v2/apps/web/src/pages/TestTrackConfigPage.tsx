@@ -914,14 +914,27 @@ export default function TestTrackConfigPage() {
     >
       <div className="flex-1 p-4 md:p-8">
         <div className="max-w-7xl mx-auto">
-          {/* Back Button */}
-          <button
-            onClick={() => navigate('/tutor')}
-            className="mb-6 flex items-center gap-2 text-brand-dark hover:text-brand-green transition-colors group"
-          >
-            <FontAwesomeIcon icon={faArrowLeft} className="group-hover:-translate-x-1 transition-transform" />
-            <span className="font-medium">Back to Dashboard</span>
-          </button>
+          {/* Navigation */}
+          <div className="flex items-center justify-between mb-6">
+            <button
+              onClick={() => navigate('/tutor')}
+              className="flex items-center gap-2 text-brand-dark hover:text-brand-green transition-colors group"
+            >
+              <FontAwesomeIcon icon={faArrowLeft} className="group-hover:-translate-x-1 transition-transform" />
+              <span className="font-medium">Back to Dashboard</span>
+            </button>
+
+            {/* GMAT-specific: Question Allocation Button */}
+            {testType === 'GMAT' && (
+              <button
+                onClick={() => navigate('/tutor/gmat-question-allocation')}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-colors flex items-center gap-2"
+              >
+                <FontAwesomeIcon icon={faCog} />
+                Question Allocation
+              </button>
+            )}
+          </div>
 
           {/* Track Type Tabs */}
           <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">

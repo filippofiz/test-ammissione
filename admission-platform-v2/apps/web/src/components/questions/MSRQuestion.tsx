@@ -8,6 +8,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheckCircle, faTimesCircle } from '@fortawesome/free-solid-svg-icons';
 import { LaTeX } from '../LaTeX';
 import { normalizeWhitespace, normalizeOptionText } from '../../lib/textUtils';
+import { ExplanationDisplay } from './ExplanationDisplay';
 
 interface MSRSource {
   content?: string;
@@ -32,9 +33,10 @@ interface MSRQuestionProps {
   readOnly?: boolean; // For results view - disables answer buttons
   correctAnswers?: string[]; // For results view - shows correct answers
   showResults?: boolean; // For results view - displays answer feedback
+  explanation?: string; // For results view - shows explanation after answer
 }
 
-export function MSRQuestion({ sources, questions, selectedAnswers, onAnswerChange, readOnly = false, correctAnswers = [], showResults = false }: MSRQuestionProps) {
+export function MSRQuestion({ sources, questions, selectedAnswers, onAnswerChange, readOnly = false, correctAnswers = [], showResults = false, explanation }: MSRQuestionProps) {
   const [activeTab, setActiveTab] = useState(0);
 
   return (
@@ -195,6 +197,11 @@ export function MSRQuestion({ sources, questions, selectedAnswers, onAnswerChang
           );
         })}
       </div>
+
+      {/* Explanation (shown in results view) */}
+      {showResults && explanation && (
+        <ExplanationDisplay explanation={explanation} />
+      )}
     </div>
   );
 }
