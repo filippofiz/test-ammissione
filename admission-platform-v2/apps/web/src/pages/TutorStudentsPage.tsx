@@ -27,6 +27,7 @@ import {
   faSearch,
   faIdCard,
   faClock,
+  faBook,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import { CountdownTimer } from '../components/CountdownTimer';
@@ -576,6 +577,21 @@ export default function TutorStudentsPage() {
                             <FontAwesomeIcon icon={faIdCard} />
                             <span className="hidden md:inline">Profile</span>
                           </button>
+
+                          {/* Materials Button - Only show for GMAT students */}
+                          {student.tests?.includes('GMAT') && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/tutor/student/${student.id}/gmat-materials`);
+                              }}
+                              className="px-3 py-2 bg-white border-2 border-blue-500 text-blue-500 rounded-lg hover:bg-blue-500 hover:text-white transition-all text-sm font-semibold flex items-center gap-2"
+                              title="Manage GMAT study materials"
+                            >
+                              <FontAwesomeIcon icon={faBook} />
+                              <span className="hidden md:inline">Materials</span>
+                            </button>
+                          )}
 
                           {/* Tests Button */}
                           <button

@@ -736,6 +736,7 @@ export default function TestResultsPage() {
           onAnswerChange={noOp}
           readOnly={true}
           showResults={true}
+          explanation={questionData.explanation}
         />
       );
     }
@@ -760,6 +761,7 @@ export default function TestResultsPage() {
           readOnly={true}
           correctAnswers={correctMSRAnswers}
           showResults={true}
+          explanation={questionData.explanation}
         />
       );
     }
@@ -788,6 +790,7 @@ export default function TestResultsPage() {
           correctBlank1={correctAnswerData}
           correctBlank2={correctAnswerData}
           showResults={true}
+          explanation={questionData.explanation}
         />
       );
     }
@@ -817,6 +820,7 @@ export default function TestResultsPage() {
           tableSortable={true}
           correctAnswers={correctTAAnswers}
           showResults={true}
+          explanation={questionData.explanation}
         />
       );
     }
@@ -848,6 +852,7 @@ export default function TestResultsPage() {
           correctColumn1={correctTPAAnswers}
           correctColumn2={correctTPAAnswers}
           showResults={true}
+          explanation={questionData.explanation}
         />
       );
     }
@@ -874,6 +879,7 @@ export default function TestResultsPage() {
           onAnswerChange={noOp}
           readOnly={true}
           showResults={true}
+          explanation={questionData.explanation}
         />
       );
     }
