@@ -1,0 +1,17 @@
+{
+  "questions": [
+    {
+      "question_number": 613,
+      "difficulty": "easy",
+      "stimulus_text": "Seventeenth-century treatises and other sources of political authority describe areas of sovereignty rather than illustrate them using maps.",
+      "question_text": "During the fifteenth century in Europe, mapmakers simplified the borders of sovereignty by drawing clear lines of demarcation between political powers.",
+      "options": {
+        "a": "Seventeenth-century treatises and other sources of political authority describe areas of sovereignty rather than illustrate them using maps.",
+        "b": "During the fifteenth century in Europe, mapmakers simplified the borders of sovereignty by drawing clear lines of demarcation between political powers.",
+        "c": "Sascha: The attempt to ban parliament's right to pass directed-spending bills—bills that contain provisions specifically funding the favorite projects of some powerful politicians—is antidemocratic. Our nation's constitution requires that money be drawn from our treasury only when so stipulated by laws passed by parliament, the branch of government most directly representative of the citizens. This requirement is based on the belief that exercising the power to spend public resources involves the ultimate exercise of state authority and that therefore ___",
+        "d": "Which of the following most logically completes Sascha's argument?",
+        "e": "A. designating funding specifically for the favorite projects of some powerful politicians should be considered antidemocratic\nB. the right to exercise such a power should belong exclusively to the branch of government most directly representative of the citizens\nC. exercising the power to spend public resources is in most cases—but not all—protected by the constitution\nD. modifications to any spending bills should be considered expenditures authorized by law\nE. only officials who are motivated by concerns for reelection should retain that power"
+      }
+    }
+  ]
+}

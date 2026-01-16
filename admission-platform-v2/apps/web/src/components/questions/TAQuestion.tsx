@@ -8,6 +8,7 @@ import { faCheckCircle, faTimesCircle } from '@fortawesome/free-solid-svg-icons'
 import { MathJaxRenderer } from '../MathJaxRenderer';
 import { SortableTable } from '../SortableTable';
 import { normalizeWhitespace } from '../../lib/textUtils';
+import { ExplanationDisplay } from './ExplanationDisplay';
 
 interface TAStatement {
   text: string;
@@ -25,6 +26,7 @@ interface TAQuestionProps {
   tableSortable?: boolean; // Allow table sorting even in readOnly mode
   correctAnswers?: Record<number, 'true' | 'false'>; // For results view - shows correct answers
   showResults?: boolean; // For results view - displays answer feedback
+  explanation?: string; // For results view - shows explanation after answer
 }
 
 export function TAQuestion({
@@ -38,6 +40,7 @@ export function TAQuestion({
   tableSortable = true,
   correctAnswers = {},
   showResults = false,
+  explanation,
 }: TAQuestionProps) {
   // Transform correctAnswers if needed
   // Database stores as: {stmt0: "col1", stmt1: "col2"} where col1=true, col2=false
@@ -220,6 +223,11 @@ export function TAQuestion({
           })}
         </div>
       </div>
+
+      {/* Explanation (shown in results view) */}
+      {showResults && explanation && (
+        <ExplanationDisplay explanation={explanation} />
+      )}
     </div>
   );
 }

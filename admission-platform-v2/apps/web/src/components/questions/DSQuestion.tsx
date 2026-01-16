@@ -7,6 +7,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheckCircle, faTimesCircle } from '@fortawesome/free-solid-svg-icons';
 import { MathJaxRenderer } from '../MathJaxRenderer';
 import { normalizeWhitespace } from '../../lib/textUtils';
+import { ExplanationDisplay } from './ExplanationDisplay';
 
 interface DSQuestionProps {
   problem: string;
@@ -17,6 +18,7 @@ interface DSQuestionProps {
   onAnswerChange: (answer: string) => void;
   readOnly?: boolean; // For results view - disables answer buttons
   showResults?: boolean; // For results view - displays answer feedback
+  explanation?: string; // For results view - shows explanation after answer
 }
 
 const DS_OPTIONS = [
@@ -51,6 +53,7 @@ export function DSQuestion({
   onAnswerChange,
   readOnly = false,
   showResults = false,
+  explanation,
 }: DSQuestionProps) {
   return (
     <div className="space-y-6">
@@ -155,6 +158,11 @@ export function DSQuestion({
           );
         })}
       </div>
+
+      {/* Explanation (shown in results view) */}
+      {showResults && explanation && (
+        <ExplanationDisplay explanation={explanation} />
+      )}
     </div>
   );
 }

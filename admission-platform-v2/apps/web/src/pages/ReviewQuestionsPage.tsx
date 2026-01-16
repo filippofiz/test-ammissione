@@ -35,6 +35,7 @@ import { MathJaxProvider, MathJaxRenderer } from '../components/MathJaxRenderer'
 import { AdvancedGraphRenderer } from '../components/GraphRenderer';
 import RechartsRenderer from '../components/RechartsRenderer';
 import { FlaggedQuestionEditor } from '../components/FlaggedQuestionEditor';
+import { DataInsightsPreview } from '../components/questions/DataInsightsPreview';
 import { supabase } from '../lib/supabase';
 import * as pdfjsLib from 'pdfjs-dist';
 import jsPDF from 'jspdf';
@@ -2623,9 +2624,16 @@ export default function ReviewQuestionsPage() {
                               )}
                             </div>
 
-                          {/* Question Text */}
+                          {/* Question Content - Different rendering for Data Insights vs regular questions */}
                           <div className="bg-blue-50 p-4 rounded-lg mb-3 border border-blue-200 overflow-x-auto">
-                            {editingQuestionId === question.id ? (
+                            {question.question_data?.di_type ? (
+                              /* Data Insights Question - Use specialized preview component */
+                              <DataInsightsPreview
+                                questionData={question.question_data}
+                                answers={question.answers}
+                                showCorrectAnswer={true}
+                              />
+                            ) : editingQuestionId === question.id ? (
                               <textarea
                                 value={
                                   getQuestionLanguage(question.id) === 'en'
