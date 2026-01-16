@@ -8,6 +8,7 @@ import { faCheckCircle, faTimesCircle } from '@fortawesome/free-solid-svg-icons'
 import { useTranslation } from 'react-i18next';
 import { MathJaxRenderer } from '../MathJaxRenderer';
 import { normalizeWhitespace, normalizeOptionText } from '../../lib/textUtils';
+import { ExplanationDisplay } from './ExplanationDisplay';
 
 interface MultipleChoiceQuestionProps {
   questionText: string;
@@ -21,6 +22,7 @@ interface MultipleChoiceQuestionProps {
   readOnly?: boolean; // For results view - disables answer buttons
   correctAnswer?: string; // For results view - shows correct answer
   showResults?: boolean; // For results view - displays answer feedback
+  explanation?: string; // For results view - shows explanation after answer
 }
 
 export function MultipleChoiceQuestion({
@@ -35,6 +37,7 @@ export function MultipleChoiceQuestion({
   readOnly = false,
   correctAnswer,
   showResults = false,
+  explanation,
 }: MultipleChoiceQuestionProps) {
   const { t } = useTranslation();
 
@@ -160,6 +163,11 @@ export function MultipleChoiceQuestion({
           );
         })}
           </div>
+
+          {/* Explanation (shown in results view) */}
+          {showResults && explanation && (
+            <ExplanationDisplay explanation={explanation} />
+          )}
         </div>
       </div>
     );
@@ -272,6 +280,11 @@ export function MultipleChoiceQuestion({
           );
         })}
       </div>
+
+      {/* Explanation (shown in results view) */}
+      {showResults && explanation && (
+        <ExplanationDisplay explanation={explanation} />
+      )}
     </div>
   );
 }

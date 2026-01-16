@@ -1,0 +1,295 @@
+[
+  {
+    "question_number": 410,
+    "scenario": "Trains M and N are traveling west on parallel tracks. At exactly noon, the front of Train M, which is traveling at a constant speed of 80 kilometers per hour (km/h), is at the rail crossing at Location X, and the front of Train N, which is traveling at a constant speed of 65 km/h, is 30 km west of the rail crossing at Location X. The trains continue traveling at their respective speeds until the front of Train M and the front of Train N are simultaneously at the rail crossing at Location Y.\n\nIn the table, identify the number of kilometers that the front of Train M has traveled between noon and 12:45 p.m. and the number of kilometers that the front of Train N has traveled between noon and 1:00 p.m.",
+    "column1_title": "Front of Train M",
+    "column2_title": "Front of Train N",
+    "shared_options": ["55", "60", "65", "70", "75"],
+    "statement_title": "Option"
+  },
+  {
+    "question_number": 411,
+    "scenario": "An international basketball tournament will be held in either Nation QN or Nation RN. Exactly six nations, including the host, plan to participate, depending on the following conditions:\n\nSN will participate only if TN does. UN will not participate if either VN or WN does. WN will not participate unless the tournament is held in RN.\n\nBased on the information provided, and assuming WN participates, in the first column select the nation that must also participate, and in the second column select the nation that will not participate. Make only two selections, one in each column.",
+    "column1_title": "Must participate",
+    "column2_title": "Will not participate",
+    "shared_options": ["QN", "RN", "SN", "TN", "UN", "VN"],
+    "statement_title": "Nation"
+  },
+  {
+    "question_number": 412,
+    "scenario": "A portion of an automobile test track is divided into Segment A, Segment B, and Segment C, in that order. In a performance test on a car, the car traveled Segment A at a constant speed of 140 kilometers per hour (km/h). Immediately after this, the car rapidly slowed on Segment B and then traveled on Segment C at a constant speed of 70 km/h. The length of Segment C is 3 times the length of Segment A, and it took a total of 42 minutes for the car to travel both Segments A and C. In the table, select the length of Segment A, in kilometers, and select the length of Segment C, in kilometers. Make only two selections, one in each column.",
+    "column1_title": "Length of Segment A (kilometers)",
+    "column2_title": "Length of Segment C (kilometers)",
+    "shared_options": ["8", "14", "24", "42", "72", "126"],
+    "statement_title": "Option"
+  },
+  {
+    "question_number": 413,
+    "scenario": "Let $X$, $Y$, and $Z$ denote the number of international students, in thousands, that Company U predicted would be studying in the United States (US) during the school years 2014-2015, 2019-2020, and 2024-2025, respectively. The average (arithmetic mean) of $X$, $Y$, and $Z$ is 1,128, and $Y = 1,124$. Company U predicted that there would be more international students studying in the US during the 2024-2025 school year than during the 2014-2015 school year.\n\nIn the table, identify a value of $X$ and a value of $Z$ that are jointly consistent with the information provided. Make only two selections, one in each column.",
+    "column1_title": "X",
+    "column2_title": "Z",
+    "shared_options": ["910", "995", "1,175", "1,350", "1,435"],
+    "statement_title": "Value"
+  },
+  {
+    "question_number": 414,
+    "scenario": "Advice from a computer security expert on passwords used for accessing online accounts follows:\n\nComputer users should use a different password for each online account. They should also use strong passwords, which are hard for hackers to decipher. However, strong passwords are difficult to remember, and this is especially the case for users who have multiple online accounts.\n\nFortunately, software is available at no cost that can store and encrypt a user's passwords: the user need only remember one password to access the rest. For users willing to take the time to install the software on a computer and enter all the required data, such software provides one way to comply with my advice. Some versions of the software can be copied to a portable device, such as a USB drive, whereby a user can access passwords from any compatible computer.\n\nFor computer users with multiple accounts who would not otherwise use a different strong password on every account, the expert's advice amounts to suggesting that such users make certain sacrifices in order to make certain gains. Indicate by appropriate selections in the first and second column which of the items in the third column such users would sacrifice and which they would gain. Make only two selections, one in each column.",
+    "column1_title": "Sacrifice",
+    "column2_title": "Gain",
+    "shared_options": ["Money", "Computing speed", "Security", "Number of online accounts", "Time"],
+    "statement_title": "Factor"
+  },
+  {
+    "question_number": 415,
+    "scenario": "Some studies of how it was that Prussia resisted the wave of European democratization in the nineteenth century point to Prussia's unequal distribution of land ownership as the principal explanation. And political figures from areas in Prussia with high inequality in land ownership tended to be the staunchest opponents of democratic reforms.\n\nHowever, arguments that focus only on those figures' conflicts with landless people ignore the fact that political figures are not only representatives of socioeconomic interests but also political actors embedded in particular contexts that shape whether they support democratic reforms. Historians must take such contexts into account if they hope to explain what transpired in Prussia during this period.\n\nSelect Passage for the statement that best describes the purpose of the passage as a whole, and select Portion in Boldface for the statement that best describes the purpose of the portion in boldface. Make only two selections, one in each column.",
+    "column1_title": "Passage",
+    "column2_title": "Portion in Boldface",
+    "shared_options": [
+      "To offer an alternative to the standard explanation of a particular historical event",
+      "To provide evidence that economic issues were at the root of a particular historical event",
+      "To criticize a certain type of argument about a particular historical event",
+      "To criticize the motives of political figures involved in a particular historical event",
+      "To encourage historians not to approach a particular historical event from too narrow a perspective"
+    ],
+    "statement_title": "Purpose"
+  },
+  {
+    "question_number": 416,
+    "scenario": "In September 2010, Armando purchased 5 identically priced shirts and 3 identically priced pairs of trousers from a certain department store. Armando paid a total of €28.85 for the shirts and €38.97 for the trousers. In October 2010, the department store held a sale, taking 25% off the September price of everything in the store. Armando returned to the store during the October 2010 sale and bought 11 of the shirts and 7 pairs of the trousers for some friends.\n\nIn the table, select how much Armando paid in October for the 11 shirts and 7 pairs of trousers, rounding for each item to the nearest cent. Make only one selection in each column.",
+    "column1_title": "Shirts",
+    "column2_title": "Trousers",
+    "shared_options": ["€47.60", "€63.51", "€68.20", "€79.39", "€90.91", "€204.54"],
+    "statement_title": "Amount"
+  },
+  {
+    "question_number": 417,
+    "scenario": "A city is hosting a table tennis tournament for its residents. Each team has exactly two players, and each player is on exactly one team. In each round, each team plays exactly one other team and either wins or loses. The winning team advances to the next round and the losing team is eliminated. No team or player drops out except by losing a game. The tournament is in progress, and exactly 512 players participated in the first round.\n\nFrom the available options, select a number of tournament rounds and a number of teams such that after the specified number of rounds there will be the specified number of teams remaining in the tournament. Make only two selections, one in each column.",
+    "column1_title": "Rounds Completed",
+    "column2_title": "Teams Remaining",
+    "shared_options": ["2", "4", "8", "16", "32"],
+    "statement_title": "Number"
+  },
+  {
+    "question_number": 418,
+    "scenario": "Adilah, Bao, Davi, Laszlo, Saleema, and Yarah work in a firm's legal department. Adilah supervises Bao and Davi, and Laszlo supervises Saleema and Yarah. These are the only supervisory relationships involving these six employees. Each document that the department processes must be initially reviewed by exactly one department member. Each document reviewed by a department member must then be reviewed by that person's supervisor. No other rules require anyone else to review any document. Anyone not required to review a given document will not review it.\n\nSelect Laszlo among reviewers for the maximum number of department members who could have reviewed a single document if Laszlo was among the reviewers. Select Adilah among reviewers for the maximum number of department members who could have reviewed a single document if Adilah was among the reviewers. Make only two selections, one in each column.",
+    "column1_title": "Laszlo among reviewers",
+    "column2_title": "Adilah among reviewers",
+    "shared_options": ["1", "2", "3", "4", "5", "6"],
+    "statement_title": "Number"
+  },
+  {
+    "question_number": 419,
+    "scenario": "Naturalist: The decline of coral reefs has various causes. One contributing factor is predation on coral by organisms such as the crown-of-thorns sea star, whose preferred food source is coral polyps. Human fishing practices have decreased the sea star's predators, such as the harlequin shrimp. It is also possible that runoff containing nutrients for phytoplankton has resulted in larger phytoplankton blooms: the crown-of-thorns sea star gladly eats phytoplankton.\n\nIndicate which cause-and-effect sequence would most likely, according to the naturalist, result in coral reef decline. Make only two selections, one in each column.",
+    "column1_title": "Cause",
+    "column2_title": "Effect",
+    "shared_options": [
+      "An increase in phytoplankton",
+      "A decrease in phytoplankton",
+      "An increase in crown-of-thorns sea stars",
+      "A decrease in crown-of-thorns sea stars",
+      "An increase in harlequin shrimp"
+    ],
+    "statement_title": "Sequence"
+  },
+  {
+    "question_number": 420,
+    "scenario": "Archaeologist: There were several porcelain-production centers in eighteenth-century Britain, among them Bristol, Plymouth, and Worcester. Each center developed a unique recipe for its porcelain that might include flint glass, soapstone, bone ash, clay, quartz, and so on. We will therefore be able to determine, on the basis of compositional analysis, where the next cup we recover from this archaeological site was made.\n\nIndicate two different statements as follows: one statement identifies an assumption required by the archaeologist's argument, and the other identifies a possible fact that would, if true, provide significant logical support for the required assumption. Make only two selections, one in each column.",
+    "column1_title": "Assumption Required",
+    "column2_title": "Possible Fact",
+    "shared_options": [
+      "Other cups have been recovered from the archeological site, all of which were made of porcelain.",
+      "Some of the cups recovered from the archeological site were not made of porcelain.",
+      "The next cup to be recovered from the site will likely be made of porcelain.",
+      "Porcelain makers often traveled between centers, experimenting with one another's recipes.",
+      "There was considerable overlap of materials in the recipes used by the various centers.",
+      "Most porcelain in eighteenth-century Britain was made at one of the several centers."
+    ],
+    "statement_title": "Statement"
+  },
+  {
+    "question_number": 421,
+    "scenario": "Health advocate: The government's current farm-subsidy system primarily rewards large farms for planting monocultures of corn, soybeans, wheat, and rice. Most of the crops produced in this way go to feed livestock in factory farms, which results in a glut of fatty meats in the marketplace. A large proportion of such crops that are not used to feed livestock are used to make sugary processed foods. These subsidies promote unhealthy diets by making sugary foods and fatty meats artificially cheap. Obviously, it is important for the government to avoid these effects.\n\nOn the basis of the information above, select Recommends for the option that describes the government action that the health advocate likely recommends, and select Intended result for the option that describes what the health advocate likely hopes will be the result of that action. Make only two selections, one in each column.",
+    "column1_title": "Recommends",
+    "column2_title": "Intended result",
+    "shared_options": [
+      "Improve the overall quality of livestock feed",
+      "Improve the overall quality of people's diets",
+      "Reduce the overall financial cost of people's diets",
+      "Prevent the manufacture of sugary processed food",
+      "Change the farm-subsidy system"
+    ],
+    "statement_title": "Action/Result"
+  },
+  {
+    "question_number": 422,
+    "scenario": "An archaeologist studying Artifacts A-D is interested in whether Artifact C is older than Artifact A.\n\nSelect an assertion involving Artifact A and an assertion involving Artifact C that together imply the assertion \"Artifact C is older than Artifact A.\" Make only two selections, one in each column.",
+    "column1_title": "Assertion involving Artifact A",
+    "column2_title": "Assertion involving Artifact C",
+    "shared_options": [
+      "Artifact A is older than Artifact B.",
+      "Artifact A is older than Artifact D.",
+      "Artifact B is older than Artifact A.",
+      "Artifact B is older than Artifact D.",
+      "Artifact C is older than Artifact D.",
+      "Artifact C is older than Artifact B."
+    ],
+    "statement_title": "Assertion"
+  },
+  {
+    "question_number": 423,
+    "scenario": "For a randomly selected day, the probability that a visitor to a certain pond will see at least one swan is 0.35. The probability that a visitor to that pond on a randomly selected day will see at least one heron is 0.2. Furthermore, seeing a swan and seeing a heron are independent of each other.\n\nBased on the information provided, select Both swan and heron for the probability that a visitor to the pond will see both at least one swan and at least one heron on any given day, and select Neither swan nor heron for the probability that a visitor to the pond will see neither a swan nor a heron on any given day. Make only two selections, one in each column.",
+    "column1_title": "Both swan and heron",
+    "column2_title": "Neither swan nor heron",
+    "shared_options": ["0.02", "0.07", "0.48", "0.52", "0.70"],
+    "statement_title": "Probability"
+  },
+  {
+    "question_number": 424,
+    "scenario": "Two primary school teachers are debating the merits of classrooms with highly decorated walls.\n\nTeacher 1: A recent study has shown that highly decorated walls can interfere with learning in the classroom. We should therefore decrease the number of wall decorations in our classrooms.\n\nTeacher 2: The results of that study are correct, but pertain only to the retention of information from single lessons in which the students were in the classroom for only a short period of time. Our students are in the same classroom all day, five days a week. Without some added stimulation, students can become bored and therefore even more distracted than they would be by highly decorated walls. I therefore maintain that highly decorated walls serve to increase learning over the long term.\n\nSelect for X and for Y the options such that the following statement, if filled in accordingly, has the most support from the information provided. Make only two selections, one in each column, where Teacher 2 suggests that he agrees with Teacher 1 about the effects of wall decorations on ___X___, but disagrees about the effects of wall decorations on ___Y___.",
+    "column1_title": "X",
+    "column2_title": "Y",
+    "shared_options": [
+      "retention of certain specified types of information",
+      "the effectiveness of teaching methods that eschew rote learning",
+      "the ability of students to maintain skills if practiced in various classrooms",
+      "retention of information from multiple lessons given in the same room over a period of time",
+      "retention of information from lessons given in rooms occupied for only a short time"
+    ],
+    "statement_title": "Topic"
+  },
+  {
+    "question_number": 425,
+    "scenario": "Natalya put 14 blue marbles, 14 red marbles, and no other marbles into 3 empty cups. She put 2 blue marbles and 6 red marbles in Cup A, 6 blue marbles and 4 red marbles in Cup B, and 6 blue marbles and 4 red marbles in Cup C. After this, Dmitry will randomly pick three marbles, one from each cup.\n\nConsistent with the given information, select for 3 blue the probability that Dmitry will pick 3 blue marbles, and select for 3 red the probability that Dmitry will pick 3 red marbles. Make only two selections, one in each column.",
+    "column1_title": "3 blue",
+    "column2_title": "3 red",
+    "shared_options": ["0.090", "0.120", "0.125", "0.150", "0.250", "0.500"],
+    "statement_title": "Probability"
+  },
+  {
+    "question_number": 426,
+    "scenario": "In recent years, commercial beekeepers have reported colony collapse: the disappearance of entire colonies of bees. A biologist, Dr. B, argues that colony collapse is caused by a parasite to which bees have not acquired immunity. A chemist, Dr. C, argues that colony collapse is caused by genetic damage from pesticides. And an ecologist, Dr. E, argues that 3 specific commercial beekeeping practices—transportation of hives over long distances, indiscriminate medication, and inbreeding—compromise both the immunity and the genetic diversity of bees, leaving them susceptible to mass die-offs from normally benign microbes.\n\nComplete the table based on the stated views of Dr. B, Dr. C, and Dr. E. In the first column, select the factor common to both Dr. B's and Dr. E's accounts of colony collapse. In the second column, select the factor common to both Dr. C's and Dr. E's accounts of colony collapse. Make two selections, one in each column.",
+    "column1_title": "Dr. B and Dr. E",
+    "column2_title": "Dr. C and Dr. E",
+    "shared_options": ["Genetics", "Immunity", "Medication", "New parasites", "Normally benign microbes", "Pesticides"],
+    "statement_title": "Factor"
+  },
+  {
+    "question_number": 427,
+    "scenario": "Martine is scheduling five contractors (Contractors A through E) to do various tasks during Monday through Friday of the upcoming week. For each day, exactly one contractor will be scheduled to work, and each contractor's task will be completed on the day for which that contractor is scheduled. The scheduling must conform to the following constraints:\n\nContractor A must be scheduled to work on Monday.\n\nContractor B must be scheduled to work exactly two days after Contractor A.\n\nContractor E must be scheduled to work exactly three days after Contractor C.\n\nStatement: Given the constraints, Martine must schedule Contractor B to work on ___1___ and Contractor D to work on ___2___.\n\nSelect for 1 and for 2 the options that complete the statement so that it is accurate based on the information provided. Make only two selections, one in each column.",
+    "column1_title": "1",
+    "column2_title": "2",
+    "shared_options": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+    "statement_title": "Day"
+  },
+  {
+    "question_number": 428,
+    "scenario": "Supervisor's memo: At the present rate of manufacture we will not have the 1,200 circuit boards assembled in time to ship them to the customer. We currently have 10 workers, all working 8 hours a day at the same hourly rate, assembling the boards. We have to date they've assembled 400. In order to finish the customer's order in time, I'll need to have each of the workers work an additional 2 hours for each of the 10 workdays between now and the deadline.\n\nOne can determine the hourly rate at which each worker assembled circuit boards up to the date of the supervisor's memo by dividing ___1___ circuit boards by the product of ___2___ worker-hours per day and the number of days since the workers began assembling the circuit boards.\n\nSelect Circuit boards for the option that fills the blank labeled 1 in the given statement, and select Worker-hours for the option that fills the blank labeled 2 in the given statement to create the most accurate statement on the basis of the information provided. Make only two selections, one in each column.",
+    "column1_title": "Circuit boards",
+    "column2_title": "Worker-hours",
+    "shared_options": ["80", "400", "500", "800", "1,000", "1,200"],
+    "statement_title": "Value"
+  },
+  {
+    "question_number": 429,
+    "scenario": "In an experiment, one thousand nine-year-old children were allowed to choose whether to participate in a program in which the researchers taught them dance during the daily break from their lessons. Four hundred of the children chose to participate for at least one year. At the end of the year, researchers found that the children who had participated had significantly better balance, on average, than those who had not. The researchers hypothesized that dancing resulted in a sustained improvement in the children's sense of balance.\n\nIt would be most helpful in evaluating the researchers' hypothesis to know whether the researchers ___1___ prior to having ___2___.\n\nSelect Researchers for the phrase that fills the blank labeled 1 in the given statement, and select Prior to for the phrase that fills the blank labeled 2 in the given statement to create the most accurate statement on the basis of the information provided. Make only two selections, one in each column.",
+    "column1_title": "Researchers",
+    "column2_title": "Prior to",
+    "shared_options": [
+      "tested the children's ability to dance",
+      "designed a second experiment",
+      "divided the children into the two experimental groups",
+      "tested the children's sense of balance",
+      "taught dance to the children through the dance program"
+    ],
+    "statement_title": "Action"
+  },
+  {
+    "question_number": 430,
+    "scenario": "Klaus: Closing our neighborhood's school will mean a major hassle for neighborhood families. Students will have to travel farther to and from school, which means they'll have less time for homework. That will likely affect them academically. Additionally, a vacant school building in our neighborhood is sure to attract crime and drag down home values.\n\nRena: Our neighborhood's school never had a great reputation anyway. Closing it means students will get to go to a larger school—with a better reputation—just a few kilometers away, where they'll have more opportunities to participate in extracurricular activities. That should make homes here more valuable to potential buyers. And the vacant school building could be converted into a much-needed community center.\n\nSelect Klaus for the phrase that best describes a factor that is specifically addressed by Klaus but not by Rena, and select Rena for the phrase that best describes a factor that is specifically addressed by Rena but not by Klaus. Make only two selections, one in each column.",
+    "column1_title": "Klaus",
+    "column2_title": "Rena",
+    "shared_options": [
+      "The vacant school building",
+      "The distance students must travel to school",
+      "Extracurricular activities",
+      "Real estate values",
+      "Students' academic performance"
+    ],
+    "statement_title": "Factor"
+  },
+  {
+    "question_number": 431,
+    "scenario": "Alfredo: The United States could make significant progress toward becoming independent of petroleum-derived gasoline as a source of energy by diverting a large proportion of corn grown in the US to the production of ethanol for fuel. [Brazil is] virtually independent of petroleum as a source of fuel because that country has been very successful in ethanol production.\n\nMavis: Ethanol derived from corn will never be a viable substitute for petroleum-derived gasoline in the US. While it is true that Brazil has been very successful in replacing gasoline with ethanol, Brazil's ethanol is derived from sugarcane, which is very easy to convert to ethanol and, in Brazil, very easy to cultivate. Corn, on the other hand, is difficult to grow, requiring intensive cultivation. Also, the amount of power that can be garnered from the land is much less per square meter for corn ethanol.\n\nIn the table, select the statement about which Alfredo and Mavis would most clearly agree and select the statement about which Alfredo and Mavis would most clearly disagree. Make only two selections, one in each column.",
+    "column1_title": "Agree with each other about",
+    "column2_title": "Disagree with each other about",
+    "shared_options": [
+      "Corn ethanol produces much less power per square meter of cultivated land than does sugarcane ethanol.",
+      "Ethanol is easier to produce from sugarcane than from corn.",
+      "There are no crops, other than corn, for producing ethanol that could viably be grown in the US.",
+      "Brazil has been very successful at replacing petroleum with ethanol.",
+      "Producing corn ethanol is a viable strategy for a nation intent on reducing dependence on petroleum."
+    ],
+    "statement_title": "Position"
+  },
+  {
+    "question_number": 432,
+    "scenario": "Radhika is refinancing a business loan and is considering 2 different loan offers. Under Offer 1, the loan's initial principal would be $190,000, and she would pay down $1,250 in principal with each monthly payment during the first year of the loan. Under Offer 2, $4,000 in refinancing fees would be added to bring the principal to $194,000, but she would pay down $1,775 in principal with each monthly payment during the first year of the loan.\n\nIn the first column of the table, select the amount of principal that would remain after 12 monthly payments under Offer 1. In the second column of the table, select the amount of principal that would remain after 12 monthly payments under Offer 2. Make only two selections, one in each column.",
+    "column1_title": "Principal remaining after 12 months under Offer 1",
+    "column2_title": "Principal remaining after 12 months under Offer 2",
+    "shared_options": ["$168,700", "$171,000", "$172,700", "$175,000", "$176,700", "$179,000"],
+    "statement_title": "Amount"
+  },
+  {
+    "question_number": 433,
+    "scenario": "Professor A: The field of Artificial Intelligence (AI) was originally aimed exclusively at the construction of thinking machines, that is, computer systems with human-like general intelligence. But the difficulty of this goal of general AI has led researchers to shift their focus to producing narrow AI systems: software displaying intelligence regarding specific tasks in relatively narrow domains such as chess. The problem is, narrow AI and general AI are fundamentally and entirely different pursuits. If modeling general intelligence is the objective, AI researchers must redirect themselves toward the original goals of the field and confront the more difficult issues of human-like intelligence.\n\nProfessor B: Narrow AI work is producing real results today, such as chess-playing programs that can defeat any human, programs that translate speech to text, and programs that can drive automated vehicles. Achievements in this field will continue to flow, and eventually narrow AI will lead to the creation of systems with general intelligence.\n\nOn the basis of the given information, select a claim that Professor A would most likely disagree with, and select a claim that Professor B would most likely disagree with. Select only two claims, one in each column.",
+    "column1_title": "Professor A disagrees",
+    "column2_title": "Professor B disagrees",
+    "shared_options": [
+      "The creation of computer systems that display human-like general intelligence is an important goal.",
+      "The creation of systems that display intelligence regarding specific tasks is an especially important step toward the creation of systems with general intelligence.",
+      "Systems with general intelligence are more difficult to create than are systems with narrow intelligence.",
+      "Research in the narrow AI field is not likely to lead to significant breakthroughs in the general AI field.",
+      "The original aim of AI research was to create systems with general intelligence.",
+      "The research into narrow AI is not producing results that real people can benefit from today."
+    ],
+    "statement_title": "Claim"
+  },
+  {
+    "question_number": 434,
+    "scenario": "Swamp sparrows live in a variety of wetland habitats. Unlike most swamp sparrows, which live in freshwater habitats, the coastal-plain subspecies lives in tidal marshes, where freshwater and seawater mix and the mud is gray rather than brown. Coastal-plain swamp sparrows differ from all other populations of swamp sparrows in having plumage that is gray-brown rather than rusty brown. DNA analysis indicates several important genetic differences between swamp sparrows that inhabit tidal marshes and other subspecies of swamp sparrows. Therefore, there must have been genetic-selection pressure on swamp sparrows in tidal marshes to become darker and grayer.\n\nSelect Strengthen for the statement that would, if true, most strengthen the argument, and select Weaken for the statement that would, if true, most weaken the argument. Make only two selections, one in each column.",
+    "column1_title": "Strengthen",
+    "column2_title": "Weaken",
+    "shared_options": [
+      "None of the genetic differences that have been identified in the genomes of coastal-plain swamp sparrows and freshwater swamp sparrows affect plumage color.",
+      "Mud in tidal marshes tends to be grayish because of the presence of iron sulfide, whereas freshwater mud is browner because of the presence of iron oxide.",
+      "Some species of birds that live in tidal marshes do not have gray plumage.",
+      "The diets of both coastal-plain and freshwater swamp sparrows can change significantly from season to season.",
+      "Baby birds of the coastal-plain subspecies and baby birds of a freshwater swamp subspecies, all raised on an identical diet under controlled conditions, grew plumage similar in color to that of their respective parents."
+    ],
+    "statement_title": "Effect"
+  },
+  {
+    "question_number": 435,
+    "scenario": "Boppo is a game played by 2 teams for a fixed duration (number of minutes). It is played with 8 members of each team on the floor—actually playing the game—at all times. At any time during the game, exactly one player from each team must be off the floor—not actually playing. Thus, by taking a break, by entering the game after it starts, or by leaving before it finishes, every player on each team must spend exactly 5 minutes resting or otherwise not playing.\n\nIn the table, identify a number of players per team and a number of minutes per game that are consistent with the given information about Boppo. Make only two selections, one in each column.",
+    "column1_title": "Number of players",
+    "column2_title": "Number of minutes",
+    "shared_options": ["9", "11", "18", "30", "45", "50"],
+    "statement_title": "Value"
+  },
+  {
+    "question_number": 436,
+    "scenario": "Loan X has a principal of $x$ and a yearly simple interest rate of 4%. Loan Y has a principal of $y$ and a yearly simple interest rate of 8%. Loans X and Y will be consolidated to form Loan Z with a principal of $(x + y)$ and a yearly simple interest rate of $r\\%$, where $r = \\frac{4x + 8y}{x + y}$. Select a value for $x$ and a value for $y$ corresponding to a yearly simple interest rate of 5% for the consolidated loan. Make only two selections, one in each column.",
+    "column1_title": "x",
+    "column2_title": "y",
+    "shared_options": ["21,000", "32,000", "51,000", "64,000", "81,000", "96,000"],
+    "statement_title": "Value"
+  },
+  {
+    "question_number": 437,
+    "scenario": "Perry, Maria, and Lorna are painting rooms in a college dormitory. Working alone, Perry can paint a standard room in 3 hours, Maria can paint a standard room in 2 hours, and Lorna can paint a standard room in 2 hours 30 minutes. Perry, Maria, and Lorna have decided that, to speed up the work, 2 of them will paint a standard room together.\n\nSelect the value closest to the shortest time in which a 2-person team could paint a standard room, and select the value closest to the longest time in which a 2-person team could paint a standard room, with each person working at his or her respective rate. Make only two selections, one in each column.",
+    "column1_title": "Shortest time",
+    "column2_title": "Longest time",
+    "shared_options": ["49 minutes", "1 hour 7 minutes", "1 hour 12 minutes", "1 hour 14 minutes", "1 hour 22 minutes", "1 hour 45 minutes"],
+    "statement_title": "Time"
+  }
+]

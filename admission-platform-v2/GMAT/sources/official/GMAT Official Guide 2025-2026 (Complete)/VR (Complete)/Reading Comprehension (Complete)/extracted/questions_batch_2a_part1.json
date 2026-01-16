@@ -1,0 +1,124 @@
+{
+  "passages": [
+    {
+      "passage_id": "RC-OG-PASSAGE-500",
+      "passage_text": "The sloth bear, an insect-eating animal native to Nepal, exhibits only one behavior that is truly distinct from that of other bear species: The females carry their cubs (at least part time) until the cubs are about nine months old even though the cubs can walk on their own at six months. Cub-carrying also occurs among some other myrmecophagous (ant-eating) mammals; therefore, one explanation is cub-carrying is necessitated by myrmecophagy since myrmecophagy entails a low metabolic rate and high energy expenditure in walking between food patches. However, although polar bears' locomotion is similarly inefficient, polar bear cubs walk along with their mother. Furthermore, the daily movements of sloth bears and American black bears—which are similar in size to sloth bears and have similarly sized home ranges—reveal similar travel rates and distances, suggesting if black bear cubs are able to keep up with their mother, so too should sloth bear cubs.\n\nAn alternative explanation is defense from predation. Black bear cubs use trees for defense, whereas brown bears and polar bears, which regularly inhabit treeless environments, rely on aggression to protect their cubs. Like brown bears and polar bears (and unlike other myrmecophagous mammals, which are noted for their passivity), sloth bears are easily provoked to aggression. Sloth bears also have relatively large canine teeth, which appear to be more functional for fighting than for foraging. Like brown bears and polar bears, sloth bears may have evolved in an environment with few trees. They are especially attracted to food-rich grasslands; although few grasslands persist today on the Indian subcontinent, this type of habitat was once widespread there. Grasslands support high densities of tigers, which fight and sometimes kill sloth bears. Sloth bears also coexist with and have been killed by tree-climbing leopards and are often confronted and chased by rhinoceroses and elephants, which can topple trees. Collectively these factors probably selected against tree-climbing as a defensive strategy for sloth bear cubs. Because sloth bears are smaller than brown and polar bears and are under greater threat from dangerous animals, they may have adopted the extra precaution of carrying their cubs. Although cub-carrying may also be adaptive for myrmecophagous foraging, the behavior of sloth bear cubs, which climb on their mother's back at the first sign of danger, suggests that predation was a key stimulus.",
+      "topic": "science"
+    },
+    {
+      "passage_id": "RC-OG-PASSAGE-505",
+      "passage_text": "Biologists have advanced two theories to explain why schooling of fish occurs in so many fish species. Because schooling is particularly widespread among species of small fish, both theories assume that schooling offers the advantage of some protection from predators.\n\nProponents of theory A dispute the assumption that a school of thousands of fish is highly visible. Experiments have shown that any fish can be seen, even in very clear water, only within a sphere of 200 meters in diameter. When fish are in a compact group, the spheres of visibility overlap. Thus the chance of a predator finding the school is only slightly greater than the chance of the predator finding a single fish swimming alone. Schooling is advantageous to the individual fish because a predator's chance of finding any particular fish swimming in the school is much smaller than its chance of finding at least one of the same group of fish if the fish were dispersed throughout an area.\n\nHowever, critics of theory A point out that some fish form schools even in areas where predators are abundant and thus little possibility of escaping detection exists. They argue that the school continues to be of value to its members even after detection. They advocate theory B, the \"confusion effect,\" which can be explained in two different ways.\n\nSometimes, proponents argue, predators simply cannot decide which fish to attack. This indecision supposedly results from a predator's preference for striking prey that is distinct from the rest of the school in appearance. In many schools the fish are almost identical in appearance, making it difficult for a predator to select one. The second explanation for the \"confusion effect\" has to do with the sensory confusion caused by a large number of prey moving around the predator. Even if the predator makes the decision to attack a particular fish, the movement of other prey in the school can be distracting. The predator's difficulty can be compared to that of a tennis player trying to hit a tennis ball when two are approaching simultaneously.",
+      "topic": "science"
+    }
+  ],
+  "questions": [
+    {
+      "question_number": 500,
+      "passage_id": "RC-OG-PASSAGE-500",
+      "question_text": "The author mentions rhinoceroses and elephants (see line 39) primarily in order to",
+      "options": {
+        "a": "explain why sloth bears are not successful foragers in grassland habitats",
+        "b": "identify the predators that have had the most influence on the behavior of sloth bears",
+        "c": "suggest a possible reason that sloth bear cubs do not use tree-climbing as a defense",
+        "d": "provide examples of predators that were once widespread across the Indian subcontinent",
+        "e": "defend the assertion that sloth bears are under greater threat from dangerous animals than are other bear species"
+      }
+    },
+    {
+      "question_number": 501,
+      "passage_id": "RC-OG-PASSAGE-500",
+      "question_text": "Which of the following, if true, would most weaken the author's argument in lines 14–19?",
+      "options": {
+        "a": "Cub-carrying behavior has been observed in many non-myrmecophagous mammals.",
+        "b": "Many of the largest myrmecophagous mammals do not typically exhibit cub-carrying behavior.",
+        "c": "Some sloth bears have home ranges that are smaller in size than the average home ranges of black bears.",
+        "d": "The locomotion of black bears is significantly more efficient than the locomotion of sloth bears.",
+        "e": "The habitat of black bears consists of terrain that is significantly more varied than that of the habitat of sloth bears."
+      }
+    },
+    {
+      "question_number": 502,
+      "passage_id": "RC-OG-PASSAGE-500",
+      "question_text": "Which of the following is mentioned in the passage as a way in which brown bears and sloth bears are similar?",
+      "options": {
+        "a": "They tend to become aggressive when provoked.",
+        "b": "They live almost exclusively in treeless environments.",
+        "c": "They are preyed upon by animals that can climb or topple trees.",
+        "d": "They are inefficient in their locomotion.",
+        "e": "They have relatively large canine teeth."
+      }
+    },
+    {
+      "question_number": 503,
+      "passage_id": "RC-OG-PASSAGE-500",
+      "question_text": "The author mentions which of the following as evidence for the view that cub-carrying behavior among sloth bears functions primarily as a defense from predation?",
+      "options": {
+        "a": "The relative passivity of sloth bears in comparison with other species of bears",
+        "b": "The age at which sloth bear cubs can defend themselves from predators",
+        "c": "The unsuitability of cub-carrying for myrmecophagous foraging",
+        "d": "The behavior of sloth bear cubs when they first perceive danger",
+        "e": "The inefficient locomotion of sloth bears and other myrmecophagous animals"
+      }
+    },
+    {
+      "question_number": 504,
+      "passage_id": "RC-OG-PASSAGE-500",
+      "question_text": "The primary purpose of the passage is to",
+      "options": {
+        "a": "trace the development of a particular behavioral characteristic of the sloth bear",
+        "b": "explore possible explanations for a particular behavioral characteristic of the sloth bear",
+        "c": "compare the defensive strategies of sloth bear cubs to the defensive strategies of cubs of other bear species",
+        "d": "describe how certain behavioral characteristics of the sloth bear differ from those of other myrmecophagous mammals",
+        "e": "provide an alternative to a generally accepted explanation of a particular behavioral characteristic of myrmecophagous mammals"
+      }
+    },
+    {
+      "question_number": 505,
+      "passage_id": "RC-OG-PASSAGE-505",
+      "question_text": "According to the passage, theory B states that which of the following is a factor that enables a schooling fish to escape predators?",
+      "options": {
+        "a": "The tendency of fish to form compact groups",
+        "b": "The movement of other fish within the school",
+        "c": "The inability of predators to detect schools",
+        "d": "The ability of fish to hide behind one another in a school",
+        "e": "The great speed with which a school can disperse"
+      }
+    },
+    {
+      "question_number": 506,
+      "passage_id": "RC-OG-PASSAGE-505",
+      "question_text": "According to the passage, both theory A and theory B have been developed to explain how",
+      "options": {
+        "a": "fish hide from predators by forming schools",
+        "b": "forming schools functions to protect fish from predators",
+        "c": "schooling among fish differs from other protective behaviors",
+        "d": "small fish are able to make rapid decisions",
+        "e": "small fish are able to survive in an environment densely populated by large predators"
+      }
+    },
+    {
+      "question_number": 507,
+      "passage_id": "RC-OG-PASSAGE-505",
+      "question_text": "According to one explanation of the \"confusion effect,\" a fish that swims in a school will have greater advantages for survival if it",
+      "options": {
+        "a": "tends to be visible for no more than 200 meters",
+        "b": "stays near either the front or the rear of a school",
+        "c": "is part of a small school rather than a large school",
+        "d": "is very similar in appearance to the other fish in the school",
+        "e": "is medium-sized"
+      }
+    },
+    {
+      "question_number": 508,
+      "passage_id": "RC-OG-PASSAGE-505",
+      "question_text": "The author is primarily concerned with",
+      "options": {
+        "a": "discussing different theories",
+        "b": "analyzing different techniques",
+        "c": "defending two hypotheses",
+        "d": "refuting established beliefs",
+        "e": "revealing new evidence"
+      }
+    }
+  ]
+}

@@ -1,0 +1,136 @@
+{
+  "passages": [
+    {
+      "passage_id": "RC-OG-PASSAGE-517",
+      "passage_text": "In corporate purchasing, competitive scrutiny is typically limited to suppliers of items that are directly related to end products. With \"indirect\" purchases (such as computers, advertising, and legal services), which are not directly related to production, corporations often favor \"supplier partnerships\" (arrangements in which the purchaser forgoes the right to pursue alternative suppliers), which can inappropriately shelter suppliers from rigorous competitive scrutiny that might afford the purchaser economic leverage. There are two independent variables—availability of alternatives and ease of changing suppliers—that companies should use to evaluate the feasibility of subjecting suppliers of indirect purchases to competitive scrutiny. This can create four possible situations.\n\nIn Type 1 situations, there are many alternatives and change is relatively easy. Open pursuit of alternatives—by frequent competitive bidding, if possible—will likely yield the best results. In Type 2 situations, where there are many alternatives but change is difficult—as for providers of employee health care benefits—it is important to continuously test the market and use the results to secure concessions from existing suppliers. Alternatives provide a credible threat to suppliers, even if the ability to switch is constrained. In Type 3 situations, there are few alternatives, but the ability to switch without difficulty creates a threat that companies can use to negotiate concessions from existing suppliers. In Type 4 situations, where there are few alternatives and change is difficult, partnerships may be unavoidable.",
+      "topic": "business"
+    },
+    {
+      "passage_id": "RC-OG-PASSAGE-522",
+      "passage_text": "Carotenoids, a family of natural pigments, form an important part of the colorful signals used by many animals. Animals acquire carotenoids either directly (from the plants and algae that produce them) or indirectly (by eating insects) and store them in a variety of tissues. Studies of several animal species have shown that when choosing mates, females prefer males with brighter carotenoid-based coloration. Owens and Olson hypothesize that the presence of carotenoids, as signaled by coloration, would be meaningful in the context of mate selection if carotenoids were either rare or required for health. The conventional view is that carotenoids are meaningful because they are rare: healthier males can forage for more of the pigments than can their inferior counterparts. Although this may be true, there is growing evidence that carotenoids are meaningful also because they are required: they are used by the immune system and for detoxification processes that are important for maintaining health.\n\nIt may be that males can use scarce carotenoids either for immune defense and detoxification or for attracting females. Males that are more susceptible to disease and parasites will have to use their carotenoids to boost their immune systems, whereas males that are genetically resistant will use fewer carotenoids for fighting disease and will advertise this by using the pigments for flashy display instead.",
+      "topic": "science"
+    }
+  ],
+  "questions": [
+    {
+      "question_number": 517,
+      "passage_id": "RC-OG-PASSAGE-517",
+      "question_text": "Which of the following can be inferred about supplier partnerships, as they are described in the passage?",
+      "options": {
+        "a": "They cannot be sustained unless the goods or services provided are available from a large number of suppliers.",
+        "b": "They can result in purchasers paying more for goods and services than they would in a competitive-bidding situation.",
+        "c": "They typically are instituted at the urging of the supplier rather than the purchaser.",
+        "d": "They are not feasible when the goods or services provided are directly related to the purchasers' end products.",
+        "e": "They are least appropriate when the purchasers' ability to change suppliers is limited."
+      }
+    },
+    {
+      "question_number": 518,
+      "passage_id": "RC-OG-PASSAGE-517",
+      "question_text": "Which of the following best describes the relation of the second paragraph to the first?",
+      "options": {
+        "a": "The second paragraph offers proof of an assertion made in the first paragraph.",
+        "b": "The second paragraph provides an explanation for the occurrence of a situation described in the first paragraph.",
+        "c": "The second paragraph discusses the application of a strategy proposed in the first paragraph.",
+        "d": "The second paragraph examines the scope of a problem presented in the first paragraph.",
+        "e": "The second paragraph discusses the contradictions inherent in a relationship described in the first paragraph."
+      }
+    },
+    {
+      "question_number": 519,
+      "passage_id": "RC-OG-PASSAGE-517",
+      "question_text": "It can be inferred that the author of the passage would be most likely to make which of the following recommendations to a company purchasing health care benefits for its employees?",
+      "options": {
+        "a": "Devise strategies for circumventing the obstacles to replacing the current provider of health care benefits.",
+        "b": "Obtain health care benefits from a provider that also provides other indirect products and services.",
+        "c": "Obtain bids from other providers of health care benefits in order to be in a position to negotiate a better deal with the current provider.",
+        "d": "Switch providers of health care benefits whenever a different provider offers a more competitive price.",
+        "e": "Acknowledge the difficulties involved in replacing the current provider of health care benefits and offer to form a partnership with the provider."
+      }
+    },
+    {
+      "question_number": 520,
+      "passage_id": "RC-OG-PASSAGE-517",
+      "question_text": "Which of the following is one difference between Type 2 situations and Type 4 situations, as they are described in the passage?",
+      "options": {
+        "a": "The number of alternative suppliers available to the purchaser",
+        "b": "The most effective approach for the purchaser to use in obtaining competitive bids from potential suppliers",
+        "c": "The degree of difficulty the purchaser encounters when changing suppliers",
+        "d": "The frequency with which each type of situation occurs in a typical business environment",
+        "e": "The likelihood that any given purchase will be an indirect purchase"
+      }
+    },
+    {
+      "question_number": 521,
+      "passage_id": "RC-OG-PASSAGE-517",
+      "question_text": "According to the passage, which of the following factors distinguishes an indirect purchase from other purchases?",
+      "options": {
+        "a": "The ability of the purchasing company to subject potential suppliers of the purchased item to competitive scrutiny",
+        "b": "The number of suppliers of the purchased item available to the purchasing company",
+        "c": "The methods of negotiation that are available to the purchasing company",
+        "d": "The relationship of the purchased item to the purchasing company's end product",
+        "e": "The degree of importance of the purchased item in the purchasing company's business operations"
+      }
+    },
+    {
+      "question_number": 522,
+      "passage_id": "RC-OG-PASSAGE-522",
+      "question_text": "According to the \"conventional view\" referred to in line 13 of the passage, brighter carotenoid-based coloration in certain species suggests that an individual",
+      "options": {
+        "a": "lives in a habitat rich in carotenoid-bearing plants and insects",
+        "b": "has efficient detoxification processes",
+        "c": "has a superior immune system",
+        "d": "possesses superior foraging capacity",
+        "e": "is currently capable of reproducing"
+      }
+    },
+    {
+      "question_number": 523,
+      "passage_id": "RC-OG-PASSAGE-522",
+      "question_text": "The idea that carotenoid-based coloration is significant partly because carotenoids are required for health suggests that a lack of bright coloration in a male is most likely to indicate which of the following?",
+      "options": {
+        "a": "Inefficient detoxification processes",
+        "b": "Immunity to parasite infestation",
+        "c": "Low genetic resistance to disease",
+        "d": "Lack of interest in mating",
+        "e": "Lack of carotenoid-storing tissues"
+      }
+    },
+    {
+      "question_number": 524,
+      "passage_id": "RC-OG-PASSAGE-522",
+      "question_text": "The passage suggests that relatively bright carotenoid-based coloration is a signal of which of the following characteristics in males of certain animal species?",
+      "options": {
+        "a": "Readiness for mating behavior",
+        "b": "Ability to fight",
+        "c": "Particular feeding preferences",
+        "d": "Recovery from parasite infestation",
+        "e": "Fitness as a mate"
+      }
+    },
+    {
+      "question_number": 525,
+      "passage_id": "RC-OG-PASSAGE-522",
+      "question_text": "The passage implies which of the following about the insects from which animals acquire carotenoids?",
+      "options": {
+        "a": "They do not produce carotenoids themselves.",
+        "b": "They use carotenoids primarily for coloration.",
+        "c": "They maintain constant levels of carotenoids in their tissues.",
+        "d": "They are unable to use carotenoids to boost their immune system.",
+        "e": "They are available in greater abundance than are carotenoid-bearing plants."
+      }
+    },
+    {
+      "question_number": 526,
+      "passage_id": "RC-OG-PASSAGE-522",
+      "question_text": "Information in the passage suggests that which of the following is true of carotenoids that a male animal uses for detoxification processes?",
+      "options": {
+        "a": "They were not acquired directly from plants and algae.",
+        "b": "They cannot be replenished through foraging.",
+        "c": "They cannot be used simultaneously to brighten coloration.",
+        "d": "They do not affect the animal's susceptibility to parasites.",
+        "e": "They increase the chances that the animal will be selected as a mate."
+      }
+    }
+  ]
+}

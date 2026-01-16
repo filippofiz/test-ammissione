@@ -8,6 +8,5 @@
       "@admission/ui": ["../../packages/ui/src"]
     }
   },
-  "include": ["src"],
-  "references": [{ "path": "../../packages/ui" }]
+  "include": ["src"]
 }

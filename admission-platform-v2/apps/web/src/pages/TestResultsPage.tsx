@@ -28,6 +28,7 @@ import {
   faLockOpen,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
+import { MathJaxProvider } from '../components/MathJaxRenderer';
 import { supabase } from '../lib/supabase';
 import { DSQuestion } from '../components/questions/DSQuestion';
 import { MSRQuestion } from '../components/questions/MSRQuestion';
@@ -782,6 +783,7 @@ export default function TestResultsPage() {
           onAnswerChange={noOp}
           readOnly={true}
           showResults={true}
+          explanation={questionData.explanation}
         />
       );
     }
@@ -806,6 +808,7 @@ export default function TestResultsPage() {
           readOnly={true}
           correctAnswers={correctMSRAnswers}
           showResults={true}
+          explanation={questionData.explanation}
         />
       );
     }
@@ -834,6 +837,7 @@ export default function TestResultsPage() {
           correctBlank1={correctAnswerData}
           correctBlank2={correctAnswerData}
           showResults={true}
+          explanation={questionData.explanation}
         />
       );
     }
@@ -863,6 +867,7 @@ export default function TestResultsPage() {
           tableSortable={true}
           correctAnswers={correctTAAnswers}
           showResults={true}
+          explanation={questionData.explanation}
         />
       );
     }
@@ -894,6 +899,7 @@ export default function TestResultsPage() {
           correctColumn1={correctTPAAnswers}
           correctColumn2={correctTPAAnswers}
           showResults={true}
+          explanation={questionData.explanation}
         />
       );
     }
@@ -920,6 +926,7 @@ export default function TestResultsPage() {
           onAnswerChange={noOp}
           readOnly={true}
           showResults={true}
+          explanation={questionData.explanation}
         />
       );
     }
@@ -1314,6 +1321,7 @@ export default function TestResultsPage() {
       pageTitle={`Test Results - ${assignment['2V_profiles']?.name || 'Student'}`}
       pageSubtitle={`${assignment['2V_tests'].test_type} - Test #${assignment['2V_tests'].test_number}`}
     >
+      <MathJaxProvider>
       <div className="max-w-7xl mx-auto p-4 md:p-8">
         {/* Back Button */}
         <button
@@ -2353,6 +2361,7 @@ export default function TestResultsPage() {
           </div>
         )}
       </div>
+      </MathJaxProvider>
     </Layout>
   );
 }

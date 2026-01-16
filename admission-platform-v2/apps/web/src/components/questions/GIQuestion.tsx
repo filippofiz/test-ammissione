@@ -8,6 +8,7 @@ import { faCheckCircle, faTimesCircle } from '@fortawesome/free-solid-svg-icons'
 import { MathJaxRenderer } from '../MathJaxRenderer';
 import { Chart } from '../Chart';
 import { normalizeWhitespace, normalizeOptionText } from '../../lib/textUtils';
+import { ExplanationDisplay } from './ExplanationDisplay';
 
 interface GIQuestionProps {
   chartConfig: any; // Chart.js config or image URL
@@ -24,6 +25,7 @@ interface GIQuestionProps {
   correctBlank1?: any; // For results view - can be string or array from DB
   correctBlank2?: any; // For results view - can be string or array from DB
   showResults?: boolean; // For results view - displays answer feedback
+  explanation?: string; // For results view - shows explanation after answer
 }
 
 export function GIQuestion({
@@ -41,6 +43,7 @@ export function GIQuestion({
   correctBlank1,
   correctBlank2,
   showResults = false,
+  explanation,
 }: GIQuestionProps) {
   // Normalize correct answers
   // Database stores as array: ["value1", "value2"]
@@ -208,6 +211,11 @@ export function GIQuestion({
             <span className="text-gray-500 italic">No answer provided</span>
           )}
         </div>
+      )}
+
+      {/* Explanation (shown in results view) */}
+      {showResults && explanation && (
+        <ExplanationDisplay explanation={explanation} />
       )}
     </div>
   );
