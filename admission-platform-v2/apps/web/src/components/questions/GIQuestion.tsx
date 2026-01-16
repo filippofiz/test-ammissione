@@ -3,10 +3,9 @@
  * Displays a chart/graph with context and fill-in-the-blank statements
  */
 
-import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheckCircle, faTimesCircle } from '@fortawesome/free-solid-svg-icons';
-import { LaTeX } from '../LaTeX';
+import { MathJaxRenderer } from '../MathJaxRenderer';
 import { Chart } from '../Chart';
 import { normalizeWhitespace, normalizeOptionText } from '../../lib/textUtils';
 
@@ -91,7 +90,7 @@ export function GIQuestion({
         {/* Context Text */}
         {contextText && (
           <div className="mt-4 text-gray-700 text-sm">
-            <LaTeX>{normalizeWhitespace(contextText)}</LaTeX>
+            <MathJaxRenderer>{normalizeWhitespace(contextText)}</MathJaxRenderer>
           </div>
         )}
       </div>
@@ -179,7 +178,7 @@ export function GIQuestion({
                 </select>
               );
             } else {
-              return <span key={index}><LaTeX>{normalizeWhitespace(part)}</LaTeX></span>;
+              return <span key={index}><MathJaxRenderer>{normalizeWhitespace(part)}</MathJaxRenderer></span>;
             }
           })}
         </div>

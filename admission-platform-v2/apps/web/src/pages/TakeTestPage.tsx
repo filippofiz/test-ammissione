@@ -23,7 +23,7 @@ import { Layout } from '../components/Layout';
 import { supabase } from '../lib/supabase';
 import { supabaseTest } from '../lib/supabaseTest';
 import { useTranslation } from 'react-i18next';
-import { LaTeX } from '../components/LaTeX';
+import { MathJaxProvider, MathJaxRenderer } from '../components/MathJaxRenderer';
 import { DSQuestion } from '../components/questions/DSQuestion';
 import { MSRQuestion } from '../components/questions/MSRQuestion';
 import { GIQuestion } from '../components/questions/GIQuestion';
@@ -5003,6 +5003,7 @@ export default function TakeTestPage() {
 
   // Main Test Interface
   return (
+    <MathJaxProvider>
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Header with Timer */}
       <div className="bg-white border-b-2 border-gray-200 px-6 py-4 flex items-center justify-between">
@@ -5416,9 +5417,9 @@ export default function TakeTestPage() {
                   {(currentQuestion.question_data?.question_text || currentQuestion.question_data?.question_text_eng) && (
                     <div className="border-2 border-gray-200 rounded-xl p-6 bg-white">
                       <div className="text-lg text-gray-800">
-                        <LaTeX>
+                        <MathJaxRenderer>
                           {getLocalizedQuestionText(currentQuestion.question_data)}
-                        </LaTeX>
+                        </MathJaxRenderer>
                       </div>
                     </div>
                   )}
@@ -5435,9 +5436,9 @@ export default function TakeTestPage() {
               <div className="space-y-4">
                 {(currentQuestion.question_data?.question_text || currentQuestion.question_data?.question_text_eng) && (
                   <div className="text-lg text-gray-800 mb-4">
-                    <LaTeX>
+                    <MathJaxRenderer>
                       {getLocalizedQuestionText(currentQuestion.question_data)}
-                    </LaTeX>
+                    </MathJaxRenderer>
                   </div>
                 )}
                 <textarea
@@ -5498,7 +5499,7 @@ export default function TakeTestPage() {
                         {choice.label}
                       </div>
                       <div className="flex-1 text-gray-800">
-                        <LaTeX>{choice.text}</LaTeX>
+                        <MathJaxRenderer>{choice.text}</MathJaxRenderer>
                       </div>
                       {isCorrect && (
                         <FontAwesomeIcon icon={faCheckCircle} className="text-green-500 text-xl" />
@@ -5552,7 +5553,7 @@ export default function TakeTestPage() {
                         {option}
                       </div>
                       <div className="flex-1 text-gray-800">
-                        <LaTeX>{answerText as string}</LaTeX>
+                        <MathJaxRenderer>{answerText as string}</MathJaxRenderer>
                       </div>
                       {isCorrect && (
                         <FontAwesomeIcon icon={faCheckCircle} className="text-green-500 text-xl" />
@@ -5817,5 +5818,6 @@ export default function TakeTestPage() {
         </div>
       )}
     </div>
+    </MathJaxProvider>
   );
 }
