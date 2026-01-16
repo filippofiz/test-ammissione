@@ -5,7 +5,7 @@
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheckCircle, faTimesCircle } from '@fortawesome/free-solid-svg-icons';
-import { LaTeX } from '../LaTeX';
+import { MathJaxRenderer } from '../MathJaxRenderer';
 import { SortableTable } from '../SortableTable';
 import { normalizeWhitespace } from '../../lib/textUtils';
 
@@ -102,7 +102,7 @@ export function TAQuestion({
             <div key={index} className="p-4">
               {/* Statement Text */}
               <div className="mb-3 text-gray-800">
-                <LaTeX>{normalizeWhitespace(statement.text)}</LaTeX>
+                <MathJaxRenderer>{normalizeWhitespace(statement.text)}</MathJaxRenderer>
               </div>
 
               {/* True/False Buttons */}

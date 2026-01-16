@@ -122,9 +122,16 @@ export const MathJaxRenderer: React.FC<MathJaxRendererProps> = ({ children, clas
       return children;
     }
 
-    const lines = children.split('\n');
+    // Preprocess: Normalize escaped dollars for MathJax
+    // When stored in DB as JSON, \$ becomes \\$ - normalize to \$ for MathJax's processEscapes
+    // Also handle malformed \9.00 or \\9.00 patterns (should be \$9.00 for MathJax)
+    let processedContent = children
+      .replace(/\\\\\$/g, '\\$')  // \\$ → \$ (normalize double backslash from JSON)
+      .replace(/\\\\([\d,]+(?:\.\d+)?)/g, '\\$$$1'); // \\9.00 → \$9.00
+
+    const lines = processedContent.split('\n');
     if (lines.length === 1) {
-      return <MathJax dynamic>{children}</MathJax>;
+      return <MathJax dynamic>{processedContent}</MathJax>;
     }
 
     // Process lines, detecting and grouping table rows

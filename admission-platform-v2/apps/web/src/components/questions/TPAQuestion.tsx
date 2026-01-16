@@ -5,7 +5,7 @@
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheckCircle, faTimesCircle } from '@fortawesome/free-solid-svg-icons';
-import { LaTeX } from '../LaTeX';
+import { MathJaxRenderer } from '../MathJaxRenderer';
 import { normalizeWhitespace, normalizeOptionText } from '../../lib/textUtils';
 
 interface TPAQuestionProps {
@@ -59,7 +59,7 @@ export function TPAQuestion({
       {/* Scenario Section */}
       <div className="border-2 border-gray-200 rounded-xl p-6 bg-white overflow-x-auto">
         <div className="text-gray-800 text-lg whitespace-pre-wrap">
-          <LaTeX>{normalizeWhitespace(scenario)}</LaTeX>
+          <MathJaxRenderer>{normalizeWhitespace(scenario)}</MathJaxRenderer>
         </div>
       </div>
 
@@ -105,7 +105,7 @@ export function TPAQuestion({
                     : ''
                 }`}>
                   <div>
-                    <LaTeX>{normalizeOptionText(option)}</LaTeX>
+                    <MathJaxRenderer>{normalizeOptionText(option)}</MathJaxRenderer>
                     {showResults && ((isSelectedCol1 && isCorrectCol1) || (isSelectedCol2 && isCorrectCol2)) && (
                       <div className="text-xs text-green-700 font-semibold mt-1">Your answer - Correct!</div>
                     )}

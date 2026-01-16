@@ -5,7 +5,7 @@
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheckCircle, faTimesCircle } from '@fortawesome/free-solid-svg-icons';
-import { LaTeX } from '../LaTeX';
+import { MathJaxRenderer } from '../MathJaxRenderer';
 import { normalizeWhitespace } from '../../lib/textUtils';
 
 interface DSQuestionProps {
@@ -57,7 +57,7 @@ export function DSQuestion({
       {/* Problem Statement */}
       <div className="border-2 border-gray-200 rounded-xl p-6 bg-white">
         <div className="text-gray-800 text-lg whitespace-pre-wrap">
-          <LaTeX>{normalizeWhitespace(problem)}</LaTeX>
+          <MathJaxRenderer>{normalizeWhitespace(problem)}</MathJaxRenderer>
         </div>
 
         {/* Two Statements */}
@@ -65,13 +65,13 @@ export function DSQuestion({
           <div>
             <div className="font-semibold text-blue-900 mb-1">(1)</div>
             <div className="text-gray-800">
-              <LaTeX>{normalizeWhitespace(statement1)}</LaTeX>
+              <MathJaxRenderer>{normalizeWhitespace(statement1)}</MathJaxRenderer>
             </div>
           </div>
           <div>
             <div className="font-semibold text-blue-900 mb-1">(2)</div>
             <div className="text-gray-800">
-              <LaTeX>{normalizeWhitespace(statement2)}</LaTeX>
+              <MathJaxRenderer>{normalizeWhitespace(statement2)}</MathJaxRenderer>
             </div>
           </div>
         </div>
