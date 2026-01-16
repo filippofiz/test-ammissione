@@ -6,6 +6,24 @@ interface LaTeXProps {
   className?: string;
 }
 
+// Helper to render plain text with newlines preserved as <br /> elements
+const renderTextWithLineBreaks = (text: string, startKey: number): { nodes: React.ReactNode[]; nextKey: number } => {
+  const lines = text.split('\n');
+  const nodes: React.ReactNode[] = [];
+  let key = startKey;
+
+  lines.forEach((line, index) => {
+    if (index > 0) {
+      nodes.push(<br key={`br-${key++}`} />);
+    }
+    if (line) {
+      nodes.push(<React.Fragment key={key++}>{line}</React.Fragment>);
+    }
+  });
+
+  return { nodes, nextKey: key };
+};
+
 /**
  * LaTeX component that renders mathematical notation using KaTeX
  *
@@ -13,6 +31,7 @@ interface LaTeXProps {
  * - Inline math: $...$
  * - Display math: $$...$$
  * - Plain text (no LaTeX)
+ * - Newlines preserved as <br /> elements
  *
  * Example usage:
  * <LaTeX>This is $x^2 + y^2 = z^2$ inline math</LaTeX>
@@ -31,9 +50,10 @@ export const LaTeX: React.FC<LaTeXProps> = ({ children, className = '' }) => {
     .replace(/\\\$/g, '$')           // \$ → $
     .replace(/\\([\d,]+(?:\.\d+)?)/g, '$$$$1'); // \9.00 → $9.00 (need $$ because it's a replacement string)
 
-  // Quick optimization: if no LaTeX delimiters, just return plain text
+  // Quick optimization: if no LaTeX delimiters, just return plain text with line breaks
   if (!processedText.includes('$') && !processedText.includes('\\[')) {
-    return <span className={className}>{processedText}</span>;
+    const { nodes } = renderTextWithLineBreaks(processedText, 0);
+    return <span className={className}>{nodes}</span>;
   }
 
   // Parse the text to find LaTeX expressions
@@ -176,8 +196,10 @@ export const LaTeX: React.FC<LaTeXProps> = ({ children, className = '' }) => {
       }
 
       if (nextDelimiter === -1) {
-        // No more LaTeX, add rest as plain text
-        parts.push(<span key={key++}>{remaining}</span>);
+        // No more LaTeX, add rest as plain text with line breaks
+        const { nodes, nextKey } = renderTextWithLineBreaks(remaining, key);
+        parts.push(...nodes);
+        key = nextKey;
         break;
       } else if (nextDelimiter === 0 && delimiterType === 'dollar') {
         // Dollar at start but didn't match - skip it
@@ -198,14 +220,19 @@ export const LaTeX: React.FC<LaTeXProps> = ({ children, className = '' }) => {
             const isEuropeanCurrency = !charAfterDollar || /[\s.,;:!?)]/.test(charAfterDollar);
 
             if (isEuropeanCurrency) {
-              // Include the $ as part of the currency
-              parts.push(<span key={key++}>{plainText}$</span>);
+              // Include the $ as part of the currency, preserving line breaks
+              const { nodes, nextKey } = renderTextWithLineBreaks(plainText + '$', key);
+              parts.push(...nodes);
+              key = nextKey;
               remaining = remaining.slice(nextDelimiter + 1); // Skip past the $
               continue;
             }
           }
 
-          parts.push(<span key={key++}>{plainText}</span>);
+          // Add plain text with line breaks preserved
+          const { nodes, nextKey } = renderTextWithLineBreaks(plainText, key);
+          parts.push(...nodes);
+          key = nextKey;
         }
         remaining = remaining.slice(nextDelimiter);
       }
