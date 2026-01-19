@@ -36,6 +36,7 @@ import { AdvancedGraphRenderer } from '../components/GraphRenderer';
 import RechartsRenderer from '../components/RechartsRenderer';
 import { FlaggedQuestionEditor } from '../components/FlaggedQuestionEditor';
 import { DataInsightsPreview } from '../components/questions/DataInsightsPreview';
+import { DataInsightsEditor } from '../components/questions/DataInsightsEditor';
 import { supabase } from '../lib/supabase';
 import * as pdfjsLib from 'pdfjs-dist';
 import jsPDF from 'jspdf';
@@ -128,6 +129,7 @@ export default function ReviewQuestionsPage() {
   const [reviewedFilter, setReviewedFilter] = useState<'all' | 'reviewed' | 'unreviewed'>('all');
   const [flaggedFilter, setFlaggedFilter] = useState<'all' | 'flagged' | 'not_flagged'>('all');
   const [sectionFilter, setSectionFilter] = useState<string>('all');
+  const [questionReviewedFilter, setQuestionReviewedFilter] = useState<'all' | 'reviewed' | 'unreviewed'>('all');
 
   // Questions state
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -262,10 +264,31 @@ export default function ReviewQuestionsPage() {
 
       if (testsError) throw testsError;
 
-      // Bulk fetch all questions with test_id and question_type (optimized - single query)
-      const { data: allQuestions } = await supabase
-        .from('2V_questions')
-        .select('id, test_id, question_type');
+      // Bulk fetch all questions with test_id and question_type (with pagination to avoid 1000 row limit)
+      let allQuestions: { id: string; test_id: string; question_type: string }[] = [];
+      const batchSize = 1000;
+      let from = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data: questionBatch, error: questionsError } = await supabase
+          .from('2V_questions')
+          .select('id, test_id, question_type')
+          .range(from, from + batchSize - 1);
+
+        if (questionsError) {
+          console.error('Error fetching questions batch:', questionsError);
+          break;
+        }
+
+        if (questionBatch && questionBatch.length > 0) {
+          allQuestions = [...allQuestions, ...questionBatch];
+          from += batchSize;
+          hasMore = questionBatch.length === batchSize;
+        } else {
+          hasMore = false;
+        }
+      }
 
       // Group questions by test_id for quick lookup
       const questionsByTestId = new Map<string, { id: string; question_type: string }[]>();
@@ -585,7 +608,18 @@ export default function ReviewQuestionsPage() {
 
       const updated = { ...q };
 
-      if (field === 'question_text' || field === 'question_text_eng') {
+      // Handle nested Data Insights fields (e.g., question_data.problem, question_data.statement1)
+      if (field.startsWith('question_data.')) {
+        const nestedField = field.replace('question_data.', '');
+        updated.question_data = { ...updated.question_data, [nestedField]: value };
+      }
+      // Handle nested answers fields (e.g., answers.correct_answer)
+      else if (field.startsWith('answers.')) {
+        const nestedField = field.replace('answers.', '');
+        updated.answers = { ...updated.answers, [nestedField]: value };
+      }
+      // Legacy handlers for regular multiple choice questions
+      else if (field === 'question_text' || field === 'question_text_eng') {
         updated.question_data = { ...updated.question_data, [field]: value };
       } else if (field === 'correct_answer') {
         updated.answers = { ...updated.answers, correct_answer: value };
@@ -2284,6 +2318,23 @@ export default function ReviewQuestionsPage() {
                             ))}
                           </select>
                         </div>
+
+                        {/* Question Reviewed Filter */}
+                        <div className="flex items-center gap-2">
+                          <FontAwesomeIcon icon={faCheckCircle} className="text-gray-500" />
+                          <select
+                            value={questionReviewedFilter}
+                            onChange={(e) => {
+                              setQuestionReviewedFilter(e.target.value as 'all' | 'reviewed' | 'unreviewed');
+                              setQuestionsPage(1); // Reset to page 1 when filter changes
+                            }}
+                            className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green bg-white"
+                          >
+                            <option value="all">All Questions</option>
+                            <option value="reviewed">Reviewed</option>
+                            <option value="unreviewed">Not Reviewed</option>
+                          </select>
+                        </div>
                       </div>
 
                       {/* AI Check Button */}
@@ -2316,7 +2367,12 @@ export default function ReviewQuestionsPage() {
                     <div className="space-y-4">
                       {/* Pagination Controls */}
                       {(() => {
-                        const filteredQuestions = questions.filter(q => sectionFilter === 'all' || q.section === sectionFilter);
+                        const filteredQuestions = questions.filter(q => {
+                          if (sectionFilter !== 'all' && q.section !== sectionFilter) return false;
+                          if (questionReviewedFilter === 'reviewed' && !q.review_info) return false;
+                          if (questionReviewedFilter === 'unreviewed' && q.review_info) return false;
+                          return true;
+                        });
                         const totalPages = Math.ceil(filteredQuestions.length / QUESTIONS_PER_PAGE);
                         if (totalPages > 1) {
                           return (
@@ -2349,7 +2405,12 @@ export default function ReviewQuestionsPage() {
                         return null;
                       })()}
                       {(() => {
-                        const filteredQuestions = questions.filter(q => sectionFilter === 'all' || q.section === sectionFilter);
+                        const filteredQuestions = questions.filter(q => {
+                          if (sectionFilter !== 'all' && q.section !== sectionFilter) return false;
+                          if (questionReviewedFilter === 'reviewed' && !q.review_info) return false;
+                          if (questionReviewedFilter === 'unreviewed' && q.review_info) return false;
+                          return true;
+                        });
                         const paginatedQuestions = filteredQuestions.slice((questionsPage - 1) * QUESTIONS_PER_PAGE, questionsPage * QUESTIONS_PER_PAGE);
                         // Track which passages have been shown on this page
                         const shownPassagesOnPage = new Set<string>();
@@ -2627,12 +2688,20 @@ export default function ReviewQuestionsPage() {
                           {/* Question Content - Different rendering for Data Insights vs regular questions */}
                           <div className="bg-blue-50 p-4 rounded-lg mb-3 border border-blue-200 overflow-x-auto">
                             {question.question_data?.di_type ? (
-                              /* Data Insights Question - Use specialized preview component */
-                              <DataInsightsPreview
-                                questionData={question.question_data}
-                                answers={question.answers}
-                                showCorrectAnswer={true}
-                              />
+                              /* Data Insights Question - Show editor if editing, otherwise preview */
+                              editingQuestionId === question.id ? (
+                                <DataInsightsEditor
+                                  questionData={question.question_data}
+                                  answers={question.answers}
+                                  onChange={(field, value) => handleEditQuestion(question.id, field, value)}
+                                />
+                              ) : (
+                                <DataInsightsPreview
+                                  questionData={question.question_data}
+                                  answers={question.answers}
+                                  showCorrectAnswer={true}
+                                />
+                              )
                             ) : editingQuestionId === question.id ? (
                               <textarea
                                 value={
@@ -2916,7 +2985,12 @@ export default function ReviewQuestionsPage() {
                       })()}
                       {/* Bottom Pagination Controls */}
                       {(() => {
-                        const filteredQuestions = questions.filter(q => sectionFilter === 'all' || q.section === sectionFilter);
+                        const filteredQuestions = questions.filter(q => {
+                          if (sectionFilter !== 'all' && q.section !== sectionFilter) return false;
+                          if (questionReviewedFilter === 'reviewed' && !q.review_info) return false;
+                          if (questionReviewedFilter === 'unreviewed' && q.review_info) return false;
+                          return true;
+                        });
                         const totalPages = Math.ceil(filteredQuestions.length / QUESTIONS_PER_PAGE);
                         if (totalPages > 1) {
                           return (

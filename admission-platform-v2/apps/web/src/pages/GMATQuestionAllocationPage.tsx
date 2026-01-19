@@ -289,17 +289,34 @@ export default function GMATQuestionAllocationPage() {
       if (poolError) {
         console.warn('No GMAT Question Pool found:', poolError);
       } else if (poolTest) {
-        // 3. Load all questions from the pool
-        const { data: questionsData, error: questionsError } = await supabase
-          .from('2V_questions')
-          .select('*')
-          .eq('test_id', poolTest.id)
-          .eq('is_active', true)
-          .order('section')
-          .order('question_number');
+        // 3. Load all questions from the pool (with pagination to avoid 1000 row limit)
+        let allQuestions: any[] = [];
+        const batchSize = 1000;
+        let from = 0;
+        let hasMore = true;
 
-        if (questionsError) throw questionsError;
-        setPoolQuestions(questionsData || []);
+        while (hasMore) {
+          const { data: questionBatch, error: questionsError } = await supabase
+            .from('2V_questions')
+            .select('*')
+            .eq('test_id', poolTest.id)
+            .eq('is_active', true)
+            .order('section')
+            .order('question_number')
+            .range(from, from + batchSize - 1);
+
+          if (questionsError) throw questionsError;
+
+          if (questionBatch && questionBatch.length > 0) {
+            allQuestions = [...allQuestions, ...questionBatch];
+            from += batchSize;
+            hasMore = questionBatch.length === batchSize;
+          } else {
+            hasMore = false;
+          }
+        }
+
+        setPoolQuestions(allQuestions);
       }
 
       // 4. Build map of all used question IDs from templates (per cycle)
