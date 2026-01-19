@@ -1,8 +1,8 @@
 # GMAT Integration Plan
 
-> **Status:** Phase 4 Complete - Ready for Phase 5
+> **Status:** Phase 7 In Progress - Question Allocation Integration
 > **Last Updated:** January 2026
-> **Purpose:** Roadmap for integrating GMAT preparation into the admission platform
+> **Purpose:** Roadmap for integrating GMAT preparation into the admission platform`2
 
 ---
 
@@ -61,6 +61,18 @@ Integrate GMAT preparation program into the admission platform:
 - [ ] Configure GMAT section order
 - [ ] Configure test track timing/navigation
 - [ ] Test full GMAT test flow
+
+### Phase 7: Question Allocation Integration 🔄 IN PROGRESS
+> **Purpose:** Connect the GMAT allocation system to the actual test-taking flow
+
+- [x] **7.1** Create `2V_gmat_student_progress` table (migration 036) ✅
+- [x] **7.2** Regenerate database types ✅
+- [ ] **7.3** Create GMAT utility library (`lib/gmat/questionAllocation.ts`)
+- [ ] **7.4** Create GMAT progress API (`lib/api/gmat.ts`)
+- [ ] **7.5** Update TakeTestPage.tsx to use allocated questions
+- [ ] **7.6** Add tutor UI for cycle management
+- [ ] **7.7** Update GMATPreparationPage to show student's cycle
+- [ ] **7.8** Add validation to GMATQuestionAllocationPage
 
 ---
 
@@ -627,5 +639,335 @@ ON CONFLICT (test_type, track_type) DO UPDATE SET
 - The platform uses React + Vite + Tailwind + Supabase
 - Question components follow a consistent pattern (see DSQuestion.tsx)
 - UI patterns follow StudentHomePage and StudentTestsPage
-- Latest migration number is 032, so new migrations start at 033
+- Latest migration number is 035, so new migrations start at 036
 - The `test_id` field is required in `2V_questions` - use "Question Pool" test as parent
+
+---
+
+## Phase 7: Question Allocation Integration
+
+> **Added:** January 2026
+> **Purpose:** Connect the GMAT Question Allocation system to the actual test-taking flow
+
+### Problem Summary
+
+The GMAT Question Allocation system (created in `GMATQuestionAllocationPage.tsx`) exists in **isolation** from the actual test-taking flow. Admins can allocate questions to cycles (Foundation/Development/Excellence) per template, but **this allocation is never used** when students take tests.
+
+**Critical Issues Identified:**
+1. `TakeTestPage.tsx` (lines 2050-2082) fetches ALL GMAT questions when `isGMATAssessmentInitial1=true`, ignoring the allocation
+2. No cycle field exists to specify which cycle a student should use
+3. No link between test assignments and material templates containing the allocation
+
+### Key Design Decisions
+
+1. **Cycle is GLOBAL per student** - Each student has ONE cycle for all GMAT preparation (stored in dedicated table)
+2. **Tutor manually selects cycle** when setting up student's GMAT preparation
+3. **Tutor can promote student** to next cycle when ready
+4. **Templates are admin-only** - Students never see allocation templates, only their preparation materials
+5. **Block test if no allocation** - Don't allow test start if questions aren't allocated for that cycle
+6. **Students see their cycle** in GMATPreparationPage
+7. **Template auto-matching** - System finds template by parsing test identifier naming convention
+
+### 7.1 Database Schema Changes
+
+**New Migration:** `036_add_gmat_student_tracking.sql`
+
+**Create new table `2V_gmat_student_progress`:**
+```sql
+CREATE TABLE "2V_gmat_student_progress" (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  student_id UUID NOT NULL REFERENCES "2V_profiles"(id) ON DELETE CASCADE,
+  gmat_cycle TEXT NOT NULL CHECK (gmat_cycle IN ('Foundation', 'Development', 'Excellence')),
+  seen_question_ids UUID[] DEFAULT '{}',  -- Array of question IDs already seen
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(student_id)  -- One record per student
+);
+
+-- Index for fast student lookups
+CREATE INDEX idx_gmat_progress_student ON "2V_gmat_student_progress"(student_id);
+
+-- Index for checking if a question was seen (using GIN for array)
+CREATE INDEX idx_gmat_progress_seen_questions ON "2V_gmat_student_progress" USING GIN(seen_question_ids);
+
+-- RLS Policies
+ALTER TABLE "2V_gmat_student_progress" ENABLE ROW LEVEL SECURITY;
+
+-- Students can view their own progress
+CREATE POLICY "Students view own progress"
+  ON "2V_gmat_student_progress" FOR SELECT
+  USING (student_id IN (SELECT id FROM "2V_profiles" WHERE auth_uid = auth.uid()));
+
+-- Tutors/Admins can manage all progress
+CREATE POLICY "Tutors manage progress"
+  ON "2V_gmat_student_progress" FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM "2V_profiles"
+      WHERE auth_uid = auth.uid()
+      AND (roles @> '"TUTOR"'::jsonb OR roles @> '"ADMIN"'::jsonb)
+    )
+  );
+```
+
+**Benefits of separate table:**
+- Clean separation of GMAT-specific data from general profiles
+- Can track seen questions efficiently (important for avoiding question repetition)
+- Easy to extend with additional GMAT tracking fields in the future
+- No changes needed to `2V_test_assignments` - template is auto-matched
+
+### 7.2 Regenerate Database Types
+
+After applying migration:
+```bash
+cd apps/web
+npx supabase gen types typescript --local > database.types.ts
+# OR for remote:
+npx supabase gen types typescript --project-id YOUR_PROJECT_ID > database.types.ts
+```
+
+### 7.3 GMAT Utility Library
+
+**New File:** `apps/web/src/lib/gmat/questionAllocation.ts`
+
+```typescript
+import { supabase } from '../supabase';
+
+export type GmatCycle = 'Foundation' | 'Development' | 'Excellence';
+
+export interface CycleAllocation {
+  allocated_questions: string[];
+  allocated_at: string | null;
+}
+
+export interface QuestionAllocation {
+  by_cycle: {
+    [K in GmatCycle]?: CycleAllocation;
+  };
+}
+
+// Get allocated question IDs for a specific material template and cycle
+export async function getAllocatedQuestionIds(
+  materialId: string,
+  cycle: GmatCycle
+): Promise<string[]>;
+
+// Get question requirements for a material template
+export async function getQuestionRequirements(
+  materialId: string
+): Promise<QuestionRequirements | null>;
+
+// Find matching template by section, topic, and material type
+export async function findMatchingTemplate(
+  section: string,
+  topic: string,
+  materialType: string
+): Promise<LessonMaterial | null>;
+
+// Parse test identifier to extract section, topic, materialType
+// Uses naming convention: e.g., "QR-01-training1" → section='QR', topic='01-...', materialType='training1'
+export function parseTestIdentifier(
+  testInfo: { section?: string; format?: string; test_number?: number }
+): { section: string; topic: string; materialType: string };
+
+// Validate if allocation is complete for all cycles
+export function validateAllocation(
+  template: LessonMaterial
+): { valid: boolean; errors: string[] };
+```
+
+### 7.4 GMAT Progress API
+
+**New File:** `apps/web/src/lib/api/gmat.ts`
+
+```typescript
+import { supabase } from '../supabase';
+
+export type GmatCycle = 'Foundation' | 'Development' | 'Excellence';
+
+export interface GmatProgress {
+  id: string;
+  student_id: string;
+  gmat_cycle: GmatCycle;
+  seen_question_ids: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+// Initialize GMAT preparation for a student
+export async function initializeGMATPreparation(
+  studentId: string,
+  cycle: GmatCycle
+): Promise<GmatProgress>;
+
+// Get student's current GMAT progress
+export async function getStudentGMATProgress(
+  studentId: string
+): Promise<GmatProgress | null>;
+
+// Update student's cycle (promotion)
+export async function updateStudentGMATCycle(
+  studentId: string,
+  newCycle: GmatCycle
+): Promise<void>;
+
+// Add questions to seen list (called after test completion)
+export async function addSeenQuestions(
+  studentId: string,
+  questionIds: string[]
+): Promise<void>;
+
+// Check if student has seen specific questions
+export async function getSeenQuestions(
+  studentId: string,
+  questionIds: string[]
+): Promise<string[]>;
+```
+
+### 7.5 Update TakeTestPage.tsx
+
+**File:** `apps/web/src/pages/TakeTestPage.tsx` (lines ~2035-2100)
+
+**Changes:**
+1. For GMAT tests, get student's cycle from `2V_gmat_student_progress`
+2. Parse test identifier to get matching fields (section, topic, materialType)
+3. Auto-match template using parsed fields
+4. Fetch template's `question_allocation`, get allocated question IDs for student's cycle
+5. Fetch only those specific questions from `2V_questions`
+6. **Block test start** if no allocation exists
+7. After test completion, add question IDs to `seen_question_ids` array
+
+```typescript
+// Pseudocode for new logic
+if (testType === 'GMAT') {
+  // 1. Get student's GMAT progress (cycle + seen questions)
+  const gmatProgress = await getStudentGMATProgress(studentId);
+  if (!gmatProgress?.gmat_cycle) {
+    throw new Error('Student has no GMAT cycle assigned. Please contact your tutor.');
+  }
+
+  // 2. Parse test identifier to get matching fields
+  const { section, topic, materialType } = parseTestIdentifier(testInfo);
+
+  // 3. Auto-match template based on parsed fields
+  const template = await findMatchingTemplate(section, topic, materialType);
+  if (!template) {
+    throw new Error(`No template found for ${section}-${topic}-${materialType}`);
+  }
+
+  // 4. Get allocated questions for this cycle
+  const allocatedIds = template.question_allocation?.by_cycle[gmatProgress.gmat_cycle]?.allocated_questions;
+  if (!allocatedIds?.length) {
+    throw new Error(`No questions allocated for ${gmatProgress.gmat_cycle} cycle`);
+  }
+
+  // 5. Fetch only allocated questions
+  questions = await fetchQuestionsByIds(allocatedIds);
+}
+
+// After test completion:
+await addSeenQuestions(studentId, questionIds);
+```
+
+### 7.6 Tutor UI for Cycle Management
+
+**Location:** Add section in tutor student management (or new component)
+
+**Features:**
+1. **Initialize GMAT Preparation** - Set student's initial cycle (Foundation/Development/Excellence)
+2. **View Current Cycle** - Display in student overview
+3. **Promote Student** - Button to move from Foundation → Development → Excellence
+4. **View Seen Questions** - Show count of questions student has already seen
+
+**When assigning a GMAT test:**
+1. Verify student has a cycle assigned (show warning if not)
+2. System auto-matches template based on test's naming convention
+3. Verify allocation exists for student's cycle (show error if not)
+
+### 7.7 Update GMATPreparationPage
+
+**File:** `apps/web/src/pages/GMATPreparationPage.tsx`
+
+Display student's current cycle prominently:
+- Show cycle name (Foundation/Development/Excellence)
+- Show target score range (e.g., 505-605 for Foundation)
+- Show difficulty distribution they'll encounter
+
+### 7.8 Add Validation to Allocation Page
+
+**File:** `apps/web/src/pages/GMATQuestionAllocationPage.tsx`
+
+Add validation to show warnings when:
+- Allocation is incomplete (less questions than required)
+- Difficulty distribution doesn't match percentages
+- Questions are duplicated across cycles
+
+### Files to Modify
+
+| File | Action | Priority |
+|------|--------|----------|
+| `supabase/migrations/036_add_gmat_student_tracking.sql` | Create new table | High |
+| `apps/web/database.types.ts` | Regenerate after migration | High |
+| `apps/web/src/lib/gmat/questionAllocation.ts` | Create utility library | High |
+| `apps/web/src/lib/api/gmat.ts` | Create GMAT progress API | High |
+| `apps/web/src/pages/TakeTestPage.tsx` | Modify lines 2050-2100 | High |
+| Tutor student management page | Add cycle selector/promoter UI | Medium |
+| `apps/web/src/pages/GMATPreparationPage.tsx` | Show student's cycle | Medium |
+| `apps/web/src/pages/GMATQuestionAllocationPage.tsx` | Add validation warnings | Low |
+
+### Difficulty Distribution Reference
+
+From the program documentation (`GMAT/material/education/program/question-allocation.md`):
+
+**Training Sessions & Topic Assessments:**
+| Cycle | Easy | Medium | Hard |
+|-------|------|--------|------|
+| Foundation | 60% | 30% | 10% |
+| Development | 25% | 50% | 25% |
+| Excellence | 5% | 30% | 65% |
+
+**Section Assessments & Mocks:**
+| Cycle | Easy | Medium | Hard |
+|-------|------|--------|------|
+| Foundation | 50% | 35% | 15% |
+| Development | 20% | 50% | 30% |
+| Excellence | 5% | 35% | 60% |
+
+### Verification Strategy
+
+1. **After Migration (7.1-7.2):**
+   - Verify `2V_gmat_student_progress` table exists
+   - Confirm constraints work (only valid cycle values)
+   - Test inserting/updating progress records
+
+2. **After Utility Library (7.3-7.4):**
+   - Test `initializeGMATPreparation()` creates record correctly
+   - Test `getStudentGMATProgress()` returns correct data
+   - Test `parseTestIdentifier()` extracts correct fields
+   - Test `findMatchingTemplate()` matches correctly
+
+3. **After TakeTestPage Changes (7.5):**
+   - Initialize GMAT preparation for test student (set cycle to Foundation)
+   - Ensure template auto-matching works
+   - Take test and verify ONLY allocated questions appear
+   - Verify question count matches template allocation
+
+4. **End-to-End Test:**
+   - Admin has allocated questions to Foundation cycle for template
+   - Tutor initializes GMAT preparation for student with cycle=Foundation
+   - Tutor assigns test to student
+   - System auto-matches to correct template
+   - Student takes test
+   - Verify only allocated questions appear
+   - After completion: verify question IDs added to `seen_question_ids`
+
+5. **Cycle Progression Test:**
+   - Tutor promotes student from Foundation to Development
+   - Student's next tests use Development-allocated questions
+   - Verify difficulty distribution changes
+
+### Backward Compatibility
+
+- Existing GMAT tests without student progress record: Show error message prompting tutor to initialize GMAT preparation
+- Template auto-matching: Relies on test identifier naming convention being consistent
+- Seen questions tracking: Starts empty, builds up as student takes tests

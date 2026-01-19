@@ -1753,28 +1753,52 @@ export default function TakeTestPage() {
       });
 
       // Load questions - SEQUENTIAL ORDER (no randomization in preview)
-      const questionsQuery = supabase
-        .from('2V_questions')
-        .select('*');
+      let questions: any[] = [];
 
-      // For GMAT Assessment Iniziale 1, fetch from general pool by test_type
+      // For GMAT Assessment Iniziale 1, fetch from general pool by test_type (with pagination)
       // For all other tests, fetch by test_id
       if (isGMATAssessmentInitial1) {
         console.log('✅ [PREVIEW] Fetching from GMAT question pool (all test_type=GMAT questions)');
-        questionsQuery.eq('test_type', testType);
+        // Use pagination to avoid 1000 row limit
+        const batchSize = 1000;
+        let from = 0;
+        let hasMore = true;
+
+        while (hasMore) {
+          const { data: batch, error: batchError } = await supabase
+            .from('2V_questions')
+            .select('*')
+            .eq('test_type', testType)
+            .order('question_number', { ascending: true })
+            .range(from, from + batchSize - 1);
+
+          if (batchError) throw batchError;
+
+          if (batch && batch.length > 0) {
+            questions = [...questions, ...batch];
+            from += batchSize;
+            hasMore = batch.length === batchSize;
+          } else {
+            hasMore = false;
+          }
+        }
       } else {
         console.log('📋 [PREVIEW] Fetching questions for specific test_id:', previewTestId);
-        questionsQuery.eq('test_id', previewTestId);
-      }
+        const { data, error: questionsError } = await supabase
+          .from('2V_questions')
+          .select('*')
+          .eq('test_id', previewTestId)
+          .order('question_number', { ascending: true });
 
-      const { data: questions, error: questionsError } = await questionsQuery.order('question_number', { ascending: true });
+        if (questionsError) throw questionsError;
+        questions = data || [];
+      }
 
       console.log('📊 [PREVIEW] Questions fetched:', {
         count: questions?.length || 0,
         sections: questions ? [...new Set(questions.map(q => q.section))].filter(Boolean) : []
       });
 
-      if (questionsError) throw questionsError;
       if (!questions || questions.length === 0) {
         alert('No questions found for this test');
         navigate('/admin/review-questions');
@@ -2021,27 +2045,58 @@ export default function TakeTestPage() {
       });
 
       // For no_sections mode, order only by question_number; otherwise by section then question_number
-      const questionsQuery = supabase
-        .from('2V_questions')
-        .select('*');
+      let questions: Question[] = [];
 
-      // For GMAT Assessment Iniziale 1, fetch from general pool by test_type
+      // For GMAT Assessment Iniziale 1, fetch from general pool by test_type (with pagination)
       // For all other tests, fetch by test_id
       if (isGMATAssessmentInitial1) {
         console.log('✅ Fetching from GMAT question pool (all test_type=GMAT questions)');
-        questionsQuery.eq('test_type', testType);
+        // Use pagination to avoid 1000 row limit
+        const batchSize = 1000;
+        let from = 0;
+        let hasMore = true;
+
+        while (hasMore) {
+          let query = supabase
+            .from('2V_questions')
+            .select('*')
+            .eq('test_type', testType);
+
+          if (configData.section_order_mode === 'no_sections') {
+            query = query.order('question_number');
+          } else {
+            query = query.order('section').order('question_number');
+          }
+
+          const { data: batch, error: batchError } = await query.range(from, from + batchSize - 1);
+
+          if (batchError) throw batchError;
+
+          if (batch && batch.length > 0) {
+            questions = [...questions, ...batch] as Question[];
+            from += batchSize;
+            hasMore = batch.length === batchSize;
+          } else {
+            hasMore = false;
+          }
+        }
       } else {
         console.log('📋 Fetching questions for specific test_id:', testId);
-        questionsQuery.eq('test_id', testId);
-      }
+        let query = supabase
+          .from('2V_questions')
+          .select('*')
+          .eq('test_id', testId);
 
-      if (configData.section_order_mode === 'no_sections') {
-        questionsQuery.order('question_number');
-      } else {
-        questionsQuery.order('section').order('question_number');
-      }
+        if (configData.section_order_mode === 'no_sections') {
+          query = query.order('question_number');
+        } else {
+          query = query.order('section').order('question_number');
+        }
 
-      const { data: questions, error: questionsError } = await questionsQuery as { data: Question[] | null; error: unknown };
+        const { data, error: questionsError } = await query as { data: Question[] | null; error: unknown };
+        if (questionsError) throw questionsError;
+        questions = data || [];
+      }
 
       console.log('📊 Questions fetched:', {
         count: questions?.length || 0,
@@ -2051,8 +2106,6 @@ export default function TakeTestPage() {
           question_number: questions[0].question_number
         } : null
       });
-
-      if (questionsError) throw questionsError;
 
       // Parse question_data and answers fields if they are strings
       const parsedQuestions = (questions || []).map(q => ({
