@@ -19,7 +19,7 @@ import {
   faFlask,
 } from '@fortawesome/free-solid-svg-icons';
 import { supabase } from '../lib/supabase';
-import { supabaseTest, fromTest, cleanupTestData } from '../lib/supabaseTest';
+import { fromTest, cleanupTestData } from '../lib/supabaseTest';
 
 interface TestScenario {
   id: string;

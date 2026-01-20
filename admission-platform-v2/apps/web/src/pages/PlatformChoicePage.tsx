@@ -3,7 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@admission/ui';
 import { getCurrentProfile } from '../lib/auth';
-import type { Profile } from '../lib/database.types';
+// Import from full generated Supabase types
+import type { Database } from '../../database.types';
+
+type Profile = Database['public']['Tables']['2V_profiles']['Row'];
 
 export function PlatformChoicePage() {
   const { t } = useTranslation();

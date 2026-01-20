@@ -33,6 +33,16 @@ import { MultipleChoiceQuestion } from '../components/questions/MultipleChoiceQu
 import { PDFTestView } from '../components/PDFTestView';
 import { createAdaptiveAlgorithm, SimpleAdaptiveAlgorithm, ComplexAdaptiveAlgorithm } from '../lib/algorithms/adaptiveAlgorithm';
 import { translateTestTrack } from '../lib/translateTestTrack';
+import {
+  getStudentGMATProgress,
+  addSeenQuestions,
+  type GmatCycle
+} from '../lib/api/gmat';
+import {
+  findMatchingTemplate,
+  getAllocatedQuestionIds,
+  parseTestIdentifier
+} from '../lib/gmat/questionAllocation';
 
 interface TestConfig {
   test_type: string;
@@ -2037,17 +2047,25 @@ export default function TakeTestPage() {
         exerciseType === 'Assessment Iniziale' &&
         testInfo.test_number === 1;
 
+      // Check if this is a GMAT test that uses cycle-based allocation (training/assessment, not initial)
+      const isGMATCycleBasedTest =
+        testType === 'GMAT' &&
+        !isGMATAssessmentInitial1 &&
+        (exerciseType.toLowerCase().includes('training') || exerciseType.toLowerCase().includes('assessment'));
+
       console.log('🎯 Question Fetching Debug:', {
         testType,
         exerciseType,
         test_number: testInfo.test_number,
-        isGMATAssessmentInitial1
+        isGMATAssessmentInitial1,
+        isGMATCycleBasedTest
       });
 
       // For no_sections mode, order only by question_number; otherwise by section then question_number
       let questions: Question[] = [];
 
       // For GMAT Assessment Iniziale 1, fetch from general pool by test_type (with pagination)
+      // For GMAT cycle-based tests, fetch allocated questions based on student's cycle
       // For all other tests, fetch by test_id
       if (isGMATAssessmentInitial1) {
         console.log('✅ Fetching from GMAT question pool (all test_type=GMAT questions)');
@@ -2080,6 +2098,74 @@ export default function TakeTestPage() {
             hasMore = false;
           }
         }
+      } else if (isGMATCycleBasedTest) {
+        // GMAT Cycle-Based Test: Get student's cycle and fetch allocated questions
+        console.log('🔄 GMAT Cycle-Based Test: Fetching allocated questions');
+
+        // Get student's GMAT progress (cycle)
+        const studentProgress = await getStudentGMATProgress(assignment.student_id);
+
+        if (!studentProgress) {
+          // Student hasn't been assigned a cycle yet
+          alert('You have not been assigned a GMAT preparation cycle yet. Please contact your tutor.');
+          navigate(-1);
+          return;
+        }
+
+        const studentCycle = studentProgress.gmat_cycle as GmatCycle;
+        console.log('📊 Student GMAT Cycle:', studentCycle);
+
+        // Parse test identifier to find matching template
+        const { section, topic, materialType } = parseTestIdentifier({
+          section: testInfo.section,
+          exercise_type: exerciseType,
+          materia: testInfo.materia,
+          test_number: testInfo.test_number
+        });
+
+        console.log('🔍 Template matching:', { section, topic, materialType });
+
+        // Find matching template
+        const template = await findMatchingTemplate(section, topic, materialType);
+
+        if (!template) {
+          console.error('No matching template found for:', { section, topic, materialType });
+          alert('No question allocation found for this test. Please contact your tutor.');
+          navigate(-1);
+          return;
+        }
+
+        console.log('✅ Found template:', template.id, template.title);
+
+        // Get allocated question IDs for student's cycle
+        const allocatedIds = await getAllocatedQuestionIds(template.id, studentCycle);
+
+        if (!allocatedIds || allocatedIds.length === 0) {
+          console.error('No questions allocated for cycle:', studentCycle);
+          alert(`No questions have been allocated for the ${studentCycle} cycle. Please contact your tutor.`);
+          navigate(-1);
+          return;
+        }
+
+        console.log('📋 Allocated question IDs:', allocatedIds.length);
+
+        // Fetch allocated questions by their IDs
+        const { data: allocatedQuestions, error: allocError } = await supabase
+          .from('2V_questions')
+          .select('*')
+          .in('id', allocatedIds);
+
+        if (allocError) throw allocError;
+
+        // Sort questions according to the allocation order
+        const idOrderMap = new Map(allocatedIds.map((id, idx) => [id, idx]));
+        questions = (allocatedQuestions || []).sort((a, b) => {
+          const orderA = idOrderMap.get(a.id) ?? 999;
+          const orderB = idOrderMap.get(b.id) ?? 999;
+          return orderA - orderB;
+        }) as Question[];
+
+        console.log('✅ Fetched allocated GMAT questions:', questions.length);
       } else {
         console.log('📋 Fetching questions for specific test_id:', testId);
         let query = supabase
@@ -4172,6 +4258,18 @@ export default function TakeTestPage() {
 
       if (!success) {
         throw new Error('Failed to save completion details');
+      }
+
+      // For GMAT tests, track seen questions
+      if (config?.test_type === 'GMAT' && studentId && allQuestions.length > 0) {
+        try {
+          const questionIds = allQuestions.map(q => q.id);
+          await addSeenQuestions(studentId, questionIds);
+          console.log('✅ Added seen questions to GMAT progress:', questionIds.length);
+        } catch (seenErr) {
+          // Non-critical error - log but don't block completion
+          console.error('Failed to track seen questions:', seenErr);
+        }
       }
 
       // Show completion screen

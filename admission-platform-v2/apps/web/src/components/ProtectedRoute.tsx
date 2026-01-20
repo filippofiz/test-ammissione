@@ -1,7 +1,6 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCurrentProfile } from '../lib/auth';
-import type { Profile } from '../lib/database.types';
 
 interface ProtectedRouteProps {
   children: ReactNode;

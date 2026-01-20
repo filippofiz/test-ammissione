@@ -31,11 +31,13 @@ import {
   faChalkboardTeacher,
   faStopwatch,
   faInfinity,
+  faRocket,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import { supabase } from '../lib/supabase';
 import { translateTestTrackAsync } from '../lib/translateTestTrack';
 import i18n from 'i18next';
+import { GMATCycleManager } from '../components/GMATCycleManager';
 
 // BIG DRAMATIC LOCK ANIMATION STYLES
 const lockAnimationStyles = `
@@ -337,8 +339,8 @@ export default function StudentTestsPage() {
             if (lockButton) {
               (lockButton as HTMLButtonElement).click();
             } else {
-              // Fallback: use handleLock function if available
-              handleLock(assignmentId);
+              // Fallback: use showLockConfirmation function if available
+              showLockConfirmation(assignmentId);
             }
           }
           break;
@@ -382,6 +384,8 @@ export default function StudentTestsPage() {
   }, [studentId, testType, assignments]);
 
   async function loadData() {
+    if (!studentId || !testType) return;
+
     setLoading(true);
     setError(null);
 
@@ -553,7 +557,7 @@ export default function StudentTestsPage() {
 
               if (attemptToLoad !== null) {
                 // Get student answers for the found attempt
-                const { data: studentAnswers, error: answersError } = await supabase
+                const { data: studentAnswers, error: _answersError } = await supabase
                   .from('2V_student_answers')
                   .select('question_id, answer, auto_score')
                   .eq('assignment_id', assignment.id)
@@ -686,7 +690,7 @@ export default function StudentTestsPage() {
 
                         if (algoConfig && algoConfig.scoring_method === 'raw_score') {
                           // EXACT logic from TestResultsPage calculateScaledScores (line 863-980)
-                          const penaltyBlank = parseFloat(algoConfig.penalty_for_blank || '0');
+                          const penaltyBlank = parseFloat(String(algoConfig.penalty_for_blank ?? '0'));
                           let totalRawScore = 0;
                           let totalQuestions = results.length;
 
@@ -703,8 +707,9 @@ export default function StudentTestsPage() {
                             const penaltyConfig = algoConfig.penalty_for_wrong;
                             if (!penaltyConfig) return 0;
                             if (typeof penaltyConfig === 'number') return Math.abs(penaltyConfig);
-                            if (typeof penaltyConfig === 'object' && optionsCount) {
-                              return Math.abs(Number(penaltyConfig[String(optionsCount)] || 0));
+                            if (typeof penaltyConfig === 'object' && penaltyConfig !== null && optionsCount) {
+                              const config = penaltyConfig as Record<string, number>;
+                              return Math.abs(Number(config[String(optionsCount)] || 0));
                             }
                             return 0;
                           };
@@ -905,7 +910,7 @@ export default function StudentTestsPage() {
       const isRetake = assignment?.completion_status?.startsWith('completed') || assignment?.status === 'completed' ||
                        (assignment?.status === 'locked' && (assignment?.total_attempts || 0) > 0);
 
-      if (isRetake) {
+      if (isRetake && assignment) {
         updateData.current_attempt = (assignment.current_attempt || 1) + 1;
 
         // Ensure total_attempts is at least current_attempt - 1 to satisfy constraint
@@ -1258,6 +1263,19 @@ export default function StudentTestsPage() {
             </div>
           )}
 
+          {/* GMAT Cycle Manager - only show for GMAT tests */}
+          {testType === 'GMAT' && studentId && (
+            <div className="mb-8 animate-fadeInUp">
+              <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8">
+                <div className="flex items-center gap-3 mb-4">
+                  <FontAwesomeIcon icon={faRocket} className="text-xl text-brand-green" />
+                  <h2 className="text-xl font-bold text-brand-dark">GMAT Preparation Cycle</h2>
+                </div>
+                <GMATCycleManager studentId={studentId} editable={true} />
+              </div>
+            </div>
+          )}
+
           {/* Note: Tests are now auto-assigned when student visits this page */}
 
           {/* Tests List */}
@@ -1305,7 +1323,7 @@ export default function StudentTestsPage() {
                         <div className="flex items-center gap-4">
                           {(() => {
                             // Calculate average score for completed tests in this section
-                            const isBocconi = testType.toUpperCase() === 'BOCCONI' || testType.toUpperCase() === 'BOCCONI LAW';
+                            const isBocconi = testType?.toUpperCase() === 'BOCCONI' || testType?.toUpperCase() === 'BOCCONI LAW';
                             const completedTests = sectionTests.filter(t => isBocconi ? t.bocconi_score !== null : t.score !== null);
                             const avgScore = completedTests.length > 0
                               ? isBocconi
@@ -1361,7 +1379,7 @@ export default function StudentTestsPage() {
 
                               return a.test_number - b.test_number;
                             })
-                            .map((assignment, index) => {
+                            .map((assignment) => {
                             const statusStyle = getStatusStyles(assignment.status, assignment.completion_status);
                             const isUnlocking = unlocking === assignment.id;
                             const isLocking = locking === assignment.id;

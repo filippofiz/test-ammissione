@@ -15,8 +15,6 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faArrowLeft,
   faBook,
-  faChevronDown,
-  faChevronRight,
   faCheck,
   faPlus,
   faMinus,
@@ -26,19 +24,16 @@ import {
   faQuestionCircle,
   faSave,
   faEye,
-  faFileAlt,
   faTimes,
   faEdit,
   faClipboardList,
   faChartBar,
   faSpinner,
-  faLayerGroup,
   faFilter,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import { supabase } from '../lib/supabase';
-import 'katex/dist/katex.min.css';
-import { InlineMath, BlockMath } from 'react-katex';
+import { MathJaxProvider, MathJaxRenderer } from '../components/MathJaxRenderer';
 
 // ============================================
 // GMAT PROGRAM STRUCTURE (from documentation)
@@ -237,7 +232,6 @@ export default function GMATQuestionAllocationPage() {
   const [searchQuery, setSearchQuery] = useState('');
 
   // UI State
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['Data Insights']));
   const [viewingPdf, setViewingPdf] = useState<{ url: string; title: string } | null>(null);
   const [previewingQuestion, setPreviewingQuestion] = useState<Question | null>(null);
 
@@ -276,7 +270,7 @@ export default function GMATQuestionAllocationPage() {
         .order('topic');
 
       if (templatesError) throw templatesError;
-      setTemplates(templatesData || []);
+      setTemplates((templatesData || []) as unknown as LessonMaterial[]);
 
       // 2. Find the GMAT Question Pool test
       const { data: poolTest, error: poolError } = await supabase
@@ -322,7 +316,7 @@ export default function GMATQuestionAllocationPage() {
       // 4. Build map of all used question IDs from templates (per cycle)
       const allUsedIds = new Map<string, { template: string; cycle: GmatCycle }>();
       (templatesData || []).forEach(template => {
-        const allocation = template.question_allocation;
+        const allocation = template.question_allocation as QuestionAllocation | null;
         if (allocation?.by_cycle) {
           GMAT_CYCLES.forEach(cycle => {
             const cycleAlloc = allocation.by_cycle[cycle];
@@ -531,11 +525,12 @@ export default function GMATQuestionAllocationPage() {
       };
 
       if (selectedTemplate) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { error: updateError } = await supabase
           .from('2V_lesson_materials')
           .update({
-            question_allocation: allocation,
-            question_requirements: requirementsForm,
+            question_allocation: allocation as any,
+            question_requirements: requirementsForm as any,
           })
           .eq('id', selectedTemplate.id);
 
@@ -583,18 +578,6 @@ export default function GMATQuestionAllocationPage() {
     }
   }
 
-  function toggleSection(section: string) {
-    setExpandedSections(prev => {
-      const next = new Set(prev);
-      if (next.has(section)) {
-        next.delete(section);
-      } else {
-        next.add(section);
-      }
-      return next;
-    });
-  }
-
   // Get allocation stats for current cycle
   function getAllocationStats() {
     const allocated = Array.from(allocatedQuestionIds)
@@ -626,6 +609,159 @@ export default function GMATQuestionAllocationPage() {
     }
     return null;
   }
+
+  // ============================================
+  // VALIDATION SYSTEM
+  // ============================================
+
+  interface ValidationResult {
+    isValid: boolean;
+    errors: string[];
+    warnings: string[];
+  }
+
+  interface CycleValidation {
+    cycle: GmatCycle;
+    totalAllocated: number;
+    totalRequired: number;
+    byDifficulty: {
+      easy: { allocated: number; required: number; };
+      medium: { allocated: number; required: number; };
+      hard: { allocated: number; required: number; };
+    };
+    isComplete: boolean;
+    difficultyMatch: boolean;
+    errors: string[];
+    warnings: string[];
+  }
+
+  // Validate allocation for a single cycle
+  function validateCycleAllocation(cycle: GmatCycle): CycleValidation {
+    const allocatedIds = cycleAllocations[cycle];
+    const allocated = Array.from(allocatedIds)
+      .map(id => poolQuestions.find(q => q.id === id))
+      .filter(Boolean) as Question[];
+
+    const totalRequired = requirementsForm?.total_questions || 0;
+    const requiredDist = requirementsForm?.difficulty_distribution?.[cycle];
+
+    const byDifficulty = {
+      easy: {
+        allocated: allocated.filter(q => q.difficulty === 'easy').length,
+        required: requiredDist?.easy || 0
+      },
+      medium: {
+        allocated: allocated.filter(q => q.difficulty === 'medium').length,
+        required: requiredDist?.medium || 0
+      },
+      hard: {
+        allocated: allocated.filter(q => q.difficulty === 'hard').length,
+        required: requiredDist?.hard || 0
+      },
+    };
+
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    // Check total count
+    const isComplete = allocated.length >= totalRequired;
+    if (!isComplete && totalRequired > 0) {
+      errors.push(`Missing ${totalRequired - allocated.length} questions (have ${allocated.length}/${totalRequired})`);
+    }
+    if (allocated.length > totalRequired && totalRequired > 0) {
+      warnings.push(`${allocated.length - totalRequired} extra questions allocated`);
+    }
+
+    // Check difficulty distribution
+    let difficultyMatch = true;
+    if (requiredDist) {
+      if (byDifficulty.easy.allocated < byDifficulty.easy.required) {
+        errors.push(`Need ${byDifficulty.easy.required - byDifficulty.easy.allocated} more easy questions`);
+        difficultyMatch = false;
+      } else if (byDifficulty.easy.allocated > byDifficulty.easy.required) {
+        warnings.push(`${byDifficulty.easy.allocated - byDifficulty.easy.required} extra easy questions`);
+      }
+
+      if (byDifficulty.medium.allocated < byDifficulty.medium.required) {
+        errors.push(`Need ${byDifficulty.medium.required - byDifficulty.medium.allocated} more medium questions`);
+        difficultyMatch = false;
+      } else if (byDifficulty.medium.allocated > byDifficulty.medium.required) {
+        warnings.push(`${byDifficulty.medium.allocated - byDifficulty.medium.required} extra medium questions`);
+      }
+
+      if (byDifficulty.hard.allocated < byDifficulty.hard.required) {
+        errors.push(`Need ${byDifficulty.hard.required - byDifficulty.hard.allocated} more hard questions`);
+        difficultyMatch = false;
+      } else if (byDifficulty.hard.allocated > byDifficulty.hard.required) {
+        warnings.push(`${byDifficulty.hard.allocated - byDifficulty.hard.required} extra hard questions`);
+      }
+    }
+
+    // Check for questions without difficulty set
+    const unsetDifficulty = allocated.filter(q => !q.difficulty).length;
+    if (unsetDifficulty > 0) {
+      warnings.push(`${unsetDifficulty} questions have no difficulty set`);
+    }
+
+    return {
+      cycle,
+      totalAllocated: allocated.length,
+      totalRequired,
+      byDifficulty,
+      isComplete,
+      difficultyMatch,
+      errors,
+      warnings,
+    };
+  }
+
+  // Validate all cycles
+  function validateAllCycles(): { cycles: CycleValidation[]; overall: ValidationResult } {
+    const cycleValidations = GMAT_CYCLES.map(cycle => validateCycleAllocation(cycle));
+
+    const allErrors: string[] = [];
+    const allWarnings: string[] = [];
+
+    // Check for duplicate questions across cycles (same question in multiple cycles)
+    const questionCycleMap = new Map<string, GmatCycle[]>();
+    GMAT_CYCLES.forEach(cycle => {
+      cycleAllocations[cycle].forEach(qId => {
+        if (!questionCycleMap.has(qId)) {
+          questionCycleMap.set(qId, []);
+        }
+        questionCycleMap.get(qId)!.push(cycle);
+      });
+    });
+
+    const duplicates = Array.from(questionCycleMap.entries())
+      .filter(([, cycles]) => cycles.length > 1);
+
+    if (duplicates.length > 0) {
+      allWarnings.push(`${duplicates.length} questions are used in multiple cycles`);
+    }
+
+    // Aggregate errors/warnings from all cycles
+    cycleValidations.forEach(cv => {
+      if (cv.errors.length > 0) {
+        allErrors.push(`${cv.cycle}: ${cv.errors.join(', ')}`);
+      }
+    });
+
+    const isValid = cycleValidations.every(cv => cv.isComplete && cv.difficultyMatch);
+
+    return {
+      cycles: cycleValidations,
+      overall: {
+        isValid,
+        errors: allErrors,
+        warnings: allWarnings,
+      },
+    };
+  }
+
+  // Get validation for current selection
+  const validation = validateAllCycles();
+  const currentCycleValidation = validation.cycles.find(cv => cv.cycle === selectedCycle);
 
   // Render question content with LaTeX support
   function renderQuestionContent(question: Question) {
@@ -796,31 +932,8 @@ export default function GMATQuestionAllocationPage() {
   function renderTextWithLatex(text: string) {
     if (!text) return null;
 
-    const parts = text.split(/(\$\$[\s\S]*?\$\$|\$[^$]+\$)/g);
-
-    return (
-      <span>
-        {parts.map((part, idx) => {
-          if (part.startsWith('$$') && part.endsWith('$$')) {
-            const latex = part.slice(2, -2);
-            try {
-              return <BlockMath key={idx} math={latex} />;
-            } catch {
-              return <code key={idx}>{latex}</code>;
-            }
-          }
-          if (part.startsWith('$') && part.endsWith('$')) {
-            const latex = part.slice(1, -1);
-            try {
-              return <InlineMath key={idx} math={latex} />;
-            } catch {
-              return <code key={idx}>{latex}</code>;
-            }
-          }
-          return <span key={idx}>{part}</span>;
-        })}
-      </span>
-    );
+    // MathJaxRenderer handles $...$ and $$...$$ delimiters automatically
+    return <MathJaxRenderer>{text}</MathJaxRenderer>;
   }
 
   function getQuestionPreview(question: Question): string {
@@ -861,6 +974,7 @@ export default function GMATQuestionAllocationPage() {
       pageTitle="GMAT Question Allocation"
       pageSubtitle="Allocate questions by section, topic, and cycle"
     >
+      <MathJaxProvider>
       <div className="flex-1 p-4 md:p-6">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
@@ -888,6 +1002,61 @@ export default function GMATQuestionAllocationPage() {
               <p className="text-green-700 font-medium flex items-center gap-2">
                 <FontAwesomeIcon icon={faCheckCircle} />
                 Question allocation saved successfully!
+              </p>
+            </div>
+          )}
+
+          {/* Validation Banner */}
+          {selectedTemplate && (validation.overall.errors.length > 0 || validation.overall.warnings.length > 0) && (
+            <div className={`rounded-xl p-4 mb-6 border-2 ${
+              validation.overall.errors.length > 0
+                ? 'bg-red-50 border-red-200'
+                : 'bg-yellow-50 border-yellow-200'
+            }`}>
+              <div className="flex items-start gap-3">
+                <FontAwesomeIcon
+                  icon={faExclamationTriangle}
+                  className={`text-xl mt-0.5 ${
+                    validation.overall.errors.length > 0 ? 'text-red-500' : 'text-yellow-500'
+                  }`}
+                />
+                <div className="flex-1">
+                  <h4 className={`font-bold mb-2 ${
+                    validation.overall.errors.length > 0 ? 'text-red-700' : 'text-yellow-700'
+                  }`}>
+                    {validation.overall.errors.length > 0 ? 'Allocation Incomplete' : 'Allocation Warnings'}
+                  </h4>
+                  {validation.overall.errors.length > 0 && (
+                    <ul className="space-y-1 text-sm text-red-600 mb-2">
+                      {validation.overall.errors.map((err, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="text-red-400">•</span>
+                          {err}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {validation.overall.warnings.length > 0 && (
+                    <ul className="space-y-1 text-sm text-yellow-700">
+                      {validation.overall.warnings.map((warn, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="text-yellow-500">⚠</span>
+                          {warn}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* All Cycles Complete Banner */}
+          {selectedTemplate && validation.overall.isValid && validation.overall.warnings.length === 0 && (
+            <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4 mb-6">
+              <p className="text-green-700 font-medium flex items-center gap-2">
+                <FontAwesomeIcon icon={faCheckCircle} />
+                All cycles are properly allocated with correct difficulty distributions!
               </p>
             </div>
           )}
@@ -954,23 +1123,43 @@ export default function GMATQuestionAllocationPage() {
                 </div>
               </div>
 
-              {/* Cycle Selector */}
+              {/* Cycle Selector with Validation Status */}
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">Cycle</label>
                 <div className="flex flex-wrap gap-1">
-                  {GMAT_CYCLES.map(cycle => (
-                    <button
-                      key={cycle}
-                      onClick={() => setSelectedCycle(cycle)}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                        selectedCycle === cycle
-                          ? `bg-gradient-to-r ${CYCLE_COLORS[cycle].gradient} text-white`
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      {cycle}
-                    </button>
-                  ))}
+                  {GMAT_CYCLES.map(cycle => {
+                    const cycleVal = validation.cycles.find(cv => cv.cycle === cycle);
+                    const hasErrors = cycleVal && cycleVal.errors.length > 0;
+                    const hasWarnings = cycleVal && cycleVal.warnings.length > 0;
+                    const isComplete = cycleVal?.isComplete && cycleVal?.difficultyMatch;
+
+                    return (
+                      <button
+                        key={cycle}
+                        onClick={() => setSelectedCycle(cycle)}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
+                          selectedCycle === cycle
+                            ? `bg-gradient-to-r ${CYCLE_COLORS[cycle].gradient} text-white`
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        {cycle}
+                        {selectedTemplate && (
+                          <>
+                            {isComplete && !hasWarnings && (
+                              <FontAwesomeIcon icon={faCheckCircle} className={`text-xs ${selectedCycle === cycle ? 'text-white' : 'text-green-500'}`} />
+                            )}
+                            {hasErrors && (
+                              <FontAwesomeIcon icon={faExclamationTriangle} className={`text-xs ${selectedCycle === cycle ? 'text-white' : 'text-red-500'}`} />
+                            )}
+                            {!hasErrors && hasWarnings && (
+                              <FontAwesomeIcon icon={faExclamationTriangle} className={`text-xs ${selectedCycle === cycle ? 'text-white' : 'text-yellow-500'}`} />
+                            )}
+                          </>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -1314,6 +1503,52 @@ export default function GMATQuestionAllocationPage() {
                   </div>
                 </div>
 
+                {/* Current Cycle Validation Details */}
+                {currentCycleValidation && (currentCycleValidation.errors.length > 0 || currentCycleValidation.warnings.length > 0) && (
+                  <div className={`rounded-xl p-4 border-2 ${
+                    currentCycleValidation.errors.length > 0
+                      ? 'bg-red-50 border-red-200'
+                      : 'bg-yellow-50 border-yellow-200'
+                  }`}>
+                    <h4 className={`font-bold mb-2 text-sm flex items-center gap-2 ${
+                      currentCycleValidation.errors.length > 0 ? 'text-red-700' : 'text-yellow-700'
+                    }`}>
+                      <FontAwesomeIcon icon={faExclamationTriangle} />
+                      {selectedCycle} Issues
+                    </h4>
+                    {currentCycleValidation.errors.length > 0 && (
+                      <ul className="space-y-1 text-xs text-red-600 mb-2">
+                        {currentCycleValidation.errors.map((err, i) => (
+                          <li key={i} className="flex items-start gap-1">
+                            <span className="text-red-400 mt-0.5">•</span>
+                            <span>{err}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {currentCycleValidation.warnings.length > 0 && (
+                      <ul className="space-y-1 text-xs text-yellow-700">
+                        {currentCycleValidation.warnings.map((warn, i) => (
+                          <li key={i} className="flex items-start gap-1">
+                            <span className="text-yellow-500 mt-0.5">⚠</span>
+                            <span>{warn}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+
+                {/* Current Cycle Complete Indicator */}
+                {currentCycleValidation && currentCycleValidation.isComplete && currentCycleValidation.difficultyMatch && currentCycleValidation.warnings.length === 0 && (
+                  <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4">
+                    <p className="text-green-700 font-medium text-sm flex items-center gap-2">
+                      <FontAwesomeIcon icon={faCheckCircle} />
+                      {selectedCycle} cycle allocation complete!
+                    </p>
+                  </div>
+                )}
+
                 {/* Save Button */}
                 <button
                   onClick={saveAllocation}
@@ -1424,6 +1659,7 @@ export default function GMATQuestionAllocationPage() {
           </div>
         </div>
       )}
+      </MathJaxProvider>
     </Layout>
   );
 }
