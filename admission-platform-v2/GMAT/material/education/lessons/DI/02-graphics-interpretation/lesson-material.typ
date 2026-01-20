@@ -1,6 +1,6 @@
 #import "/templates/uptoten-template.typ": *
-#import "@preview/cetz:0.3.2"
-#import "@preview/cetz-plot:0.1.1"
+#import "@preview/cetz:0.4.2"
+#import "@preview/cetz-plot:0.1.3": plot, chart
 
 #show: uptoten-doc.with(
   title: "GMAT Data Insights",
@@ -125,8 +125,7 @@ When multiple lines appear on the same graph, you can compare how different enti
 #align(center)[
   #cetz.canvas({
     import cetz.draw: *
-    import cetz-plot: *
-
+    
     plot.plot(
       size: (10, 5),
       x-label: "Quarter",
@@ -138,6 +137,8 @@ When multiple lines appear on the same graph, you can compare how different enti
       x-min: 0,
       x-max: 5,
       legend: "north-east",
+      x-grid: true,
+      y-grid: true,
       {
         // Company A - steady growth
         plot.add(
@@ -170,38 +171,22 @@ In a standard bar chart, each category receives its own bar, and the height (or 
   #cetz.canvas({
     import cetz.draw: *
 
-    // Bar chart - Quarterly Sales by Region
-    let bar_width = 0.6
-    let gap = 0.3
-    let colors = (rgb("#3498db"), rgb("#e74c3c"), rgb("#2ecc71"), rgb("#f39c12"))
-    let data = (("Q1", 35), ("Q2", 42), ("Q3", 38), ("Q4", 50))
-    let max_val = 60
-
-    // Axes
-    line((0, 0), (8, 0), stroke: black + 1pt)
-    line((0, 0), (0, 5), stroke: black + 1pt)
-
-    // Y-axis labels
-    for i in range(0, 7) {
-      let y = i * 5 / 6
-      let val = i * 10
-      content((-0.5, y), text(size: 8pt)[#val])
-      line((-0.1, y), (0, y), stroke: gray + 0.5pt)
-    }
-    content((-1.2, 2.5), text(size: 9pt)[Sales])
-
-    // Bars
-    for (i, (label, value)) in data.enumerate() {
-      let x = 1 + i * 1.7
-      let height = value / 60 * 5
-      rect(
-        (x, 0), (x + bar_width, height),
-        fill: colors.at(i),
-        stroke: colors.at(i).darken(20%) + 1pt
-      )
-      content((x + bar_width/2, -0.4), text(size: 9pt)[#label])
-      content((x + bar_width/2, height + 0.3), text(size: 8pt)[#value])
-    }
+    chart.columnchart(
+      size: (9, 5),
+      label-key: 0,
+      value-key: 1,
+      y-tick-step: 10,
+      bar-style: (i) => {
+        let colors = (rgb("#3498db"), rgb("#e74c3c"), rgb("#2ecc71"), rgb("#f39c12"))
+        (fill: colors.at(calc.rem(i, 4)), stroke: none)
+      },
+      (
+        ([Q1], 35),
+        ([Q2], 42),
+        ([Q3], 38),
+        ([Q4], 50),
+      ),
+    )
   })
 ]
 
@@ -217,45 +202,28 @@ Pie charts represent parts of a whole. The entire circle represents 100% of some
   #cetz.canvas({
     import cetz.draw: *
 
-    let center = (4, 2.5)
-    let radius = 2
-    let colors = (rgb("#3498db"), rgb("#e74c3c"), rgb("#2ecc71"), rgb("#9b59b6"))
-    let data = (("Product A", 35), ("Product B", 25), ("Product C", 25), ("Product D", 15))
-
-    // Draw pie slices
-    let start_angle = 0deg
-    for (i, (label, pct)) in data.enumerate() {
-      let angle = pct / 100 * 360deg
-      let end_angle = start_angle + angle
-      let mid_angle = start_angle + angle / 2
-
-      // Draw arc sector using lines from center
-      let steps = 20
-      let points = (center,)
-      for j in range(steps + 1) {
-        let a = start_angle + angle * j / steps
-        points.push((center.at(0) + radius * calc.cos(a), center.at(1) + radius * calc.sin(a)))
-      }
-      points.push(center)
-
-      // Fill the sector
-      line(..points, fill: colors.at(i), stroke: white + 1pt, close: true)
-
-      // Label position
-      let label_dist = radius + 0.6
-      let lx = center.at(0) + label_dist * calc.cos(mid_angle)
-      let ly = center.at(1) + label_dist * calc.sin(mid_angle)
-      content((lx, ly), text(size: 8pt)[#pct%])
-
-      start_angle = end_angle
-    }
-
-    // Legend
-    for (i, (label, pct)) in data.enumerate() {
-      let ly = 4.5 - i * 0.6
-      rect((8, ly - 0.15), (8.4, ly + 0.15), fill: colors.at(i), stroke: none)
-      content((9.2, ly), text(size: 8pt)[#label])
-    }
+    chart.piechart(
+      (
+        ([Product A], 35),
+        ([Product B], 25),
+        ([Product C], 25),
+        ([Product D], 15),
+      ),
+      value-key: 1,
+      label-key: 0,
+      radius: 2.5,
+      inner-radius: 0.5,
+      slice-style: (
+        (fill: rgb("#3498db"), stroke: white + 0.5pt),
+        (fill: rgb("#e74c3c"), stroke: white + 0.5pt),
+        (fill: rgb("#2ecc71"), stroke: white + 0.5pt),
+        (fill: rgb("#9b59b6"), stroke: white + 0.5pt),
+      ),
+      outer-label: (content: "%", radius: 120%),
+      legend: (
+        position: "south"
+      ),
+    )
   })
 ]
 
@@ -270,8 +238,7 @@ Scatter plots reveal relationships between two variables. Each point on the plot
 #align(center)[
   #cetz.canvas({
     import cetz.draw: *
-    import cetz-plot: *
-
+    
     plot.plot(
       size: (8, 5),
       x-label: "Study Hours",
@@ -282,6 +249,8 @@ Scatter plots reveal relationships between two variables. Each point on the plot
       y-max: 100,
       x-min: 0,
       x-max: 10,
+      x-grid: true,
+      y-grid: true,
       {
         // Scatter points showing positive correlation
         plot.add(
@@ -586,54 +555,27 @@ Stacked charts create a particular type of misreading error. For the bottom segm
   #cetz.canvas({
     import cetz.draw: *
 
-    // Stacked bar example
-    let bar_width = 1.2
+    // Draw the stacked column chart
+    chart.columnchart(
+      mode: "stacked",
+      size: (6, 5),
+      label-key: 0,
+      value-key: (1, 2, 3),
+      y-tick-step: 20,
+      bar-style: (i) => {
+        let colors = (rgb("#3498db"), rgb("#e74c3c"), rgb("#2ecc71"))
+        (fill: colors.at(calc.rem(i, 3)), stroke: white + 0.5pt)
+      },
+      labels: ([Cat A], [Cat B], [Cat C]),
+      legend: "north-east",
+      (
+        ([Q1], 40, 30, 20),
+        ([Q2], 50, 20, 15),
+      ),
+    )
 
-    // Axes
-    line((0, 0), (6, 0), stroke: black + 1pt)
-    line((0, 0), (0, 5), stroke: black + 1pt)
-
-    // Y-axis labels
-    for i in range(0, 6) {
-      let y = i * 1
-      let val = i * 20
-      content((-0.5, y), text(size: 7pt)[#val])
-      line((-0.1, y), (0, y), stroke: gray + 0.5pt)
-    }
-
-    // Q1 stacked bar
-    let q1_a = 2    // Category A = 40
-    let q1_b = 1.5  // Category B = 30
-    let q1_c = 1    // Category C = 20
-    rect((0.8, 0), (2, q1_a), fill: rgb("#3498db"), stroke: white + 0.5pt)
-    rect((0.8, q1_a), (2, q1_a + q1_b), fill: rgb("#e74c3c"), stroke: white + 0.5pt)
-    rect((0.8, q1_a + q1_b), (2, q1_a + q1_b + q1_c), fill: rgb("#2ecc71"), stroke: white + 0.5pt)
-    content((1.4, -0.4), text(size: 8pt)[Q1])
-
-    // Q2 stacked bar
-    let q2_a = 2.5  // Category A = 50
-    let q2_b = 1    // Category B = 20
-    let q2_c = 0.75 // Category C = 15
-    rect((3.5, 0), (4.7, q2_a), fill: rgb("#3498db"), stroke: white + 0.5pt)
-    rect((3.5, q2_a), (4.7, q2_a + q2_b), fill: rgb("#e74c3c"), stroke: white + 0.5pt)
-    rect((3.5, q2_a + q2_b), (4.7, q2_a + q2_b + q2_c), fill: rgb("#2ecc71"), stroke: white + 0.5pt)
-    content((4.1, -0.4), text(size: 8pt)[Q2])
-
-    // Annotations
-    line((2.2, q1_a), (3, q1_a), stroke: gray + 0.5pt)
-    line((2.2, q1_a + q1_b), (3, q1_a + q1_b), stroke: gray + 0.5pt)
-    content((3.2, q1_a + q1_b/2), text(size: 7pt)[30], anchor: "west")
-
-    // Legend
-    rect((6.5, 4), (7, 4.4), fill: rgb("#2ecc71"), stroke: none)
-    content((7.8, 4.2), text(size: 7pt)[Cat C])
-    rect((6.5, 3.2), (7, 3.6), fill: rgb("#e74c3c"), stroke: none)
-    content((7.8, 3.4), text(size: 7pt)[Cat B])
-    rect((6.5, 2.4), (7, 2.8), fill: rgb("#3498db"), stroke: none)
-    content((7.8, 2.6), text(size: 7pt)[Cat A])
-
-    // Callout
-    content((5, -1), text(size: 8pt)[_Cat B in Q1 = 30 (segment height), not 70 (top position)_])
+    // Callout explanation
+    content((3, -0.8), text(size: 8pt)[_Cat B in Q1 = 30 (segment height), not 70 (top position)_])
   })
 ]
 

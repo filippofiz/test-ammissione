@@ -29,7 +29,10 @@ import {
 import { Layout } from '../components/Layout';
 import { supabase } from '../lib/supabase';
 import { getCurrentProfile } from '../lib/auth';
-import { Profile } from '../lib/database.types';
+// Import from full generated Supabase types
+import type { Database } from '../../database.types';
+
+type Profile = Database['public']['Tables']['2V_profiles']['Row'];
 
 interface LessonMaterial {
   id: string;

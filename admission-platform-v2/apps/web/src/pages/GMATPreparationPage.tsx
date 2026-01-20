@@ -22,10 +22,16 @@ import {
   faChartLine,
   faCheckCircle,
   faTimes,
+  faRocket,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import { supabase } from '../lib/supabase';
 import { getCurrentProfile } from '../lib/auth';
+import {
+  getStudentGMATProgress,
+  type GmatCycle,
+  type GmatProgress,
+} from '../lib/api/gmat';
 
 interface LessonMaterial {
   id: string;
@@ -36,16 +42,16 @@ interface LessonMaterial {
   title: string;
   description: string | null;
   pdf_storage_path: string;
-  order_index: number;
-  is_active: boolean;
-  is_template: boolean;  // True if this is a question template (admin only)
+  order_index: number | null;
+  is_active: boolean | null;
+  is_template: boolean | null;  // True if this is a question template (admin only)
 }
 
 interface MaterialAssignment {
   id: string;
   material_id: string;
   student_id: string;
-  is_unlocked: boolean;
+  is_unlocked: boolean | null;
   unlocked_at: string | null;
   viewed_at: string | null;
   completed_at: string | null;
@@ -102,10 +108,39 @@ export default function GMATPreparationPage() {
   const [expandedTopics, setExpandedTopics] = useState<Set<string>>(new Set());
   const [viewingPdf, setViewingPdf] = useState<{ url: string; title: string } | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [gmatProgress, setGmatProgress] = useState<GmatProgress | null>(null);
 
   useEffect(() => {
     loadMaterials();
   }, []);
+
+  // Helper to get cycle display info
+  function getCycleInfo(cycle: GmatCycle) {
+    const info: Record<GmatCycle, { color: string; bgColor: string; borderColor: string; scoreRange: string; description: string }> = {
+      Foundation: {
+        color: 'text-blue-700',
+        bgColor: 'bg-blue-50',
+        borderColor: 'border-blue-200',
+        scoreRange: '505-605',
+        description: 'Building core skills',
+      },
+      Development: {
+        color: 'text-amber-700',
+        bgColor: 'bg-amber-50',
+        borderColor: 'border-amber-200',
+        scoreRange: '605-665',
+        description: 'Advancing skills',
+      },
+      Excellence: {
+        color: 'text-green-700',
+        bgColor: 'bg-green-50',
+        borderColor: 'border-green-200',
+        scoreRange: '665-715+',
+        description: 'Mastering advanced content',
+      },
+    };
+    return info[cycle];
+  }
 
   async function loadMaterials() {
     setLoading(true);
@@ -114,6 +149,10 @@ export default function GMATPreparationPage() {
     try {
       const profile = await getCurrentProfile();
       if (!profile) throw new Error('Profile not found');
+
+      // Load GMAT progress for current student
+      const progress = await getStudentGMATProgress(profile.id);
+      setGmatProgress(progress);
 
       // Fetch all active GMAT materials (excluding templates which are for admin use only)
       const { data: materialsData, error: materialsError } = await supabase
@@ -328,6 +367,28 @@ export default function GMATPreparationPage() {
           {error && (
             <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 mb-6">
               <p className="text-red-700 font-medium">{error}</p>
+            </div>
+          )}
+
+          {/* Current Cycle Display */}
+          {gmatProgress && (
+            <div className={`${getCycleInfo(gmatProgress.gmat_cycle).bgColor} border-2 ${getCycleInfo(gmatProgress.gmat_cycle).borderColor} rounded-2xl p-6 mb-6`}>
+              <div className="flex items-center gap-4">
+                <div className={`w-14 h-14 rounded-xl ${getCycleInfo(gmatProgress.gmat_cycle).bgColor} border-2 ${getCycleInfo(gmatProgress.gmat_cycle).borderColor} flex items-center justify-center`}>
+                  <FontAwesomeIcon icon={faRocket} className={`text-2xl ${getCycleInfo(gmatProgress.gmat_cycle).color}`} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-3">
+                    <h2 className={`text-xl font-bold ${getCycleInfo(gmatProgress.gmat_cycle).color}`}>
+                      {gmatProgress.gmat_cycle} Cycle
+                    </h2>
+                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getCycleInfo(gmatProgress.gmat_cycle).bgColor} ${getCycleInfo(gmatProgress.gmat_cycle).color} border ${getCycleInfo(gmatProgress.gmat_cycle).borderColor}`}>
+                      Target: {getCycleInfo(gmatProgress.gmat_cycle).scoreRange}
+                    </span>
+                  </div>
+                  <p className="text-gray-600 text-sm mt-1">{getCycleInfo(gmatProgress.gmat_cycle).description}</p>
+                </div>
+              </div>
             </div>
           )}
 
