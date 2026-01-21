@@ -36,6 +36,7 @@ import {
   type StudentWithAssignments,
 } from '../lib/api/tutors';
 import { supabase } from '../lib/supabase';
+import { fetchExternalStudents, updateExternalStudentEmail, type ExternalStudent } from '../lib/api/externalStudents';
 
 export default function TutorStudentsPage() {
   const { t } = useTranslation();
@@ -60,6 +61,11 @@ export default function TutorStudentsPage() {
   const [newStudentTutorId, setNewStudentTutorId] = useState<string>(''); // Selected tutor for new student
   const [creatingStudent, setCreatingStudent] = useState(false);
   const [createStudentError, setCreateStudentError] = useState<string | null>(null);
+  const [externalStudents, setExternalStudents] = useState<ExternalStudent[]>([]);
+  const [externalSearchQuery, setExternalSearchQuery] = useState('');
+  const [loadingExternalStudents, setLoadingExternalStudents] = useState(false);
+  const [newStudentExternalId, setNewStudentExternalId] = useState<number | undefined>();
+  const [showExternalDropdown, setShowExternalDropdown] = useState(false);
 
   // Available test types (fetched from database)
   const [availableTestTypes, setAvailableTestTypes] = useState<string[]>([]);
@@ -75,6 +81,30 @@ export default function TutorStudentsPage() {
       loadTestTypesAndTutors();
     }
   }, [showAddStudentModal]);
+
+  // Auto-search external students as user types
+  useEffect(() => {
+    // Don't search if we already have a selected student
+    if (newStudentExternalId) {
+      setShowExternalDropdown(false);
+      return;
+    }
+
+    console.log('🔍 External search query changed:', externalSearchQuery);
+    if (externalSearchQuery.length >= 2) {
+      console.log('✅ Query length >= 2, setting up search timeout');
+      const timeoutId = setTimeout(() => {
+        console.log('⏰ Timeout fired, calling loadExternalStudents');
+        loadExternalStudents();
+        setShowExternalDropdown(true);
+      }, 500); // Debounce 500ms
+      return () => clearTimeout(timeoutId);
+    } else {
+      console.log('❌ Query too short, clearing results');
+      setExternalStudents([]);
+      setShowExternalDropdown(false);
+    }
+  }, [externalSearchQuery, newStudentExternalId]);
 
   // Load available test types when assign modal opens
   useEffect(() => {
@@ -295,8 +325,46 @@ export default function TutorStudentsPage() {
     }
   }
 
+  async function loadExternalStudents() {
+    console.log('📡 loadExternalStudents called with query:', externalSearchQuery);
+    setLoadingExternalStudents(true);
+    try {
+      console.log('🌐 Calling fetchExternalStudents API...');
+      const students = await fetchExternalStudents(externalSearchQuery);
+      console.log('✅ Received students from API:', students);
+      console.log('📊 Number of students:', students.length);
+      setExternalStudents(students);
+      console.log('💾 State updated with external students');
+    } catch (error) {
+      console.error('❌ Error loading external students:', error);
+      // Don't show error to user - external students are optional
+    } finally {
+      setLoadingExternalStudents(false);
+      console.log('🏁 Loading finished');
+    }
+  }
+
+  function closeAddStudentModal() {
+    setShowAddStudentModal(false);
+    setNewStudentEmail('');
+    setNewStudentName('');
+    setNewStudentPassword('');
+    setNewStudentTests([]);
+    setNewStudentTutorId('');
+    setNewStudentExternalId(undefined);
+    setExternalSearchQuery('');
+    setExternalStudents([]);
+    setShowExternalDropdown(false);
+    setCreateStudentError(null);
+  }
+
   async function createStudent() {
-    if (!newStudentEmail || !newStudentName || !newStudentPassword || !newStudentTutorId) {
+    if (!newStudentExternalId) {
+      setCreateStudentError('Please search and select a student from the external system');
+      return;
+    }
+
+    if (!newStudentEmail || !newStudentName || !newStudentTutorId) {
       setCreateStudentError('Please fill in all fields');
       return;
     }
@@ -308,10 +376,10 @@ export default function TutorStudentsPage() {
       // Use selected tutor ID
       const tutorId = newStudentTutorId;
 
-      // Create auth user
+      // Create auth user with default password 123456
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: newStudentEmail,
-        password: newStudentPassword,
+        password: '123456',
         options: {
           data: {
             name: newStudentName,
@@ -319,7 +387,12 @@ export default function TutorStudentsPage() {
         }
       });
 
-      if (authError) throw authError;
+      if (authError) {
+        if (authError.message.includes('already registered')) {
+          throw new Error(`This email (${newStudentEmail}) is already registered. Please use a different email or contact the admin.`);
+        }
+        throw authError;
+      }
       if (!authData.user) throw new Error('Failed to create user');
 
       // Create profile
@@ -334,18 +407,28 @@ export default function TutorStudentsPage() {
           tests: newStudentTests,
           esigenze_speciali: false,
           must_change_password: true,
-          platform_version: 'v2'
+          platform_version: 'v2',
+          external_student_id: newStudentExternalId || null,
         });
 
       if (profileError) throw profileError;
 
+      // If email was manually entered (external student didn't have email), update external DB
+      const selectedExternalStudent = externalStudents.find(s => s.id === newStudentExternalId);
+      if (selectedExternalStudent && !selectedExternalStudent.studentMail && newStudentEmail) {
+        console.log('📧 Updating external student email...');
+        try {
+          await updateExternalStudentEmail(newStudentExternalId, newStudentEmail);
+          console.log('✅ External student email updated successfully');
+        } catch (emailError) {
+          console.error('⚠️ Failed to update external student email:', emailError);
+          // Don't fail the whole operation, just warn
+          alert('⚠️ Student created but failed to update email in external database');
+        }
+      }
+
       // Success - close modal and reload students
-      setShowAddStudentModal(false);
-      setNewStudentEmail('');
-      setNewStudentName('');
-      setNewStudentPassword('');
-      setNewStudentTests([]);
-      setNewStudentTutorId('');
+      closeAddStudentModal();
       await loadStudents();
     } catch (err) {
       console.error('Error creating student:', err);
@@ -682,7 +765,7 @@ export default function TutorStudentsPage() {
       {showAddStudentModal && (
         <div
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn"
-          onClick={() => setShowAddStudentModal(false)}
+          onClick={closeAddStudentModal}
         >
           <div
             className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col animate-slideUp"
@@ -698,7 +781,7 @@ export default function TutorStudentsPage() {
                   <h2 className="text-2xl font-bold">Add New Student</h2>
                 </div>
                 <button
-                  onClick={() => setShowAddStudentModal(false)}
+                  onClick={closeAddStudentModal}
                   className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 transition-colors flex items-center justify-center"
                 >
                   <span className="text-2xl font-bold">×</span>
@@ -714,17 +797,96 @@ export default function TutorStudentsPage() {
                 </div>
               )}
 
-              <div>
+              {/* Student Name with Autocomplete Search */}
+              <div className="relative">
                 <label className="block text-sm font-semibold text-brand-dark mb-2">
                   Student Name *
                 </label>
-                <input
-                  type="text"
-                  value={newStudentName}
-                  onChange={(e) => setNewStudentName(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-brand-green focus:outline-none transition-colors"
-                  placeholder="Enter student name"
-                />
+                <div className="relative">
+                  <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Type student name to search..."
+                    value={newStudentName}
+                    onChange={(e) => {
+                      setNewStudentName(e.target.value);
+                      setExternalSearchQuery(e.target.value);
+                      // Clear selection when typing
+                      if (newStudentExternalId) {
+                        setNewStudentExternalId(undefined);
+                        setNewStudentEmail('');
+                      }
+                    }}
+                    onFocus={() => !newStudentExternalId && externalStudents.length > 0 && setShowExternalDropdown(true)}
+                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-brand-green focus:outline-none"
+                  />
+                  {loadingExternalStudents && (
+                    <FontAwesomeIcon icon={faSpinner} spin className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  )}
+                </div>
+
+                {/* Autocomplete Dropdown */}
+                {(() => {
+                  console.log('🎨 Rendering dropdown check:', {
+                    showExternalDropdown,
+                    studentsCount: externalStudents.length,
+                    willShow: showExternalDropdown && externalStudents.length > 0
+                  });
+                  return null;
+                })()}
+                {showExternalDropdown && externalStudents.length > 0 && (
+                  <div className="absolute z-50 w-full mt-1 bg-white border-2 border-gray-200 rounded-xl shadow-2xl max-h-96 overflow-y-auto">
+                    {externalStudents.map(student => (
+                      <button
+                        key={student.id}
+                        type="button"
+                        onClick={() => {
+                          setNewStudentExternalId(student.id);
+                          setNewStudentName(student.studentName || '');
+                          setNewStudentEmail(student.studentMail || '');
+                          setExternalSearchQuery(student.studentName);
+                          setShowExternalDropdown(false);
+                          setCreateStudentError(null);
+                        }}
+                        className="w-full px-4 py-4 text-left hover:bg-green-50 transition-colors border-b border-gray-100 last:border-0"
+                      >
+                        <div className="font-bold text-brand-dark text-base mb-1">{student.studentName}</div>
+                        {student.studentMail && (
+                          <div className="text-sm text-gray-700 mb-1">
+                            <span className="font-medium">Email:</span> {student.studentMail}
+                          </div>
+                        )}
+                        {student.parentName && (
+                          <div className="text-sm text-gray-700 mb-1">
+                            <span className="font-medium">Parent:</span> {student.parentName}
+                          </div>
+                        )}
+                        {student.parentMail && (
+                          <div className="text-sm text-gray-600">
+                            <span className="font-medium">Parent Email:</span> {student.parentMail}
+                          </div>
+                        )}
+                        {student.school && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            <span className="font-medium">School:</span> {student.school}
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {newStudentExternalId && (
+                  <p className="text-xs text-green-600 mt-1">
+                    ✓ Selected: {newStudentName} (ID: {newStudentExternalId})
+                  </p>
+                )}
+
+                {newStudentName.length > 0 && newStudentName.length < 2 && !newStudentExternalId && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Type at least 2 characters to search
+                  </p>
+                )}
               </div>
 
               <div>
@@ -735,9 +897,22 @@ export default function TutorStudentsPage() {
                   type="email"
                   value={newStudentEmail}
                   onChange={(e) => setNewStudentEmail(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-brand-green focus:outline-none transition-colors"
-                  placeholder="student@example.com"
+                  className={`w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-brand-green focus:outline-none transition-colors ${
+                    newStudentExternalId && externalStudents.find(s => s.id === newStudentExternalId)?.studentMail
+                      ? 'bg-gray-50'
+                      : ''
+                  }`}
+                  placeholder={newStudentExternalId && !externalStudents.find(s => s.id === newStudentExternalId)?.studentMail
+                    ? "Email not found - enter manually"
+                    : "student@example.com"
+                  }
+                  readOnly={!!(newStudentExternalId && externalStudents.find(s => s.id === newStudentExternalId)?.studentMail)}
                 />
+                {newStudentExternalId && !externalStudents.find(s => s.id === newStudentExternalId)?.studentMail && newStudentEmail && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    ⚠️ This email will be saved to the external student database
+                  </p>
+                )}
               </div>
 
               <div>
@@ -745,14 +920,13 @@ export default function TutorStudentsPage() {
                   Password *
                 </label>
                 <input
-                  type="password"
-                  value={newStudentPassword}
-                  onChange={(e) => setNewStudentPassword(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-brand-green focus:outline-none transition-colors"
-                  placeholder="Enter password"
+                  type="text"
+                  value="123456"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-brand-green focus:outline-none transition-colors bg-gray-50"
+                  readOnly
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Student will be required to change password on first login
+                  Default password: 123456 - Student will be required to change it on first login
                 </p>
               </div>
 
@@ -817,7 +991,7 @@ export default function TutorStudentsPage() {
             <div className="p-6 border-t border-gray-200 flex-shrink-0 bg-gray-50">
               <div className="flex gap-3">
                 <button
-                  onClick={() => setShowAddStudentModal(false)}
+                  onClick={closeAddStudentModal}
                   disabled={creatingStudent}
                   className="flex-1 px-6 py-3 rounded-xl font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all disabled:opacity-50"
                 >
