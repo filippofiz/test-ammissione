@@ -195,6 +195,7 @@ export default function ReviewQuestionsPage() {
   const [showImageSourceModal, setShowImageSourceModal] = useState(false);
   const [currentImageQuestionId, setCurrentImageQuestionId] = useState<string | null>(null);
   const [currentImageOptionKey, setCurrentImageOptionKey] = useState<string | null>(null); // For answer option images (a, b, c, d)
+  const [selectedImageLanguage, setSelectedImageLanguage] = useState<'ita' | 'eng'>('ita');
   const [selectedPageForExtraction, setSelectedPageForExtraction] = useState<number>(1);
   const [availableImages, setAvailableImages] = useState<{ url: string; width: number; height: number; y: number }[]>([]);
   const [loadingImages, setLoadingImages] = useState(false);
@@ -259,11 +260,11 @@ export default function ReviewQuestionsPage() {
       // For each test, get question count, format, and flagged count
       const testsWithDetails = await Promise.all(
         (testsData || []).map(async (test) => {
-          // Get questions for format detection
+          // Get questions for format detection (check test_id OR additional_test_ids)
           const { data: questions } = await supabase
             .from('2V_questions')
             .select('id, question_type')
-            .eq('test_id', test.id);
+            .or(`test_id.eq.${test.id},additional_test_ids.cs.["${test.id}"]`);
 
           let format: 'pdf' | 'interactive' | 'mixed' = 'pdf';
           if (questions && questions.length > 0) {
@@ -309,10 +310,11 @@ export default function ReviewQuestionsPage() {
   async function loadQuestions(testId: string) {
     setLoadingQuestions(true);
     try {
+      // Fetch questions where test_id matches OR additional_test_ids contains the test_id
       const { data, error } = await supabase
         .from('2V_questions')
         .select('*')
-        .eq('test_id', testId)
+        .or(`test_id.eq.${testId},additional_test_ids.cs.["${testId}"]`)
         .order('question_number');
 
       if (error) throw error;
@@ -390,10 +392,25 @@ export default function ReviewQuestionsPage() {
       const ANDREA_ID = 'ed3865f5-9207-4a1e-9534-d57b0f8f15f3';
       const KLAUDIO_ID = 'ca0a06db-0b50-4edf-a26d-8b5213690413';
 
+      // Get Filippo's ID dynamically by email
+      let FILIPPO_ID: string | null = null;
+      const { data: filippoProfile } = await supabase
+        .from('2V_profiles')
+        .select('id')
+        .ilike('email', 'filippo.fiz%')
+        .single();
+
+      if (filippoProfile) {
+        FILIPPO_ID = filippoProfile.id;
+      }
+
       let filteredData = data || [];
 
       if (currentProfile) {
-        if (currentProfile.id === ANDREA_ID) {
+        if (currentProfile.id === FILIPPO_ID) {
+          // Filippo sees ALL flagged questions (no filtering)
+          // filteredData remains unchanged
+        } else if (currentProfile.id === ANDREA_ID) {
           // Andrea sees everything EXCEPT SAT and GMAT
           filteredData = filteredData.filter((q: any) => {
             const testType = q['2V_tests']?.test_type?.toUpperCase();
@@ -407,7 +424,7 @@ export default function ReviewQuestionsPage() {
           });
         }
         // Other users see nothing (empty list)
-        else if (currentProfile.id !== ANDREA_ID && currentProfile.id !== KLAUDIO_ID) {
+        else {
           filteredData = [];
         }
       }
@@ -435,6 +452,29 @@ export default function ReviewQuestionsPage() {
       );
 
       setFlaggedQuestions(questionsWithNames);
+
+      // Extract passages from flagged questions (same as in loadQuestions)
+      if (questionsWithNames && questionsWithNames.length > 0) {
+        const passageMap = new Map<string, any>();
+        questionsWithNames.forEach((q: any) => {
+          if (q.question_data?.passage_id && q.question_data?.passage_text) {
+            if (!passageMap.has(q.question_data.passage_id)) {
+              passageMap.set(q.question_data.passage_id, {
+                passage_id: q.question_data.passage_id,
+                passage_text: q.question_data.passage_text,
+                passage_text_eng: q.question_data.passage_text_eng,
+                passage_title: q.question_data.passage_title,
+                passage_title_eng: q.question_data.passage_title_eng,
+                question_numbers: []
+              });
+            }
+            passageMap.get(q.question_data.passage_id)!.question_numbers.push(q.question_number);
+          }
+        });
+        setPassages(Array.from(passageMap.values()));
+      } else {
+        setPassages([]);
+      }
     } catch (err) {
       console.error('Error loading flagged questions:', err);
     } finally {
@@ -1707,21 +1747,40 @@ export default function ReviewQuestionsPage() {
 
         if (currentImageOptionKey) {
           // Updating an answer option image
-          console.log(`  → Updating option ${currentImageOptionKey} image`);
-          updatedData = {
-            ...question.question_data,
-            image_options: {
-              ...(question.question_data.image_options || {}),
-              [currentImageOptionKey]: publicUrl,
-            },
-          };
+          console.log(`  → Updating option ${currentImageOptionKey} image (${selectedImageLanguage})`);
+          if (selectedImageLanguage === 'ita') {
+            updatedData = {
+              ...question.question_data,
+              image_options: {
+                ...(question.question_data.image_options || {}),
+                [currentImageOptionKey]: publicUrl,
+              },
+            };
+          } else {
+            // English version
+            updatedData = {
+              ...question.question_data,
+              image_options_eng: {
+                ...(question.question_data.image_options_eng || {}),
+                [currentImageOptionKey]: publicUrl,
+              },
+            };
+          }
         } else {
           // Updating the main question image
-          console.log('  → Updating main question image');
-          updatedData = {
-            ...question.question_data,
-            image_url: publicUrl,
-          };
+          console.log(`  → Updating main question image (${selectedImageLanguage})`);
+          if (selectedImageLanguage === 'ita') {
+            updatedData = {
+              ...question.question_data,
+              image_url: publicUrl,
+            };
+          } else {
+            // English version
+            updatedData = {
+              ...question.question_data,
+              image_url_eng: publicUrl,
+            };
+          }
         }
 
         const { error: updateError } = await supabase
@@ -1762,14 +1821,15 @@ export default function ReviewQuestionsPage() {
         return;
       }
 
+      // Don't close modal - allow uploading another language
       // Clean up
-      console.log('  🧹 Cleaning up...');
-      availableImages.forEach(img => URL.revokeObjectURL(img.url));
-      setAvailableImages([]);
-      setShowImageSourceModal(false);
-      setCurrentImageQuestionId(null);
-      setCurrentImageOptionKey(null);
-      console.log('✅ Image upload completed successfully!');
+      // console.log('  🧹 Cleaning up...');
+      // availableImages.forEach(img => URL.revokeObjectURL(img.url));
+      // setAvailableImages([]);
+      // setShowImageSourceModal(false);
+      // setCurrentImageQuestionId(null);
+      // setCurrentImageOptionKey(null);
+      console.log('✅ Image upload completed successfully! Modal stays open for other language.');
     } catch (err) {
       console.error('❌ Error uploading image:', err);
       alert(`Failed to upload image: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -1829,26 +1889,62 @@ export default function ReviewQuestionsPage() {
 
       const { publicUrl } = await uploadResponse.json();
 
+      console.log('🖼️ Image uploaded successfully:', {
+        publicUrl,
+        selectedLanguage: selectedImageLanguage,
+        questionId: currentImageQuestionId,
+        isOption: !!currentImageOptionKey,
+        optionKey: currentImageOptionKey
+      });
+
       // Update question in database
       if (question) {
         let updatedData;
 
         if (currentImageOptionKey) {
           // Updating an answer option image
-          updatedData = {
-            ...question.question_data,
-            image_options: {
-              ...(question.question_data.image_options || {}),
-              [currentImageOptionKey]: publicUrl,
-            },
-          };
+          console.log(`  → Applying to image_options${selectedImageLanguage === 'eng' ? '_eng' : ''}.${currentImageOptionKey}`);
+          if (selectedImageLanguage === 'ita') {
+            updatedData = {
+              ...question.question_data,
+              image_options: {
+                ...(question.question_data.image_options || {}),
+                [currentImageOptionKey]: publicUrl,
+              },
+            };
+          } else {
+            // English version
+            updatedData = {
+              ...question.question_data,
+              image_options_eng: {
+                ...(question.question_data.image_options_eng || {}),
+                [currentImageOptionKey]: publicUrl,
+              },
+            };
+          }
         } else {
           // Updating the main question image
-          updatedData = {
-            ...question.question_data,
-            image_url: publicUrl,
-          };
+          console.log(`  → Applying to ${selectedImageLanguage === 'ita' ? 'image_url' : 'image_url_eng'}`);
+          if (selectedImageLanguage === 'ita') {
+            updatedData = {
+              ...question.question_data,
+              image_url: publicUrl,
+            };
+          } else {
+            // English version
+            updatedData = {
+              ...question.question_data,
+              image_url_eng: publicUrl,
+            };
+          }
         }
+
+        console.log('  → Updated data:', {
+          has_image_url: !!updatedData.image_url,
+          has_image_url_eng: !!updatedData.image_url_eng,
+          has_image_options: !!updatedData.image_options,
+          has_image_options_eng: !!updatedData.image_options_eng
+        });
 
         await supabase
           .from('2V_questions')
@@ -1863,9 +1959,10 @@ export default function ReviewQuestionsPage() {
         ));
       }
 
-      setShowImageSourceModal(false);
-      setCurrentImageQuestionId(null);
-      setCurrentImageOptionKey(null);
+      // Don't close modal - allow uploading another language
+      // setShowImageSourceModal(false);
+      // setCurrentImageQuestionId(null);
+      // setCurrentImageOptionKey(null);
     } catch (err) {
       console.error('Error uploading image:', err);
       alert('Failed to upload image');
@@ -2639,11 +2736,15 @@ export default function ReviewQuestionsPage() {
                                   className="rounded-lg border-2 border-indigo-300"
                                 />
                                 {/* Show original image below for comparison */}
-                                {question.question_data?.image_url && (
+                                {(question.question_data?.image_url || question.question_data?.image_url_eng) && (
                                   <div className="mt-2">
                                     <span className="text-xs text-gray-500">Original image:</span>
                                     <img
-                                      src={question.question_data.image_url}
+                                      src={
+                                        getQuestionLanguage(question.id) === 'en' && question.question_data.image_url_eng
+                                          ? question.question_data.image_url_eng
+                                          : question.question_data.image_url || question.question_data.image_url_eng
+                                      }
                                       alt="Original"
                                       className="max-w-full max-h-32 mt-1 rounded border border-gray-300 opacity-70 hover:opacity-100 transition-opacity"
                                     />
@@ -2685,11 +2786,15 @@ export default function ReviewQuestionsPage() {
                                   className="rounded-lg border-2 border-indigo-300 p-4 bg-white"
                                 />
                                 {/* Show original image below for comparison */}
-                                {question.question_data?.image_url && (
+                                {(question.question_data?.image_url || question.question_data?.image_url_eng) && (
                                   <div className="mt-2">
                                     <span className="text-xs text-gray-500">Original extracted image:</span>
                                     <img
-                                      src={question.question_data.image_url}
+                                      src={
+                                        getQuestionLanguage(question.id) === 'en' && question.question_data.image_url_eng
+                                          ? question.question_data.image_url_eng
+                                          : question.question_data.image_url || question.question_data.image_url_eng
+                                      }
                                       alt="Original"
                                       className="max-w-full max-h-32 mt-1 rounded border border-gray-300 opacity-70 hover:opacity-100 transition-opacity"
                                     />
@@ -2699,10 +2804,14 @@ export default function ReviewQuestionsPage() {
                             )}
 
                             {/* Image if present (only show if no graph recreation and no recharts) */}
-                            {question.question_data?.image_url && !question.question_data?.recreate_graph && !question.question_data?.recharts_code && (
+                            {(question.question_data?.image_url || question.question_data?.image_url_eng) && !question.question_data?.recreate_graph && !question.question_data?.recharts_code && (
                               <div className="mt-3 relative group">
                                 <img
-                                  src={question.question_data.image_url}
+                                  src={
+                                    getQuestionLanguage(question.id) === 'en' && question.question_data.image_url_eng
+                                      ? question.question_data.image_url_eng
+                                      : question.question_data.image_url || question.question_data.image_url_eng
+                                  }
                                   alt={`Question ${question.question_number}`}
                                   className="max-w-full rounded-lg border-2 border-indigo-300"
                                 />
@@ -2778,10 +2887,14 @@ export default function ReviewQuestionsPage() {
                                     {key.toUpperCase()}
                                   </span>
                                   <div className="flex-1 relative">
-                                    {question.question_data?.image_options?.[key] ? (
+                                    {(question.question_data?.image_options?.[key] || question.question_data?.image_options_eng?.[key]) ? (
                                       <div className="relative group">
                                         <img
-                                          src={question.question_data.image_options[key]}
+                                          src={
+                                            getQuestionLanguage(question.id) === 'en' && question.question_data.image_options_eng?.[key]
+                                              ? question.question_data.image_options_eng[key]
+                                              : question.question_data.image_options?.[key] || question.question_data.image_options_eng?.[key]
+                                          }
                                           alt={`Option ${key}`}
                                           className="max-w-full rounded"
                                         />
@@ -2858,31 +2971,38 @@ export default function ReviewQuestionsPage() {
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    {flaggedQuestions.map((question: any) => (
-                      <FlaggedQuestionEditor
-                        key={question.id}
-                        question={question}
-                        onUpdate={loadFlaggedQuestions}
-                        onClearFlag={(questionId) => {
-                          setFlaggedQuestions(prev => prev.filter(q => q.id !== questionId));
-                        }}
-                        onGoToTest={(testId, questionNumber) => {
-                          // Find the test
-                          const test = tests.find(t => t.id === testId);
-                          if (test) {
-                            setSelectedTest(test);
-                            setViewMode('entireTests');
-                            // Scroll to question after a brief delay
-                            setTimeout(() => {
-                              const element = document.getElementById(`question-${questionNumber}`);
-                              if (element) {
-                                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                              }
-                            }, 500);
-                          }
-                        }}
-                      />
-                    ))}
+                    {flaggedQuestions.map((question: any) => {
+                      // Find passage for this question if it has one
+                      const passageId = question.question_data?.passage_id;
+                      const passage = passageId ? passages.find(p => p.passage_id === passageId) : null;
+
+                      return (
+                        <FlaggedQuestionEditor
+                          key={question.id}
+                          question={question}
+                          passage={passage}
+                          onUpdate={loadFlaggedQuestions}
+                          onClearFlag={(questionId) => {
+                            setFlaggedQuestions(prev => prev.filter(q => q.id !== questionId));
+                          }}
+                          onGoToTest={(testId, questionNumber) => {
+                            // Find the test
+                            const test = tests.find(t => t.id === testId);
+                            if (test) {
+                              setSelectedTest(test);
+                              setViewMode('entireTests');
+                              // Scroll to question after a brief delay
+                              setTimeout(() => {
+                                const element = document.getElementById(`question-${questionNumber}`);
+                                if (element) {
+                                  element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                }
+                              }, 500);
+                            }
+                          }}
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -3053,9 +3173,13 @@ export default function ReviewQuestionsPage() {
                         </div>
                         <div>
                           <span className="text-xs text-gray-500 block mb-1">Original image:</span>
-                          {question.question_data?.image_url ? (
+                          {(question.question_data?.image_url || question.question_data?.image_url_eng) ? (
                             <img
-                              src={question.question_data.image_url}
+                              src={
+                                getQuestionLanguage(question.id) === 'en' && question.question_data.image_url_eng
+                                  ? question.question_data.image_url_eng
+                                  : question.question_data.image_url || question.question_data.image_url_eng
+                              }
                               alt="Original"
                               className="max-h-32 rounded border"
                             />
@@ -3581,6 +3705,84 @@ export default function ReviewQuestionsPage() {
                     <p className="text-xs text-blue-700 mt-2">
                       Current question is on page {questions.find(q => q.id === currentImageQuestionId)?.question_data?.page_number || '?'}
                     </p>
+                  </div>
+
+                  {/* Language Selector */}
+                  <div className="mb-4 p-4 bg-blue-50 border-2 border-blue-300 rounded-lg">
+                    <p className="text-sm font-semibold text-blue-800 mb-2">
+                      🌐 Select Language Version
+                    </p>
+                    <p className="text-xs text-blue-700 mb-2">
+                      Choose which language this image is for. If only one image is uploaded, it will be used for both languages automatically.
+                    </p>
+                    <div className="mb-3 p-2 bg-white rounded border border-blue-200">
+                      <span className="text-xs font-bold text-blue-900">
+                        Currently selected: {selectedImageLanguage === 'ita' ? '🇮🇹 ITALIAN' : '🇬🇧 ENGLISH'}
+                      </span>
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => {
+                          console.log('🇮🇹 Switching to Italian');
+                          setSelectedImageLanguage('ita');
+                        }}
+                        className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-colors ${
+                          selectedImageLanguage === 'ita'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                        }`}
+                      >
+                        🇮🇹 Italian
+                      </button>
+                      <button
+                        onClick={() => {
+                          console.log('🇬🇧 Switching to English');
+                          setSelectedImageLanguage('eng');
+                        }}
+                        className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-colors ${
+                          selectedImageLanguage === 'eng'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                        }`}
+                      >
+                        🇬🇧 English
+                      </button>
+                    </div>
+
+                    {/* Current status indicators */}
+                    {currentImageQuestionId && (() => {
+                      const question = questions.find(q => q.id === currentImageQuestionId);
+                      if (!question) return null;
+
+                      const hasItalianImage = currentImageOptionKey
+                        ? !!question.question_data?.image_options?.[currentImageOptionKey]
+                        : !!question.question_data?.image_url;
+
+                      const hasEnglishImage = currentImageOptionKey
+                        ? !!question.question_data?.image_options_eng?.[currentImageOptionKey]
+                        : !!question.question_data?.image_url_eng;
+
+                      if (hasItalianImage || hasEnglishImage) {
+                        return (
+                          <div className="mt-3 pt-3 border-t border-blue-200">
+                            <p className="text-xs font-semibold text-blue-800 mb-1">Current status:</p>
+                            <div className="flex gap-2">
+                              {hasItalianImage && (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                                  ✓ 🇮🇹 Italian uploaded
+                                </span>
+                              )}
+                              {hasEnglishImage && (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                                  ✓ 🇬🇧 English uploaded
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
 
                   {/* Direct Upload Option */}

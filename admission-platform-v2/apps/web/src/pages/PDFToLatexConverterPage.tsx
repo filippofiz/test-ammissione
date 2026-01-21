@@ -26,6 +26,7 @@ import { MathJaxProvider, MathJaxRenderer, TikZGraph } from '../components/MathJ
 import { AdvancedGraphRenderer } from '../components/GraphRenderer';
 import { NewTestCreator } from '../components/NewTestCreator';
 import { LanguageSelectionModal } from '../components/LanguageSelectionModal';
+import { ImageUploader } from '../components/ImageUploader';
 import { supabase } from '../lib/supabase';
 import * as pdfjsLib from 'pdfjs-dist';
 import { Document, Page, pdfjs } from 'react-pdf';
@@ -514,14 +515,55 @@ export default function PDFToLatexConverterPage() {
   // Section-by-section workflow state for new tests
   const [baseTestId, setBaseTestId] = useState<string | null>(null); // Shared test ID across sections
   const [savedSections, setSavedSections] = useState<string[]>([]); // Track which sections have been saved
+  const [creationMode, setCreationMode] = useState<'create-new' | 'add-section'>('create-new');
+  const [selectedExistingTest, setSelectedExistingTest] = useState<string | null>(null);
+  const [availableTests, setAvailableTests] = useState<any[]>([]);
 
   // Clear savedSections and baseTestId when test metadata changes (so sections from Training 1 don't grey out Training 2)
   useEffect(() => {
     if (mode === 'new') {
       setSavedSections([]);
       setBaseTestId(null);
+      setSelectedExistingTest(null);
     }
   }, [mode, newTestMetadata.test_type, newTestMetadata.exercise_type, newTestMetadata.test_number]);
+
+  // Load available tests when in "add-section" mode
+  useEffect(() => {
+    const loadAvailableTests = async () => {
+      if (mode !== 'new' || creationMode !== 'add-section') {
+        setAvailableTests([]);
+        return;
+      }
+
+      if (!newTestMetadata.test_type || !newTestMetadata.exercise_type || !newTestMetadata.test_number) {
+        setAvailableTests([]);
+        return;
+      }
+
+      try {
+        const { data: tests, error } = await supabase
+          .from('2V_tests')
+          .select('id, test_type, section, exercise_type, test_number, format')
+          .eq('test_type', newTestMetadata.test_type)
+          .eq('exercise_type', newTestMetadata.exercise_type)
+          .eq('test_number', newTestMetadata.test_number)
+          .eq('format', 'interactive')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error loading available tests:', error);
+          return;
+        }
+
+        setAvailableTests(tests || []);
+      } catch (err) {
+        console.error('Error loading tests:', err);
+      }
+    };
+
+    loadAvailableTests();
+  }, [mode, creationMode, newTestMetadata.test_type, newTestMetadata.exercise_type, newTestMetadata.test_number]);
 
   // Load existing sections from questions table when baseTestId is set
   useEffect(() => {
@@ -571,6 +613,7 @@ export default function PDFToLatexConverterPage() {
   const [availableImages, setAvailableImages] = useState<{ url: string; width: number; height: number; y: number; blob: Blob }[]>([]);
   const [loadingImages, setLoadingImages] = useState(false);
   const [selectedImageTarget, setSelectedImageTarget] = useState<'question' | 'option_a' | 'option_b' | 'option_c' | 'option_d' | 'option_e'>('question');
+  const [selectedImageLanguage, setSelectedImageLanguage] = useState<'ita' | 'eng'>('ita');
   const [sharedImageQuestions, setSharedImageQuestions] = useState<number[]>([]); // For selecting multiple questions to share an image
   const [selectedPageForExtraction, setSelectedPageForExtraction] = useState<number>(1);
   const [totalPdfPages, setTotalPdfPages] = useState<number>(1);
@@ -1359,6 +1402,11 @@ export default function PDFToLatexConverterPage() {
       return;
     }
 
+    if (mode === 'new' && creationMode === 'add-section' && !selectedExistingTest) {
+      setError('Please select an existing test to add sections to');
+      return;
+    }
+
     setSaving(true);
     setError(null);
     setSaveSuccess(false);
@@ -1432,48 +1480,49 @@ export default function PDFToLatexConverterPage() {
               console.log(`✓ Updated test section to "Multi-topic"`);
             }
           }
-        } else {
-          // First section - determine section value and check if test exists
-          const sectionValue = firstSection.section;
+        } else if (creationMode === 'add-section' && selectedExistingTest) {
+          // User selected an existing test to add section to
+          testId = selectedExistingTest;
+          console.log(`✓ Adding section to existing test: ${testId}`);
 
-          // Check if test already exists (look for same test_type, exercise_type, test_number)
-          // Don't filter by section because we want to find any matching test
-          const { data: existingTests } = await supabase
+          // Update the test to "Multi-topic" since we're adding sections
+          const { error: updateError } = await supabase
             .from('2V_tests')
-            .select('id, section')
-            .eq('test_type', newTestMetadata.test_type)
-            .eq('exercise_type', newTestMetadata.exercise_type)
-            .eq('test_number', newTestMetadata.test_number)
-            .eq('format', 'interactive')
-            .limit(1);
+            .update({ section: 'Multi-topic' })
+            .eq('id', testId);
 
-          if (existingTests && existingTests.length > 0) {
-            // Test exists - reuse it, don't create new entry
-            testId = existingTests[0].id;
-            console.log(`✓ Test already exists, reusing test_id: ${testId}`);
+          if (updateError) {
+            console.warn('Could not update section to Multi-topic:', updateError);
           } else {
-            // New test - create ONE entry in 2V_tests
-            testId = crypto.randomUUID();
-
-            const { error: testInsertError } = await supabase
-              .from('2V_tests')
-              .insert({
-                id: testId,
-                test_type: newTestMetadata.test_type,
-                section: sectionValue,
-                exercise_type: newTestMetadata.exercise_type,
-                test_number: newTestMetadata.test_number,
-                format: 'interactive',
-                is_active: true,
-                created_by: profileId,
-              });
-
-            if (testInsertError) {
-              console.error('Error inserting test:', testInsertError);
-              throw new Error(`Failed to create test: ${testInsertError.message}`);
-            }
-            console.log(`✓ Created new test in 2V_tests with id: ${testId}`);
+            console.log(`✓ Updated test section to "Multi-topic"`);
           }
+
+          // Save the baseTestId for subsequent sections in this session
+          setBaseTestId(testId);
+          console.log(`✓ Set baseTestId: ${testId}`);
+        } else {
+          // Create New Test mode - always create a brand new test
+          const sectionValue = firstSection.section;
+          testId = crypto.randomUUID();
+
+          const { error: testInsertError } = await supabase
+            .from('2V_tests')
+            .insert({
+              id: testId,
+              test_type: newTestMetadata.test_type,
+              section: sectionValue,
+              exercise_type: newTestMetadata.exercise_type,
+              test_number: newTestMetadata.test_number,
+              format: 'interactive',
+              is_active: true,
+              created_by: profileId,
+            });
+
+          if (testInsertError) {
+            console.error('Error inserting test:', testInsertError);
+            throw new Error(`Failed to create test: ${testInsertError.message}`);
+          }
+          console.log(`✓ Created new test in 2V_tests with id: ${testId}`);
 
           // Save the baseTestId so subsequent sections can reuse it
           setBaseTestId(testId);
@@ -1534,7 +1583,9 @@ export default function PDFToLatexConverterPage() {
             page_number: q.page_number,
             has_image: q.has_image || false,
             image_url: q.image_url || null,
+            image_url_eng: q.image_url_eng || null,
             image_options: q.image_options || null,
+            image_options_eng: q.image_options_eng || null,
             // Passage data for reading comprehension
             passage_id: q.passage_id || null,
             passage_text: passage?.passage_text || null,
@@ -1701,7 +1752,9 @@ export default function PDFToLatexConverterPage() {
               page_number: q.page_number,
               has_image: q.has_image || false,
               image_url: q.image_url || null,
+              image_url_eng: q.image_url_eng || null,
               image_options: q.image_options || null,
+              image_options_eng: q.image_options_eng || null,
               // Passage data for reading comprehension
               passage_id: q.passage_id || null,
               passage_text: passage?.passage_text || null,
@@ -2530,7 +2583,13 @@ export default function PDFToLatexConverterPage() {
 
       for (const qIndex of sharedImageQuestions) {
         if (selectedImageTarget === 'question') {
-          (updatedQuestions[qIndex] as any).image_url = publicUrl;
+          // Apply image based on language selection
+          if (selectedImageLanguage === 'ita') {
+            (updatedQuestions[qIndex] as any).image_url = publicUrl;
+          } else if (selectedImageLanguage === 'eng') {
+            (updatedQuestions[qIndex] as any).image_url_eng = publicUrl;
+          }
+
           // Store linked questions info
           if (sharedImageQuestions.length > 1) {
             (updatedQuestions[qIndex] as any).shared_image_questions = linkedQuestionNumbers;
@@ -2539,23 +2598,30 @@ export default function PDFToLatexConverterPage() {
           // Handle option images (only for primary question)
           if (qIndex === imageSelectorQuestionIndex) {
             const optionKey = selectedImageTarget.replace('option_', '');
-            if (!(updatedQuestions[qIndex] as any).image_options) {
-              (updatedQuestions[qIndex] as any).image_options = {};
+
+            // Apply option image based on language
+            if (selectedImageLanguage === 'ita') {
+              if (!(updatedQuestions[qIndex] as any).image_options) {
+                (updatedQuestions[qIndex] as any).image_options = {};
+              }
+              (updatedQuestions[qIndex] as any).image_options[optionKey] = publicUrl;
+            } else if (selectedImageLanguage === 'eng') {
+              if (!(updatedQuestions[qIndex] as any).image_options_eng) {
+                (updatedQuestions[qIndex] as any).image_options_eng = {};
+              }
+              (updatedQuestions[qIndex] as any).image_options_eng[optionKey] = publicUrl;
             }
-            (updatedQuestions[qIndex] as any).image_options[optionKey] = publicUrl;
           }
         }
       }
 
       setConvertedQuestions(updatedQuestions);
-      setShowImageSelector(false);
-
-      // Clean up object URLs
-      availableImages.forEach(img => URL.revokeObjectURL(img.url));
-      setAvailableImages([]);
+      // Don't close modal - allow selecting another image for the other language
+      // Modal stays open so don't clean up object URLs yet
 
       const questionsList = linkedQuestionNumbers.join(', ');
-      console.log(`✓ Manually selected and uploaded image for question(s) ${questionsList}`);
+      const langLabel = selectedImageLanguage === 'ita' ? 'ITA' : 'ENG';
+      console.log(`✓ Manually selected and uploaded image (${langLabel}) for question(s) ${questionsList}`);
     } catch (err) {
       console.error('Error uploading selected image:', err);
       setError(err instanceof Error ? err.message : 'Failed to upload image');
@@ -2573,6 +2639,63 @@ export default function PDFToLatexConverterPage() {
         return [...prev, index].sort((a, b) => a - b);
       }
     });
+  };
+
+  // Handle uploaded image from ImageUploader component
+  const handleUploadedImage = (imageUrl: string, language: 'ita' | 'eng' = 'ita') => {
+    if (imageSelectorQuestionIndex === null || sharedImageQuestions.length === 0) return;
+
+    try {
+      // Update ALL selected questions with the uploaded image
+      const updatedQuestions = [...convertedQuestions];
+
+      // Get question numbers for linking
+      const linkedQuestionNumbers = sharedImageQuestions.map(idx => convertedQuestions[idx].question_number);
+
+      for (const qIndex of sharedImageQuestions) {
+        if (selectedImageTarget === 'question') {
+          // Apply image based on language selection
+          if (language === 'ita') {
+            (updatedQuestions[qIndex] as any).image_url = imageUrl;
+          } else if (language === 'eng') {
+            (updatedQuestions[qIndex] as any).image_url_eng = imageUrl;
+          }
+
+          // Store linked questions info
+          if (sharedImageQuestions.length > 1) {
+            (updatedQuestions[qIndex] as any).shared_image_questions = linkedQuestionNumbers;
+          }
+        } else {
+          // Handle option images (only for primary question)
+          if (qIndex === imageSelectorQuestionIndex) {
+            const optionKey = selectedImageTarget.replace('option_', '');
+
+            // Apply option image based on language
+            if (language === 'ita') {
+              if (!(updatedQuestions[qIndex] as any).image_options) {
+                (updatedQuestions[qIndex] as any).image_options = {};
+              }
+              (updatedQuestions[qIndex] as any).image_options[optionKey] = imageUrl;
+            } else if (language === 'eng') {
+              if (!(updatedQuestions[qIndex] as any).image_options_eng) {
+                (updatedQuestions[qIndex] as any).image_options_eng = {};
+              }
+              (updatedQuestions[qIndex] as any).image_options_eng[optionKey] = imageUrl;
+            }
+          }
+        }
+      }
+
+      setConvertedQuestions(updatedQuestions);
+      // Don't close modal - allow uploading another language version
+
+      const questionsList = linkedQuestionNumbers.join(', ');
+      const langLabel = language === 'ita' ? 'ITA' : 'ENG';
+      console.log(`✓ Uploaded image (${langLabel}) applied to question(s) ${questionsList}`);
+    } catch (err) {
+      console.error('Error applying uploaded image:', err);
+      setError(err instanceof Error ? err.message : 'Failed to apply uploaded image');
+    }
   };
 
   // Close image selector and clean up
@@ -3253,11 +3376,80 @@ export default function PDFToLatexConverterPage() {
 
           {/* New Test Creation Panel - Shows before conversion (NEW MODE) */}
           {convertedQuestions.length === 0 && mode === 'new' && (
-            <NewTestCreator
-              onConvert={handleConvertNewTest}
-              converting={converting}
-              savedSections={savedSections}
-            />
+            <>
+              {/* Creation Mode Selector */}
+              <div className="max-w-5xl mx-auto px-4 mb-6">
+                <div className="bg-white rounded-2xl shadow-xl p-6 border-2 border-indigo-200">
+                  <h3 className="text-xl font-bold text-brand-dark mb-4">Choose Creation Mode</h3>
+
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <button
+                      onClick={() => {
+                        setCreationMode('create-new');
+                        setSelectedExistingTest(null);
+                      }}
+                      className={`p-4 rounded-xl border-2 transition-all ${
+                        creationMode === 'create-new'
+                          ? 'border-indigo-600 bg-indigo-50'
+                          : 'border-gray-300 hover:border-indigo-300'
+                      }`}
+                    >
+                      <div className="text-2xl mb-2">🆕</div>
+                      <div className="font-bold text-brand-dark">Create New Test</div>
+                      <div className="text-sm text-gray-600 mt-1">Start a brand new test from scratch</div>
+                    </button>
+
+                    <button
+                      onClick={() => setCreationMode('add-section')}
+                      className={`p-4 rounded-xl border-2 transition-all ${
+                        creationMode === 'add-section'
+                          ? 'border-indigo-600 bg-indigo-50'
+                          : 'border-gray-300 hover:border-indigo-300'
+                      }`}
+                    >
+                      <div className="text-2xl mb-2">➕</div>
+                      <div className="font-bold text-brand-dark">Add Section to Existing</div>
+                      <div className="text-sm text-gray-600 mt-1">Add new section to an existing test</div>
+                    </button>
+                  </div>
+
+                  {/* Existing Test Selector */}
+                  {creationMode === 'add-section' && (
+                    <div className="mt-4 p-4 bg-blue-50 border-2 border-blue-300 rounded-lg">
+                      <label className="block text-sm font-bold text-blue-900 mb-2">
+                        Select Existing Test to Add Section To:
+                      </label>
+                      <p className="text-xs text-blue-700 mb-3">
+                        {availableTests.length === 0
+                          ? 'Fill in the test metadata below to see available tests'
+                          : `Found ${availableTests.length} matching test(s)`
+                        }
+                      </p>
+                      {availableTests.length > 0 && (
+                        <select
+                          value={selectedExistingTest || ''}
+                          onChange={(e) => setSelectedExistingTest(e.target.value || null)}
+                          className="w-full px-4 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">-- Select a test --</option>
+                          {availableTests.map((test) => (
+                            <option key={test.id} value={test.id}>
+                              {test.test_type} - {test.section} ({test.exercise_type} #{test.test_number})
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <NewTestCreator
+                onConvert={handleConvertNewTest}
+                converting={converting}
+                savedSections={savedSections}
+              />
+            </>
           )}
 
           {/* Full Screen Preview Mode - Real Test View */}
@@ -3295,10 +3487,14 @@ export default function PDFToLatexConverterPage() {
                       )}
 
                       {/* Question Image (fallback if no graph recreation) */}
-                      {(question as any).image_url && !(question as any).has_graph_latex && (
+                      {((question as any).image_url || (question as any).image_url_eng) && !(question as any).has_graph_latex && (
                         <div className="mt-4">
                           <img
-                            src={(question as any).image_url}
+                            src={
+                              viewLanguage === 'ENG' && (question as any).image_url_eng
+                                ? (question as any).image_url_eng
+                                : (question as any).image_url
+                            }
                             alt={`Question ${question.question_number}`}
                             className="max-w-full border-2 border-gray-300 rounded-lg"
                           />
@@ -3310,8 +3506,10 @@ export default function PDFToLatexConverterPage() {
                     {question.options && (
                       <div className="space-y-3">
                         {Object.entries(question.options).map(([key, value]) => {
-                          const hasImageOption = !!(question as any).image_options?.[key];
-                          const imageUrl = (question as any).image_options?.[key];
+                          const hasImageOption = !!((question as any).image_options?.[key] || (question as any).image_options_eng?.[key]);
+                          const imageUrl = viewLanguage === 'ENG' && (question as any).image_options_eng?.[key]
+                            ? (question as any).image_options_eng[key]
+                            : (question as any).image_options?.[key];
 
                           return (
                             <div key={key} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
@@ -3563,10 +3761,7 @@ export default function PDFToLatexConverterPage() {
                             <FontAwesomeIcon icon={faTable} />
                           </button>
                           <button
-                            onClick={() => {
-                              setImageSelectorQuestionIndex(index);
-                              setShowImageSelector(true);
-                            }}
+                            onClick={() => openImageSelector(index, 'question')}
                             className="text-green-600 hover:text-green-800 px-3 py-1.5 rounded-lg hover:bg-green-50 transition-colors"
                             title={question.image_url ? "Edit image" : "Add image"}
                           >
@@ -3606,7 +3801,7 @@ export default function PDFToLatexConverterPage() {
                           </MathJaxRenderer>
 
                           {/* Display image(s) if present */}
-                          {(question as any).image_url && (
+                          {((question as any).image_url || (question as any).image_url_eng) && (
                             <div className="mt-3 space-y-2">
                               {/* Shared image indicator */}
                               {(question as any).shared_image_questions && (question as any).shared_image_questions.length > 1 && (
@@ -3619,7 +3814,11 @@ export default function PDFToLatexConverterPage() {
                               )}
                               <div className="border-2 border-indigo-300 rounded-lg overflow-hidden">
                                 <img
-                                  src={(question as any).image_url}
+                                  src={
+                                    viewLanguage === 'ENG' && (question as any).image_url_eng
+                                      ? (question as any).image_url_eng
+                                      : (question as any).image_url
+                                  }
                                   alt={`Question ${question.question_number} diagram`}
                                   className="w-full"
                                 />
@@ -3648,6 +3847,7 @@ export default function PDFToLatexConverterPage() {
                           {/* Show indicator if image extraction failed */}
                           {(question as any).has_image &&
                            !(question as any).image_url &&
+                           !(question as any).image_url_eng &&
                            !(question as any).image_options && (
                             <div className="mt-3 p-3 bg-red-50 border-2 border-red-400 rounded-lg">
                               <div className="flex items-center justify-between gap-3">
@@ -3685,7 +3885,7 @@ export default function PDFToLatexConverterPage() {
                           )}
 
                           {/* Button to change existing image */}
-                          {(question as any).image_url && (
+                          {((question as any).image_url || (question as any).image_url_eng) && (
                             <div className="mt-2 flex justify-end">
                               <button
                                 onClick={() => openImageSelector(index, 'question')}
@@ -3704,16 +3904,11 @@ export default function PDFToLatexConverterPage() {
                         <>
                           <div className="space-y-2 mb-3">
                             {Object.entries(question.options).map(([key, value]) => {
-                              // Debug log for image options
-                              const hasImageOption = !!(question as any).image_options?.[key];
-                              const imageUrl = (question as any).image_options?.[key];
-                              if (index === 0 && key === 'a') {
-                                console.log(`[DEBUG] Q${question.question_number} Option ${key}:`, {
-                                  hasImageOption,
-                                  imageUrl,
-                                  allImageOptions: (question as any).image_options
-                                });
-                              }
+                              // Check for image options in both languages
+                              const hasImageOption = !!((question as any).image_options?.[key] || (question as any).image_options_eng?.[key]);
+                              const imageUrl = viewLanguage === 'ENG' && (question as any).image_options_eng?.[key]
+                                ? (question as any).image_options_eng[key]
+                                : (question as any).image_options?.[key];
 
                               return (
                                 <div key={key} className="flex items-start gap-2">
@@ -3997,12 +4192,6 @@ export default function PDFToLatexConverterPage() {
                   <FontAwesomeIcon icon={faSpinner} className="animate-spin text-4xl text-indigo-600" />
                   <span className="ml-3 text-gray-600">Loading images from PDF...</span>
                 </div>
-              ) : availableImages.length === 0 ? (
-                <div className="text-center py-12">
-                  <FontAwesomeIcon icon={faImage} className="text-6xl text-gray-300 mb-4" />
-                  <p className="text-gray-500 text-lg">No images found on this page</p>
-                  <p className="text-gray-400 text-sm mt-2">The PDF may not contain extractable images</p>
-                </div>
               ) : (
                 <div className="space-y-4">
                   {/* Question selector for shared images */}
@@ -4037,38 +4226,139 @@ export default function PDFToLatexConverterPage() {
                     </div>
                   )}
 
-                  <p className="text-sm text-gray-600 mb-4">
-                    Click on an image to select it. Found {availableImages.length} image(s) on this page.
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {availableImages.map((img, idx) => (
+                  {/* Language selector */}
+                  <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mb-4">
+                    <p className="text-sm font-semibold text-blue-800 mb-2">
+                      🌐 Select Language Version
+                    </p>
+                    <p className="text-xs text-blue-700 mb-3">
+                      Choose which language this image is for. If only one image is uploaded, it will be used for both languages automatically.
+                    </p>
+                    <div className="flex gap-3">
                       <button
-                        key={idx}
-                        onClick={() => handleSelectImage(idx)}
-                        className="border-2 border-gray-200 rounded-lg p-3 hover:border-indigo-500 hover:bg-indigo-50 transition-all text-left group"
+                        onClick={() => setSelectedImageLanguage('ita')}
+                        className={`flex-1 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                          selectedImageLanguage === 'ita'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                        }`}
                       >
-                        <div className="aspect-video bg-gray-100 rounded overflow-hidden mb-2 flex items-center justify-center">
-                          <img
-                            src={img.url}
-                            alt={`Image ${idx + 1}`}
-                            className="max-w-full max-h-full object-contain"
-                          />
-                        </div>
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-gray-600">
-                            Image #{idx + 1}
-                          </span>
-                          <span className="text-gray-500">
-                            {img.width}×{img.height}
-                          </span>
-                        </div>
-                        <div className="mt-2 text-center">
-                          <span className="inline-block px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-semibold group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                            Click to Select
-                          </span>
-                        </div>
+                        🇮🇹 Italian
                       </button>
-                    ))}
+                      <button
+                        onClick={() => setSelectedImageLanguage('eng')}
+                        className={`flex-1 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                          selectedImageLanguage === 'eng'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                        }`}
+                      >
+                        🇬🇧 English
+                      </button>
+                    </div>
+
+                    {/* Current status */}
+                    {imageSelectorQuestionIndex !== null && sharedImageQuestions.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-blue-200">
+                        <p className="text-xs font-semibold text-blue-800 mb-1">Current status:</p>
+                        <div className="flex gap-2 text-xs">
+                          {sharedImageQuestions.some(idx => {
+                            const q = convertedQuestions[idx] as any;
+                            return selectedImageTarget === 'question'
+                              ? q?.image_url
+                              : q?.image_options?.[selectedImageTarget.replace('option_', '')];
+                          }) && (
+                            <span className="px-2 py-1 bg-green-100 text-green-700 rounded font-semibold">
+                              ✓ 🇮🇹 Italian uploaded
+                            </span>
+                          )}
+                          {sharedImageQuestions.some(idx => {
+                            const q = convertedQuestions[idx] as any;
+                            return selectedImageTarget === 'question'
+                              ? q?.image_url_eng
+                              : q?.image_options_eng?.[selectedImageTarget.replace('option_', '')];
+                          }) && (
+                            <span className="px-2 py-1 bg-green-100 text-green-700 rounded font-semibold">
+                              ✓ 🇬🇧 English uploaded
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Upload Image from Computer */}
+                  <div className="bg-purple-50 border-2 border-purple-300 rounded-lg p-4 mb-6">
+                    <h3 className="text-sm font-bold text-purple-900 mb-2">
+                      📤 Upload from Computer
+                    </h3>
+                    <p className="text-xs text-purple-700 mb-3">
+                      Upload your own image file (PNG, JPG, etc.) if it's not available in the PDF
+                    </p>
+                    <ImageUploader
+                      testType={selectedTest?.test_type || uploadedSections[0]?.testType || 'GMAT'}
+                      section={selectedTest?.section || uploadedSections[0]?.section || 'General'}
+                      onImageUploaded={(imageUrl) => handleUploadedImage(imageUrl, selectedImageLanguage)}
+                      onError={(error) => setError(error)}
+                      showLanguageSelector={false}
+                    />
+                  </div>
+
+                  {/* Divider */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex-1 h-px bg-gray-300"></div>
+                    <span className="text-sm text-gray-500 font-semibold">OR</span>
+                    <div className="flex-1 h-px bg-gray-300"></div>
+                  </div>
+
+                  {/* Select from PDF */}
+                  <div>
+                    <h3 className="text-sm font-bold text-indigo-900 mb-2">
+                      📄 Select from PDF
+                    </h3>
+                    {availableImages.length === 0 ? (
+                      <div className="text-center py-8">
+                        <FontAwesomeIcon icon={faImage} className="text-5xl text-gray-300 mb-3" />
+                        <p className="text-gray-500 text-sm">No images found on this page</p>
+                        <p className="text-gray-400 text-xs mt-1">The PDF may not contain extractable images</p>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-sm text-gray-600 mb-4">
+                          Click on an image to select it. Found {availableImages.length} image(s) on this page.
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {availableImages.map((img, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => handleSelectImage(idx)}
+                              className="border-2 border-gray-200 rounded-lg p-3 hover:border-indigo-500 hover:bg-indigo-50 transition-all text-left group"
+                            >
+                              <div className="aspect-video bg-gray-100 rounded overflow-hidden mb-2 flex items-center justify-center">
+                                <img
+                                  src={img.url}
+                                  alt={`Image ${idx + 1}`}
+                                  className="max-w-full max-h-full object-contain"
+                                />
+                              </div>
+                              <div className="flex justify-between items-center text-sm">
+                                <span className="text-gray-600">
+                                  Image #{idx + 1}
+                                </span>
+                                <span className="text-gray-500">
+                                  {img.width}×{img.height}
+                                </span>
+                              </div>
+                              <div className="mt-2 text-center">
+                                <span className="inline-block px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-semibold group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                  Click to Select
+                                </span>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
@@ -4078,13 +4368,13 @@ export default function PDFToLatexConverterPage() {
             <div className="p-4 bg-gray-50 border-t">
               <div className="flex justify-between items-center">
                 <p className="text-sm text-gray-500">
-                  Images are sorted from top to bottom of the page
+                  Upload images for one or both languages, then click Done
                 </p>
                 <button
                   onClick={closeImageSelector}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
+                  className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold shadow-md"
                 >
-                  Cancel
+                  Done
                 </button>
               </div>
             </div>
