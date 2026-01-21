@@ -26,6 +26,9 @@ import AdminMigrateAnswersPage from './pages/AdminMigrateAnswersPage';
 import ManageAccountsPage from './pages/ManageAccountsPage';
 import AIValidationDashboard from './pages/AIValidationDashboard';
 import CloneTestsPage from './pages/CloneTestsPage';
+import GMATPreparationPage from './pages/GMATPreparationPage';
+import GMATMaterialsManagementPage from './pages/GMATMaterialsManagementPage';
+import GMATQuestionAllocationPage from './pages/GMATQuestionAllocationPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 function App() {
@@ -82,6 +85,14 @@ function App() {
           }
         />
         <Route
+          path="/student/gmat-preparation"
+          element={
+            <ProtectedRoute requiredRoles={['STUDENT']}>
+              <GMATPreparationPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/tutor"
           element={
             <ProtectedRoute requiredRoles={['TUTOR', 'ADMIN']}>
@@ -102,6 +113,14 @@ function App() {
           element={
             <ProtectedRoute requiredRoles={['TUTOR', 'ADMIN']}>
               <StudentProfilePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tutor/student/:studentId/gmat-materials"
+          element={
+            <ProtectedRoute requiredRoles={['TUTOR', 'ADMIN']}>
+              <GMATMaterialsManagementPage />
             </ProtectedRoute>
           }
         />
@@ -158,6 +177,14 @@ function App() {
           element={
             <ProtectedRoute requiredRoles={['TUTOR', 'ADMIN']}>
               <TestTypeSelectionPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tutor/gmat-question-allocation"
+          element={
+            <ProtectedRoute requiredRoles={['TUTOR', 'ADMIN']}>
+              <GMATQuestionAllocationPage />
             </ProtectedRoute>
           }
         />

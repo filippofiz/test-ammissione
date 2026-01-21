@@ -1,0 +1,2393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GMAT Quantitative Reasoning - Adaptive Assessment</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --uptoten-blue: #021d49;
+            --uptoten-green: #4caf50;
+            --uptoten-orange: #ffb606;
+            --uptoten-red: #e53935;
+            --light-gray: #f5f5f5;
+            --medium-gray: #e0e0e0;
+            --dark-gray: #666;
+            --gmat-purple: #7b68a6;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--light-gray);
+            color: #333;
+            line-height: 1.6;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--uptoten-blue), #0a3a7d);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .logo span {
+            color: var(--uptoten-green);
+        }
+
+        .timer-section {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .timer {
+            background: rgba(255,255,255,0.1);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 24px;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+
+        .timer.warning {
+            color: var(--uptoten-orange);
+            animation: pulse 1s infinite;
+        }
+
+        .timer.critical {
+            color: var(--uptoten-red);
+            animation: pulse 0.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .progress-info {
+            text-align: right;
+        }
+
+        .progress-info .question-num {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .progress-bar-container {
+            width: 200px;
+            height: 8px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--uptoten-green);
+            transition: width 0.3s ease;
+        }
+
+        /* Main Content */
+        .main-content {
+            max-width: 900px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        /* Start Screen */
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        .start-screen {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .start-screen h1 {
+            color: var(--uptoten-blue);
+            margin-bottom: 20px;
+            font-size: 32px;
+        }
+
+        .start-screen .subtitle {
+            color: var(--dark-gray);
+            margin-bottom: 30px;
+            font-size: 18px;
+        }
+
+        .info-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .info-card {
+            background: var(--light-gray);
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid var(--uptoten-green);
+        }
+
+        .info-card h3 {
+            color: var(--uptoten-blue);
+            margin-bottom: 10px;
+        }
+
+        .info-card p {
+            color: var(--dark-gray);
+            font-size: 14px;
+        }
+
+        .exclusion-section {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: left;
+        }
+
+        .exclusion-section h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .exclusion-section p {
+            color: #856404;
+            font-size: 14px;
+        }
+
+        .btn {
+            padding: 15px 40px;
+            font-size: 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        .btn-primary {
+            background: var(--uptoten-green);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--uptoten-blue);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #0a3a7d;
+        }
+
+        /* Question Screen */
+        .question-card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .question-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--light-gray);
+        }
+
+        .difficulty-badge {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .difficulty-easy {
+            background: #e8f5e9;
+            color: var(--uptoten-green);
+        }
+
+        .difficulty-medium {
+            background: #fff3e0;
+            color: var(--uptoten-orange);
+        }
+
+        .difficulty-hard {
+            background: #ffebee;
+            color: var(--uptoten-red);
+        }
+
+        .question-type {
+            color: var(--dark-gray);
+            font-size: 14px;
+        }
+
+        .question-text {
+            font-size: 18px;
+            line-height: 1.8;
+            margin-bottom: 25px;
+            color: #333;
+        }
+
+        .question-text table {
+            border-collapse: collapse;
+            margin: 15px 0;
+            width: 100%;
+        }
+
+        .question-text th, .question-text td {
+            border: 1px solid var(--medium-gray);
+            padding: 10px 15px;
+            text-align: center;
+        }
+
+        .question-text th {
+            background: var(--light-gray);
+            font-weight: bold;
+        }
+
+        .options-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .option {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            background: var(--light-gray);
+            border: 2px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .option:hover {
+            background: #e3f2fd;
+            border-color: #2196f3;
+        }
+
+        .option.selected {
+            background: #e3f2fd;
+            border-color: var(--uptoten-blue);
+        }
+
+        .option-letter {
+            width: 35px;
+            height: 35px;
+            background: white;
+            border: 2px solid var(--medium-gray);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+
+        .option.selected .option-letter {
+            background: var(--uptoten-blue);
+            color: white;
+            border-color: var(--uptoten-blue);
+        }
+
+        .option-text {
+            font-size: 16px;
+        }
+
+        .navigation-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .btn-next {
+            padding: 12px 30px;
+            font-size: 16px;
+        }
+
+        .btn-next:disabled {
+            background: var(--medium-gray);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Results Screen */
+        .results-screen {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .results-header {
+            background: linear-gradient(135deg, var(--uptoten-blue), #0a3a7d);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .results-header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .score-display {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-top: 30px;
+        }
+
+        .score-item {
+            text-align: center;
+        }
+
+        .score-value {
+            font-size: 48px;
+            font-weight: bold;
+            color: var(--uptoten-green);
+        }
+
+        .score-label {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        .percentile-value {
+            color: var(--uptoten-orange);
+        }
+
+        .results-body {
+            padding: 30px;
+        }
+
+        .section-title {
+            color: var(--uptoten-blue);
+            font-size: 20px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--light-gray);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 24px;
+            background: var(--gmat-purple);
+            border-radius: 2px;
+        }
+
+        /* Score Distribution Chart */
+        .chart-container {
+            background: var(--light-gray);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+        }
+
+        /* Performance Tables */
+        .performance-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+
+        .performance-table th {
+            background: #5a5a5a;
+            color: white;
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .performance-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--medium-gray);
+        }
+
+        .performance-table tr:nth-child(even) {
+            background: var(--light-gray);
+        }
+
+        .performance-table .correct {
+            color: var(--uptoten-green);
+            font-weight: bold;
+        }
+
+        .performance-table .incorrect {
+            color: var(--uptoten-red);
+            font-weight: bold;
+        }
+
+        /* Performance by Domain */
+        .domain-performance {
+            margin-bottom: 30px;
+        }
+
+        .domain-bar {
+            margin-bottom: 20px;
+        }
+
+        .domain-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .domain-name {
+            font-weight: 600;
+            color: var(--uptoten-blue);
+        }
+
+        .domain-percentile {
+            color: var(--dark-gray);
+            font-weight: bold;
+        }
+
+        .domain-bar-container {
+            height: 30px;
+            background: var(--light-gray);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .domain-bar-fill {
+            height: 100%;
+            background: var(--gmat-purple);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            transition: width 0.5s ease;
+        }
+
+        /* Time Management Chart */
+        .time-chart-container {
+            background: var(--light-gray);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        /* Question Review */
+        .question-review {
+            margin-bottom: 15px;
+            padding: 15px;
+            background: var(--light-gray);
+            border-radius: 8px;
+            border-left: 4px solid var(--medium-gray);
+        }
+
+        .question-review.correct {
+            border-left-color: var(--uptoten-green);
+        }
+
+        .question-review.incorrect {
+            border-left-color: var(--uptoten-red);
+        }
+
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .review-question-num {
+            font-weight: bold;
+            color: var(--uptoten-blue);
+        }
+
+        .review-result {
+            font-weight: bold;
+        }
+
+        .review-result.correct {
+            color: var(--uptoten-green);
+        }
+
+        .review-result.incorrect {
+            color: var(--uptoten-red);
+        }
+
+        .review-details {
+            font-size: 14px;
+            color: var(--dark-gray);
+        }
+
+        /* Restart Button */
+        .restart-section {
+            text-align: center;
+            padding: 30px;
+            background: var(--light-gray);
+            border-radius: 0 0 12px 12px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .info-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .score-display {
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .timer-section {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+
+        /* Loading indicator */
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 4px solid var(--light-gray);
+            border-top: 4px solid var(--uptoten-blue);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: var(--uptoten-blue);
+            color: white;
+            text-align: center;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 12px;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Question Review Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            max-width: 800px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, var(--uptoten-blue), #0a3a7d);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .modal-header h2 {
+            font-size: 20px;
+            margin: 0;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+
+        .modal-close:hover {
+            opacity: 1;
+        }
+
+        .modal-body {
+            padding: 30px;
+        }
+
+        .modal-question-meta {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .modal-badge {
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .modal-badge.correct {
+            background: #e8f5e9;
+            color: var(--uptoten-green);
+        }
+
+        .modal-badge.incorrect {
+            background: #ffebee;
+            color: var(--uptoten-red);
+        }
+
+        .modal-badge.domain {
+            background: #e3f2fd;
+            color: var(--uptoten-blue);
+        }
+
+        .modal-badge.difficulty {
+            background: var(--light-gray);
+            color: var(--dark-gray);
+        }
+
+        .modal-badge.time {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .modal-question-text {
+            font-size: 16px;
+            line-height: 1.8;
+            margin-bottom: 25px;
+            padding: 20px;
+            background: var(--light-gray);
+            border-radius: 8px;
+        }
+
+        .modal-question-text table {
+            border-collapse: collapse;
+            margin: 15px 0;
+            width: 100%;
+        }
+
+        .modal-question-text th, .modal-question-text td {
+            border: 1px solid var(--medium-gray);
+            padding: 8px 12px;
+            text-align: center;
+        }
+
+        .modal-question-text th {
+            background: white;
+            font-weight: bold;
+        }
+
+        .modal-options {
+            margin-bottom: 25px;
+        }
+
+        .modal-option {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            background: var(--light-gray);
+            border-radius: 8px;
+            border: 2px solid transparent;
+        }
+
+        .modal-option.student-answer {
+            border-color: var(--uptoten-blue);
+            background: #e3f2fd;
+        }
+
+        .modal-option.correct-answer {
+            border-color: var(--uptoten-green);
+            background: #e8f5e9;
+        }
+
+        .modal-option.student-answer.correct-answer {
+            border-color: var(--uptoten-green);
+            background: #e8f5e9;
+        }
+
+        .modal-option.student-answer:not(.correct-answer) {
+            border-color: var(--uptoten-red);
+            background: #ffebee;
+        }
+
+        .modal-option-letter {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 12px;
+            background: white;
+            border: 2px solid var(--medium-gray);
+            flex-shrink: 0;
+        }
+
+        .modal-option.correct-answer .modal-option-letter {
+            background: var(--uptoten-green);
+            color: white;
+            border-color: var(--uptoten-green);
+        }
+
+        .modal-option.student-answer:not(.correct-answer) .modal-option-letter {
+            background: var(--uptoten-red);
+            color: white;
+            border-color: var(--uptoten-red);
+        }
+
+        .modal-option-text {
+            flex: 1;
+        }
+
+        .modal-option-indicator {
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .modal-explanation {
+            background: #e8f5e9;
+            border-left: 4px solid var(--uptoten-green);
+            padding: 20px;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .modal-explanation h4 {
+            color: var(--uptoten-green);
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .modal-explanation p {
+            color: #333;
+            line-height: 1.7;
+        }
+
+        .modal-nav {
+            display: flex;
+            justify-content: space-between;
+            padding: 20px 30px;
+            border-top: 1px solid var(--medium-gray);
+            background: var(--light-gray);
+            border-radius: 0 0 12px 12px;
+        }
+
+        .modal-nav-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .modal-nav-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .modal-nav-btn.prev {
+            background: var(--medium-gray);
+            color: var(--dark-gray);
+        }
+
+        .modal-nav-btn.prev:hover:not(:disabled) {
+            background: #ccc;
+        }
+
+        .modal-nav-btn.next {
+            background: var(--uptoten-blue);
+            color: white;
+        }
+
+        .modal-nav-btn.next:hover:not(:disabled) {
+            background: #0a3a7d;
+        }
+
+        .question-link {
+            color: var(--uptoten-blue);
+            text-decoration: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .question-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="logo">Up<span>To</span>Ten</div>
+        <div class="timer-section">
+            <div class="timer" id="timer">45:00</div>
+            <div class="progress-info">
+                <div class="question-num" id="questionProgress">Question 0 of 21</div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <!-- Start Screen -->
+        <div class="screen active" id="startScreen">
+            <div class="start-screen">
+                <h1>GMAT Quantitative Reasoning</h1>
+                <p class="subtitle">Adaptive Assessment Simulation</p>
+
+                <div class="info-cards">
+                    <div class="info-card">
+                        <h3>21 Questions</h3>
+                        <p>Adaptive difficulty based on your performance</p>
+                    </div>
+                    <div class="info-card">
+                        <h3>45 Minutes</h3>
+                        <p>Approximately 2 minutes per question</p>
+                    </div>
+                    <div class="info-card">
+                        <h3>Score: 60-90</h3>
+                        <p>GMAT-style scoring with percentile</p>
+                    </div>
+                </div>
+
+                <div class="exclusion-section">
+                    <h4>Questions Exclusion</h4>
+                    <p>Questions from your completed practice shuffles (quantitative_reasoning_all_topics.typ and probability_statistics_combinations.typ) will be automatically excluded from this assessment to ensure you see new material.</p>
+                </div>
+
+                <button class="btn btn-primary" onclick="startAssessment()">Start Assessment</button>
+            </div>
+        </div>
+
+        <!-- Question Screen -->
+        <div class="screen" id="questionScreen">
+            <div class="question-card">
+                <div class="question-header">
+                    <span class="difficulty-badge" id="difficultyBadge">Medium</span>
+                    <span class="question-type" id="questionType">Problem Solving</span>
+                </div>
+                <div class="question-text" id="questionText">
+                    Loading question...
+                </div>
+                <div class="options-container" id="optionsContainer">
+                    <!-- Options will be dynamically generated -->
+                </div>
+            </div>
+
+            <div class="navigation-buttons">
+                <button class="btn btn-primary btn-next" id="nextBtn" onclick="submitAnswer()" disabled>
+                    Next Question
+                </button>
+            </div>
+        </div>
+
+        <!-- Results Screen -->
+        <div class="screen" id="resultsScreen">
+            <div class="results-screen">
+                <div class="results-header">
+                    <h1>Assessment Complete</h1>
+                    <p>GMAT Quantitative Reasoning Performance Report</p>
+                    <div class="score-display">
+                        <div class="score-item">
+                            <div class="score-value" id="finalScore">78</div>
+                            <div class="score-label">Your Score</div>
+                        </div>
+                        <div class="score-item">
+                            <div class="score-value percentile-value" id="percentile">50th</div>
+                            <div class="score-label">Percentile</div>
+                        </div>
+                        <div class="score-item">
+                            <div class="score-value" id="correctCount">15/21</div>
+                            <div class="score-label">Correct</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="results-body">
+                    <!-- Score Distribution -->
+                    <h2 class="section-title">Score Distribution</h2>
+                    <div class="chart-container">
+                        <div class="chart-wrapper">
+                            <canvas id="scoreDistributionChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Performance by Content Domain -->
+                    <h2 class="section-title">Performance by Content Domain</h2>
+                    <div class="domain-performance" id="domainPerformance">
+                        <!-- Dynamically generated -->
+                    </div>
+
+                    <!-- Performance by Fundamental Skills -->
+                    <h2 class="section-title">Performance by Fundamental Skills</h2>
+                    <div class="domain-performance" id="skillsPerformance">
+                        <!-- Dynamically generated -->
+                    </div>
+
+                    <!-- Time Management -->
+                    <h2 class="section-title">Question Performance and Time Management</h2>
+                    <div class="time-chart-container">
+                        <div class="chart-wrapper">
+                            <canvas id="timeManagementChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Question-by-Question Review -->
+                    <h2 class="section-title">Question-by-Question Review</h2>
+                    <table class="performance-table" id="questionReviewTable">
+                        <thead>
+                            <tr>
+                                <th>Question</th>
+                                <th>Response Time</th>
+                                <th>Performance</th>
+                                <th>Content Domain</th>
+                                <th>Difficulty</th>
+                            </tr>
+                        </thead>
+                        <tbody id="questionReviewBody">
+                            <!-- Dynamically generated -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="restart-section">
+                    <button class="btn btn-primary" onclick="restartAssessment()">Start New Assessment</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Question Review Modal -->
+    <div class="modal-overlay" id="questionModal" onclick="closeModalOnOverlay(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2 id="modalTitle">Question 1 Review</h2>
+                <button class="modal-close" onclick="closeQuestionModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-question-meta" id="modalMeta">
+                    <!-- Badges will be inserted here -->
+                </div>
+                <div class="modal-question-text" id="modalQuestionText">
+                    <!-- Question text will be inserted here -->
+                </div>
+                <div class="modal-options" id="modalOptions">
+                    <!-- Options will be inserted here -->
+                </div>
+                <div class="modal-explanation" id="modalExplanation">
+                    <h4>Explanation</h4>
+                    <p id="modalExplanationText"></p>
+                </div>
+            </div>
+            <div class="modal-nav">
+                <button class="modal-nav-btn prev" id="modalPrevBtn" onclick="navigateQuestion(-1)">
+                    &larr; Previous Question
+                </button>
+                <button class="modal-nav-btn next" id="modalNextBtn" onclick="navigateQuestion(1)">
+                    Next Question &rarr;
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // GMAT QUANTITATIVE REASONING QUESTION BANK
+        // ==========================================
+
+        // Questions excluded from shuffle files (by question text matching)
+        const excludedQuestionIds = [
+            // From quantitative_reasoning_all_topics.typ
+            "QR-GMAT-OG__-00001", // probability graduation class
+            "QR-GMAT-OG__-00002", // board game stock cards
+            "QR-GMAT-OG__-00003", // Carmen Juan Maria Rafael driving
+            "QR-GMAT-OG__-00005", // batches nails defective
+            "QR-GMAT-OG__-00006", // consecutive odd/even integers
+            "QR-GMAT-OG__-00014", // tulips bouquets
+            "QR-GMAT-OG__-00022", // 16 coins 10 cents 25 cents
+            "QR-GMAT-OG__-00026", // 1 < x < y < z greatest value
+            "QR-GMAT-OG__-00097", // two dice sum greater than 9
+            "QR-GMAT-OG__-00098", // Malachi camping rain
+            "QR-GMAT-OG__-00101", // tractor rent x dollars
+            "QR-GMAT-OG__-00102", // cubic centimeter mass
+            "QR-GMAT-OG__-00108", // a(a+2)=24
+            "QR-GMAT-OG__-00114", // Sam $800 deposits
+            "QR-GMAT-OG__-00124", // standard deviation n,k,p
+            "QR-GMAT-OG__-00127", // printing presses R,S,T
+            "QR-GMAT-OG__-00134", // stockholders employees meeting
+            "QR-GMAT-OG__-00177", // bus rental x dollars
+            "QR-GMAT-OG__-00178", // Clarissa summer reading
+            "QR-GMAT-OG__-00180", // probability M and R
+            "QR-GMAT-OG__-00182", // Q consecutive integers median
+            "QR-GMAT-OG__-00184", // three-digit code locks
+            "QR-GMAT-OG__-00187", // test score y=0.8x+20
+            "QR-GMAT-OG__-00189", // store sales $385 million
+            "QR-GMAT-OG__-00190", // remainder 9 division 96.12
+            "QR-GMAT-OG__-00195", // 25^n > 5^12
+            "QR-GMAT-OG__-00204", // 12 pens 3 defective
+            "QR-GMAT-OG__-00208", // product 1 to 30 factor 3^k
+            "QR-GMAT-OG__-00212", // sqrt(r/s) = s
+            "QR-GMAT-OG__-00216", // inequalities x+6>10
+            // From probability_statistics_combinations.typ
+            "QR-GMAT-OG__-00105", // absences distribution median
+            "QR-GMAT-OG__-00111", // products P and Q revenue
+            "QR-GMAT-OG__-00024", // 24 cards divisible 2,3,7
+            "QR-GMAT-OG__-00196", // women lawyers probability
+            "QR-GMAT-OG__-00218", // 8 teams league games
+            "QR-GMAT-OG__-00099", // skiing skating survey
+        ];
+
+        // Question Bank - Easy Questions
+        const easyQuestions = [
+            {
+                id: "QR-GMAT-OG__-00004",
+                text: "Each week, a clothing salesperson receives a commission equal to 15 percent of the first $500 in sales and 20 percent of all additional sales that week. What commission would the salesperson receive on total sales for the week of $1,300?",
+                options: { a: "$195", b: "$227", c: "$235", d: "$260", e: "$335" },
+                answer: "c",
+                domain: "Arithmetic",
+                skill: "Rates/Ratios/Percent",
+                explanation: "Commission = 0.15($500) + 0.20($800) = $75 + $160 = $235"
+            },
+            {
+                id: "QR-GMAT-OG__-00007",
+                text: "A certain grocery store has 5 checkout lanes. The table shows the number of people in line at each checkout lane at closing time yesterday. What was the median number of people in line?<br><br><table><tr><th>Lane</th><th>Number in line</th></tr><tr><td>1</td><td>5</td></tr><tr><td>2</td><td>4</td></tr><tr><td>3</td><td>3</td></tr><tr><td>4</td><td>4</td></tr><tr><td>5</td><td>2</td></tr></table>",
+                options: { a: "2⅘", b: "3", c: "3½", d: "3⅗", e: "4" },
+                answer: "e",
+                domain: "Arithmetic",
+                skill: "Counting/Sets/Series/Prob/Stats",
+                explanation: "Ordered: 2, 3, 4, 4, 5. Median (middle value) = 4"
+            },
+            {
+                id: "QR-GMAT-OG__-00008",
+                text: "\\(\\left(\\frac{1}{2} - \\frac{1}{3}\\right) + \\left(\\frac{1}{3} - \\frac{1}{4}\\right) + \\left(\\frac{1}{4} - \\frac{1}{5}\\right) + \\left(\\frac{1}{5} - \\frac{1}{6}\\right) =\\)",
+                options: { a: "\\(-\\frac{1}{6}\\)", b: "0", c: "\\(\\frac{1}{3}\\)", d: "\\(\\frac{1}{2}\\)", e: "\\(\\frac{2}{3}\\)" },
+                answer: "c",
+                domain: "Arithmetic",
+                skill: "Value/Order/Factors",
+                explanation: "Telescoping sum: ½ - ⅙ = ⅓"
+            },
+            {
+                id: "QR-GMAT-OG__-00010",
+                text: "Last year $48,000 of a certain store's profit was shared by its 2 owners and their 10 employees. Each of the 2 owners received 3 times as much as each of their 10 employees. How much did each owner receive from the $48,000?",
+                options: { a: "$12,000", b: "$9,000", c: "$6,000", d: "$4,000", e: "$3,000" },
+                answer: "b",
+                domain: "Algebra",
+                skill: "Equal/Unequal/ALG",
+                explanation: "Let employee share = E. Then 2(3E) + 10E = 48,000. 16E = 48,000. E = $3,000. Owner = $9,000"
+            },
+            {
+                id: "QR-GMAT-OG__-00011",
+                text: "On a vacation, Rose exchanged $500.00 for euros at an exchange rate of 0.80 euro per dollar and spent \\(\\frac{3}{4}\\) of the euros she received. If she exchanged the remaining euros for dollars at an exchange rate of $1.20 per euro, what was the dollar amount she received?",
+                options: { a: "$60.00", b: "$80.00", c: "$100.00", d: "$120.00", e: "$140.00" },
+                answer: "d",
+                domain: "Arithmetic",
+                skill: "Rates/Ratios/Percent",
+                explanation: "500 × 0.80 = 400 euros. Spent ¾(400) = 300. Remaining = 100 euros. 100 × $1.20 = $120"
+            },
+            {
+                id: "QR-GMAT-OG__-00012",
+                text: "Each of the 12 squares shown is labeled \\(x\\), \\(y\\), \\(v\\), or \\(w\\). What is the ratio of the number of these squares labeled \\(x\\) or \\(y\\) to the number labeled \\(v\\) or \\(w\\)?<br><br><table><tr><td>x</td><td>x</td><td>x</td><td>y</td><td>y</td><td>v</td></tr><tr><td>v</td><td>x</td><td>x</td><td>y</td><td>w</td><td>w</td></tr></table>",
+                options: { a: "1:2", b: "2:3", c: "4:3", d: "3:2", e: "2:1" },
+                answer: "e",
+                domain: "Arithmetic",
+                skill: "Rates/Ratios/Percent",
+                explanation: "x or y: 5 + 3 = 8. v or w: 2 + 2 = 4. Ratio = 8:4 = 2:1"
+            },
+            {
+                id: "QR-GMAT-OG__-00016",
+                text: "125% of 5 =",
+                options: { a: "5.125", b: "5.25", c: "6", d: "6.125", e: "6.25" },
+                answer: "e",
+                domain: "Arithmetic",
+                skill: "Rates/Ratios/Percent",
+                explanation: "125% × 5 = 1.25 × 5 = 6.25"
+            },
+            {
+                id: "QR-GMAT-OG__-00017",
+                text: "Each day Linda spends 6 hours at her dog-walking job, for which she is paid $15.00 per hour. In addition, Linda spends a total of 1.5 hours each day (for which she is not paid) traveling to and from the job. What is Linda's hourly rate of pay for the total amount of time she spends each day?",
+                options: { a: "$7.50", b: "$9.00", c: "$10.00", d: "$10.75", e: "$12.00" },
+                answer: "e",
+                domain: "Arithmetic",
+                skill: "Rates/Ratios/Percent",
+                explanation: "Total pay = $90. Total time = 7.5 hours. Rate = $90/7.5 = $12/hour"
+            },
+            {
+                id: "QR-GMAT-OG__-00018",
+                text: "When traveling at a constant speed of 32 miles per hour, a certain motorboat consumes 24 gallons of fuel per hour. What is the fuel consumption of this boat at this speed measured in miles traveled per gallon of fuel?",
+                options: { a: "\\(\\frac{2}{3}\\)", b: "\\(\\frac{3}{4}\\)", c: "\\(\\frac{4}{5}\\)", d: "\\(\\frac{4}{3}\\)", e: "\\(\\frac{3}{2}\\)" },
+                answer: "d",
+                domain: "Arithmetic",
+                skill: "Rates/Ratios/Percent",
+                explanation: "32 miles/hour ÷ 24 gallons/hour = 32/24 = 4/3 miles/gallon"
+            },
+            {
+                id: "QR-GMAT-OG__-00020",
+                text: "From 2000 to 2003, the number of employees at a certain company increased by a factor of \\(\\frac{1}{4}\\). From 2003 to 2006, the number decreased by a factor of \\(\\frac{1}{3}\\). If there were 100 employees in 2006, how many were there in 2000?",
+                options: { a: "200", b: "120", c: "100", d: "75", e: "60" },
+                answer: "b",
+                domain: "Arithmetic",
+                skill: "Rates/Ratios/Percent",
+                explanation: "Let N = 2000 employees. 2003: (5/4)N. 2006: (5/4)N × (2/3) = (5/6)N = 100. N = 120"
+            },
+            {
+                id: "QR-GMAT-OG__-00023",
+                text: "A retailer purchased eggs at $2.80 per dozen and sold the eggs at 3 eggs for $0.90. What was the retailer's gross profit from purchasing and selling 5 dozen eggs?",
+                options: { a: "$0.90", b: "$2.40", c: "$4.00", d: "$11.30", e: "$12.00" },
+                answer: "c",
+                domain: "Arithmetic",
+                skill: "Rates/Ratios/Percent",
+                explanation: "Cost = 5 × $2.80 = $14. Revenue = 60 eggs × ($0.90/3) = $18. Profit = $4"
+            },
+            {
+                id: "QR-GMAT-OG__-00027",
+                text: "Set \\(X\\) consists of eight consecutive integers. Set \\(Y\\) consists of all the integers that result from adding 4 to each integer in \\(X\\) and all integers from subtracting 4 from each integer in \\(X\\). How many more integers are in Set \\(Y\\) than in Set \\(X\\)?",
+                options: { a: "0", b: "4", c: "8", d: "12", e: "16" },
+                answer: "c",
+                domain: "Arithmetic",
+                skill: "Value/Order/Factors",
+                explanation: "Set X spans 8 integers. Adding/subtracting 4 creates overlap in middle. Y has 16 integers, so 8 more than X"
+            },
+            {
+                id: "QR-GMAT-OG__-00029",
+                text: "Thabo owns exactly 140 books, and each book is either paperback fiction, paperback nonfiction, or hardcover nonfiction. If he owns 20 more paperback nonfiction books than hardcover nonfiction books, and twice as many paperback fiction books as paperback nonfiction books, how many hardcover nonfiction books does Thabo own?",
+                options: { a: "10", b: "20", c: "30", d: "40", e: "50" },
+                answer: "b",
+                domain: "Algebra",
+                skill: "Equal/Unequal/ALG",
+                explanation: "Let H = hardcover. Then PN = H+20, PF = 2(H+20). Total: H + (H+20) + 2(H+20) = 140. 4H + 60 = 140. H = 20"
+            },
+            {
+                id: "QR-GMAT-OG__-00033",
+                text: "Which of the following is closest to the value of \\(\\frac{999}{100 + \\frac{1}{999}}\\)?",
+                options: { a: "10", b: "1", c: "0.1", d: "0.01", e: "0.001" },
+                answer: "a",
+                domain: "Arithmetic",
+                skill: "Value/Order/Factors",
+                explanation: "≈ 999/100 ≈ 10"
+            },
+            {
+                id: "QR-GMAT-OG__-00034",
+                text: "The population of City X is 50 percent of the population of City Y. The population of City X is what percent of the total population of City X and City Y?",
+                options: { a: "25%", b: "33⅓%", c: "40%", d: "50%", e: "66⅔%" },
+                answer: "b",
+                domain: "Arithmetic",
+                skill: "Rates/Ratios/Percent",
+                explanation: "X = 0.5Y. Total = X + Y = 0.5Y + Y = 1.5Y. X/Total = 0.5Y/1.5Y = 1/3 = 33⅓%"
+            },
+            {
+                id: "QR-GMAT-OG__-00036",
+                text: "If \\(k^2 = m^2\\), which of the following must be true?",
+                options: { a: "\\(k = m\\)", b: "\\(k = -m\\)", c: "\\(k = |m|\\)", d: "\\(k = -|m|\\)", e: "\\(|k| = |m|\\)" },
+                answer: "e",
+                domain: "Algebra",
+                skill: "Equal/Unequal/ALG",
+                explanation: "k² = m² means |k| = |m|. k could be ±m"
+            },
+            {
+                id: "QR-GMAT-OG__-00038",
+                text: "If \\(x\\) is a positive integer and \\(4^x - 3 = y\\), which of the following CANNOT be a value of \\(y\\)?",
+                options: { a: "1", b: "7", c: "13", d: "61", e: "253" },
+                answer: "b",
+                domain: "Arithmetic",
+                skill: "Value/Order/Factors",
+                explanation: "4¹-3=1, 4²-3=13, 4³-3=61, 4⁴-3=253. 7 is not possible."
+            },
+            {
+                id: "QR-GMAT-OG__-00040",
+                text: "The quotient when a certain number is divided by \\(\\frac{2}{3}\\) is \\(\\frac{9}{2}\\). What is the number?",
+                options: { a: "\\(\\frac{4}{27}\\)", b: "\\(\\frac{1}{3}\\)", c: "3", d: "6", e: "\\(\\frac{27}{4}\\)" },
+                answer: "c",
+                domain: "Arithmetic",
+                skill: "Value/Order/Factors",
+                explanation: "N ÷ (2/3) = 9/2. N × (3/2) = 9/2. N = (9/2) × (2/3) = 3"
+            },
+            {
+                id: "QR-GMAT-OG__-00042",
+                text: "Harry spent 25% of his $2,200 May take-home pay on rent and 30% of the remainder on food. How much of his May take-home pay did Harry spend on food?",
+                options: { a: "$165", b: "$495", c: "$550", d: "$660", e: "$1,045" },
+                answer: "b",
+                domain: "Arithmetic",
+                skill: "Rates/Ratios/Percent",
+                explanation: "Rent = 25% × $2,200 = $550. Remainder = $1,650. Food = 30% × $1,650 = $495"
+            },
+            {
+                id: "QR-GMAT-OG__-00043",
+                text: "If \\(2x + y = 7\\) and \\(x + 2y = 5\\), then \\(\\frac{x + y}{3} =\\)",
+                options: { a: "1", b: "\\(\\frac{4}{3}\\)", c: "\\(\\frac{17}{5}\\)", d: "\\(\\frac{18}{5}\\)", e: "4" },
+                answer: "b",
+                domain: "Algebra",
+                skill: "Equal/Unequal/ALG",
+                explanation: "Adding equations: 3x + 3y = 12. So x + y = 4. (x+y)/3 = 4/3"
+            }
+        ];
+
+        // Question Bank - Medium Questions
+        const mediumQuestions = [
+            {
+                id: "QR-GMAT-OG__-00100",
+                text: "If the relations shown hold for the operation ⊕ and the numbers \\(m, n, p, q,\\) and \\(r\\), then \\([(m ⊕ p) ⊕ q] ⊕ p =\\)<br><br>\\(m ⊕ p = n\\)<br>\\(n ⊕ r = m\\)<br>\\(n ⊕ q = q\\)<br>\\(p ⊕ q = p\\)<br>\\(q ⊕ p = r\\)",
+                options: { a: "\\(m\\)", b: "\\(n\\)", c: "\\(p\\)", d: "\\(q\\)", e: "\\(r\\)" },
+                answer: "e",
+                domain: "Algebra",
+                skill: "Equal/Unequal/ALG",
+                explanation: "[(m⊕p)⊕q]⊕p = [n⊕q]⊕p = q⊕p = r"
+            },
+            {
+                id: "QR-GMAT-OG__-00103",
+                text: "If \\(z \\neq 0\\) and \\(z + \\frac{1 - 2z^2}{z} = \\frac{w}{z}\\), then \\(w =\\)",
+                options: { a: "\\(z + 1\\)", b: "\\(z^2 + 1\\)", c: "\\(-z^2 + 1\\)", d: "\\(-z^2 + z + 1\\)", e: "\\(-2z^2 + 1\\)" },
+                answer: "c",
+                domain: "Algebra",
+                skill: "Equal/Unequal/ALG",
+                explanation: "Multiply by z: z² + 1 - 2z² = w. So w = 1 - z²"
+            },
+            {
+                id: "QR-GMAT-OG__-00106",
+                text: "If \\(\\frac{x}{y} = \\frac{c}{d}\\) and \\(\\frac{d}{c} = \\frac{b}{a}\\), which of the following must be true?<br><br>I. \\(\\frac{y}{x} = \\frac{b}{a}\\)<br>II. \\(\\frac{x}{a} = \\frac{y}{b}\\)<br>III. \\(\\frac{y}{a} = \\frac{x}{b}\\)",
+                options: { a: "I only", b: "II only", c: "I and II only", d: "I and III only", e: "I, II, and III" },
+                answer: "c",
+                domain: "Algebra",
+                skill: "Rates/Ratios/Percent",
+                explanation: "y/x = d/c = b/a (I true). From I, y = bx/a, so y/b = x/a (II true). III is false."
+            },
+            {
+                id: "QR-GMAT-OG__-00109",
+                text: "In a recent election, Ms. Robbins received 8,000 votes cast by independent voters. She also received 10 percent of the votes cast by those registered with a political party. If \\(N\\) is the total number of votes and 40 percent were cast by independent voters, which represents the votes Ms. Robbins received?",
+                options: { a: "\\(0.06N + 3,200\\)", b: "\\(0.1N + 7,200\\)", c: "\\(0.4N + 7,200\\)", d: "\\(0.1N + 8,000\\)", e: "\\(0.06N + 8,000\\)" },
+                answer: "e",
+                domain: "Algebra",
+                skill: "Equal/Unequal/ALG",
+                explanation: "Party voters = 0.6N. Ms. Robbins gets 10%(0.6N) + 8,000 = 0.06N + 8,000"
+            },
+            {
+                id: "QR-GMAT-OG__-00110",
+                text: "For each of the first 4 months of the year, \\(C = I + 32,000\\); for the next 3 months, \\(I = C + 36,000\\); and for the remaining 5 months, \\(I = C + 10,000\\). If \\(P = I - C\\), what was the company's total profit for the 12-month year?",
+                options: { a: "$10,000", b: "$30,000", c: "$40,000", d: "$50,000", e: "$70,000" },
+                answer: "b",
+                domain: "Algebra",
+                skill: "Equal/Unequal/ALG",
+                explanation: "Profit: 4(-$32,000) + 3($36,000) + 5($10,000) = -$128,000 + $108,000 + $50,000 = $30,000"
+            },
+            {
+                id: "QR-GMAT-OG__-00112",
+                text: "A worker carries jugs of liquid soap from a production line to a packing area, carrying 4 jugs per trip. If the jugs are packed into cartons that hold 7 jugs each, how many jugs are needed to fill the last partially filled carton after 17 trips?",
+                options: { a: "1", b: "2", c: "4", d: "5", e: "6" },
+                answer: "b",
+                domain: "Arithmetic",
+                skill: "Value/Order/Factors",
+                explanation: "17 × 4 = 68 jugs. 68 = 9(7) + 5. Need 7 - 5 = 2 more jugs"
+            },
+            {
+                id: "QR-GMAT-OG__-00113",
+                text: "Last year a state senate had 20 more Republican members than Democrat members. This year it has 2 fewer Republican members. If this year Republicans are \\(\\frac{2}{3}\\) of the senate, how many members does the senate have?",
+                options: { a: "33", b: "36", c: "42", d: "45", e: "48" },
+                answer: "e",
+                domain: "Algebra",
+                skill: "Equal/Unequal/ALG",
+                explanation: "Let D = Democrats last year. This year: R = D+18, D = D+2. R = ⅔(Total). D+18 = ⅔(2D+20). Solving: D = 14, Total = 48"
+            },
+            {
+                id: "QR-GMAT-OG__-00115",
+                text: "A state's milk production was 980 million pounds in 2007 and 2.7 billion pounds in 2014. Approximately how many more million gallons did the state produce in 2014 than in 2007? (1 gallon = 8.6 pounds)",
+                options: { a: "100", b: "200", c: "1,700", d: "8,200", e: "14,800" },
+                answer: "b",
+                domain: "Arithmetic",
+                skill: "Rates/Ratios/Percent",
+                explanation: "(2,700 - 980) million pounds ÷ 8.6 ≈ 200 million gallons"
+            },
+            {
+                id: "QR-GMAT-OG__-00116",
+                text: "Working simultaneously at identical constant rates, four machines produce \\(x\\) units of Product P in 6 days. How many machines, working at this rate, can produce \\(3x\\) units in 4 days?",
+                options: { a: "24", b: "18", c: "16", d: "12", e: "8" },
+                answer: "b",
+                domain: "Arithmetic",
+                skill: "Rates/Ratios/Percent",
+                explanation: "4 machines × 6 days = 24 machine-days for x units. Need 72 machine-days for 3x. 72/4 = 18 machines"
+            },
+            {
+                id: "QR-GMAT-OG__-00118",
+                text: "If \\(mn \\neq 0\\) and 25 percent of \\(n\\) equals 37½ percent of \\(m\\), what is the value of \\(\\frac{12n}{m}\\)?",
+                options: { a: "18", b: "\\(\\frac{32}{3}\\)", c: "8", d: "3", e: "\\(\\frac{9}{8}\\)" },
+                answer: "a",
+                domain: "Algebra",
+                skill: "Rates/Ratios/Percent",
+                explanation: "0.25n = 0.375m. n/m = 1.5. 12n/m = 18"
+            },
+            {
+                id: "QR-GMAT-OG__-00119",
+                text: "\\(N\\) and \\(M\\) are each 3-digit integers. Each of the numbers 1, 2, 3, 6, 7, and 8 is a digit of either \\(N\\) or \\(M\\). What is the smallest possible positive difference between \\(N\\) and \\(M\\)?",
+                options: { a: "29", b: "49", c: "58", d: "113", e: "131" },
+                answer: "a",
+                domain: "Arithmetic",
+                skill: "Value/Order/Factors",
+                explanation: "N = 316, M = 287 (or N = 712, M = 683). Difference = 29"
+            },
+            {
+                id: "QR-GMAT-OG__-00120",
+                text: "A survey shows which promotional technique most influenced consumers' decisions. Of those who indicated one of four techniques listed (TV 35%, Coupons 22%, Store displays 18%, Samples 15%), what fraction indicated coupons or store displays?",
+                options: { a: "\\(\\frac{2}{7}\\)", b: "\\(\\frac{1}{3}\\)", c: "\\(\\frac{2}{5}\\)", d: "\\(\\frac{4}{9}\\)", e: "\\(\\frac{1}{2}\\)" },
+                answer: "d",
+                domain: "Arithmetic",
+                skill: "Rates/Ratios/Percent",
+                explanation: "(22 + 18)/(35 + 22 + 18 + 15) = 40/90 = 4/9"
+            },
+            {
+                id: "QR-GMAT-OG__-00121",
+                text: "If 65 percent of a firm's employees are full-time and there are 5,100 more full-time employees than part-time employees, how many employees does the firm have?",
+                options: { a: "8,250", b: "10,200", c: "11,050", d: "16,500", e: "17,000" },
+                answer: "e",
+                domain: "Algebra",
+                skill: "Equal/Unequal/ALG",
+                explanation: "F = 0.65T, P = 0.35T. F - P = 0.30T = 5,100. T = 17,000"
+            },
+            {
+                id: "QR-GMAT-OG__-00122",
+                text: "The cost \\(C\\) to remove \\(p\\) percent of a pollutant from a pond is \\(C = \\frac{100,000p}{100 - p}\\). How much more would it cost to remove 90 percent than 80 percent?",
+                options: { a: "$500,000", b: "$100,000", c: "$50,000", d: "$10,000", e: "$5,000" },
+                answer: "a",
+                domain: "Algebra",
+                skill: "Equal/Unequal/ALG",
+                explanation: "C(90) = 900,000. C(80) = 400,000. Difference = $500,000"
+            },
+            {
+                id: "QR-GMAT-OG__-00125",
+                text: "In a high school, 80 percent of seniors take calculus, and 60 percent of those also take physics. If 10 percent take neither, what percent take physics?",
+                options: { a: "40%", b: "42%", c: "48%", d: "58%", e: "80%" },
+                answer: "d",
+                domain: "Arithmetic",
+                skill: "Counting/Sets/Series/Prob/Stats",
+                explanation: "Both = 0.8 × 0.6 = 0.48. Calc only = 0.32. Physics only = 0.9 - 0.8 = 0.1. Total physics = 0.48 + 0.1 = 58%"
+            },
+            {
+                id: "QR-GMAT-OG__-00128",
+                text: "In a poll of 200 subscribers, 48 own IBM stock and 30 own AT&T stock. If 15 own both, how many own neither?",
+                options: { a: "63", b: "93", c: "107", d: "122", e: "137" },
+                answer: "e",
+                domain: "Arithmetic",
+                skill: "Counting/Sets/Series/Prob/Stats",
+                explanation: "Own at least one = 48 + 30 - 15 = 63. Neither = 200 - 63 = 137"
+            },
+            {
+                id: "QR-GMAT-OG__-00129",
+                text: "The sum of all the integers \\(k\\) such that \\(-26 < k < 24\\) is",
+                options: { a: "0", b: "\\(-2\\)", c: "\\(-25\\)", d: "\\(-49\\)", e: "\\(-51\\)" },
+                answer: "d",
+                domain: "Arithmetic",
+                skill: "Value/Order/Factors",
+                explanation: "Integers from -25 to 23. Pairs -25+25=0 through -1+1=0. Leftover: -25, -24, 23. Sum = -25 + -24 + 0 = -49"
+            },
+            {
+                id: "QR-GMAT-OG__-00131",
+                text: "Mark and Ann together were allocated \\(n\\) boxes of cookies to sell. Mark sold 10 less than \\(n\\) and Ann sold 2 less than \\(n\\). If each sold at least one box but together sold less than \\(n\\) boxes, what is \\(n\\)?",
+                options: { a: "11", b: "12", c: "13", d: "14", e: "15" },
+                answer: "a",
+                domain: "Algebra",
+                skill: "Equal/Unequal/ALG",
+                explanation: "n-10 ≥ 1 → n ≥ 11. (n-10)+(n-2) < n → n < 12. So n = 11"
+            },
+            {
+                id: "QR-GMAT-OG__-00133",
+                text: "A high school has 5,000 students. Of these, \\(x\\) take music, \\(y\\) take art, and \\(z\\) take both. How many take neither?",
+                options: { a: "\\(5,000 - z\\)", b: "\\(5,000 - x - y\\)", c: "\\(5,000 - x + z\\)", d: "\\(5,000 - x - y - z\\)", e: "\\(5,000 - x - y + z\\)" },
+                answer: "e",
+                domain: "Arithmetic",
+                skill: "Counting/Sets/Series/Prob/Stats",
+                explanation: "At least one = x + y - z. Neither = 5,000 - (x + y - z) = 5,000 - x - y + z"
+            },
+            {
+                id: "QR-GMAT-OG__-00136",
+                text: "A graph shows computers assembled over 6 days: Day 1: 20, Day 2: 12, Day 3: 18, Day 4: 10, Day 5: 16, Day 6: 8. From which day to the next was the percent change greatest in magnitude?",
+                options: { a: "Day 1 to Day 2", b: "Day 2 to Day 3", c: "Day 3 to Day 4", d: "Day 4 to Day 5", e: "Day 5 to Day 6" },
+                answer: "d",
+                domain: "Arithmetic",
+                skill: "Rates/Ratios/Percent",
+                explanation: "Day 4→5: (16-10)/10 = 60%. This is the largest percent change."
+            }
+        ];
+
+        // Question Bank - Hard Questions
+        const hardQuestions = [
+            {
+                id: "QR-GMAT-OG__-00179",
+                text: "If \\(n\\) is a positive integer and the product of all the integers from 1 to \\(n\\), inclusive, is divisible by 990, what is the least possible value of \\(n\\)?",
+                options: { a: "8", b: "9", c: "10", d: "11", e: "12" },
+                answer: "d",
+                domain: "Arithmetic",
+                skill: "Value/Order/Factors",
+                explanation: "990 = 2 × 3² × 5 × 11. Need n! to include 11 as a factor. Least n = 11"
+            },
+            {
+                id: "QR-GMAT-OG__-00181",
+                text: "The total cost for Company X to produce a batch of tools is $10,000 plus $3 per tool. Each tool sells for $8. If 20,000 tools are produced and sold, what is the gross profit per tool?",
+                options: { a: "$3.00", b: "$3.75", c: "$4.50", d: "$5.00", e: "$5.50" },
+                answer: "c",
+                domain: "Arithmetic",
+                skill: "Rates/Ratios/Percent",
+                explanation: "Cost = $10,000 + $3(20,000) = $70,000. Revenue = $8(20,000) = $160,000. Profit = $90,000. Per tool = $4.50"
+            },
+            {
+                id: "QR-GMAT-OG__-00183",
+                text: "If there are fewer than 8 zeros between the decimal point and the first nonzero digit in \\(\\left(\\frac{t}{1,000}\\right)^4\\), which could be \\(t\\)?<br><br>I. 3&nbsp;&nbsp;&nbsp;II. 5&nbsp;&nbsp;&nbsp;III. 9",
+                options: { a: "None", b: "I only", c: "II only", d: "III only", e: "II and III" },
+                answer: "a",
+                domain: "Arithmetic",
+                skill: "Value/Order/Factors",
+                explanation: "t=3: 81×10⁻¹²=10 zeros. t=5: 625×10⁻¹²=9 zeros. t=9: 6561×10⁻¹²=8 zeros. None has fewer than 8."
+            },
+            {
+                id: "QR-GMAT-OG__-00185",
+                text: "Jackie has solutions that are 2% and 12% sulfuric acid. If mixed to produce 60 liters of 5% sulfuric acid, approximately how many liters of the 2% solution is required?",
+                options: { a: "18", b: "20", c: "24", d: "36", e: "42" },
+                answer: "e",
+                domain: "Algebra",
+                skill: "Equal/Unequal/ALG",
+                explanation: "0.02x + 0.12(60-x) = 0.05(60). 0.02x + 7.2 - 0.12x = 3. -0.1x = -4.2. x = 42"
+            },
+            {
+                id: "QR-GMAT-OG__-00186",
+                text: "If Jake loses 8 pounds, he will weigh twice as much as his sister. Together they now weigh 278 pounds. What is Jake's present weight, in pounds?",
+                options: { a: "131", b: "135", c: "139", d: "147", e: "188" },
+                answer: "e",
+                domain: "Algebra",
+                skill: "Equal/Unequal/ALG",
+                explanation: "J - 8 = 2S, J + S = 278. S = 278 - J. J - 8 = 2(278 - J). 3J = 564. J = 188"
+            },
+            {
+                id: "QR-GMAT-OG__-00188",
+                text: "Last year 26 members traveled to England, 26 to France, and 32 to Italy. None traveled to both England and France, 6 to both England and Italy, and 11 to both France and Italy. How many traveled to at least one of these countries?",
+                options: { a: "52", b: "67", c: "71", d: "73", e: "79" },
+                answer: "b",
+                domain: "Arithmetic",
+                skill: "Counting/Sets/Series/Prob/Stats",
+                explanation: "E only = 20, F only = 15, I only = 15, E∩I = 6, F∩I = 11. Total = 20+15+15+6+11 = 67"
+            },
+            {
+                id: "QR-GMAT-OG__-00191",
+                text: "If \\(x(2x + 1) = 0\\) and \\(\\left(x + \\frac{1}{2}\\right)(2x - 3) = 0\\), then \\(x =\\)",
+                options: { a: "\\(-3\\)", b: "\\(-\\frac{1}{2}\\)", c: "\\(0\\)", d: "\\(\\frac{1}{2}\\)", e: "\\(\\frac{3}{2}\\)" },
+                answer: "b",
+                domain: "Algebra",
+                skill: "Equal/Unequal/ALG",
+                explanation: "First equation: x = 0 or -½. Second equation: x = -½ or 3/2. Common solution: x = -½"
+            },
+            {
+                id: "QR-GMAT-OG__-00192",
+                text: "A math program was tried in 2 classes in each of 32 schools with 37 teachers. Each class had 1 teacher, and each teacher taught 1-3 classes. If \\(n\\) teachers taught 3 classes, what are the least and greatest possible values of \\(n\\)?",
+                options: { a: "0 and 13", b: "0 and 14", c: "1 and 10", d: "1 and 9", e: "2 and 8" },
+                answer: "a",
+                domain: "Algebra",
+                skill: "Equal/Unequal/ALG",
+                explanation: "64 classes, 37 teachers. k + m + n = 37, k + 2m + 3n = 64. So m + 2n = 27. Max n = 13, min n = 0"
+            },
+            {
+                id: "QR-GMAT-OG__-00193",
+                text: "For the positive numbers \\(n, n+1, n+2, n+4,\\) and \\(n+8\\), how much greater is the mean than the median?",
+                options: { a: "0", b: "1", c: "\\(n + 1\\)", d: "\\(n + 2\\)", e: "\\(n + 3\\)" },
+                answer: "b",
+                domain: "Arithmetic",
+                skill: "Counting/Sets/Series/Prob/Stats",
+                explanation: "Median = n+2. Mean = (5n+15)/5 = n+3. Difference = 1"
+            },
+            {
+                id: "QR-GMAT-OG__-00194",
+                text: "The present ratio of students to teachers is 30 to 1. If students increase by 50 and teachers by 5, the ratio becomes 25 to 1. What is the present number of teachers?",
+                options: { a: "5", b: "8", c: "10", d: "12", e: "15" },
+                answer: "e",
+                domain: "Algebra",
+                skill: "Rates/Ratios/Percent",
+                explanation: "s = 30t. (s+50)/(t+5) = 25. 30t + 50 = 25t + 125. 5t = 75. t = 15"
+            },
+            {
+                id: "QR-GMAT-OG__-00197",
+                text: "Each year for 4 years, a farmer increased the number of trees in an orchard by \\(\\frac{1}{4}\\) of the previous year. If there were 6,250 trees at the end of 4 years, how many were there at the beginning?",
+                options: { a: "1,250", b: "1,563", c: "2,250", d: "2,560", e: "2,752" },
+                answer: "d",
+                domain: "Algebra",
+                skill: "Rates/Ratios/Percent",
+                explanation: "N(5/4)⁴ = 6,250. N = 6,250 × (4/5)⁴ = 6,250 × 256/625 = 2,560"
+            },
+            {
+                id: "QR-GMAT-OG__-00199",
+                text: "For positive integers \\(a, b, k\\), \\(a^k \\| b\\) means \\(a^k\\) divides \\(b\\) but \\(a^{k+1}\\) does not. If \\(2^k \\| 72\\), then \\(k =\\)",
+                options: { a: "2", b: "3", c: "4", d: "8", e: "18" },
+                answer: "b",
+                domain: "Arithmetic",
+                skill: "Value/Order/Factors",
+                explanation: "72 = 2³ × 3². So 2³ divides 72 but 2⁴ doesn't. k = 3"
+            },
+            {
+                id: "QR-GMAT-OG__-00200",
+                text: "A distribution is symmetric about the mean \\(m\\). If 68 percent lies within one standard deviation \\(d\\) of the mean, what percent is less than \\(m + d\\)?",
+                options: { a: "16%", b: "32%", c: "48%", d: "84%", e: "92%" },
+                answer: "d",
+                domain: "Arithmetic",
+                skill: "Counting/Sets/Series/Prob/Stats",
+                explanation: "32% outside ±d, so 16% above m+d. Less than m+d = 100% - 16% = 84%"
+            },
+            {
+                id: "QR-GMAT-OG__-00201",
+                text: "Four sandwiches were ordered for \\(m\\) students (\\(m > 4\\)). Three sandwiches were evenly divided among all students. The fourth was divided among \\(m - 4\\) students. If Carol ate one piece from each, what fraction of a whole sandwich did she eat?",
+                options: { a: "\\(\\frac{m+4}{m(m-4)}\\)", b: "\\(\\frac{2m-4}{m(m-4)}\\)", c: "\\(\\frac{4m-4}{m(m-4)}\\)", d: "\\(\\frac{4m-8}{m(m-4)}\\)", e: "\\(\\frac{4m-12}{m(m-4)}\\)" },
+                answer: "e",
+                domain: "Algebra",
+                skill: "Equal/Unequal/ALG",
+                explanation: "3(1/m) + 1/(m-4) = 3(m-4)+m / m(m-4) = (4m-12)/m(m-4)"
+            },
+            {
+                id: "QR-GMAT-OG__-00202",
+                text: "Which of the following equations has \\(1 + \\sqrt{2}\\) as one of its roots?",
+                options: { a: "\\(x^2 + 2x - 1 = 0\\)", b: "\\(x^2 - 2x + 1 = 0\\)", c: "\\(x^2 + 2x + 1 = 0\\)", d: "\\(x^2 - 2x - 1 = 0\\)", e: "\\(x^2 - x - 1 = 0\\)" },
+                answer: "d",
+                domain: "Algebra",
+                skill: "Equal/Unequal/ALG",
+                explanation: "x = 1 + √2. (x-1)² = 2. x² - 2x + 1 = 2. x² - 2x - 1 = 0"
+            },
+            {
+                id: "QR-GMAT-OG__-00203",
+                text: "Unemployment among construction workers dropped from 16% to 9%. The number of workers was 20% greater in the second period. What was the approximate percent change in unemployed workers?",
+                options: { a: "50% decrease", b: "30% decrease", c: "15% decrease", d: "30% increase", e: "55% increase" },
+                answer: "b",
+                domain: "Arithmetic",
+                skill: "Rates/Ratios/Percent",
+                explanation: "Initial: 0.16N. Final: 0.09(1.2N) = 0.108N. Change = (0.108-0.16)/0.16 ≈ -30%"
+            },
+            {
+                id: "QR-GMAT-OG__-00205",
+                text: "Mary selects 10 apples (40¢) and oranges (60¢) with average price 56¢. How many oranges must she put back to make the average price 52¢?",
+                options: { a: "1", b: "2", c: "3", d: "4", e: "5" },
+                answer: "e",
+                domain: "Algebra",
+                skill: "Equal/Unequal/ALG",
+                explanation: "Original: 2 apples, 8 oranges. Need 40(2)+60(8-y)/(10-y)=52. Solving: y = 5"
+            },
+            {
+                id: "QR-GMAT-OG__-00209",
+                text: "If \\(n = 3^8 - 2^8\\), which of the following is NOT a factor of \\(n\\)?",
+                options: { a: "97", b: "65", c: "35", d: "13", e: "5" },
+                answer: "c",
+                domain: "Arithmetic",
+                skill: "Value/Order/Factors",
+                explanation: "3⁸ - 2⁸ = (3⁴+2⁴)(3⁴-2⁴) = (97)(3²+2²)(3²-2²) = 97×13×5. 35 = 5×7 is not a factor (7 not present)"
+            },
+            {
+                id: "QR-GMAT-OG__-00210",
+                text: "Club X has more than 10 but fewer than 40 members. Members can sit 3 at one table and 4 at others, or 3 at one table and 5 at others. If they sit 6 at each table except one, how many are at that table?",
+                options: { a: "1", b: "2", c: "3", d: "4", e: "5" },
+                answer: "e",
+                domain: "Arithmetic",
+                skill: "Value/Order/Factors",
+                explanation: "n-3 divisible by 4 and 5, so by 20. n = 23 is only value 10 < n < 40. 23 = 3(6) + 5"
+            },
+            {
+                id: "QR-GMAT-OG__-00211",
+                text: "Terry planned to read 90 pages/day but read only 75 pages/day at first, leaving 690 pages for the last 6 days. How many days total did Terry have?",
+                options: { a: "15", b: "16", c: "25", d: "40", e: "46" },
+                answer: "b",
+                domain: "Algebra",
+                skill: "Rates/Ratios/Percent",
+                explanation: "(75n + 690)/(n+6) = 90. 75n + 690 = 90n + 540. 15n = 150. n = 10. Total = 16 days"
+            },
+            {
+                id: "QR-GMAT-OG__-00213",
+                text: "If \\(3 < x < 100\\), for how many values of \\(x\\) is \\(\\frac{x}{3}\\) the square of a prime number?",
+                options: { a: "Two", b: "Three", c: "Four", d: "Five", e: "Nine" },
+                answer: "b",
+                domain: "Arithmetic",
+                skill: "Value/Order/Factors",
+                explanation: "x/3 = prime². x = 3×4=12, 3×9=27, 3×25=75. Three values in range."
+            },
+            {
+                id: "QR-GMAT-OG__-00214",
+                text: "A researcher identifies 12 participants with codes using single letters or pairs of distinct letters in alphabetical order. What is the least number of letters needed?",
+                options: { a: "4", b: "5", c: "6", d: "7", e: "8" },
+                answer: "b",
+                domain: "Arithmetic",
+                skill: "Counting/Sets/Series/Prob/Stats",
+                explanation: "n letters give n + C(n,2) codes. 4 letters: 4+6=10. 5 letters: 5+10=15 ≥ 12. Need 5 letters."
+            },
+            {
+                id: "QR-GMAT-OG__-00215",
+                text: "An object thrown upward has height \\(h = -16(t-3)^2 + 150\\). At what height, in feet, is it 2 seconds after reaching maximum height?",
+                options: { a: "6", b: "86", c: "134", d: "150", e: "166" },
+                answer: "b",
+                domain: "Algebra",
+                skill: "Equal/Unequal/ALG",
+                explanation: "Max at t=3. At t=5: h = -16(4) + 150 = 86"
+            },
+            {
+                id: "QR-GMAT-OG__-00217",
+                text: "David has \\(d\\) books, which is 3 times as many as Jeff and \\(\\frac{1}{2}\\) as many as Paula. How many books do they have altogether, in terms of \\(d\\)?",
+                options: { a: "\\(\\frac{5}{6}d\\)", b: "\\(\\frac{7}{3}d\\)", c: "\\(\\frac{10}{3}d\\)", d: "\\(\\frac{7}{2}d\\)", e: "\\(\\frac{9}{2}d\\)" },
+                answer: "c",
+                domain: "Algebra",
+                skill: "Equal/Unequal/ALG",
+                explanation: "J = d/3, P = 2d. Total = d + d/3 + 2d = 10d/3"
+            },
+            {
+                id: "QR-GMAT-OG__-00219",
+                text: "At Don's regular hourly rate, a job was estimated at $336. The job took 4 hours longer, so he earned $2/hour less than his regular rate. What was his estimated time, in hours?",
+                options: { a: "28", b: "24", c: "16", d: "14", e: "12" },
+                answer: "b",
+                domain: "Algebra",
+                skill: "Equal/Unequal/ALG",
+                explanation: "Let t = estimated time, r = rate. rt = 336, (r-2)(t+4) = 336. Solving: t = 24"
+            }
+        ];
+
+        // ==========================================
+        // GMAT CAT ADAPTIVE ALGORITHM
+        // ==========================================
+
+        // Assessment state
+        let currentQuestionIndex = 0;
+        let selectedAnswer = null;
+        let totalQuestions = 21;
+        let timeLimit = 45 * 60; // 45 minutes in seconds
+        let timeRemaining = timeLimit;
+        let timerInterval = null;
+        let assessmentStartTime = null;
+
+        // Adaptive testing state
+        let theta = 0; // Current ability estimate (starts at average)
+        let questionHistory = [];
+        let usedQuestionIds = new Set();
+
+        // Filter out excluded questions
+        function filterQuestions(questions) {
+            return questions.filter(q => !excludedQuestionIds.includes(q.id));
+        }
+
+        // Get filtered question pools
+        let availableEasy = filterQuestions(easyQuestions);
+        let availableMedium = filterQuestions(mediumQuestions);
+        let availableHard = filterQuestions(hardQuestions);
+
+        // Select next question based on CAT algorithm
+        function selectNextQuestion() {
+            let targetDifficulty;
+            let questionPool;
+
+            // Determine target difficulty based on theta (ability estimate)
+            if (theta < -0.5) {
+                targetDifficulty = "easy";
+                questionPool = availableEasy.filter(q => !usedQuestionIds.has(q.id));
+            } else if (theta < 0.5) {
+                targetDifficulty = "medium";
+                questionPool = availableMedium.filter(q => !usedQuestionIds.has(q.id));
+            } else {
+                targetDifficulty = "hard";
+                questionPool = availableHard.filter(q => !usedQuestionIds.has(q.id));
+            }
+
+            // If no questions available at target difficulty, expand search
+            if (questionPool.length === 0) {
+                const allAvailable = [
+                    ...availableEasy.filter(q => !usedQuestionIds.has(q.id)),
+                    ...availableMedium.filter(q => !usedQuestionIds.has(q.id)),
+                    ...availableHard.filter(q => !usedQuestionIds.has(q.id))
+                ];
+                questionPool = allAvailable;
+            }
+
+            if (questionPool.length === 0) {
+                return null; // No more questions available
+            }
+
+            // Randomly select from the pool
+            const randomIndex = Math.floor(Math.random() * questionPool.length);
+            return questionPool[randomIndex];
+        }
+
+        // Update ability estimate (simplified IRT)
+        function updateTheta(isCorrect, difficulty) {
+            const difficultyValue = difficulty === "easy" ? -1 : (difficulty === "medium" ? 0 : 1);
+            const expectedProbability = 1 / (1 + Math.exp(-(theta - difficultyValue)));
+
+            // Simplified update rule
+            const learningRate = 0.3;
+            if (isCorrect) {
+                theta += learningRate * (1 - expectedProbability);
+            } else {
+                theta -= learningRate * expectedProbability;
+            }
+
+            // Clamp theta to reasonable range
+            theta = Math.max(-3, Math.min(3, theta));
+        }
+
+        // Calculate final score (GMAT QR scale: 60-90)
+        function calculateScore() {
+            // Count correct answers at each difficulty
+            let correctEasy = 0, totalEasy = 0;
+            let correctMedium = 0, totalMedium = 0;
+            let correctHard = 0, totalHard = 0;
+
+            questionHistory.forEach(q => {
+                if (q.difficulty === "easy") {
+                    totalEasy++;
+                    if (q.correct) correctEasy++;
+                } else if (q.difficulty === "medium") {
+                    totalMedium++;
+                    if (q.correct) correctMedium++;
+                } else {
+                    totalHard++;
+                    if (q.correct) correctHard++;
+                }
+            });
+
+            // Weight by difficulty
+            const weightedScore = (correctEasy * 1 + correctMedium * 1.5 + correctHard * 2) /
+                                 (totalEasy * 1 + totalMedium * 1.5 + totalHard * 2);
+
+            // Scale to GMAT range (60-90)
+            const score = Math.round(60 + weightedScore * 30);
+            return Math.max(60, Math.min(90, score));
+        }
+
+        // Calculate percentile based on score
+        function calculatePercentile(score) {
+            // Approximate GMAT percentile distribution
+            const percentileMap = {
+                90: 97, 89: 95, 88: 92, 87: 89, 86: 85,
+                85: 80, 84: 75, 83: 70, 82: 65, 81: 60,
+                80: 55, 79: 50, 78: 45, 77: 40, 76: 35,
+                75: 30, 74: 26, 73: 22, 72: 18, 71: 15,
+                70: 12, 69: 10, 68: 8, 67: 6, 66: 5,
+                65: 4, 64: 3, 63: 2, 62: 1, 61: 1, 60: 1
+            };
+            return percentileMap[score] || 50;
+        }
+
+        // Get difficulty from question
+        function getQuestionDifficulty(question) {
+            if (availableEasy.some(q => q.id === question.id)) return "easy";
+            if (availableMedium.some(q => q.id === question.id)) return "medium";
+            return "hard";
+        }
+
+        // ==========================================
+        // UI FUNCTIONS
+        // ==========================================
+
+        function startAssessment() {
+            document.getElementById('startScreen').classList.remove('active');
+            document.getElementById('questionScreen').classList.add('active');
+
+            assessmentStartTime = Date.now();
+            startTimer();
+            loadQuestion();
+        }
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                timeRemaining--;
+                updateTimerDisplay();
+
+                if (timeRemaining <= 0) {
+                    clearInterval(timerInterval);
+                    endAssessment();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timeRemaining / 60);
+            const seconds = timeRemaining % 60;
+            const timerElement = document.getElementById('timer');
+            timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+            // Warning colors
+            timerElement.classList.remove('warning', 'critical');
+            if (timeRemaining <= 300 && timeRemaining > 60) {
+                timerElement.classList.add('warning');
+            } else if (timeRemaining <= 60) {
+                timerElement.classList.add('critical');
+            }
+        }
+
+        function loadQuestion() {
+            const question = selectNextQuestion();
+
+            if (!question || currentQuestionIndex >= totalQuestions) {
+                endAssessment();
+                return;
+            }
+
+            // Mark question as used
+            usedQuestionIds.add(question.id);
+
+            // Store question start time
+            question.startTime = Date.now();
+            question.difficulty = getQuestionDifficulty(question);
+
+            // Update progress
+            document.getElementById('questionProgress').textContent =
+                `Question ${currentQuestionIndex + 1} of ${totalQuestions}`;
+            document.getElementById('progressBar').style.width =
+                `${((currentQuestionIndex + 1) / totalQuestions) * 100}%`;
+
+            // Update difficulty badge
+            const badge = document.getElementById('difficultyBadge');
+            badge.textContent = question.difficulty.charAt(0).toUpperCase() + question.difficulty.slice(1);
+            badge.className = `difficulty-badge difficulty-${question.difficulty}`;
+
+            // Update question type
+            document.getElementById('questionType').textContent = question.domain;
+
+            // Update question text
+            document.getElementById('questionText').innerHTML = question.text;
+
+            // Update options
+            const optionsContainer = document.getElementById('optionsContainer');
+            optionsContainer.innerHTML = '';
+
+            const letters = ['A', 'B', 'C', 'D', 'E'];
+            Object.entries(question.options).forEach(([key, value], index) => {
+                const option = document.createElement('div');
+                option.className = 'option';
+                option.dataset.answer = key;
+                option.innerHTML = `
+                    <span class="option-letter">${letters[index]}</span>
+                    <span class="option-text">${value}</span>
+                `;
+                option.addEventListener('click', () => selectOption(option, key));
+                optionsContainer.appendChild(option);
+            });
+
+            // Reset selection
+            selectedAnswer = null;
+            document.getElementById('nextBtn').disabled = true;
+
+            // Store current question reference
+            window.currentQuestion = question;
+
+            // Re-render MathJax
+            if (window.MathJax) {
+                MathJax.typesetPromise();
+            }
+        }
+
+        function selectOption(element, answer) {
+            // Remove previous selection
+            document.querySelectorAll('.option').forEach(opt => opt.classList.remove('selected'));
+
+            // Add selection to clicked option
+            element.classList.add('selected');
+            selectedAnswer = answer;
+
+            // Enable next button
+            document.getElementById('nextBtn').disabled = false;
+        }
+
+        function submitAnswer() {
+            if (!selectedAnswer || !window.currentQuestion) return;
+
+            const question = window.currentQuestion;
+            const isCorrect = selectedAnswer === question.answer;
+            const responseTime = (Date.now() - question.startTime) / 1000; // in seconds
+
+            // Record response
+            questionHistory.push({
+                questionNum: currentQuestionIndex + 1,
+                questionId: question.id,
+                difficulty: question.difficulty,
+                domain: question.domain,
+                skill: question.skill,
+                correct: isCorrect,
+                selectedAnswer: selectedAnswer,
+                correctAnswer: question.answer,
+                responseTime: responseTime,
+                explanation: question.explanation,
+                questionText: question.text,
+                options: question.options
+            });
+
+            // Update theta (ability estimate)
+            updateTheta(isCorrect, question.difficulty);
+
+            // Move to next question
+            currentQuestionIndex++;
+            selectedAnswer = null;
+
+            if (currentQuestionIndex >= totalQuestions) {
+                endAssessment();
+            } else {
+                loadQuestion();
+            }
+        }
+
+        function endAssessment() {
+            clearInterval(timerInterval);
+
+            document.getElementById('questionScreen').classList.remove('active');
+            document.getElementById('resultsScreen').classList.add('active');
+
+            generateResults();
+        }
+
+        function generateResults() {
+            const score = calculateScore();
+            const percentile = calculatePercentile(score);
+            const correctCount = questionHistory.filter(q => q.correct).length;
+
+            // Update header scores
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('percentile').textContent = percentile + 'th';
+            document.getElementById('correctCount').textContent = `${correctCount}/${totalQuestions}`;
+
+            // Generate score distribution chart
+            generateScoreDistributionChart(score);
+
+            // Generate performance by domain
+            generateDomainPerformance();
+
+            // Generate performance by skills
+            generateSkillsPerformance();
+
+            // Generate time management chart
+            generateTimeManagementChart();
+
+            // Generate question review table
+            generateQuestionReviewTable();
+        }
+
+        function generateScoreDistributionChart(userScore) {
+            const ctx = document.getElementById('scoreDistributionChart').getContext('2d');
+
+            // Simulated GMAT score distribution
+            const scores = [];
+            const percentages = [];
+            for (let s = 60; s <= 90; s++) {
+                scores.push(s);
+                // Normal distribution approximation
+                const mean = 78;
+                const stdDev = 5;
+                const z = (s - mean) / stdDev;
+                const pct = Math.exp(-0.5 * z * z) / (stdDev * Math.sqrt(2 * Math.PI)) * 100;
+                percentages.push(pct);
+            }
+
+            const backgroundColors = scores.map(s =>
+                s === userScore ? 'rgba(123, 104, 166, 1)' : 'rgba(200, 200, 200, 0.5)'
+            );
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: scores,
+                    datasets: [{
+                        label: '% of Test Takers',
+                        data: percentages,
+                        backgroundColor: backgroundColors,
+                        borderColor: backgroundColors.map(c => c.replace('0.5', '1')),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        title: {
+                            display: true,
+                            text: `Your Score: ${userScore} | Mean: 78`,
+                            font: { size: 16 }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            title: { display: true, text: '% of Test Takers' },
+                            beginAtZero: true
+                        },
+                        x: {
+                            title: { display: true, text: 'Quantitative Reasoning Score' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function generateDomainPerformance() {
+            const container = document.getElementById('domainPerformance');
+            container.innerHTML = '';
+
+            // Calculate performance by domain
+            const domains = {};
+            questionHistory.forEach(q => {
+                if (!domains[q.domain]) {
+                    domains[q.domain] = { correct: 0, total: 0 };
+                }
+                domains[q.domain].total++;
+                if (q.correct) domains[q.domain].correct++;
+            });
+
+            Object.entries(domains).forEach(([domain, data]) => {
+                const percentage = Math.round((data.correct / data.total) * 100);
+                const percentile = Math.round(percentage * 0.8 + 10); // Approximate percentile
+
+                const barHtml = `
+                    <div class="domain-bar">
+                        <div class="domain-header">
+                            <span class="domain-name">${domain}</span>
+                            <span class="domain-percentile">${percentile}th percentile</span>
+                        </div>
+                        <div class="domain-bar-container">
+                            <div class="domain-bar-fill" style="width: ${percentile}%">${percentile}th</div>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += barHtml;
+            });
+        }
+
+        function generateSkillsPerformance() {
+            const container = document.getElementById('skillsPerformance');
+            container.innerHTML = '';
+
+            // Calculate performance by skill
+            const skills = {};
+            questionHistory.forEach(q => {
+                if (!skills[q.skill]) {
+                    skills[q.skill] = { correct: 0, total: 0 };
+                }
+                skills[q.skill].total++;
+                if (q.correct) skills[q.skill].correct++;
+            });
+
+            Object.entries(skills).forEach(([skill, data]) => {
+                const percentage = Math.round((data.correct / data.total) * 100);
+                const percentile = Math.round(percentage * 0.8 + 10);
+
+                const barHtml = `
+                    <div class="domain-bar">
+                        <div class="domain-header">
+                            <span class="domain-name">${skill}</span>
+                            <span class="domain-percentile">${percentile}th percentile</span>
+                        </div>
+                        <div class="domain-bar-container">
+                            <div class="domain-bar-fill" style="width: ${percentile}%">${percentile}th</div>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += barHtml;
+            });
+        }
+
+        function generateTimeManagementChart() {
+            const ctx = document.getElementById('timeManagementChart').getContext('2d');
+
+            const labels = questionHistory.map((q, i) => i + 1);
+            const times = questionHistory.map(q => q.responseTime / 60); // Convert to minutes
+            const colors = questionHistory.map(q =>
+                q.correct ? 'rgba(76, 175, 80, 0.8)' : 'rgba(229, 57, 53, 0.8)'
+            );
+
+            new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Response Time',
+                        data: labels.map((l, i) => ({ x: l, y: times[i] })),
+                        backgroundColor: colors,
+                        pointRadius: 10,
+                        pointHoverRadius: 12
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        title: {
+                            display: true,
+                            text: 'Response Time per Question (Green = Correct, Red = Incorrect)',
+                            font: { size: 14 }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            title: { display: true, text: 'Response Time (Minutes)' },
+                            beginAtZero: true,
+                            suggestedMax: 5
+                        },
+                        x: {
+                            title: { display: true, text: 'Question Number' },
+                            min: 0,
+                            max: totalQuestions + 1
+                        }
+                    }
+                }
+            });
+        }
+
+        function generateQuestionReviewTable() {
+            const tbody = document.getElementById('questionReviewBody');
+            tbody.innerHTML = '';
+
+            questionHistory.forEach((q, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><a href="#" class="question-link" data-index="${index}">${q.questionNum}</a></td>
+                    <td>${(q.responseTime / 60).toFixed(2)} min</td>
+                    <td class="${q.correct ? 'correct' : 'incorrect'}">${q.correct ? 'Correct' : 'Incorrect'}</td>
+                    <td>${q.domain}</td>
+                    <td>${q.difficulty.charAt(0).toUpperCase() + q.difficulty.slice(1)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            // Add click handlers to question links
+            document.querySelectorAll('.question-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const index = parseInt(link.dataset.index);
+                    openQuestionModal(index);
+                });
+            });
+        }
+
+        // ==========================================
+        // QUESTION REVIEW MODAL FUNCTIONS
+        // ==========================================
+
+        let currentModalQuestionIndex = 0;
+
+        function openQuestionModal(index) {
+            currentModalQuestionIndex = index;
+            renderQuestionModal(index);
+            document.getElementById('questionModal').classList.add('active');
+            document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        }
+
+        function closeQuestionModal() {
+            document.getElementById('questionModal').classList.remove('active');
+            document.body.style.overflow = ''; // Restore scrolling
+        }
+
+        function closeModalOnOverlay(event) {
+            if (event.target === event.currentTarget) {
+                closeQuestionModal();
+            }
+        }
+
+        function navigateQuestion(direction) {
+            const newIndex = currentModalQuestionIndex + direction;
+            if (newIndex >= 0 && newIndex < questionHistory.length) {
+                currentModalQuestionIndex = newIndex;
+                renderQuestionModal(newIndex);
+            }
+        }
+
+        function renderQuestionModal(index) {
+            const q = questionHistory[index];
+
+            // Update title
+            document.getElementById('modalTitle').textContent = `Question ${q.questionNum} Review`;
+
+            // Update meta badges
+            const metaHtml = `
+                <span class="modal-badge ${q.correct ? 'correct' : 'incorrect'}">
+                    ${q.correct ? '✓ Correct' : '✗ Incorrect'}
+                </span>
+                <span class="modal-badge domain">${q.domain}</span>
+                <span class="modal-badge difficulty">${q.difficulty.charAt(0).toUpperCase() + q.difficulty.slice(1)}</span>
+                <span class="modal-badge time">${(q.responseTime / 60).toFixed(2)} min</span>
+            `;
+            document.getElementById('modalMeta').innerHTML = metaHtml;
+
+            // Update question text
+            document.getElementById('modalQuestionText').innerHTML = q.questionText;
+
+            // Update options
+            const letters = ['A', 'B', 'C', 'D', 'E'];
+            let optionsHtml = '';
+            Object.entries(q.options).forEach(([key, value], i) => {
+                const isStudentAnswer = key === q.selectedAnswer;
+                const isCorrectAnswer = key === q.correctAnswer;
+
+                let classes = 'modal-option';
+                if (isStudentAnswer) classes += ' student-answer';
+                if (isCorrectAnswer) classes += ' correct-answer';
+
+                let indicator = '';
+                if (isStudentAnswer && isCorrectAnswer) {
+                    indicator = '<span class="modal-option-indicator" style="color: var(--uptoten-green);">✓ Your Answer (Correct)</span>';
+                } else if (isStudentAnswer && !isCorrectAnswer) {
+                    indicator = '<span class="modal-option-indicator" style="color: var(--uptoten-red);">✗ Your Answer</span>';
+                } else if (isCorrectAnswer) {
+                    indicator = '<span class="modal-option-indicator" style="color: var(--uptoten-green);">✓ Correct Answer</span>';
+                }
+
+                optionsHtml += `
+                    <div class="${classes}">
+                        <span class="modal-option-letter">${letters[i]}</span>
+                        <span class="modal-option-text">${value}</span>
+                        ${indicator}
+                    </div>
+                `;
+            });
+            document.getElementById('modalOptions').innerHTML = optionsHtml;
+
+            // Update explanation
+            document.getElementById('modalExplanationText').innerHTML = q.explanation;
+
+            // Update navigation buttons
+            document.getElementById('modalPrevBtn').disabled = index === 0;
+            document.getElementById('modalNextBtn').disabled = index === questionHistory.length - 1;
+
+            // Re-render MathJax in modal
+            if (window.MathJax) {
+                MathJax.typesetPromise([document.getElementById('questionModal')]);
+            }
+        }
+
+        // Handle escape key to close modal
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeQuestionModal();
+            }
+            if (document.getElementById('questionModal').classList.contains('active')) {
+                if (e.key === 'ArrowLeft') {
+                    navigateQuestion(-1);
+                } else if (e.key === 'ArrowRight') {
+                    navigateQuestion(1);
+                }
+            }
+        });
+
+        function restartAssessment() {
+            // Reset all state
+            currentQuestionIndex = 0;
+            selectedAnswer = null;
+            timeRemaining = timeLimit;
+            theta = 0;
+            questionHistory = [];
+            usedQuestionIds = new Set();
+
+            // Reset UI
+            document.getElementById('resultsScreen').classList.remove('active');
+            document.getElementById('startScreen').classList.add('active');
+            document.getElementById('timer').textContent = '45:00';
+            document.getElementById('timer').classList.remove('warning', 'critical');
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Configure MathJax
+            if (window.MathJax) {
+                MathJax.startup.defaultReady();
+            }
+        });
+    </script>
+</body>
+</html>
