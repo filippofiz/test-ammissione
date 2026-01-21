@@ -19,6 +19,8 @@ import {
   faFileCode,
   faListCheck,
   faUsers,
+  faRobot,
+  faCopy,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import type { Profile } from '../lib/database.types';
@@ -436,6 +438,94 @@ export default function AdminDashboardPage() {
 
                 {/* Arrow Indicator */}
                 <div className="absolute bottom-4 right-4 text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </button>
+
+              {/* AI Validation Card */}
+              <button
+                onClick={() => navigate('/admin/ai-validation')}
+                className="group relative bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 border-2 border-gray-100 hover:border-cyan-500 transform hover:scale-105"
+              >
+                {/* Icon */}
+                <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-cyan-500 to-cyan-700 rounded-full flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
+                  <FontAwesomeIcon icon={faRobot} className="text-4xl text-white" />
+                </div>
+
+                {/* Title */}
+                <h3 className="text-2xl font-bold text-brand-dark mb-3">
+                  AI Validation
+                </h3>
+
+                {/* Description */}
+                <p className="text-gray-600 mb-4">
+                  AI-powered validation of question correctness and quality
+                </p>
+
+                {/* Features List */}
+                <ul className="text-left text-sm text-gray-500 space-y-2">
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></span>
+                    Verify answer correctness
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></span>
+                    Check question quality
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></span>
+                    Batch processing
+                  </li>
+                </ul>
+
+                {/* Arrow Indicator */}
+                <div className="absolute bottom-4 right-4 text-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </button>
+
+              {/* Clone Tests Card */}
+              <button
+                onClick={() => navigate('/admin/clone-tests')}
+                className="group relative bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 border-2 border-gray-100 hover:border-emerald-500 transform hover:scale-105"
+              >
+                {/* Icon */}
+                <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-full flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
+                  <FontAwesomeIcon icon={faCopy} className="text-4xl text-white" />
+                </div>
+
+                {/* Title */}
+                <h3 className="text-2xl font-bold text-brand-dark mb-3">
+                  Clone Tests
+                </h3>
+
+                {/* Description */}
+                <p className="text-gray-600 mb-4">
+                  Clone tests across test types (BOCCONI ↔ TOLC) with shared questions
+                </p>
+
+                {/* Features List */}
+                <ul className="text-left text-sm text-gray-500 space-y-2">
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+                    Clone BOCCONI to TOLC
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+                    Share questions across tests
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+                    Edit once, update everywhere
+                  </li>
+                </ul>
+
+                {/* Arrow Indicator */}
+                <div className="absolute bottom-4 right-4 text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>

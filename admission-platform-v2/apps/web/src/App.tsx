@@ -24,6 +24,8 @@ import PDFToLatexConverterPage from './pages/PDFToLatexConverterPage';
 import ReviewQuestionsPage from './pages/ReviewQuestionsPage';
 import AdminMigrateAnswersPage from './pages/AdminMigrateAnswersPage';
 import ManageAccountsPage from './pages/ManageAccountsPage';
+import AIValidationDashboard from './pages/AIValidationDashboard';
+import CloneTestsPage from './pages/CloneTestsPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 function App() {
@@ -184,6 +186,14 @@ function App() {
           }
         />
         <Route
+          path="/admin/dashboard"
+          element={
+            <ProtectedRoute requiredRoles={['ADMIN']}>
+              <AdminDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/admin/test-runner"
           element={
             <ProtectedRoute requiredRoles={['ADMIN']}>
@@ -220,6 +230,22 @@ function App() {
           element={
             <ProtectedRoute requiredRoles={['ADMIN']}>
               <ManageAccountsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/ai-validation"
+          element={
+            <ProtectedRoute requiredRoles={['ADMIN']}>
+              <AIValidationDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/clone-tests"
+          element={
+            <ProtectedRoute requiredRoles={['ADMIN']}>
+              <CloneTestsPage />
             </ProtectedRoute>
           }
         />
