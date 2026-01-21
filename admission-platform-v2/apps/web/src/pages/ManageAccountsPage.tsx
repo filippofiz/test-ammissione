@@ -21,6 +21,7 @@ import {
 import { Layout } from '../components/Layout';
 import { supabase } from '../lib/supabase';
 import type { Profile } from '../lib/database.types';
+import { fetchExternalStudents, type ExternalStudent } from '../lib/api/externalStudents';
 
 interface UserFormData {
   email: string;
@@ -29,6 +30,7 @@ interface UserFormData {
   tutor_id?: string;
   esigenze_speciali?: boolean;
   student_ids?: string[]; // For tutors: assign multiple students
+  external_student_id?: number; // For students: link to external project student
 }
 
 export default function ManageAccountsPage() {
@@ -42,6 +44,9 @@ export default function ManageAccountsPage() {
   const [filterRole, setFilterRole] = useState<'ALL' | 'STUDENT' | 'TUTOR'>('ALL');
   const [saving, setSaving] = useState(false);
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
+  const [externalStudents, setExternalStudents] = useState<ExternalStudent[]>([]);
+  const [externalSearchQuery, setExternalSearchQuery] = useState('');
+  const [loadingExternalStudents, setLoadingExternalStudents] = useState(false);
 
   const [formData, setFormData] = useState<UserFormData>({
     email: '',
@@ -54,6 +59,26 @@ export default function ManageAccountsPage() {
   useEffect(() => {
     loadUsers();
   }, []);
+
+  // Load external students when modal opens and role is STUDENT
+  useEffect(() => {
+    if (showAddModal && formData.role === 'STUDENT') {
+      loadExternalStudents();
+    }
+  }, [showAddModal, formData.role]);
+
+  const loadExternalStudents = async () => {
+    setLoadingExternalStudents(true);
+    try {
+      const students = await fetchExternalStudents(externalSearchQuery);
+      setExternalStudents(students);
+    } catch (error) {
+      console.error('Error loading external students:', error);
+      // Don't alert, just log - external students are optional
+    } finally {
+      setLoadingExternalStudents(false);
+    }
+  };
 
   const loadUsers = async () => {
     setLoading(true);
@@ -131,6 +156,7 @@ export default function ManageAccountsPage() {
       if (formData.role === 'STUDENT') {
         profileData.tutor_id = formData.tutor_id || null;
         profileData.esigenze_speciali = formData.esigenze_speciali || false;
+        profileData.external_student_id = formData.external_student_id || null;
         profileData.tests = [];
       }
 
@@ -173,8 +199,11 @@ export default function ManageAccountsPage() {
         role: 'STUDENT',
         esigenze_speciali: false,
         student_ids: [],
+        external_student_id: undefined,
       });
       setStudentSearchQuery('');
+      setExternalSearchQuery('');
+      setExternalStudents([]);
       setShowAddModal(false);
       loadUsers();
     } catch (err: any) {
@@ -671,6 +700,72 @@ export default function ManageAccountsPage() {
                     </select>
                   </div>
 
+                  {/* External Student Selection */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Link to External Student (Optional)
+                    </label>
+
+                    {/* Search Field */}
+                    <div className="mb-2">
+                      <div className="relative">
+                        <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                        <input
+                          type="text"
+                          placeholder="Search external students..."
+                          value={externalSearchQuery}
+                          onChange={(e) => {
+                            setExternalSearchQuery(e.target.value);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              loadExternalStudents();
+                            }
+                          }}
+                          className="w-full pl-10 pr-4 py-2 border-2 border-gray-200 rounded-lg focus:border-brand-green focus:outline-none text-sm"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={loadExternalStudents}
+                        disabled={loadingExternalStudents}
+                        className="mt-1 text-xs text-brand-green hover:underline"
+                      >
+                        {loadingExternalStudents ? 'Searching...' : 'Search'}
+                      </button>
+                    </div>
+
+                    {/* External Students Dropdown */}
+                    <select
+                      value={formData.external_student_id || ''}
+                      onChange={(e) => {
+                        const selectedId = e.target.value ? parseInt(e.target.value) : undefined;
+                        const selectedStudent = externalStudents.find(s => s.id === selectedId);
+                        setFormData({
+                          ...formData,
+                          external_student_id: selectedId,
+                          // Optionally pre-fill email/name from external student
+                          email: selectedStudent?.studentMail || formData.email,
+                          name: selectedStudent?.studentName || formData.name,
+                        });
+                      }}
+                      className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-brand-green focus:outline-none text-sm"
+                    >
+                      <option value="">No external student linked</option>
+                      {externalStudents.map(student => (
+                        <option key={student.id} value={student.id}>
+                          {student.studentName} {student.studentMail ? `(${student.studentMail})` : ''}
+                        </option>
+                      ))}
+                    </select>
+
+                    {formData.external_student_id && (
+                      <p className="text-xs text-green-600 mt-1">
+                        ✓ Linked to external student ID: {formData.external_student_id}
+                      </p>
+                    )}
+                  </div>
+
                   <div>
                     <label className="flex items-center gap-2">
                       <input
@@ -695,8 +790,11 @@ export default function ManageAccountsPage() {
                     role: 'STUDENT',
                     esigenze_speciali: false,
                     student_ids: [],
+                    external_student_id: undefined,
                   });
                   setStudentSearchQuery('');
+                  setExternalSearchQuery('');
+                  setExternalStudents([]);
                   setShowAddModal(false);
                 }}
                 disabled={saving}
