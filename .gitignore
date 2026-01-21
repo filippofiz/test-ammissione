@@ -43,3 +43,7 @@ backup-*/
 
 # AI API Configuration - DO NOT COMMIT
 inglese/gmat/data-insights/config.js
+
+# Test scripts with credentials
+test-validate-question.js
+test-validation-direct.ps1
