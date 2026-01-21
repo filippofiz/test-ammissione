@@ -6,8 +6,9 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheckCircle, faTimesCircle } from '@fortawesome/free-solid-svg-icons';
 import { useTranslation } from 'react-i18next';
-import { LaTeX } from '../LaTeX';
+import { MathJaxRenderer } from '../MathJaxRenderer';
 import { normalizeWhitespace, normalizeOptionText } from '../../lib/textUtils';
+import { ExplanationDisplay } from './ExplanationDisplay';
 
 interface MultipleChoiceQuestionProps {
   questionText: string;
@@ -21,6 +22,7 @@ interface MultipleChoiceQuestionProps {
   readOnly?: boolean; // For results view - disables answer buttons
   correctAnswer?: string; // For results view - shows correct answer
   showResults?: boolean; // For results view - displays answer feedback
+  explanation?: string; // For results view - shows explanation after answer
 }
 
 export function MultipleChoiceQuestion({
@@ -35,6 +37,7 @@ export function MultipleChoiceQuestion({
   readOnly = false,
   correctAnswer,
   showResults = false,
+  explanation,
 }: MultipleChoiceQuestionProps) {
   const { t } = useTranslation();
 
@@ -46,11 +49,11 @@ export function MultipleChoiceQuestion({
         <div className="flex-1 min-w-[45%] border-2 border-blue-200 rounded-xl p-6 bg-blue-50 h-fit sticky top-4">
           {passageTitle && (
             <h3 className="text-lg font-semibold text-blue-900 mb-4">
-              <LaTeX>{normalizeWhitespace(passageTitle)}</LaTeX>
+              <MathJaxRenderer>{normalizeWhitespace(passageTitle)}</MathJaxRenderer>
             </h3>
           )}
           <div className="text-gray-700 whitespace-pre-wrap max-h-[650px] overflow-y-auto overflow-x-auto">
-            <LaTeX>{normalizeWhitespace(passageText)}</LaTeX>
+            <MathJaxRenderer>{normalizeWhitespace(passageText)}</MathJaxRenderer>
           </div>
         </div>
 
@@ -59,7 +62,7 @@ export function MultipleChoiceQuestion({
           {/* Question Text */}
           <div className="border-2 border-gray-200 rounded-xl p-6 bg-white overflow-x-auto">
             <div className="text-gray-800 text-lg whitespace-pre-wrap mb-4">
-              <LaTeX>{normalizeWhitespace(questionText)}</LaTeX>
+              <MathJaxRenderer>{normalizeWhitespace(questionText)}</MathJaxRenderer>
             </div>
 
             {/* Image if present */}
@@ -134,7 +137,7 @@ export function MultipleChoiceQuestion({
                       className="max-w-full h-auto rounded"
                     />
                   ) : (
-                    text && <LaTeX>{normalizeOptionText(text)}</LaTeX>
+                    text && <MathJaxRenderer>{normalizeOptionText(text)}</MathJaxRenderer>
                   )}
                   {showResults && isSelected && isCorrectOption && (
                     <div className="text-xs text-green-700 font-semibold mt-1">{t('testResults.yourAnswerCorrect')}</div>
@@ -160,6 +163,11 @@ export function MultipleChoiceQuestion({
           );
         })}
           </div>
+
+          {/* Explanation (shown in results view) */}
+          {showResults && explanation && (
+            <ExplanationDisplay explanation={explanation} />
+          )}
         </div>
       </div>
     );
@@ -171,7 +179,7 @@ export function MultipleChoiceQuestion({
       {/* Question Text */}
       <div className="border-2 border-gray-200 rounded-xl p-6 bg-white overflow-x-auto">
         <div className="text-gray-800 text-lg whitespace-pre-wrap mb-4">
-          <LaTeX>{normalizeWhitespace(questionText)}</LaTeX>
+          <MathJaxRenderer>{normalizeWhitespace(questionText)}</MathJaxRenderer>
         </div>
 
         {/* Image if present */}
@@ -246,7 +254,7 @@ export function MultipleChoiceQuestion({
                       className="max-w-full h-auto rounded"
                     />
                   ) : (
-                    text && <LaTeX>{normalizeOptionText(text)}</LaTeX>
+                    text && <MathJaxRenderer>{normalizeOptionText(text)}</MathJaxRenderer>
                   )}
                   {showResults && isSelected && isCorrectOption && (
                     <div className="text-xs text-green-700 font-semibold mt-1">{t('testResults.yourAnswerCorrect')}</div>
@@ -272,6 +280,11 @@ export function MultipleChoiceQuestion({
           );
         })}
       </div>
+
+      {/* Explanation (shown in results view) */}
+      {showResults && explanation && (
+        <ExplanationDisplay explanation={explanation} />
+      )}
     </div>
   );
 }

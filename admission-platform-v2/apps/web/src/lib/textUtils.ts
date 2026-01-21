@@ -6,9 +6,9 @@
 /**
  * Normalizes whitespace in text by:
  * - Trimming leading/trailing whitespace
- * - Removing all line breaks (text will flow naturally)
+ * - Preserving intentional line breaks (single \n)
  * - Replacing multiple consecutive spaces with a single space
- * - Normalizing double line breaks to paragraph breaks only when needed
+ * - Normalizing multiple consecutive newlines to a single newline
  *
  * @param text - The text to normalize
  * @returns The normalized text
@@ -16,36 +16,17 @@
 export function normalizeWhitespace(text: string): string {
   if (!text) return '';
 
-  // First, check if there are intentional paragraph breaks (double newlines)
-  const hasParagraphs = /\n\s*\n/.test(text);
-
-  if (hasParagraphs) {
-    // Preserve paragraph structure
-    return text
-      .trim()
-      // Split by paragraph breaks
-      .split(/\n\s*\n+/)
-      // Clean each paragraph
-      .map(para => para
-        .replace(/\n/g, ' ') // Remove single line breaks within paragraph
-        .replace(/\s+/g, ' ') // Collapse all whitespace to single space
-        .trim()
-      )
-      // Rejoin with double newline for paragraphs
-      .filter(para => para.length > 0)
-      .join('\n\n');
-  } else {
-    // No paragraph breaks - treat as single flowing text
-    return text
-      .trim()
-      // Replace all line breaks with spaces
-      .replace(/\n/g, ' ')
-      // Replace all tabs with spaces
-      .replace(/\t/g, ' ')
-      // Collapse multiple spaces to single space
-      .replace(/\s+/g, ' ')
-      .trim();
-  }
+  return text
+    .trim()
+    // Replace tabs with spaces
+    .replace(/\t/g, ' ')
+    // Collapse multiple spaces (but not newlines) to single space
+    .replace(/ +/g, ' ')
+    // Normalize multiple newlines to single newline (preserving paragraph breaks as double)
+    .replace(/\n{3,}/g, '\n\n')
+    // Clean up spaces around newlines
+    .replace(/ *\n */g, '\n')
+    .trim();
 }
 
 /**

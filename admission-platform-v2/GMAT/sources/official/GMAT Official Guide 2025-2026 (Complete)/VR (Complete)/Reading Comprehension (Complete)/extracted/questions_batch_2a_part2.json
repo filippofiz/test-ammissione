@@ -1,0 +1,120 @@
+{
+  "passages": [
+    {
+      "passage_id": "RC-OG-PASSAGE-509",
+      "passage_text": "In Winters v. United States (1908), the Supreme Court held that the right to use waters flowing through or adjacent to the Fort Berthold Indian Reservation was reserved to American Indians by the treaty establishing the reservation. Although this treaty did not mention water rights, the Court ruled that the federal government, when it created the reservation, intended to deal fairly with American Indians by reserving for them the waters without which their lands would have been useless. Later decisions, citing Winters, established that courts can find federal rights to reserve water for particular purposes if (1) the land in question lies within an enclave under exclusive federal jurisdiction; (2) the land has been formally withdrawn from federal public lands—i.e., withdrawn from the stock of federal lands available for private use under federal land use laws—and set aside or reserved; and (3) the circumstances reveal the government intended to reserve water as well as land when establishing the reservation.\n\nSome American Indian tribes have also established water rights through the courts based on their traditional diversion and use of certain waters prior to the United States' acquisition of sovereignty. For example, the Rio Grande pueblos already existed when the United States acquired sovereignty over New Mexico in 1848. Although they at that time became part of the United States, the pueblo lands never formally constituted a part of federal public lands; in any event, no treaty, statute, or executive order has ever designated or withdrawn the pueblos from public lands as American Indian reservations. This fact, however, has not barred application of the Winters doctrine. What constitutes an American Indian reservation is a question of practice, not of legal definition, and the pueblos have always been treated as reservations by the United States. This pragmatic approach is buttressed by Arizona v. California (1963), wherein the Supreme Court indicated that the manner in which any type of federal reservation is created does not affect the application to it of the Winters doctrine. Therefore, the reserved water rights of Pueblo Indians have priority over other citizens' water rights as of 1848, the year in which pueblos must be considered to have become reservations.",
+      "topic": "legal"
+    },
+    {
+      "passage_id": "RC-OG-PASSAGE-515",
+      "passage_text": "The Black Death, a severe epidemic that ravaged fourteenth-century Europe, has intrigued scholars ever since Francis Gasquet's 1893 study contending that this epidemic greatly intensified the political and religious upheaval that ended the Middle Ages. Thirty-six years later, historian George Coulton agreed but, paradoxically, attributed a silver lining to the Black Death: Prosperity engendered by diminished competition for food, shelter, and work led survivors of the epidemic into the Renaissance and subsequent rise of modern Europe.\n\nIn the 1930s, however, Evgeny Kosminsky and other Marxist historians claimed the epidemic was merely an ancillary factor contributing to a general agrarian crisis stemming primarily from the inevitable decay of European feudalism. In arguing that this decline of feudalism was economically determined both Kosminsky and other Marxist historians asserted that the Black Death was a relatively insignificant factor. This became the prevailing view until after World War II, when studies of specific regions and towns revealed astonishing mortality rates ascribed to the epidemic, thus restoring the central role of the Black Death in history.\n\nThis central role of the Black Death (traditionally attributed to bubonic plague brought from Asia) has recently been challenged from another direction. Building on bacteriologist John Shrewsbury's speculations about mislabeled epidemics, zoologist Graham Twigg employs urban case studies suggesting the rat population in Europe was both too sparse and insufficiently migratory to have spread plague. Moreover, Twigg disputes the traditional trade-ship explanation for plague transmissions by extrapolating from data on the number of dead rats aboard Nile sailing vessels in 1912. The Black Death, which he conjectures was anthrax instead of bubonic plague, therefore caused far less havoc and fewer deaths than historians typically claim.\n\nAlthough correctly citing the exacting conditions needed to start or spread bubonic plague, Twigg ignores virtually a century of scholarship contradictory to his findings and employs faulty logic in his single-minded approach to the Black Death. His speculative generalizations about the numbers of rats in medieval Europe are based on isolated studies unrepresentative of medieval conditions, while his unconvincing trade-ship argument overlooks land-based caravans, the overland migration of infected rodents, and the many other animals that carry plague.",
+      "topic": "history"
+    }
+  ],
+  "questions": [
+    {
+      "question_number": 509,
+      "passage_id": "RC-OG-PASSAGE-509",
+      "question_text": "According to the passage, which of the following was true of the treaty establishing the Fort Berthold Indian Reservation?",
+      "options": {
+        "a": "It was challenged in the Supreme Court a number of times.",
+        "b": "It was rescinded by the federal government, an action that gave rise to the Winters case.",
+        "c": "It cited American Indians' traditional use of the land's resources.",
+        "d": "It failed to mention water rights to be enjoyed by the reservation's inhabitants.",
+        "e": "It was modified by the Supreme Court in Arizona v. California."
+      },
+      "difficulty": "medium"
+    },
+    {
+      "question_number": 510,
+      "passage_id": "RC-OG-PASSAGE-509",
+      "question_text": "The passage suggests that, if the criteria discussed in lines 10–20 of the text were the only criteria for establishing a reservation's water rights, which of the following would be true?",
+      "options": {
+        "a": "The water rights of the inhabitants of the Fort Berthold Indian Reservation would not take precedence over those of other citizens.",
+        "b": "Reservations established before 1848 would be judged to have no water rights.",
+        "c": "There would be no legal basis for the water rights of the Rio Grande pueblos.",
+        "d": "Reservations other than American Indian reservations could not be created with reserved water rights.",
+        "e": "Treaties establishing reservations would have to mention water rights explicitly in order to reserve water for a particular purpose."
+      },
+      "difficulty": "medium"
+    },
+    {
+      "question_number": 511,
+      "passage_id": "RC-OG-PASSAGE-509",
+      "question_text": "Which of the following most accurately summarizes the relationship between Arizona v. California, as that decision is described in the passage, and the criteria discussed in lines 10–20?",
+      "options": {
+        "a": "Arizona v. California abolishes these criteria and establishes a competing set of criteria for applying the Winters doctrine.",
+        "b": "Arizona v. California establishes that the Winters doctrine applies to a broader range of situations than those defined by these criteria.",
+        "c": "Arizona v. California represents the sole example of an exception to the criteria as they were set forth in the Winters doctrine.",
+        "d": "Arizona v. California does not refer to the Winters doctrine to justify water rights, whereas these criteria do rely on the Winters doctrine.",
+        "e": "Arizona v. California applies the criteria derived from the Winters doctrine only to federal lands other than American Indian reservations."
+      },
+      "difficulty": "medium"
+    },
+    {
+      "question_number": 512,
+      "passage_id": "RC-OG-PASSAGE-509",
+      "question_text": "The \"pragmatic approach\" mentioned in lines 37–38 of the passage is best defined as one that",
+      "options": {
+        "a": "grants recognition to reservations that were never formally established but that have traditionally been treated as such",
+        "b": "determines the water rights of all citizens in a particular region by examining the actual history of water usage in that region",
+        "c": "gives federal courts the right to reserve water along with land even when it is clear that the government originally intended to reserve only the land",
+        "d": "bases the decision to recognize the legal rights of a group on the practical effect such a recognition is likely to have on other citizens",
+        "e": "dictates that courts ignore precedents set by such cases as Winters v. United States in deciding what water rights belong to reserved land"
+      },
+      "difficulty": "medium"
+    },
+    {
+      "question_number": 513,
+      "passage_id": "RC-OG-PASSAGE-509",
+      "question_text": "It can be inferred from the passage that the Winters doctrine has been used to establish which of the following?",
+      "options": {
+        "a": "A rule that the government may reserve water only by explicit treaty or agreement",
+        "b": "A legal distinction between federal lands reserved for American Indians and federal lands reserved for other purposes",
+        "c": "Criteria governing when the federal government may set land aside for a particular purpose",
+        "d": "The special status of American Indian tribes' rights to reserved land",
+        "e": "The federal right to reserve water implicitly as well as explicitly under certain conditions"
+      },
+      "difficulty": "medium"
+    },
+    {
+      "question_number": 514,
+      "passage_id": "RC-OG-PASSAGE-509",
+      "question_text": "The author cites the fact that the Rio Grande pueblos were never formally withdrawn from public lands primarily in order to do which of the following?",
+      "options": {
+        "a": "Suggest why it might have been argued that the Winters doctrine ought not to apply to pueblo lands",
+        "b": "Imply that the United States never really acquired sovereignty over pueblo lands",
+        "c": "Argue that the pueblo lands ought still to be considered part of federal public lands",
+        "d": "Support the argument that the water rights of citizens other than American Indians are limited by the Winters doctrine",
+        "e": "Suggest that federal courts cannot claim jurisdiction over cases disputing the traditional diversion and use of water by Pueblo Indians"
+      },
+      "difficulty": "medium"
+    },
+    {
+      "question_number": 515,
+      "passage_id": "RC-OG-PASSAGE-515",
+      "question_text": "The passage is primarily concerned with",
+      "options": {
+        "a": "demonstrating the relationship between bubonic plague and the Black Death",
+        "b": "interpreting historical and scientific works on the origins of the Black Death",
+        "c": "employing the Black Death as a case study of disease transmission in medieval Europe",
+        "d": "presenting aspects of past and current debate on the historical importance of the Black Death",
+        "e": "analyzing the differences between capitalist and Marxist interpretations of the historical significance of the Black Death"
+      },
+      "difficulty": "medium"
+    },
+    {
+      "question_number": 516,
+      "passage_id": "RC-OG-PASSAGE-515",
+      "question_text": "Which of the following statements is most compatible with Kosminsky's approach to history as it is presented in the passage?",
+      "options": {
+        "a": "The Middle Ages were ended primarily by the religious and political upheaval in fourteenth-century Europe.",
+        "b": "The economic consequences of the Black Death included increased competition for food, shelter, and work.",
+        "c": "European history cannot be studied in isolation from that of the rest of the world.",
+        "d": "The number of deaths in fourteenth-century Europe has been greatly exaggerated by other historians.",
+        "e": "The significance of the Black Death is best explained within the context of evolving economic systems."
+      },
+      "difficulty": "medium"
+    }
+  ]
+}

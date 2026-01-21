@@ -35,6 +35,7 @@ import { MathJaxProvider, MathJaxRenderer } from '../components/MathJaxRenderer'
 import { AdvancedGraphRenderer } from '../components/GraphRenderer';
 import RechartsRenderer from '../components/RechartsRenderer';
 import { FlaggedQuestionEditor } from '../components/FlaggedQuestionEditor';
+import { DataInsightsPreview } from '../components/questions/DataInsightsPreview';
 import { supabase } from '../lib/supabase';
 import * as pdfjsLib from 'pdfjs-dist';
 import jsPDF from 'jspdf';
@@ -133,6 +134,10 @@ export default function ReviewQuestionsPage() {
   const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [flaggedQuestionIds, setFlaggedQuestionIds] = useState<Set<string>>(new Set());
 
+  // Pagination for questions (to prevent rendering too many MathJax components at once)
+  const [questionsPage, setQuestionsPage] = useState(1);
+  const QUESTIONS_PER_PAGE = 10;
+
   // Actions
   const [markingReviewed, setMarkingReviewed] = useState(false);
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
@@ -216,6 +221,7 @@ export default function ReviewQuestionsPage() {
 
   useEffect(() => {
     if (selectedTest) {
+      setQuestionsPage(1); // Reset to first page when selecting a new test
       loadQuestions(selectedTest.id);
     } else {
       setQuestions([]);
@@ -257,47 +263,71 @@ export default function ReviewQuestionsPage() {
 
       if (testsError) throw testsError;
 
-      // For each test, get question count, format, and flagged count
-      const testsWithDetails = await Promise.all(
-        (testsData || []).map(async (test) => {
-          // Get questions for format detection (check test_id OR additional_test_ids)
-          const { data: questions } = await supabase
-            .from('2V_questions')
-            .select('id, question_type')
-            .or(`test_id.eq.${test.id},additional_test_ids.cs.["${test.id}"]`);
+      // Bulk fetch all questions with test_id and question_type (optimized - single query)
+      const { data: allQuestions } = await supabase
+        .from('2V_questions')
+        .select('id, test_id, question_type, additional_test_ids');
 
-          let format: 'pdf' | 'interactive' | 'mixed' = 'pdf';
-          if (questions && questions.length > 0) {
-            const pdfCount = questions.filter(q => q.question_type === 'pdf').length;
-            const interactiveCount = questions.filter(q => q.question_type === 'multiple_choice').length;
+      // Group questions by test_id for quick lookup, including additional_test_ids
+      const questionsByTestId = new Map<string, { id: string; question_type: string }[]>();
+      (allQuestions || []).forEach(q => {
+        // Add to primary test_id
+        if (!questionsByTestId.has(q.test_id)) {
+          questionsByTestId.set(q.test_id, []);
+        }
+        questionsByTestId.get(q.test_id)!.push({ id: q.id, question_type: q.question_type });
 
-            if (pdfCount > 0 && interactiveCount > 0) {
-              format = 'mixed';
-            } else if (interactiveCount > 0) {
-              format = 'interactive';
+        // Also add to any additional_test_ids (for shared questions)
+        if (q.additional_test_ids && Array.isArray(q.additional_test_ids)) {
+          q.additional_test_ids.forEach((additionalTestId: string) => {
+            if (!questionsByTestId.has(additionalTestId)) {
+              questionsByTestId.set(additionalTestId, []);
             }
-          }
+            questionsByTestId.get(additionalTestId)!.push({ id: q.id, question_type: q.question_type });
+          });
+        }
+      });
 
-          // Get flagged answers count for this test's questions
-          let flaggedCount = 0;
-          if (questions && questions.length > 0) {
-            const questionIds = questions.map(q => q.id);
-            const { count } = await supabase
-              .from('2V_student_answers')
-              .select('*', { count: 'exact', head: true })
-              .in('question_id', questionIds)
-              .eq('is_flagged', true);
-            flaggedCount = count || 0;
-          }
+      // Bulk fetch all flagged answers (optimized - single query)
+      const { data: flaggedAnswers } = await supabase
+        .from('2V_student_answers')
+        .select('question_id')
+        .eq('is_flagged', true);
 
-          return {
-            ...test,
-            question_count: questions?.length || 0,
-            format,
-            flagged_count: flaggedCount,
-          };
-        })
-      );
+      // Create a set of flagged question IDs for quick lookup
+      const flaggedQuestionIdSet = new Set((flaggedAnswers || []).map(a => a.question_id));
+
+      // Process tests using the pre-fetched data (no additional queries)
+      const testsWithDetails = (testsData || []).map((test) => {
+        const questions = questionsByTestId.get(test.id) || [];
+
+        let format: 'pdf' | 'interactive' | 'mixed' = 'pdf';
+        if (questions.length > 0) {
+          const pdfCount = questions.filter(q => q.question_type === 'pdf').length;
+          const interactiveCount = questions.filter(q => q.question_type === 'multiple_choice').length;
+
+          if (pdfCount > 0 && interactiveCount > 0) {
+            format = 'mixed';
+          } else if (interactiveCount > 0) {
+            format = 'interactive';
+          }
+        }
+
+        // Count flagged answers for this test's questions
+        let flaggedCount = 0;
+        questions.forEach(q => {
+          if (flaggedQuestionIdSet.has(q.id)) {
+            flaggedCount++;
+          }
+        });
+
+        return {
+          ...test,
+          question_count: questions.length,
+          format,
+          flagged_count: flaggedCount,
+        };
+      });
 
       setTests(testsWithDetails);
     } catch (err) {
@@ -429,27 +459,41 @@ export default function ReviewQuestionsPage() {
         }
       }
 
-      // Fetch profile names for flagged_by IDs
-      const questionsWithNames = await Promise.all(
-        filteredData.map(async (question) => {
-          if (question.Questions_toReview?.flagged_by) {
-            const { data: profile } = await supabase
-              .from('2V_profiles')
-              .select('name')
-              .eq('id', question.Questions_toReview.flagged_by)
-              .single();
+      // Collect unique flagged_by IDs for bulk profile fetch
+      const flaggedByIds = new Set<string>();
+      filteredData.forEach((question) => {
+        if (question.Questions_toReview?.flagged_by) {
+          flaggedByIds.add(question.Questions_toReview.flagged_by);
+        }
+      });
 
-            return {
-              ...question,
-              Questions_toReview: {
-                ...question.Questions_toReview,
-                flagged_by_name: profile?.name || 'Unknown',
-              },
-            };
-          }
-          return question;
-        })
-      );
+      // Bulk fetch all profiles in a single query
+      const profileIdArray = Array.from(flaggedByIds);
+      const profileMap = new Map<string, string>();
+      if (profileIdArray.length > 0) {
+        const { data: profiles } = await supabase
+          .from('2V_profiles')
+          .select('id, name')
+          .in('id', profileIdArray);
+
+        (profiles || []).forEach(p => {
+          profileMap.set(p.id, p.name || 'Unknown');
+        });
+      }
+
+      // Map profile names to questions (no additional queries)
+      const questionsWithNames = filteredData.map((question) => {
+        if (question.Questions_toReview?.flagged_by) {
+          return {
+            ...question,
+            Questions_toReview: {
+              ...question.Questions_toReview,
+              flagged_by_name: profileMap.get(question.Questions_toReview.flagged_by) || 'Unknown',
+            },
+          };
+        }
+        return question;
+      });
 
       setFlaggedQuestions(questionsWithNames);
 
@@ -2378,17 +2422,57 @@ export default function ReviewQuestionsPage() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {questions
-                        .filter(q => sectionFilter === 'all' || q.section === sectionFilter)
-                        .map((question, index) => {
+                      {/* Pagination Controls */}
+                      {(() => {
+                        const filteredQuestions = questions.filter(q => sectionFilter === 'all' || q.section === sectionFilter);
+                        const totalPages = Math.ceil(filteredQuestions.length / QUESTIONS_PER_PAGE);
+                        if (totalPages > 1) {
+                          return (
+                            <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3 mb-4">
+                              <span className="text-sm text-gray-600">
+                                Showing {((questionsPage - 1) * QUESTIONS_PER_PAGE) + 1}-{Math.min(questionsPage * QUESTIONS_PER_PAGE, filteredQuestions.length)} of {filteredQuestions.length} questions
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => setQuestionsPage(p => Math.max(1, p - 1))}
+                                  disabled={questionsPage === 1}
+                                  className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  Previous
+                                </button>
+                                <span className="text-sm font-medium">
+                                  Page {questionsPage} of {totalPages}
+                                </span>
+                                <button
+                                  onClick={() => setQuestionsPage(p => Math.min(totalPages, p + 1))}
+                                  disabled={questionsPage === totalPages}
+                                  className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  Next
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+                      {(() => {
+                        const filteredQuestions = questions.filter(q => sectionFilter === 'all' || q.section === sectionFilter);
+                        const paginatedQuestions = filteredQuestions.slice((questionsPage - 1) * QUESTIONS_PER_PAGE, questionsPage * QUESTIONS_PER_PAGE);
+                        // Track which passages have been shown on this page
+                        const shownPassagesOnPage = new Set<string>();
+
+                        return paginatedQuestions.map((question) => {
                         const isFlagged = flaggedQuestionIds.has(question.id);
                         const localizedOptions = getLocalizedOptions(question);
 
-                        // Check if this question starts a passage group
+                        // Check if this question starts a passage group (first occurrence on this page)
                         const passageId = question.question_data?.passage_id;
                         const passage = passageId ? passages.find(p => p.passage_id === passageId) : null;
-                        const isFirstInPassage = passage &&
-                          questions.findIndex(q => q.question_data?.passage_id === passageId) === index;
+                        const isFirstInPassage = passage && passageId && !shownPassagesOnPage.has(passageId);
+                        if (passageId && isFirstInPassage) {
+                          shownPassagesOnPage.add(passageId);
+                        }
 
                         return (
                         <div key={question.id}>
@@ -2648,9 +2732,16 @@ export default function ReviewQuestionsPage() {
                               )}
                             </div>
 
-                          {/* Question Text */}
+                          {/* Question Content - Different rendering for Data Insights vs regular questions */}
                           <div className="bg-blue-50 p-4 rounded-lg mb-3 border border-blue-200 overflow-x-auto">
-                            {editingQuestionId === question.id ? (
+                            {question.question_data?.di_type ? (
+                              /* Data Insights Question - Use specialized preview component */
+                              <DataInsightsPreview
+                                questionData={question.question_data}
+                                answers={question.answers}
+                                showCorrectAnswer={true}
+                              />
+                            ) : editingQuestionId === question.id ? (
                               <textarea
                                 value={
                                   getQuestionLanguage(question.id) === 'en'
@@ -2945,7 +3036,42 @@ export default function ReviewQuestionsPage() {
                           </div>
                         </div>
                       );
-                      })}
+                      });
+                      })()}
+                      {/* Bottom Pagination Controls */}
+                      {(() => {
+                        const filteredQuestions = questions.filter(q => sectionFilter === 'all' || q.section === sectionFilter);
+                        const totalPages = Math.ceil(filteredQuestions.length / QUESTIONS_PER_PAGE);
+                        if (totalPages > 1) {
+                          return (
+                            <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3 mt-4">
+                              <span className="text-sm text-gray-600">
+                                Showing {((questionsPage - 1) * QUESTIONS_PER_PAGE) + 1}-{Math.min(questionsPage * QUESTIONS_PER_PAGE, filteredQuestions.length)} of {filteredQuestions.length} questions
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => { setQuestionsPage(p => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                                  disabled={questionsPage === 1}
+                                  className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  Previous
+                                </button>
+                                <span className="text-sm font-medium">
+                                  Page {questionsPage} of {totalPages}
+                                </span>
+                                <button
+                                  onClick={() => { setQuestionsPage(p => Math.min(totalPages, p + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                                  disabled={questionsPage === totalPages}
+                                  className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  Next
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
                   )}
                 </div>

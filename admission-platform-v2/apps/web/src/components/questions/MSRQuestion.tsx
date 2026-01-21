@@ -6,8 +6,9 @@
 import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheckCircle, faTimesCircle } from '@fortawesome/free-solid-svg-icons';
-import { LaTeX } from '../LaTeX';
+import { MathJaxRenderer } from '../MathJaxRenderer';
 import { normalizeWhitespace, normalizeOptionText } from '../../lib/textUtils';
+import { ExplanationDisplay } from './ExplanationDisplay';
 
 interface MSRSource {
   content?: string;
@@ -33,9 +34,10 @@ interface MSRQuestionProps {
   readOnly?: boolean; // For results view - disables answer buttons
   correctAnswers?: string[]; // For results view - shows correct answers
   showResults?: boolean; // For results view - displays answer feedback
+  explanation?: string; // For results view - shows explanation after answer
 }
 
-export function MSRQuestion({ sources, questions, selectedAnswers, onAnswerChange, readOnly = false, correctAnswers = [], showResults = false }: MSRQuestionProps) {
+export function MSRQuestion({ sources, questions, selectedAnswers, onAnswerChange, readOnly = false, correctAnswers = [], showResults = false, explanation }: MSRQuestionProps) {
   const [activeTab, setActiveTab] = useState(0);
 
   return (
@@ -63,7 +65,7 @@ export function MSRQuestion({ sources, questions, selectedAnswers, onAnswerChang
         <div className="p-6 bg-white max-h-96 overflow-y-auto overflow-x-hidden">
           {sources[activeTab].content_type === 'text' ? (
             <div className="text-gray-800 whitespace-pre-wrap">
-              <LaTeX>{normalizeWhitespace(sources[activeTab].content || '')}</LaTeX>
+              <MathJaxRenderer>{normalizeWhitespace(sources[activeTab].content || '')}</MathJaxRenderer>
             </div>
           ) : (
             // Table display
@@ -73,7 +75,7 @@ export function MSRQuestion({ sources, questions, selectedAnswers, onAnswerChang
                   <tr className="bg-gray-100">
                     {sources[activeTab].table_headers?.map((header, i) => (
                       <th key={i} className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-700 break-words">
-                        <LaTeX>{normalizeOptionText(header)}</LaTeX>
+                        <MathJaxRenderer>{normalizeOptionText(header)}</MathJaxRenderer>
                       </th>
                     ))}
                   </tr>
@@ -83,7 +85,7 @@ export function MSRQuestion({ sources, questions, selectedAnswers, onAnswerChang
                     <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                       {row.map((cell, j) => (
                         <td key={j} className="border border-gray-300 px-4 py-2 text-gray-800 break-words">
-                          <LaTeX>{normalizeOptionText(cell)}</LaTeX>
+                          <MathJaxRenderer>{normalizeOptionText(cell)}</MathJaxRenderer>
                         </td>
                       ))}
                     </tr>
@@ -111,7 +113,7 @@ export function MSRQuestion({ sources, questions, selectedAnswers, onAnswerChang
                   Question {qIndex + 1}
                 </span>
                 <p className="text-gray-800 text-lg">
-                  <LaTeX>{normalizeWhitespace(question.text)}</LaTeX>
+                  <MathJaxRenderer>{normalizeWhitespace(question.text)}</MathJaxRenderer>
                 </p>
               </div>
 
@@ -171,7 +173,7 @@ export function MSRQuestion({ sources, questions, selectedAnswers, onAnswerChang
                               className="max-w-full h-auto rounded"
                             />
                           ) : (
-                            value && <LaTeX>{normalizeOptionText(value)}</LaTeX>
+                            value && <MathJaxRenderer>{normalizeOptionText(value)}</MathJaxRenderer>
                           )}
                           {showResults && isSelected && isCorrect && (
                             <div className="text-xs text-green-700 font-semibold mt-1">Your answer - Correct!</div>
@@ -204,6 +206,11 @@ export function MSRQuestion({ sources, questions, selectedAnswers, onAnswerChang
           );
         })}
       </div>
+
+      {/* Explanation (shown in results view) */}
+      {showResults && explanation && (
+        <ExplanationDisplay explanation={explanation} />
+      )}
     </div>
   );
 }

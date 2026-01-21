@@ -23,7 +23,7 @@ import { Layout } from '../components/Layout';
 import { supabase } from '../lib/supabase';
 import { supabaseTest } from '../lib/supabaseTest';
 import { useTranslation } from 'react-i18next';
-import { LaTeX } from '../components/LaTeX';
+import { MathJaxProvider, MathJaxRenderer } from '../components/MathJaxRenderer';
 import { DSQuestion } from '../components/questions/DSQuestion';
 import { MSRQuestion } from '../components/questions/MSRQuestion';
 import { GIQuestion } from '../components/questions/GIQuestion';
@@ -739,7 +739,16 @@ export default function TakeTestPage() {
   const currentSectionQuestionsList = sectionQuestions;
 
   // Calculate total questions expected for THIS section
+  // For non-adaptive mode: use actual questions loaded (user must answer all selected questions)
+  // For adaptive mode: use configured limit (effective questions target)
   const calculateSectionQuestionLimit = (): number => {
+    // For non-adaptive mode, always use actual questions count
+    // because we pre-select all questions and user must complete them
+    if (config?.adaptivity_mode !== 'adaptive') {
+      return totalQuestionsInSection;
+    }
+
+    // For adaptive mode, use configured limit
     if (config?.questions_per_section && currentSection) {
       // Try exact section name first
       let limit = config.questions_per_section[currentSection];
@@ -1200,6 +1209,359 @@ export default function TakeTestPage() {
 
     let processedQuestions = [...allQuestions];
 
+    // HELPER: Generate a hash key for MSR/TA questions to identify shared sources
+    // Questions with the same source data should be presented together
+    const getSourceGroupKey = (question: Question): string | null => {
+      const diType = question.question_data?.di_type;
+
+      if (diType === 'MSR' && question.question_data?.sources) {
+        // Hash based on source tab names and content types
+        const sources = question.question_data.sources;
+        const sourceKey = sources.map((s: any) =>
+          `${s.tab_name}:${s.content_type}:${(s.content || '').substring(0, 100)}`
+        ).join('|');
+        return `MSR:${sourceKey}`;
+      }
+
+      if (diType === 'TA' && question.question_data?.table_data) {
+        // Hash based on table title and first row of data
+        const tableTitle = question.question_data.table_title || '';
+        const firstRow = question.question_data.table_data?.[0]?.join(',') || '';
+        const headers = question.question_data.column_headers?.join(',') || '';
+        return `TA:${tableTitle}:${headers}:${firstRow}`;
+      }
+
+      return null;
+    };
+
+    // HELPER: Group questions by shared source data and sort so related questions are adjacent
+    const groupRelatedQuestions = (questions: Question[]): Question[] => {
+      // Separate questions by whether they have a source group
+      const grouped: Map<string, Question[]> = new Map();
+      const ungrouped: Question[] = [];
+
+      questions.forEach(q => {
+        const groupKey = getSourceGroupKey(q);
+        if (groupKey) {
+          if (!grouped.has(groupKey)) {
+            grouped.set(groupKey, []);
+          }
+          grouped.get(groupKey)!.push(q);
+        } else {
+          ungrouped.push(q);
+        }
+      });
+
+      // Log groupings found
+      const groupSizes = Array.from(grouped.entries())
+        .filter(([_, qs]) => qs.length > 1)
+        .map(([key, qs]) => `${key.split(':')[0]}(${qs.length})`);
+
+      if (groupSizes.length > 0) {
+        console.log('🔗 [QUESTION GROUPING] Found related question groups:', groupSizes.join(', '));
+      }
+
+      // Build final array: interleave grouped and ungrouped questions
+      // Groups are kept together, positioned based on first question's original position
+      const result: Question[] = [];
+      const usedGroups = new Set<string>();
+
+      // Track original positions
+      const originalPositions = new Map<string, number>();
+      questions.forEach((q, idx) => originalPositions.set(q.id, idx));
+
+      // Sort groups by the position of their first member in original array
+      const groupEntries = Array.from(grouped.entries()).sort((a, b) => {
+        const posA = Math.min(...a[1].map(q => originalPositions.get(q.id) || 0));
+        const posB = Math.min(...b[1].map(q => originalPositions.get(q.id) || 0));
+        return posA - posB;
+      });
+
+      // Process in original order, inserting groups when we hit their first member
+      questions.forEach(q => {
+        const groupKey = getSourceGroupKey(q);
+
+        if (groupKey && !usedGroups.has(groupKey)) {
+          // First time seeing this group - add all members together
+          const groupMembers = grouped.get(groupKey) || [];
+          result.push(...groupMembers);
+          usedGroups.add(groupKey);
+        } else if (!groupKey) {
+          // Ungrouped question
+          result.push(q);
+        }
+        // Skip if already added as part of a group
+      });
+
+      return result;
+    };
+
+    // GMAT DI SUBTYPE REPRESENTATION HELPER
+    // Ensures all Data Insights question types (DS, GI, TA, TPA, MSR) are represented
+    // even when some types are underrepresented in the pool
+    //
+    // IMPORTANT: MSR/TA sets (multiple questions sharing same source) count as 1 "effective question"
+    // toward the limit, not individual questions. This prevents MSR sets from filling up all slots.
+    const selectWithDISubtypeRepresentation = (
+      questions: Question[],
+      limit: number,
+      shouldRandomize: boolean
+    ): Question[] => {
+      console.log(`🎯 [DI SELECTION] Starting selection with limit: ${limit} effective questions, pool size: ${questions.length}`);
+
+      // Check if this is a Data Insights section (GMAT)
+      const isDataInsightsSection = questions.some(q =>
+        q.section?.toLowerCase().includes('data insights') ||
+        q.section?.toLowerCase().includes('di') ||
+        q.question_data?.di_type
+      );
+
+      if (!isDataInsightsSection) {
+        // Not DI section - use standard selection
+        let selected = shouldRandomize
+          ? [...questions].sort(() => Math.random() - 0.5)
+          : [...questions];
+        console.log(`📋 [DI SELECTION] Not a DI section, returning ${Math.min(selected.length, limit)} questions`);
+        return selected.slice(0, limit);
+      }
+
+      // DI Section: Ensure representation of all DI subtypes
+      const DI_TYPES = ['DS', 'GI', 'TA', 'TPA', 'MSR'] as const;
+
+      // Minimum "effective questions" per DI type (MSR/TA sets count as 1)
+      const MIN_PER_TYPE: Record<string, number> = {
+        'DS': 1,   // Usually well-represented
+        'GI': 2,   // Often underrepresented - force at least 2
+        'TA': 1,   // 1 TA set (may have multiple questions)
+        'TPA': 1,  // Usually okay
+        'MSR': 1,  // 1 MSR set (counts as 1 even if it has 6 questions)
+      };
+
+      // First, build source groups for MSR/TA questions
+      // Each group is treated as 1 "effective question"
+      const msrTaGroups: Map<string, Question[]> = new Map();
+      const nonGroupedQuestions: Question[] = [];
+
+      questions.forEach(q => {
+        const groupKey = getSourceGroupKey(q);
+        if (groupKey) {
+          if (!msrTaGroups.has(groupKey)) {
+            msrTaGroups.set(groupKey, []);
+          }
+          msrTaGroups.get(groupKey)!.push(q);
+        } else {
+          nonGroupedQuestions.push(q);
+        }
+      });
+
+      // Log MSR/TA groups found
+      console.log('📦 [MSR/TA GROUPS] Found', msrTaGroups.size, 'source groups:');
+      msrTaGroups.forEach((qs, key) => {
+        const preview = qs[0]?.question_data?.sources?.[0]?.content?.substring(0, 50) || key.substring(0, 50);
+        console.log(`   - ${key.split(':')[0]}: ${qs.length} questions sharing "${preview}..."`);
+      });
+
+      // FORCE INCLUDE: Island Museum MSR set (starts with "Island Museum analyzes historical artifacts")
+      // Search through all MSR groups to find the Island Museum set
+      let islandMuseumKey: string | undefined = undefined;
+      msrTaGroups.forEach((qs, key) => {
+        if (islandMuseumKey) return; // Already found
+        const firstQuestion = qs[0];
+        if (!firstQuestion?.question_data?.sources) return;
+
+        // Check all sources in the question for "Island Museum"
+        const hasIslandMuseum = firstQuestion.question_data.sources.some((source: any) =>
+          source.content?.includes('Island Museum')
+        );
+
+        if (hasIslandMuseum) {
+          islandMuseumKey = key;
+          console.log('🏛️ [DETECTION] Found Island Museum MSR set with key:', key.substring(0, 50) + '...');
+        }
+      });
+
+      const selectedQuestions: Question[] = [];
+      const usedIds = new Set<string>();
+      const usedGroupKeys = new Set<string>();
+      let effectiveQuestionCount = 0; // MSR/TA sets count as 1
+
+      // Phase 0: Force include Island Museum MSR set if found
+      if (islandMuseumKey && effectiveQuestionCount < limit) {
+        const islandMuseumQuestions = msrTaGroups.get(islandMuseumKey)!;
+        console.log('🏛️ [FORCED] Adding Island Museum MSR set:', islandMuseumQuestions.length, 'questions (counts as 1 effective question)');
+        islandMuseumQuestions.forEach(q => {
+          selectedQuestions.push(q);
+          usedIds.add(q.id);
+        });
+        usedGroupKeys.add(islandMuseumKey);
+        effectiveQuestionCount += 1; // Entire set counts as 1
+      }
+
+      // Group questions by DI type (for non-grouped questions)
+      const byType: Record<string, Question[]> = {};
+      DI_TYPES.forEach(type => {
+        byType[type] = nonGroupedQuestions.filter(q => q.question_data?.di_type === type);
+      });
+
+      // Also track MSR/TA groups by type
+      const msrGroups: Array<{ key: string; questions: Question[] }> = [];
+      const taGroups: Array<{ key: string; questions: Question[] }> = [];
+
+      msrTaGroups.forEach((qs, key) => {
+        if (usedGroupKeys.has(key)) return; // Already used
+        const diType = qs[0]?.question_data?.di_type;
+        if (diType === 'MSR') {
+          msrGroups.push({ key, questions: qs });
+        } else if (diType === 'TA') {
+          taGroups.push({ key, questions: qs });
+        }
+      });
+
+      // Log available questions per type
+      console.log('📊 GMAT DI Subtype Distribution in Pool:',
+        `DS: ${byType['DS']?.length || 0}, ` +
+        `GI: ${byType['GI']?.length || 0}, ` +
+        `TA: ${taGroups.length} sets (${questions.filter(q => q.question_data?.di_type === 'TA').length} questions), ` +
+        `TPA: ${byType['TPA']?.length || 0}, ` +
+        `MSR: ${msrGroups.length} sets (${questions.filter(q => q.question_data?.di_type === 'MSR').length} questions)`
+      );
+
+      // Phase 1: Guarantee minimum representation of each type
+      // For MSR/TA, we select SETS (each set = 1 effective question)
+      DI_TYPES.forEach(type => {
+        const minRequired = MIN_PER_TYPE[type] || 1;
+
+        if (type === 'MSR') {
+          // Select MSR groups (each group = 1 effective question)
+          const groups = shouldRandomize ? [...msrGroups].sort(() => Math.random() - 0.5) : msrGroups;
+          let typeCount = usedGroupKeys.has(islandMuseumKey || '') && islandMuseumKey?.includes('MSR') ? 1 : 0;
+
+          for (const { key, questions: groupQs } of groups) {
+            if (typeCount >= minRequired) break;
+            if (effectiveQuestionCount >= limit) break;
+            if (usedGroupKeys.has(key)) continue;
+
+            // Add entire group
+            groupQs.forEach(q => {
+              selectedQuestions.push(q);
+              usedIds.add(q.id);
+            });
+            usedGroupKeys.add(key);
+            effectiveQuestionCount += 1; // Set counts as 1
+            typeCount++;
+            console.log(`✅ Added MSR set (${groupQs.length} questions) - effective count now: ${effectiveQuestionCount}`);
+          }
+        } else if (type === 'TA') {
+          // Select TA groups (each group = 1 effective question)
+          const groups = shouldRandomize ? [...taGroups].sort(() => Math.random() - 0.5) : taGroups;
+          let typeCount = 0;
+
+          for (const { key, questions: groupQs } of groups) {
+            if (typeCount >= minRequired) break;
+            if (effectiveQuestionCount >= limit) break;
+            if (usedGroupKeys.has(key)) continue;
+
+            // Add entire group
+            groupQs.forEach(q => {
+              selectedQuestions.push(q);
+              usedIds.add(q.id);
+            });
+            usedGroupKeys.add(key);
+            effectiveQuestionCount += 1; // Set counts as 1
+            typeCount++;
+            console.log(`✅ Added TA set (${groupQs.length} questions) - effective count now: ${effectiveQuestionCount}`);
+          }
+        } else {
+          // DS, GI, TPA - select individual questions (each = 1 effective question)
+          const typeQuestions = byType[type] || [];
+          const pool = shouldRandomize
+            ? [...typeQuestions].sort(() => Math.random() - 0.5)
+            : [...typeQuestions];
+
+          let typeCount = 0;
+          for (const q of pool) {
+            if (typeCount >= minRequired) break;
+            if (effectiveQuestionCount >= limit) break;
+            if (usedIds.has(q.id)) continue;
+
+            selectedQuestions.push(q);
+            usedIds.add(q.id);
+            effectiveQuestionCount += 1;
+            typeCount++;
+          }
+        }
+      });
+
+      console.log(`✅ Phase 1 (Guaranteed DI types): ${effectiveQuestionCount}/${limit} effective questions (${selectedQuestions.length} actual questions)`);
+
+      // Phase 2: Fill remaining slots with any available questions
+      // Prioritize individual questions over more MSR/TA sets to avoid filling up with sets
+      if (effectiveQuestionCount < limit) {
+        // First, add remaining individual questions
+        const remainingIndividual = nonGroupedQuestions.filter(q => !usedIds.has(q.id));
+        const pool = shouldRandomize
+          ? [...remainingIndividual].sort(() => Math.random() - 0.5)
+          : [...remainingIndividual];
+
+        for (const q of pool) {
+          if (effectiveQuestionCount >= limit) break;
+          if (!usedIds.has(q.id)) {
+            selectedQuestions.push(q);
+            usedIds.add(q.id);
+            effectiveQuestionCount += 1;
+          }
+        }
+      }
+
+      // If still need more, add remaining MSR/TA sets
+      if (effectiveQuestionCount < limit) {
+        const remainingGroups = [...msrGroups, ...taGroups].filter(g => !usedGroupKeys.has(g.key));
+        const shuffled = shouldRandomize ? remainingGroups.sort(() => Math.random() - 0.5) : remainingGroups;
+
+        for (const { key, questions: groupQs } of shuffled) {
+          if (effectiveQuestionCount >= limit) break;
+          if (usedGroupKeys.has(key)) continue;
+
+          groupQs.forEach(q => {
+            selectedQuestions.push(q);
+            usedIds.add(q.id);
+          });
+          usedGroupKeys.add(key);
+          effectiveQuestionCount += 1; // Set counts as 1
+        }
+      }
+
+      console.log(`✅ Phase 2 (Fill remaining): ${effectiveQuestionCount}/${limit} effective questions (${selectedQuestions.length} actual questions)`);
+
+      // Log final distribution
+      const finalMsrCount = new Set(
+        selectedQuestions.filter(q => q.question_data?.di_type === 'MSR').map(q => getSourceGroupKey(q))
+      ).size;
+      const finalTaCount = new Set(
+        selectedQuestions.filter(q => q.question_data?.di_type === 'TA').map(q => getSourceGroupKey(q))
+      ).size;
+
+      console.log('📋 Final DI type distribution (effective questions):',
+        `DS: ${selectedQuestions.filter(q => q.question_data?.di_type === 'DS').length}, ` +
+        `GI: ${selectedQuestions.filter(q => q.question_data?.di_type === 'GI').length}, ` +
+        `TA: ${finalTaCount} sets, ` +
+        `TPA: ${selectedQuestions.filter(q => q.question_data?.di_type === 'TPA').length}, ` +
+        `MSR: ${finalMsrCount} sets`
+      );
+
+      console.log(`🏁 [DI SELECTION] FINAL: Selected ${selectedQuestions.length} actual questions = ${effectiveQuestionCount} effective questions (limit was ${limit})`);
+
+      // Verify we haven't exceeded the limit
+      if (effectiveQuestionCount > limit) {
+        console.warn(`⚠️ [DI SELECTION] WARNING: Exceeded limit! ${effectiveQuestionCount} > ${limit}`);
+      }
+
+      // Phase 3: Group related MSR/TA questions together in the final order
+      const groupedQuestions = groupRelatedQuestions(selectedQuestions);
+
+      return groupedQuestions;
+    };
+
     // NON-ADAPTIVE MODE: Static question selection
     if (config.adaptivity_mode !== 'adaptive') {
       // CASE 1: Single-section test with total_questions limit
@@ -1219,16 +1581,17 @@ export default function TakeTestPage() {
         const sections = Array.from(new Set(processedQuestions.map(q => getSection(q))));
 
         sections.forEach(section => {
-          let sectionQuestions = processedQuestions.filter(q => getSection(q) === section);
+          const sectionQuestions = processedQuestions.filter(q => getSection(q) === section);
           const limit = config.questions_per_section![section];
 
           if (limit !== undefined && limit > 0) {
-            // Apply randomization if configured
-            if (config.question_order === 'random') {
-              sectionQuestions = [...sectionQuestions].sort(() => Math.random() - 0.5);
-            }
-            // Take limited number
-            limitedQuestions.push(...sectionQuestions.slice(0, limit));
+            // Use DI subtype representation helper for Data Insights section
+            const selected = selectWithDISubtypeRepresentation(
+              sectionQuestions,
+              limit,
+              config.question_order === 'random'
+            );
+            limitedQuestions.push(...selected);
           } else {
             // No limit for this section, include all
             limitedQuestions.push(...sectionQuestions);
@@ -1314,12 +1677,37 @@ export default function TakeTestPage() {
       const baseQuestions: Question[] = [];
 
       // Helper to select baseline questions with fallback (respects question_order config)
+      // Enhanced with DI subtype representation for Data Insights section
       const selectBaselineQuestions = (
         questions: Question[],
         targetSection: string,
         targetDifficulty: number | string,
         count: number
       ): Question[] => {
+        // Get all questions from this section
+        const allSectionQuestions = questions.filter(q => getSection(q) === targetSection);
+
+        // Check if this is a Data Insights section
+        const isDataInsightsSection = allSectionQuestions.some(q =>
+          q.section?.toLowerCase().includes('data insights') ||
+          q.section?.toLowerCase().includes('di') ||
+          q.question_data?.di_type
+        );
+
+        // For Data Insights: Use DI subtype representation logic
+        if (isDataInsightsSection) {
+          console.log('🎯 Adaptive Base Questions: Using DI subtype representation for', targetSection);
+          const selected = selectWithDISubtypeRepresentation(
+            allSectionQuestions,
+            count,
+            config.question_order === 'random'
+          );
+          // Mark as baseline
+          selected.forEach(q => q.is_base = true);
+          return selected;
+        }
+
+        // Standard selection for non-DI sections
         // Try to get questions with target difficulty
         let candidates = questions.filter(
           q => getSection(q) === targetSection && matchesDifficulty(q, targetDifficulty)
@@ -1327,8 +1715,6 @@ export default function TakeTestPage() {
 
         // FALLBACK: If not enough questions with target difficulty, try other difficulties
         if (candidates.length < count) {
-          // Get all questions from this section
-          const allSectionQuestions = questions.filter(q => getSection(q) === targetSection);
           candidates = allSectionQuestions;
         }
 
@@ -2951,11 +3337,85 @@ export default function TakeTestPage() {
         const sectionSelectedQuestions = selectedQuestions.filter(q => getSectionField(q) === currentSection);
 
         // Check if we've reached the question limit for this section
+        // IMPORTANT: For Data Insights, count MSR/TA sets as 1 effective question
+        // We must count ANSWERED questions (up to currentQuestionIndex + 1), not ALL selected questions
         let questionLimitForSection = 20; // default
         if (config.questions_per_section) {
           questionLimitForSection = config.questions_per_section[currentSection] || 20;
 
-          if (sectionSelectedQuestions.length >= questionLimitForSection) {
+          // Get questions that have been ANSWERED (shown and completed)
+          // currentQuestionIndex is 0-based, so +1 gives us the count of questions answered
+          // We're in goToNextQuestion, so the current question has been answered
+          const answeredQuestionsCount = currentQuestionIndex + 1;
+          const answeredQuestions = sectionSelectedQuestions.slice(0, answeredQuestionsCount);
+
+          // Calculate effective question count for DI section
+          const isDataInsights = currentSection?.toLowerCase().includes('data insights') ||
+            currentSection?.toLowerCase().includes('di') ||
+            answeredQuestions.some(q => q.question_data?.di_type);
+
+          let effectiveQuestionCount = answeredQuestionsCount;
+
+          if (isDataInsights) {
+            // For MSR/TA sets to count as 1 effective question, ALL questions in the set must be answered
+            // First, build a map of all MSR/TA groups in the selected questions (not just answered)
+            const allGroupSizes: Map<string, number> = new Map();
+
+            sectionSelectedQuestions.forEach(q => {
+              const diType = q.question_data?.di_type;
+              if (diType === 'MSR' && q.question_data?.sources) {
+                const sources = q.question_data.sources;
+                const sourceKey = 'MSR:' + sources.map((s: any) =>
+                  `${s.tab_name}:${s.content_type}:${(s.content || '').substring(0, 100)}`
+                ).join('|');
+                allGroupSizes.set(sourceKey, (allGroupSizes.get(sourceKey) || 0) + 1);
+              } else if (diType === 'TA' && q.question_data?.table_data) {
+                const tableTitle = q.question_data.table_title || '';
+                const firstRow = q.question_data.table_data?.[0]?.join(',') || '';
+                const headers = q.question_data.column_headers?.join(',') || '';
+                const sourceKey = `TA:${tableTitle}:${headers}:${firstRow}`;
+                allGroupSizes.set(sourceKey, (allGroupSizes.get(sourceKey) || 0) + 1);
+              }
+            });
+
+            // Now count how many questions from each group have been answered
+            const answeredGroupCounts: Map<string, number> = new Map();
+            let individualCount = 0;
+
+            answeredQuestions.forEach(q => {
+              const diType = q.question_data?.di_type;
+              if (diType === 'MSR' && q.question_data?.sources) {
+                const sources = q.question_data.sources;
+                const sourceKey = 'MSR:' + sources.map((s: any) =>
+                  `${s.tab_name}:${s.content_type}:${(s.content || '').substring(0, 100)}`
+                ).join('|');
+                answeredGroupCounts.set(sourceKey, (answeredGroupCounts.get(sourceKey) || 0) + 1);
+              } else if (diType === 'TA' && q.question_data?.table_data) {
+                const tableTitle = q.question_data.table_title || '';
+                const firstRow = q.question_data.table_data?.[0]?.join(',') || '';
+                const headers = q.question_data.column_headers?.join(',') || '';
+                const sourceKey = `TA:${tableTitle}:${headers}:${firstRow}`;
+                answeredGroupCounts.set(sourceKey, (answeredGroupCounts.get(sourceKey) || 0) + 1);
+              } else {
+                individualCount++;
+              }
+            });
+
+            // Count completed groups (where ALL questions in the group have been answered)
+            let completedGroupsCount = 0;
+            answeredGroupCounts.forEach((answeredCount, groupKey) => {
+              const totalInGroup = allGroupSizes.get(groupKey) || 0;
+              if (answeredCount >= totalInGroup) {
+                completedGroupsCount++;
+              }
+            });
+
+            effectiveQuestionCount = completedGroupsCount + individualCount;
+            console.log(`📊 [SECTION LIMIT] Effective questions completed: ${effectiveQuestionCount} (${answeredQuestionsCount} actual answered, ${completedGroupsCount} MSR/TA sets fully completed)`);
+          }
+
+          if (effectiveQuestionCount >= questionLimitForSection) {
+            console.log(`🏁 [SECTION LIMIT] Reached limit: ${effectiveQuestionCount}/${questionLimitForSection} effective questions`);
             completeSection();
             return;
           }
@@ -2964,9 +3424,134 @@ export default function TakeTestPage() {
         const answeredQuestionIds = new Set(sectionSelectedQuestions.map(q => q.id));
 
         // Get available questions from pool (not yet shown in this section)
-        const availableQuestions = questionPool.filter(
+        let availableQuestions = questionPool.filter(
           q => !answeredQuestionIds.has(q.id) && getSectionField(q) === currentSection
         );
+
+        // GMAT DI SUBTYPE BALANCING FOR ADAPTIVE MODE
+        // Check if we need to force inclusion of underrepresented DI types
+        const isDataInsightsSection = currentSection?.toLowerCase().includes('data insights') ||
+          currentSection?.toLowerCase().includes('di') ||
+          availableQuestions.some(q => q.question_data?.di_type);
+
+        // Helper to get source group key for MSR/TA questions (same logic as in prepareInitialQuestions)
+        const getAdaptiveSourceGroupKey = (question: Question): string | null => {
+          const diType = question.question_data?.di_type;
+          if (diType === 'MSR' && question.question_data?.sources) {
+            const sources = question.question_data.sources;
+            const sourceKey = sources.map((s: any) =>
+              `${s.tab_name}:${s.content_type}:${(s.content || '').substring(0, 100)}`
+            ).join('|');
+            return `MSR:${sourceKey}`;
+          }
+          if (diType === 'TA' && question.question_data?.table_data) {
+            const tableTitle = question.question_data.table_title || '';
+            const firstRow = question.question_data.table_data?.[0]?.join(',') || '';
+            const headers = question.question_data.column_headers?.join(',') || '';
+            return `TA:${tableTitle}:${headers}:${firstRow}`;
+          }
+          return null;
+        };
+
+        // Helper to find all related questions (same source group)
+        const findRelatedQuestions = (question: Question, pool: Question[]): Question[] => {
+          const groupKey = getAdaptiveSourceGroupKey(question);
+          if (!groupKey) return [question];
+
+          const related = pool.filter(q => getAdaptiveSourceGroupKey(q) === groupKey);
+          return related.length > 0 ? related : [question];
+        };
+
+        // Helper to calculate what effective count would be after adding questions
+        // This counts unique MSR/TA groups as 1 each, plus individual questions
+        const calculateEffectiveAfterAdding = (newQuestions: Question[]): number => {
+          // Combine already selected questions with new questions to be added
+          const allQuestionsAfterAdd = [...sectionSelectedQuestions, ...newQuestions];
+
+          // Count unique MSR/TA groups and individual questions
+          const groupKeys = new Set<string>();
+          let individualCount = 0;
+
+          allQuestionsAfterAdd.forEach(q => {
+            const diType = q.question_data?.di_type;
+            if (diType === 'MSR' && q.question_data?.sources) {
+              const sources = q.question_data.sources;
+              const sourceKey = 'MSR:' + sources.map((s: any) =>
+                `${s.tab_name}:${s.content_type}:${(s.content || '').substring(0, 100)}`
+              ).join('|');
+              groupKeys.add(sourceKey);
+            } else if (diType === 'TA' && q.question_data?.table_data) {
+              const tableTitle = q.question_data.table_title || '';
+              const firstRow = q.question_data.table_data?.[0]?.join(',') || '';
+              const headers = q.question_data.column_headers?.join(',') || '';
+              const sourceKey = `TA:${tableTitle}:${headers}:${firstRow}`;
+              groupKeys.add(sourceKey);
+            } else {
+              individualCount++;
+            }
+          });
+
+          const projectedEffective = groupKeys.size + individualCount;
+          console.log(`📊 [PROJECTION] After adding ${newQuestions.length} questions: ${projectedEffective} effective (${groupKeys.size} groups + ${individualCount} individual)`);
+          return projectedEffective;
+        };
+
+        if (isDataInsightsSection && availableQuestions.length > 0) {
+          const DI_TYPES = ['DS', 'GI', 'TA', 'TPA', 'MSR'] as const;
+          const MIN_PER_TYPE = { 'DS': 2, 'GI': 2, 'TA': 2, 'TPA': 2, 'MSR': 2 };
+
+          // Count already selected per type
+          const selectedPerType: Record<string, number> = {};
+          DI_TYPES.forEach(type => {
+            selectedPerType[type] = sectionSelectedQuestions.filter(q => q.question_data?.di_type === type).length;
+          });
+
+          // Find types that haven't met minimum
+          const underrepresentedTypes = DI_TYPES.filter(type => selectedPerType[type] < MIN_PER_TYPE[type]);
+
+          if (underrepresentedTypes.length > 0) {
+            // Filter available questions to prioritize underrepresented types
+            const priorityQuestions = availableQuestions.filter(q =>
+              underrepresentedTypes.includes(q.question_data?.di_type)
+            );
+
+            if (priorityQuestions.length > 0) {
+              console.log('🎯 [DI BALANCE] Prioritizing underrepresented DI types:', underrepresentedTypes);
+              console.log('🎯 [DI BALANCE] Current distribution:', selectedPerType);
+              console.log('🎯 [DI BALANCE] Priority questions available:', priorityQuestions.length);
+
+              // Force selection from underrepresented types
+              // Override adaptive algorithm temporarily
+              const randomIndex = Math.floor(Math.random() * priorityQuestions.length);
+              const forcedQuestion = priorityQuestions[randomIndex];
+
+              if (forcedQuestion) {
+                // For MSR/TA, find and add ALL related questions together
+                const relatedQuestions = findRelatedQuestions(forcedQuestion, availableQuestions);
+
+                // CHECK: Would adding these questions exceed the limit?
+                const projectedEffective = calculateEffectiveAfterAdding(relatedQuestions);
+                if (projectedEffective > questionLimitForSection) {
+                  console.log(`🛑 [DI BALANCE] Adding ${relatedQuestions.length} questions would exceed limit (${projectedEffective} > ${questionLimitForSection}), completing section`);
+                  completeSection();
+                  return;
+                }
+
+                console.log('✅ [DI BALANCE] Forcing question of type:', forcedQuestion.question_data?.di_type);
+                if (relatedQuestions.length > 1) {
+                  console.log('🔗 [DI BALANCE] Adding', relatedQuestions.length, 'related questions together');
+                }
+
+                // Mark all as non-baseline and add to selection
+                relatedQuestions.forEach(q => q.is_base = false);
+                setSelectedQuestions(prev => [...prev, ...relatedQuestions]);
+                setCurrentQuestionIndex(currentQuestionIndex + 1);
+                setGlobalQuestionOrder(globalQuestionOrder + 1);
+                return;
+              }
+            }
+          }
+        }
 
         if (availableQuestions.length > 0) {
           let nextQuestion: Question | undefined;
@@ -3001,16 +3586,38 @@ export default function TakeTestPage() {
           }
 
           if (nextQuestion) {
-            console.log('✅ [NAVIGATION] Adding adaptive question to selection', {
+            // For MSR/TA questions, find and add ALL related questions together
+            const diType = nextQuestion.question_data?.di_type;
+            let questionsToAdd: Question[] = [nextQuestion];
+
+            if (diType === 'MSR' || diType === 'TA') {
+              const relatedQuestions = findRelatedQuestions(nextQuestion, availableQuestions);
+              if (relatedQuestions.length > 1) {
+                questionsToAdd = relatedQuestions;
+                console.log('🔗 [NAVIGATION] MSR/TA question has', relatedQuestions.length, 'related questions - adding together');
+              }
+            }
+
+            // CHECK: Would adding these questions exceed the limit?
+            const projectedEffective = calculateEffectiveAfterAdding(questionsToAdd);
+            if (projectedEffective > questionLimitForSection) {
+              console.log(`🛑 [NAVIGATION] Adding ${questionsToAdd.length} questions would exceed limit (${projectedEffective} > ${questionLimitForSection}), completing section`);
+              completeSection();
+              return;
+            }
+
+            console.log('✅ [NAVIGATION] Adding adaptive question(s) to selection', {
               questionId: nextQuestion.id.substring(0, 8),
               section: currentSection,
+              count: questionsToAdd.length,
               newQuestionIndex: currentQuestionIndex + 1
             });
+
             // Explicitly mark as NOT baseline (adaptive question)
-            nextQuestion.is_base = false;
+            questionsToAdd.forEach(q => q.is_base = false);
 
             // Add to selected questions
-            setSelectedQuestions(prev => [...prev, nextQuestion]);
+            setSelectedQuestions(prev => [...prev, ...questionsToAdd]);
 
             // Move to the new question
             setCurrentQuestionIndex(currentQuestionIndex + 1);
@@ -4624,6 +5231,7 @@ export default function TakeTestPage() {
 
   // Main Test Interface
   return (
+    <MathJaxProvider>
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Header with Timer */}
       <div className="bg-white border-b-2 border-gray-200 px-6 py-4 flex items-center justify-between">
@@ -5037,9 +5645,9 @@ export default function TakeTestPage() {
                   {(currentQuestion.question_data?.question_text || currentQuestion.question_data?.question_text_eng) && (
                     <div className="border-2 border-gray-200 rounded-xl p-6 bg-white">
                       <div className="text-lg text-gray-800">
-                        <LaTeX>
+                        <MathJaxRenderer>
                           {getLocalizedQuestionText(currentQuestion.question_data)}
-                        </LaTeX>
+                        </MathJaxRenderer>
                       </div>
                     </div>
                   )}
@@ -5056,9 +5664,9 @@ export default function TakeTestPage() {
               <div className="space-y-4">
                 {(currentQuestion.question_data?.question_text || currentQuestion.question_data?.question_text_eng) && (
                   <div className="text-lg text-gray-800 mb-4">
-                    <LaTeX>
+                    <MathJaxRenderer>
                       {getLocalizedQuestionText(currentQuestion.question_data)}
-                    </LaTeX>
+                    </MathJaxRenderer>
                   </div>
                 )}
                 <textarea
@@ -5119,7 +5727,7 @@ export default function TakeTestPage() {
                         {choice.label}
                       </div>
                       <div className="flex-1 text-gray-800">
-                        <LaTeX>{choice.text}</LaTeX>
+                        <MathJaxRenderer>{choice.text}</MathJaxRenderer>
                       </div>
                       {isCorrect && (
                         <FontAwesomeIcon icon={faCheckCircle} className="text-green-500 text-xl" />
@@ -5173,7 +5781,7 @@ export default function TakeTestPage() {
                         {option}
                       </div>
                       <div className="flex-1 text-gray-800">
-                        <LaTeX>{answerText as string}</LaTeX>
+                        <MathJaxRenderer>{answerText as string}</MathJaxRenderer>
                       </div>
                       {isCorrect && (
                         <FontAwesomeIcon icon={faCheckCircle} className="text-green-500 text-xl" />
@@ -5438,5 +6046,6 @@ export default function TakeTestPage() {
         </div>
       )}
     </div>
+    </MathJaxProvider>
   );
 }

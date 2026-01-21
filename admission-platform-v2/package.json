@@ -11,11 +11,22 @@
     "build": "turbo run build",
     "test": "turbo run test",
     "lint": "turbo run lint",
-    "clean": "turbo run clean && rm -rf node_modules"
+    "clean": "turbo run clean && rm -rf node_modules",
+    "import:gmat": "npx tsx GMAT/scripts/import-gmat-questions.ts",
+    "import:gmat:dry": "npx tsx GMAT/scripts/import-gmat-questions.ts --dry-run --all",
+    "compile:materials": "npx tsx GMAT/scripts/compile-materials.ts --all",
+    "compile:materials:dry": "npx tsx GMAT/scripts/compile-materials.ts --dry-run --all",
+    "upload:materials": "npx tsx GMAT/scripts/upload-gmat-materials.ts --all",
+    "upload:materials:dry": "npx tsx GMAT/scripts/upload-gmat-materials.ts --dry-run --all"
   },
   "devDependencies": {
     "turbo": "^2.3.0",
-    "typescript": "^5.6.0"
+    "typescript": "^5.6.0",
+    "tsx": "^4.7.0",
+    "dotenv": "^16.3.1"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
   },
   "pnpm": {
     "overrides": {

@@ -3,12 +3,12 @@
  * Displays a chart/graph with context and fill-in-the-blank statements
  */
 
-import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheckCircle, faTimesCircle } from '@fortawesome/free-solid-svg-icons';
-import { LaTeX } from '../LaTeX';
+import { MathJaxRenderer } from '../MathJaxRenderer';
 import { Chart } from '../Chart';
 import { normalizeWhitespace, normalizeOptionText } from '../../lib/textUtils';
+import { ExplanationDisplay } from './ExplanationDisplay';
 
 interface GIQuestionProps {
   chartConfig: any; // Chart.js config or image URL
@@ -25,6 +25,7 @@ interface GIQuestionProps {
   correctBlank1?: any; // For results view - can be string or array from DB
   correctBlank2?: any; // For results view - can be string or array from DB
   showResults?: boolean; // For results view - displays answer feedback
+  explanation?: string; // For results view - shows explanation after answer
 }
 
 export function GIQuestion({
@@ -42,6 +43,7 @@ export function GIQuestion({
   correctBlank1,
   correctBlank2,
   showResults = false,
+  explanation,
 }: GIQuestionProps) {
   // Normalize correct answers
   // Database stores as array: ["value1", "value2"]
@@ -91,7 +93,7 @@ export function GIQuestion({
         {/* Context Text */}
         {contextText && (
           <div className="mt-4 text-gray-700 text-sm">
-            <LaTeX>{normalizeWhitespace(contextText)}</LaTeX>
+            <MathJaxRenderer>{normalizeWhitespace(contextText)}</MathJaxRenderer>
           </div>
         )}
       </div>
@@ -179,7 +181,7 @@ export function GIQuestion({
                 </select>
               );
             } else {
-              return <span key={index}><LaTeX>{normalizeWhitespace(part)}</LaTeX></span>;
+              return <span key={index}><MathJaxRenderer>{normalizeWhitespace(part)}</MathJaxRenderer></span>;
             }
           })}
         </div>
@@ -209,6 +211,11 @@ export function GIQuestion({
             <span className="text-gray-500 italic">No answer provided</span>
           )}
         </div>
+      )}
+
+      {/* Explanation (shown in results view) */}
+      {showResults && explanation && (
+        <ExplanationDisplay explanation={explanation} />
       )}
     </div>
   );

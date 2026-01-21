@@ -5,8 +5,9 @@
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheckCircle, faTimesCircle } from '@fortawesome/free-solid-svg-icons';
-import { LaTeX } from '../LaTeX';
+import { MathJaxRenderer } from '../MathJaxRenderer';
 import { normalizeWhitespace, normalizeOptionText } from '../../lib/textUtils';
+import { ExplanationDisplay } from './ExplanationDisplay';
 
 interface TPAQuestionProps {
   scenario: string;
@@ -22,6 +23,7 @@ interface TPAQuestionProps {
   correctColumn1?: any; // For results view - can be string or object from DB
   correctColumn2?: any; // For results view - can be string or object from DB
   showResults?: boolean; // For results view - displays answer feedback
+  explanation?: string; // For results view - shows explanation after answer
 }
 
 export function TPAQuestion({
@@ -37,6 +39,7 @@ export function TPAQuestion({
   correctColumn1,
   correctColumn2,
   showResults = false,
+  explanation,
 }: TPAQuestionProps) {
   // Normalize correct answers
   // Database stores as object: {col1: "option1", col2: "option2"}
@@ -59,7 +62,7 @@ export function TPAQuestion({
       {/* Scenario Section */}
       <div className="border-2 border-gray-200 rounded-xl p-6 bg-white overflow-x-auto">
         <div className="text-gray-800 text-lg whitespace-pre-wrap">
-          <LaTeX>{normalizeWhitespace(scenario)}</LaTeX>
+          <MathJaxRenderer>{normalizeWhitespace(scenario)}</MathJaxRenderer>
         </div>
       </div>
 
@@ -105,7 +108,7 @@ export function TPAQuestion({
                     : ''
                 }`}>
                   <div>
-                    <LaTeX>{normalizeOptionText(option)}</LaTeX>
+                    <MathJaxRenderer>{normalizeOptionText(option)}</MathJaxRenderer>
                     {showResults && ((isSelectedCol1 && isCorrectCol1) || (isSelectedCol2 && isCorrectCol2)) && (
                       <div className="text-xs text-green-700 font-semibold mt-1">Your answer - Correct!</div>
                     )}
@@ -186,6 +189,11 @@ export function TPAQuestion({
           })}
         </div>
       </div>
+
+      {/* Explanation (shown in results view) */}
+      {showResults && explanation && (
+        <ExplanationDisplay explanation={explanation} />
+      )}
     </div>
   );
 }

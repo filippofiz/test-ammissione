@@ -27,6 +27,7 @@ import {
   faTimes,
   faClock,
   faQuestionCircle,
+  faBook,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import { CountdownTimer } from '../components/CountdownTimer';
@@ -968,6 +969,17 @@ export default function StudentHomePage() {
                 <div className="bg-white/20 rounded-lg p-3 text-center text-sm font-medium backdrop-blur-sm">
                   {getMotivationalMessage()}
                 </div>
+
+                {/* GMAT Materials Button - Only show for GMAT students */}
+                {testTypes.some(t => t.test_type === 'GMAT') && (
+                  <button
+                    onClick={() => navigate('/student/gmat-preparation')}
+                    className="w-full mt-4 py-3 px-4 bg-white/20 hover:bg-white/30 rounded-lg transition-all flex items-center justify-center gap-2 font-semibold backdrop-blur-sm"
+                  >
+                    <FontAwesomeIcon icon={faBook} />
+                    {t('studentHome.studyMaterials', 'Study Materials')}
+                  </button>
+                )}
               </div>
             </div>
           </div>
