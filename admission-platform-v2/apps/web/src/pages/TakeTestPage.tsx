@@ -33,6 +33,8 @@ import { MultipleChoiceQuestion } from '../components/questions/MultipleChoiceQu
 import { PDFTestView } from '../components/PDFTestView';
 import { createAdaptiveAlgorithm, SimpleAdaptiveAlgorithm, ComplexAdaptiveAlgorithm } from '../lib/algorithms/adaptiveAlgorithm';
 import { translateTestTrack } from '../lib/translateTestTrack';
+import { syncTestResultsToExternal } from '../lib/api/externalStudents';
+import { calculateResultsForExternalSync } from '../lib/utils/externalSyncCalculator';
 
 interface TestConfig {
   test_type: string;
@@ -139,6 +141,9 @@ interface Question {
 
     // Common fields
     image_url?: string | null;
+    image_url_eng?: string | null;
+    image_options?: Record<string, string>;
+    image_options_eng?: Record<string, string>;
     question?: string;
     passage?: string;
     question_text?: string;
@@ -670,6 +675,38 @@ export default function TakeTestPage() {
     return questionData.passage_title ?? '';
   };
 
+  // Helper to get localized image based on language captured at test start
+  // Automatically falls back to available image if only one language has an image
+  const getLocalizedImage = (questionData: Question['question_data']): string | undefined => {
+    if (!questionData) return undefined;
+
+    // Check if current section is an English section (for Cattolica's "inglese" section)
+    const isEnglishSection = currentSection && currentSection.toLowerCase().includes('inglese');
+
+    // Show English version if: test language is English OR current section is an English section
+    if ((testLanguage === 'en' || isEnglishSection) && questionData.image_url_eng) {
+      return questionData.image_url_eng;
+    }
+    // Fallback: if no Italian image but English exists, use English
+    return questionData.image_url || questionData.image_url_eng || undefined;
+  };
+
+  // Helper to get localized image options based on language captured at test start
+  // Automatically falls back to available image if only one language has an image
+  const getLocalizedImageOptions = (questionData: Question['question_data']): Record<string, string> | undefined => {
+    if (!questionData) return undefined;
+
+    // Check if current section is an English section (for Cattolica's "inglese" section)
+    const isEnglishSection = currentSection && currentSection.toLowerCase().includes('inglese');
+
+    // Show English version if: test language is English OR current section is an English section
+    if ((testLanguage === 'en' || isEnglishSection) && questionData.image_options_eng) {
+      return questionData.image_options_eng;
+    }
+    // Fallback: if no Italian images but English exists, use English
+    return questionData.image_options || questionData.image_options_eng || undefined;
+  };
+
   // Calculate expected total sections (for footer display)
   // In macro_section adaptivity mode, each base section will have an adaptive section added
   const expectedTotalSections = (() => {
@@ -731,6 +768,53 @@ export default function TakeTestPage() {
       }));
     }
   }, [currentQuestion?.id]);
+
+  // Check network connection every 2 seconds when offline
+  useEffect(() => {
+    // Only run the interval if there's a network error
+    if (!saveError?.includes('internet')) {
+      return;
+    }
+
+    const checkConnection = async () => {
+      try {
+        // Try to make a simple request to Supabase
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/`, {
+          method: 'HEAD',
+          headers: {
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
+          },
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        // If request succeeds, we're back online
+        if (response.ok) {
+          setSaveError('✅ Sei di nuovo online');
+
+          // Clear message after 5 seconds
+          setTimeout(() => {
+            setSaveError(null);
+          }, 5000);
+        }
+      } catch (error) {
+        // Still offline, do nothing
+        console.log('🔴 Still offline');
+      }
+    };
+
+    // Check immediately
+    checkConnection();
+
+    // Then check every 2 seconds
+    const intervalId = setInterval(checkConnection, 2000);
+
+    return () => clearInterval(intervalId);
+  }, [saveError]);
 
   // ❌ REMOVED: test_questions tracking with race condition
   // ✅ NEW: Question order is now tracked via answers.created_at (atomic, no race conditions)
@@ -1367,21 +1451,31 @@ export default function TakeTestPage() {
       });
 
       // Load questions - SEQUENTIAL ORDER (no randomization in preview)
-      const questionsQuery = supabase
-        .from('2V_questions')
-        .select('*');
-
       // For GMAT Assessment Iniziale 1, fetch from general pool by test_type
-      // For all other tests, fetch by test_id
+      // For all other tests, fetch by test_id OR additional_test_ids
+      let questions: any[] | null = null;
+      let questionsError: any = null;
+
       if (isGMATAssessmentInitial1) {
         console.log('✅ [PREVIEW] Fetching from GMAT question pool (all test_type=GMAT questions)');
-        questionsQuery.eq('test_type', testType);
+        const result = await supabase
+          .from('2V_questions')
+          .select('*')
+          .eq('test_type', testType)
+          .order('question_number', { ascending: true });
+        questions = result.data;
+        questionsError = result.error;
       } else {
-        console.log('📋 [PREVIEW] Fetching questions for specific test_id:', previewTestId);
-        questionsQuery.eq('test_id', previewTestId);
+        console.log('📋 [PREVIEW] Fetching questions for test_id OR additional_test_ids:', previewTestId);
+        // Fetch questions where test_id matches OR additional_test_ids contains the test_id
+        const result = await supabase
+          .from('2V_questions')
+          .select('*')
+          .or(`test_id.eq.${previewTestId},additional_test_ids.cs.["${previewTestId}"]`)
+          .order('question_number', { ascending: true });
+        questions = result.data;
+        questionsError = result.error;
       }
-
-      const { data: questions, error: questionsError } = await questionsQuery.order('question_number', { ascending: true });
 
       console.log('📊 [PREVIEW] Questions fetched:', {
         count: questions?.length || 0,
@@ -1635,27 +1729,45 @@ export default function TakeTestPage() {
       });
 
       // For no_sections mode, order only by question_number; otherwise by section then question_number
-      const questionsQuery = supabase
-        .from('2V_questions')
-        .select('*');
-
       // For GMAT Assessment Iniziale 1, fetch from general pool by test_type
-      // For all other tests, fetch by test_id
+      // For all other tests, fetch by test_id OR additional_test_ids
+      let questions: Question[] | null = null;
+      let questionsError: unknown = null;
+
       if (isGMATAssessmentInitial1) {
         console.log('✅ Fetching from GMAT question pool (all test_type=GMAT questions)');
-        questionsQuery.eq('test_type', testType);
-      } else {
-        console.log('📋 Fetching questions for specific test_id:', testId);
-        questionsQuery.eq('test_id', testId);
-      }
+        const query = supabase
+          .from('2V_questions')
+          .select('*')
+          .eq('test_type', testType);
 
-      if (configData.section_order_mode === 'no_sections') {
-        questionsQuery.order('question_number');
-      } else {
-        questionsQuery.order('section').order('question_number');
-      }
+        if (configData.section_order_mode === 'no_sections') {
+          query.order('question_number');
+        } else {
+          query.order('section').order('question_number');
+        }
 
-      const { data: questions, error: questionsError } = await questionsQuery as { data: Question[] | null; error: unknown };
+        const result = await query as { data: Question[] | null; error: unknown };
+        questions = result.data;
+        questionsError = result.error;
+      } else {
+        console.log('📋 Fetching questions for test_id OR additional_test_ids:', testId);
+        // Fetch questions where test_id matches OR additional_test_ids contains the test_id
+        const query = supabase
+          .from('2V_questions')
+          .select('*')
+          .or(`test_id.eq.${testId},additional_test_ids.cs.["${testId}"]`);
+
+        if (configData.section_order_mode === 'no_sections') {
+          query.order('question_number');
+        } else {
+          query.order('section').order('question_number');
+        }
+
+        const result = await query as { data: Question[] | null; error: unknown };
+        questions = result.data;
+        questionsError = result.error;
+      }
 
       console.log('📊 Questions fetched:', {
         count: questions?.length || 0,
@@ -2482,7 +2594,8 @@ export default function TakeTestPage() {
     const savePromise = (async () => {
       try {
         setIsSaving(true);
-        setSaveError(null);
+        // Only clear error if it's not a network error (don't clear persistent network errors)
+        setSaveError(prev => prev?.includes('internet') ? prev : null);
 
       // Use refs to get actual current values (avoids stale closure in timer callbacks)
       const actualCurrentAttempt = currentAttemptRef.current;
@@ -2497,13 +2610,21 @@ export default function TakeTestPage() {
 
       // Check if answer already exists (to preserve question_order and accumulate time)
       const tableSuffix = isTestMode ? '_test' : '';
-      const { data: existingAnswer } = await db
+
+      // Add 5-second timeout to detect network issues quickly
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Network timeout')), 5000)
+      );
+
+      const queryPromise = db
         .from(`2V_student_answers${tableSuffix}`)
         .select('question_order, time_spent_seconds')
         .eq('assignment_id', assignmentId)
         .eq('question_id', questionId)
         .eq('attempt_number', actualCurrentAttempt)
         .maybeSingle();
+
+      const { data: existingAnswer } = await Promise.race([queryPromise, timeoutPromise]) as any;
 
       // Calculate time spent on this question ONLY for this viewing session
       const startTime = actualQuestionStartTimes[questionId];
@@ -2565,7 +2686,12 @@ export default function TakeTestPage() {
       }
 
       // Upsert answer to database (uses test tables in test mode)
-      const { error } = await db
+      // Add 5-second timeout to detect network issues quickly
+      const upsertTimeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Network timeout')), 5000)
+      );
+
+      const upsertQueryPromise = db
         .from(`2V_student_answers${tableSuffix}`)
         .upsert({
           assignment_id: assignmentId,
@@ -2585,13 +2711,20 @@ export default function TakeTestPage() {
           onConflict: 'assignment_id,question_id,attempt_number'
         });
 
+      const { error } = await Promise.race([upsertQueryPromise, upsertTimeoutPromise]) as any;
+
       if (error) {
         throw error;
       }
 
       // Update assignment status to 'in_progress' on first answer (if still unlocked)
       // Note: annulled/incomplete transitions are now handled in loadTestData
-      const { error: _statusError } = await db
+      // Add 5-second timeout to detect network issues quickly
+      const statusTimeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Network timeout')), 5000)
+      );
+
+      const statusQueryPromise = db
         .from(`2V_test_assignments${tableSuffix}`)
         .update({
           status: 'in_progress',
@@ -2600,7 +2733,7 @@ export default function TakeTestPage() {
         .eq('id', assignmentId)
         .eq('status', 'unlocked');
 
-      setIsSaving(false);
+      const { error: _statusError } = await Promise.race([statusQueryPromise, statusTimeoutPromise]) as any;
 
       // Clear the start time to prevent reusing stale timestamps
       setQuestionStartTimes(prev => {
@@ -2612,7 +2745,22 @@ export default function TakeTestPage() {
         return true;
 
       } catch (error: any) {
-        // Retry logic with exponential backoff
+        console.error('❌ [SAVE] Error:', error);
+
+        // Check for network errors (case-insensitive)
+        const errorMessage = error?.message?.toLowerCase() || '';
+        const isNetworkError = !navigator.onLine ||
+                               errorMessage.includes('fetch') ||
+                               errorMessage.includes('network') ||
+                               errorMessage.includes('timeout') ||
+                               error?.code === 'ENOTFOUND';
+
+        if (isNetworkError) {
+          setSaveError('⚠️ No internet connection. Cannot proceed until connection is restored.');
+          return false;
+        }
+
+        // Retry logic with exponential backoff for other errors
         if (retryCount < 2) {
           const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s
 
@@ -2621,11 +2769,11 @@ export default function TakeTestPage() {
         } else {
           // Final failure after 3 attempts
           setSaveError('Failed to save answer. Your progress may not be saved.');
-          setIsSaving(false);
           return false;
         }
       } finally {
-        // Remove from in-progress map
+        // Always reset saving state and clean up
+        setIsSaving(false);
         savingInProgressRef.current.delete(questionId);
       }
     })();
@@ -2671,14 +2819,21 @@ export default function TakeTestPage() {
 
       // Save current answer immediately before navigating (or save empty answer to track question order)
       if (currentQuestion?.id) {
-      await saveAnswer(
-        currentQuestion.id,
-        answers[currentQuestion.id] || { answer: null },
-        answers[currentQuestion.id]?.flagged || false,
-        0,
-        globalQuestionOrder + 1
-      );
-    }
+        const saved = await saveAnswer(
+          currentQuestion.id,
+          answers[currentQuestion.id] || { answer: null },
+          answers[currentQuestion.id]?.flagged || false,
+          0,
+          globalQuestionOrder + 1
+        );
+
+        // Block navigation if save failed
+        if (!saved) {
+          console.log('⚠️ [NAVIGATION] Blocked - save failed');
+          setIsTransitioning(false);
+          return;
+        }
+      }
 
     // Check if answer is required
     console.log('📝 [VALIDATION] Checking blank answers:', {
@@ -3717,6 +3872,79 @@ export default function TakeTestPage() {
         throw error;
       }
 
+      // Sync test results to external database if completed
+      if (status === 'completed') {
+        try {
+          // Get student's external_student_id
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { data: profile } = await supabase
+              .from('2V_profiles')
+              .select('external_student_id')
+              .eq('auth_uid', user.id)
+              .single();
+
+            if (profile?.external_student_id) {
+              // Calculate correct, wrong, blank answers using isolated calculator
+              // IMPORTANT: This is ONLY for external sync and has NO impact on internal platform results
+              const totalQuestions = selectedQuestions.length;
+
+              // Get test info for external sync
+              const { data: assignmentWithTest } = await supabase
+                .from('2V_test_assignments')
+                .select('2V_tests(test_type, exercise_type, test_number, section)')
+                .eq('id', assignmentId!)
+                .single();
+
+              const testInfo = (assignmentWithTest as any)?.['2V_tests'];
+              const testType = testInfo?.test_type || 'Unknown';
+              const section = testInfo?.section || '';
+              const exerciseType = testInfo?.exercise_type || '';
+              const testNumber = testInfo?.test_number || '';
+
+              // Build comprehensive test name: "GMAT - Logaritmi e Esponenziali - Training 1"
+              // or "GMAT - Logaritmi e Esponenziali - Assessment Monomatematico 2"
+              let testName = testType;
+
+              if (section && section !== 'Multi-topic') {
+                testName += ` - ${section}`;
+              }
+
+              if (exerciseType) {
+                testName += ` - ${exerciseType}`;
+              }
+
+              if (testNumber) {
+                testName += ` ${testNumber}`;
+              }
+
+              console.log('📊 [EXTERNAL SYNC] Calculating results for external platform');
+              const results = await calculateResultsForExternalSync(
+                assignmentId!,
+                currentAttempt,
+                totalQuestions
+              );
+
+              await syncTestResultsToExternal({
+                externalStudentId: profile.external_student_id,
+                testType: testType,
+                testName: testName,
+                completedAt: new Date().toISOString(),
+                attemptNumber: currentAttempt,
+                status: status,
+                correct: results.correct,
+                wrong: results.wrong,
+                blank: results.blank,
+                totalQuestions: results.totalQuestions
+              });
+            }
+          }
+        } catch (syncError) {
+          console.error('⚠️ Failed to sync results to external database:', syncError);
+          // Don't fail the test submission if external sync fails
+        }
+      }
+
       return true;
     } catch (err) {
       return false;
@@ -4617,7 +4845,7 @@ export default function TakeTestPage() {
                 statementText={currentQuestion.question_data.statement_text || ''}
                 blank1Options={currentQuestion.question_data.blank1_options || []}
                 blank2Options={currentQuestion.question_data.blank2_options || []}
-                imageUrl={currentQuestion.question_data.image_url || undefined}
+                imageUrl={getLocalizedImage(currentQuestion.question_data)}
                 selectedBlank1={answers[currentQuestion.id]?.blank1}
                 selectedBlank2={answers[currentQuestion.id]?.blank2}
                 onBlank1Change={(value) => {
@@ -4775,9 +5003,9 @@ export default function TakeTestPage() {
                 questionText={getLocalizedQuestionText(currentQuestion.question_data)}
                 passageText={getLocalizedPassageText(currentQuestion.question_data) || undefined}
                 passageTitle={getLocalizedPassageTitle(currentQuestion.question_data) || undefined}
-                imageUrl={currentQuestion.question_data.image_url || undefined}
+                imageUrl={getLocalizedImage(currentQuestion.question_data)}
                 options={getLocalizedOptions(currentQuestion.question_data)}
-                imageOptions={currentQuestion.question_data.image_options}
+                imageOptions={getLocalizedImageOptions(currentQuestion.question_data)}
                 selectedAnswer={answers[currentQuestion.id]?.answer}
                 onAnswerChange={handleAnswerSelect}
                 showResults={(isGuidedMode && showCorrectAnswers) || isPreviewMode}
