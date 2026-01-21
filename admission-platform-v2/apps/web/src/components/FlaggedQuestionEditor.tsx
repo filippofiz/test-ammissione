@@ -24,9 +24,17 @@ interface FlaggedQuestionEditorProps {
   onUpdate: () => void;
   onClearFlag: (questionId: string) => void;
   onGoToTest: (testId: string, questionNumber: number) => void;
+  passage?: {
+    passage_id: string;
+    passage_text: string;
+    passage_text_eng?: string;
+    passage_title?: string;
+    passage_title_eng?: string;
+    question_numbers: number[];
+  } | null;
 }
 
-export function FlaggedQuestionEditor({ question, onUpdate, onClearFlag, onGoToTest }: FlaggedQuestionEditorProps) {
+export function FlaggedQuestionEditor({ question, onUpdate, onClearFlag, onGoToTest, passage }: FlaggedQuestionEditorProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editedData, setEditedData] = useState({
@@ -36,13 +44,20 @@ export function FlaggedQuestionEditor({ question, onUpdate, onClearFlag, onGoToT
     options: question.question_data?.options || {},
     options_eng: question.question_data?.options_eng || {},
     image_url: question.question_data?.image_url || '',
+    image_url_eng: question.question_data?.image_url_eng || '',
     image_options: question.question_data?.image_options || {},
+    image_options_eng: question.question_data?.image_options_eng || {},
+    passage_text: question.question_data?.passage_text || '',
+    passage_text_eng: question.question_data?.passage_text_eng || '',
+    passage_title: question.question_data?.passage_title || '',
+    passage_title_eng: question.question_data?.passage_title_eng || '',
   });
 
   // Image management
   const [showImageModal, setShowImageModal] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [currentImageTarget, setCurrentImageTarget] = useState<'question' | string>('question'); // 'question' or option key like 'a', 'b', 'c', 'd'
+  const [selectedImageLanguage, setSelectedImageLanguage] = useState<'ita' | 'eng'>('ita');
 
   const reviewData = question.Questions_toReview;
   const testInfo = question['2V_tests'];
@@ -50,6 +65,7 @@ export function FlaggedQuestionEditor({ question, onUpdate, onClearFlag, onGoToT
   async function saveChanges() {
     setSaving(true);
     try {
+      // Update this question
       const { error } = await supabase
         .from('2V_questions')
         .update({
@@ -60,7 +76,13 @@ export function FlaggedQuestionEditor({ question, onUpdate, onClearFlag, onGoToT
             options: editedData.options,
             options_eng: editedData.options_eng,
             image_url: editedData.image_url,
+            image_url_eng: editedData.image_url_eng,
             image_options: editedData.image_options,
+            image_options_eng: editedData.image_options_eng,
+            passage_text: editedData.passage_text || null,
+            passage_text_eng: editedData.passage_text_eng || null,
+            passage_title: editedData.passage_title || null,
+            passage_title_eng: editedData.passage_title_eng || null,
           },
           answers: {
             ...question.answers,
@@ -71,9 +93,40 @@ export function FlaggedQuestionEditor({ question, onUpdate, onClearFlag, onGoToT
 
       if (error) throw error;
 
+      // If this question has a passage, update all other questions with the same passage_id
+      if (passage && question.question_data?.passage_id) {
+        // Fetch all questions with the same passage_id
+        const { data: relatedQuestions, error: fetchError } = await supabase
+          .from('2V_questions')
+          .select('*')
+          .eq('question_data->passage_id', question.question_data.passage_id)
+          .neq('id', question.id);
+
+        if (fetchError) {
+          console.error('Error fetching related questions:', fetchError);
+        } else if (relatedQuestions && relatedQuestions.length > 0) {
+          // Update each related question's passage data
+          for (const relatedQ of relatedQuestions) {
+            await supabase
+              .from('2V_questions')
+              .update({
+                question_data: {
+                  ...relatedQ.question_data,
+                  passage_text: editedData.passage_text || null,
+                  passage_text_eng: editedData.passage_text_eng || null,
+                  passage_title: editedData.passage_title || null,
+                  passage_title_eng: editedData.passage_title_eng || null,
+                }
+              })
+              .eq('id', relatedQ.id);
+          }
+          console.log(`Updated passage for ${relatedQuestions.length} related questions`);
+        }
+      }
+
       alert('Question updated successfully!');
       setIsEditing(false);
-      onUpdate();
+      // Don't reload the list - just exit edit mode
     } catch (err) {
       console.error('Error saving question:', err);
       alert('Failed to save changes');
@@ -85,44 +138,89 @@ export function FlaggedQuestionEditor({ question, onUpdate, onClearFlag, onGoToT
   async function handleImageUpload(file: File) {
     setUploadingImage(true);
     try {
-      // Generate unique filename
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${question.id}_${currentImageTarget}_${Date.now()}.${fileExt}`;
-      const filePath = `question-images/${fileName}`;
-
-      // Upload to Supabase Storage
-      const { error: uploadError } = await supabase.storage
-        .from('question-images')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: true
-        });
-
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('question-images')
-        .getPublicUrl(filePath);
-
-      // Update local state
-      if (currentImageTarget === 'question') {
-        setEditedData({ ...editedData, image_url: publicUrl });
-      } else {
-        setEditedData({
-          ...editedData,
-          image_options: {
-            ...editedData.image_options,
-            [currentImageTarget]: publicUrl
-          }
-        });
+      // Get user session token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Not authenticated');
       }
 
-      setShowImageModal(false);
-      alert('Image uploaded successfully!');
+      // Convert file to base64
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve) => {
+        reader.onload = () => {
+          const base64 = (reader.result as string).split(',')[1];
+          resolve(base64);
+        };
+      });
+      reader.readAsDataURL(file);
+      const imageBase64 = await base64Promise;
+
+      // Generate unique filename
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${question.id}_${currentImageTarget}_${selectedImageLanguage}_${Date.now()}.${fileExt}`;
+
+      // Upload via edge function
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-question-image`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            filePath,
+            imageBase64,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Upload failed: ${errorText}`);
+      }
+
+      const { publicUrl } = await response.json();
+
+      if (!publicUrl) {
+        throw new Error('No image URL returned from upload');
+      }
+
+      // Update local state based on language
+      if (currentImageTarget === 'question') {
+        if (selectedImageLanguage === 'ita') {
+          setEditedData({ ...editedData, image_url: publicUrl });
+        } else {
+          setEditedData({ ...editedData, image_url_eng: publicUrl });
+        }
+      } else {
+        // Option image
+        if (selectedImageLanguage === 'ita') {
+          setEditedData({
+            ...editedData,
+            image_options: {
+              ...editedData.image_options,
+              [currentImageTarget]: publicUrl
+            }
+          });
+        } else {
+          setEditedData({
+            ...editedData,
+            image_options_eng: {
+              ...editedData.image_options_eng,
+              [currentImageTarget]: publicUrl
+            }
+          });
+        }
+      }
+
+      console.log('✅ Image uploaded successfully:', publicUrl);
+      alert(`Image uploaded successfully for ${selectedImageLanguage === 'ita' ? 'Italian' : 'English'}!`);
+      // Don't close modal - allow uploading other language
     } catch (err) {
       console.error('Error uploading image:', err);
-      alert('Failed to upload image');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to upload image';
+      alert(`Failed to upload image: ${errorMessage}`);
     } finally {
       setUploadingImage(false);
     }
@@ -145,21 +243,75 @@ export function FlaggedQuestionEditor({ question, onUpdate, onClearFlag, onGoToT
     }
   }
 
-  async function clearFlag() {
-    if (!confirm('Clear the flag from this question?')) return;
+  async function markAsFixed() {
+    if (!confirm('Mark this question as fixed and remove from flagged list?')) return;
 
+    setSaving(true);
     try {
-      const { error } = await supabase
+      // First save any pending changes
+      const { error: updateError } = await supabase
         .from('2V_questions')
-        .update({ Questions_toReview: null })
+        .update({
+          question_data: {
+            ...question.question_data,
+            question_text: editedData.question_text,
+            question_text_eng: editedData.question_text_eng,
+            options: editedData.options,
+            options_eng: editedData.options_eng,
+            image_url: editedData.image_url,
+            image_url_eng: editedData.image_url_eng,
+            image_options: editedData.image_options,
+            image_options_eng: editedData.image_options_eng,
+            passage_text: editedData.passage_text || null,
+            passage_text_eng: editedData.passage_text_eng || null,
+            passage_title: editedData.passage_title || null,
+            passage_title_eng: editedData.passage_title_eng || null,
+          },
+          answers: {
+            ...question.answers,
+            correct_answer: editedData.correct_answer,
+          },
+          Questions_toReview: null, // Clear the flag
+        })
         .eq('id', question.id);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
 
-      onClearFlag(question.id);
+      // If this question has a passage, update all other questions with the same passage_id
+      if (passage && question.question_data?.passage_id) {
+        const { data: relatedQuestions, error: fetchError } = await supabase
+          .from('2V_questions')
+          .select('*')
+          .eq('question_data->passage_id', question.question_data.passage_id)
+          .neq('id', question.id);
+
+        if (fetchError) {
+          console.error('Error fetching related questions:', fetchError);
+        } else if (relatedQuestions && relatedQuestions.length > 0) {
+          for (const relatedQ of relatedQuestions) {
+            await supabase
+              .from('2V_questions')
+              .update({
+                question_data: {
+                  ...relatedQ.question_data,
+                  passage_text: editedData.passage_text || null,
+                  passage_text_eng: editedData.passage_text_eng || null,
+                  passage_title: editedData.passage_title || null,
+                  passage_title_eng: editedData.passage_title_eng || null,
+                }
+              })
+              .eq('id', relatedQ.id);
+          }
+        }
+      }
+
+      alert('Question marked as fixed!');
+      onClearFlag(question.id); // Remove from flagged list
     } catch (err) {
-      console.error('Error clearing flag:', err);
-      alert('Failed to clear flag');
+      console.error('Error marking as fixed:', err);
+      alert('Failed to mark as fixed');
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -222,12 +374,12 @@ export function FlaggedQuestionEditor({ question, onUpdate, onClearFlag, onGoToT
                 Edit
               </button>
               <button
-                onClick={clearFlag}
+                onClick={markAsFixed}
                 className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2 font-semibold text-sm"
-                title="Mark as fixed and clear flag"
+                title="Save changes and mark as fixed"
               >
                 <FontAwesomeIcon icon={faCheckCircle} />
-                Fixed
+                Mark as Fixed
               </button>
             </>
           )}
@@ -249,6 +401,94 @@ export function FlaggedQuestionEditor({ question, onUpdate, onClearFlag, onGoToT
             <p className="text-gray-800 font-medium whitespace-pre-wrap leading-relaxed">
               {reviewData.notes}
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Passage (if this question has one) */}
+      {passage && (
+        <div className="mb-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg p-5 border-2 border-amber-200">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xl">📖</span>
+                {isEditing ? (
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold text-amber-800 mb-1">Passage Title (IT):</p>
+                    <input
+                      type="text"
+                      value={editedData.passage_title}
+                      onChange={(e) => setEditedData({ ...editedData, passage_title: e.target.value })}
+                      className="w-full p-2 border-2 border-amber-300 rounded font-semibold text-amber-900"
+                      placeholder="Italian title"
+                    />
+                    <p className="text-xs font-semibold text-amber-800 mb-1 mt-2">Passage Title (EN):</p>
+                    <input
+                      type="text"
+                      value={editedData.passage_title_eng}
+                      onChange={(e) => setEditedData({ ...editedData, passage_title_eng: e.target.value })}
+                      className="w-full p-2 border-2 border-amber-300 rounded font-semibold text-amber-900"
+                      placeholder="English title"
+                    />
+                  </div>
+                ) : (
+                  <h3 className="font-bold text-amber-900">
+                    {passage.passage_title || 'Reading Passage'}
+                  </h3>
+                )}
+              </div>
+            </div>
+            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded whitespace-nowrap ml-2">
+              For Q: {passage.question_numbers.join(', ')}
+            </span>
+          </div>
+
+          {/* Italian Passage */}
+          <div className="mb-3">
+            <p className="text-xs font-semibold text-amber-800 mb-2">🇮🇹 Italian:</p>
+            {isEditing ? (
+              <textarea
+                value={editedData.passage_text}
+                onChange={(e) => setEditedData({ ...editedData, passage_text: e.target.value })}
+                className="w-full p-3 border-2 border-amber-300 rounded-lg font-mono text-sm bg-white"
+                rows={8}
+                placeholder="Italian passage text..."
+              />
+            ) : (
+              <div className="bg-white rounded-lg p-4 text-gray-700 overflow-x-auto border-2 border-amber-200">
+                <div className="whitespace-pre-wrap">
+                  <MathJaxRenderer>
+                    {passage.passage_text || ''}
+                  </MathJaxRenderer>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* English Passage */}
+          <div>
+            <p className="text-xs font-semibold text-amber-800 mb-2">🇬🇧 English:</p>
+            {isEditing ? (
+              <textarea
+                value={editedData.passage_text_eng}
+                onChange={(e) => setEditedData({ ...editedData, passage_text_eng: e.target.value })}
+                className="w-full p-3 border-2 border-amber-300 rounded-lg font-mono text-sm bg-white"
+                rows={8}
+                placeholder="English passage text..."
+              />
+            ) : passage.passage_text_eng ? (
+              <div className="bg-white rounded-lg p-4 text-gray-700 overflow-x-auto border-2 border-amber-200">
+                <div className="whitespace-pre-wrap">
+                  <MathJaxRenderer>
+                    {passage.passage_text_eng}
+                  </MathJaxRenderer>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg p-4 text-gray-400 italic border-2 border-amber-200">
+                No English translation available
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -280,21 +520,51 @@ export function FlaggedQuestionEditor({ question, onUpdate, onClearFlag, onGoToT
           </div>
         )}
 
-        {/* Question Image */}
-        {editedData.image_url && (
-          <div className="mt-3 relative inline-block">
-            <img
-              src={editedData.image_url}
-              alt="Question"
-              className="max-w-full max-h-80 rounded-lg border-2 border-gray-300 object-contain"
-            />
-            {isEditing && (
-              <button
-                onClick={() => removeImage('question')}
-                className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600 shadow-lg"
-              >
-                <FontAwesomeIcon icon={faTimes} />
-              </button>
+        {/* Question Images */}
+        {(editedData.image_url || editedData.image_url_eng) && (
+          <div className="mt-3 space-y-3">
+            {/* Italian Image */}
+            {editedData.image_url && (
+              <div>
+                <p className="text-xs font-semibold text-gray-600 mb-1">🇮🇹 Italian Image:</p>
+                <div className="relative inline-block">
+                  <img
+                    src={editedData.image_url}
+                    alt="Question (IT)"
+                    className="max-w-full max-h-80 rounded-lg border-2 border-blue-300 object-contain"
+                  />
+                  {isEditing && (
+                    <button
+                      onClick={() => setEditedData({ ...editedData, image_url: '' })}
+                      className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600 shadow-lg"
+                    >
+                      <FontAwesomeIcon icon={faTimes} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* English Image */}
+            {editedData.image_url_eng && (
+              <div>
+                <p className="text-xs font-semibold text-gray-600 mb-1">🇬🇧 English Image:</p>
+                <div className="relative inline-block">
+                  <img
+                    src={editedData.image_url_eng}
+                    alt="Question (EN)"
+                    className="max-w-full max-h-80 rounded-lg border-2 border-green-300 object-contain"
+                  />
+                  {isEditing && (
+                    <button
+                      onClick={() => setEditedData({ ...editedData, image_url_eng: '' })}
+                      className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600 shadow-lg"
+                    >
+                      <FontAwesomeIcon icon={faTimes} />
+                    </button>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         )}
@@ -362,21 +632,59 @@ export function FlaggedQuestionEditor({ question, onUpdate, onClearFlag, onGoToT
                   )}
                 </div>
 
-                {/* Option Image */}
-                {editedData.image_options?.[key] && (
-                  <div className="mt-2 relative inline-block">
-                    <img
-                      src={editedData.image_options[key]}
-                      alt={`Option ${key.toUpperCase()}`}
-                      className="max-w-xs max-h-48 rounded border-2 border-gray-300 object-contain"
-                    />
-                    {isEditing && (
-                      <button
-                        onClick={() => removeImage(key)}
-                        className="absolute top-1 right-1 bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600 shadow-lg"
-                      >
-                        <FontAwesomeIcon icon={faTimes} />
-                      </button>
+                {/* Option Images */}
+                {(editedData.image_options?.[key] || editedData.image_options_eng?.[key]) && (
+                  <div className="mt-2 space-y-2">
+                    {/* Italian Option Image */}
+                    {editedData.image_options?.[key] && (
+                      <div>
+                        <p className="text-xs font-semibold text-gray-600 mb-1">🇮🇹 Italian Image:</p>
+                        <div className="relative inline-block">
+                          <img
+                            src={editedData.image_options[key]}
+                            alt={`Option ${key.toUpperCase()} (IT)`}
+                            className="max-w-xs max-h-48 rounded border-2 border-blue-300 object-contain"
+                          />
+                          {isEditing && (
+                            <button
+                              onClick={() => {
+                                const newImageOptions = { ...editedData.image_options };
+                                delete newImageOptions[key];
+                                setEditedData({ ...editedData, image_options: newImageOptions });
+                              }}
+                              className="absolute top-1 right-1 bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600 shadow-lg"
+                            >
+                              <FontAwesomeIcon icon={faTimes} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* English Option Image */}
+                    {editedData.image_options_eng?.[key] && (
+                      <div>
+                        <p className="text-xs font-semibold text-gray-600 mb-1">🇬🇧 English Image:</p>
+                        <div className="relative inline-block">
+                          <img
+                            src={editedData.image_options_eng[key]}
+                            alt={`Option ${key.toUpperCase()} (EN)`}
+                            className="max-w-xs max-h-48 rounded border-2 border-green-300 object-contain"
+                          />
+                          {isEditing && (
+                            <button
+                              onClick={() => {
+                                const newImageOptionsEng = { ...editedData.image_options_eng };
+                                delete newImageOptionsEng[key];
+                                setEditedData({ ...editedData, image_options_eng: newImageOptionsEng });
+                              }}
+                              className="absolute top-1 right-1 bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600 shadow-lg"
+                            >
+                              <FontAwesomeIcon icon={faTimes} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     )}
                   </div>
                 )}
@@ -420,17 +728,6 @@ export function FlaggedQuestionEditor({ question, onUpdate, onClearFlag, onGoToT
                     )}
                   </div>
                 </div>
-
-                {/* Option Image (shared with IT options) */}
-                {editedData.image_options?.[key] && (
-                  <div className="mt-2 relative inline-block">
-                    <img
-                      src={editedData.image_options[key]}
-                      alt={`Option ${key.toUpperCase()}`}
-                      className="max-w-xs max-h-48 rounded border-2 border-gray-300 object-contain"
-                    />
-                  </div>
-                )}
               </div>
               );
             })}
@@ -494,6 +791,43 @@ export function FlaggedQuestionEditor({ question, onUpdate, onClearFlag, onGoToT
             </div>
 
             <div className="space-y-4">
+              {/* Language Selector */}
+              <div className="mb-4 p-4 bg-blue-50 border-2 border-blue-300 rounded-lg">
+                <p className="text-sm font-semibold text-blue-800 mb-2">
+                  🌐 Select Language Version
+                </p>
+                <p className="text-xs text-blue-700 mb-3">
+                  Choose which language this image is for.
+                </p>
+                <div className="flex gap-3 mb-3">
+                  <button
+                    onClick={() => setSelectedImageLanguage('ita')}
+                    className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-colors ${
+                      selectedImageLanguage === 'ita'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                    }`}
+                  >
+                    🇮🇹 Italian
+                  </button>
+                  <button
+                    onClick={() => setSelectedImageLanguage('eng')}
+                    className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-colors ${
+                      selectedImageLanguage === 'eng'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                    }`}
+                  >
+                    🇬🇧 English
+                  </button>
+                </div>
+                <div className="text-center">
+                  <span className="text-xs font-bold text-blue-900">
+                    Currently selected: {selectedImageLanguage === 'ita' ? '🇮🇹 ITALIAN' : '🇬🇧 ENGLISH'}
+                  </span>
+                </div>
+              </div>
+
               {/* File Upload */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
