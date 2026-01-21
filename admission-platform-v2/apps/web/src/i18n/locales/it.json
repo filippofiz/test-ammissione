@@ -181,7 +181,14 @@
     "yesLockIt": "Sì, Bloccalo",
     "min": "min",
     "attempt": "Tentativo",
-    "of": "di"
+    "of": "di",
+    "scoringInfo": {
+      "title": "Come Vengono Calcolati i Punteggi",
+      "scoreDefinition": "Punteggio: Numero di risposte corrette / Totale domande nel test",
+      "percentageDefinition": "Percentuale: (Risposte corrette ÷ Totale domande) × 100",
+      "passDefinition": "✓ SUPERATO: Percentuale ≥ 75%",
+      "failDefinition": "✗ NON SUPERATO: Percentuale < 75%"
+    }
   },
   "testManagement": {
     "title": "Gestione Test",
@@ -347,7 +354,9 @@
     "thankYou": "Grazie per aver completato il test",
     "testLocked": "Test Bloccato",
     "testLockedMessage": "Questo test è stato completato ed è ora bloccato. Contatta il tuo tutor per sbloccarlo se hai bisogno di ripeterlo.",
-    "backToHome": "Torna alla Home"
+    "backToHome": "Torna alla Home",
+    "submittingTest": "Invio Test in Corso...",
+    "pleaseWait": "Attendere mentre salviamo le tue risposte..."
   },
   "common": {
     "loading": "Caricamento...",

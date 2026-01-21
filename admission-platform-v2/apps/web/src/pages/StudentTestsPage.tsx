@@ -31,6 +31,7 @@ import {
   faChalkboardTeacher,
   faStopwatch,
   faInfinity,
+  faInfoCircle,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import { supabase } from '../lib/supabase';
@@ -177,6 +178,8 @@ interface TestAssignment {
   score: number | null;
   percentage_score: number | null;
   bocconi_score: number | null;
+  correct_count: number | null;  // Number of correct answers
+  total_questions: number | null;  // Total questions in test
   current_attempt: number;
   total_attempts: number;
   test_name: string;
@@ -505,11 +508,14 @@ export default function StudentTestsPage() {
       // For each assignment, check the question_type distribution and calculate score
       const assignmentWithFormat = await Promise.all(
         (assignmentData || []).map(async (assignment: any) => {
-          // Count question types for this test
+          // Count question types for this test (check test_id OR additional_test_ids)
           const { data: questions } = await supabase
             .from('2V_questions')
             .select('id, question_type')
-            .eq('test_id', assignment.test_id);
+            .or(`test_id.eq.${assignment.test_id},additional_test_ids.cs.["${assignment.test_id}"]`);
+
+          // Get ACTUAL total questions from test definition (ground truth)
+          const actualTotalQuestions = questions?.length || 0;
 
           // Determine format based on question types
           let format: 'pdf' | 'interactive' | 'mixed' = 'pdf';
@@ -688,7 +694,17 @@ export default function StudentTestsPage() {
                           // EXACT logic from TestResultsPage calculateScaledScores (line 863-980)
                           const penaltyBlank = parseFloat(algoConfig.penalty_for_blank || '0');
                           let totalRawScore = 0;
-                          let totalQuestions = results.length;
+
+                          // Get total questions from completion_details OR test definition (ground truth)
+                          let totalQuestions = actualTotalQuestions; // Use test definition as fallback
+                          if (assignment.completion_details?.attempts) {
+                            const attemptData = assignment.completion_details.attempts.find(
+                              (a: any) => a.attempt_number === attemptToLoad
+                            );
+                            if (attemptData?.total_questions) {
+                              totalQuestions = attemptData.total_questions;
+                            }
+                          }
 
                           // Helper to count options (line 914-921)
                           const countOptions = (question: any): number => {
@@ -733,9 +749,30 @@ export default function StudentTestsPage() {
                     }
 
                     // Simple percentage for all tests
+                    // Get total questions from completion_details OR test definition (ground truth)
+                    let totalTestQuestions = actualTotalQuestions; // Use test definition as fallback
+                    if (assignment.completion_details?.attempts) {
+                      const attemptData = assignment.completion_details.attempts.find(
+                        (a: any) => a.attempt_number === attemptToLoad
+                      );
+                      if (attemptData?.total_questions) {
+                        totalTestQuestions = attemptData.total_questions;
+                      }
+                    }
+
                     const correctCount = results.filter(r => r.isCorrect).length;
-                    percentageScore = Math.round((correctCount / results.length) * 100);
-                    console.log(`📊 Scores - Percentage: ${percentageScore}% (${correctCount}/${results.length}), Bocconi: ${bocconiScore}/50`);
+                    percentageScore = Math.round((correctCount / totalTestQuestions) * 100);
+                    console.log(`📊 Scores - Percentage: ${percentageScore}% (${correctCount}/${totalTestQuestions}), Bocconi: ${bocconiScore}/50`);
+
+                    // Store correct count and total for display
+                    return {
+                      ...assignment,
+                      question_format: format,
+                      percentage_score: percentageScore,
+                      bocconi_score: bocconiScore,
+                      correct_count: correctCount,
+                      total_questions: totalTestQuestions
+                    };
                   }
                 }
               }
@@ -753,7 +790,9 @@ export default function StudentTestsPage() {
             ...assignment,
             question_format: format,
             percentage_score: percentageScore,
-            bocconi_score: bocconiScore
+            bocconi_score: bocconiScore,
+            correct_count: null,
+            total_questions: null
           };
         })
       );
@@ -786,6 +825,8 @@ export default function StudentTestsPage() {
           score: row.percentage_score, // Simple percentage for backwards compatibility
           percentage_score: row.percentage_score,
           bocconi_score: row.bocconi_score,
+          correct_count: row.correct_count,
+          total_questions: row.total_questions,
           current_attempt: row.current_attempt || 1,
           total_attempts: row.total_attempts || 0,
           test_name: testName,
@@ -1258,6 +1299,22 @@ export default function StudentTestsPage() {
             </div>
           )}
 
+          {/* Scoring Info Note */}
+          <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 mb-6 animate-fadeInUp">
+            <div className="flex items-start gap-3">
+              <FontAwesomeIcon icon={faInfoCircle} className="text-blue-600 text-xl mt-0.5" />
+              <div className="flex-1">
+                <h4 className="font-bold text-blue-900 mb-2">{t('studentTests.scoringInfo.title')}</h4>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• {t('studentTests.scoringInfo.scoreDefinition')}</li>
+                  <li>• {t('studentTests.scoringInfo.percentageDefinition')}</li>
+                  <li>• {t('studentTests.scoringInfo.passDefinition')}</li>
+                  <li>• {t('studentTests.scoringInfo.failDefinition')}</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
           {/* Note: Tests are now auto-assigned when student visits this page */}
 
           {/* Tests List */}
@@ -1278,8 +1335,8 @@ export default function StudentTestsPage() {
                 return sortedSections.map((section, sectionIndex) => {
                   const sectionTests = grouped[section];
                   const isExpanded = expandedSections.has(section);
-                  // Backward compatible: check completion_status first, then fall back to status
-                  const sectionCompleted = sectionTests.filter(t => t.completion_status?.startsWith('completed') || t.status === 'completed').length;
+                  // Count tests with results (regardless of status)
+                  const sectionCompleted = sectionTests.filter(t => t.correct_count !== null && t.total_questions !== null).length;
                   const sectionProgress = sectionTests.length > 0
                     ? Math.round((sectionCompleted / sectionTests.length) * 100)
                     : 0;
@@ -1302,43 +1359,86 @@ export default function StudentTestsPage() {
                           />
                           <h3 className="text-xl font-bold text-brand-dark">{translatedSections[section] || section}</h3>
                         </div>
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          {/* Show percentage badges for each completed test */}
                           {(() => {
-                            // Calculate average score for completed tests in this section
-                            const isBocconi = testType.toUpperCase() === 'BOCCONI' || testType.toUpperCase() === 'BOCCONI LAW';
-                            const completedTests = sectionTests.filter(t => isBocconi ? t.bocconi_score !== null : t.score !== null);
-                            const avgScore = completedTests.length > 0
-                              ? isBocconi
-                                ? (completedTests.reduce((sum, t) => sum + (t.bocconi_score || 0), 0) / completedTests.length).toFixed(1)
-                                : Math.round(completedTests.reduce((sum, t) => sum + (t.score || 0), 0) / completedTests.length)
+                            const completedTests = sectionTests
+                              .filter(t => t.correct_count !== null && t.total_questions !== null)
+                              .sort((a, b) => {
+                                // Sort: Training first, then Assessments, both by test_number
+                                const aIsTraining = a.exercise_type.toLowerCase().includes('training');
+                                const bIsTraining = b.exercise_type.toLowerCase().includes('training');
+
+                                if (aIsTraining && !bIsTraining) return -1; // Training before Assessment
+                                if (!aIsTraining && bIsTraining) return 1;  // Assessment after Training
+
+                                return a.test_number - b.test_number; // Same type: sort by number
+                              });
+
+                            const trainingTests = completedTests.filter(t => t.exercise_type.toLowerCase().includes('training'));
+                            const simulazioniTests = completedTests.filter(t => t.exercise_type.toLowerCase().includes('simulazion'));
+                            const assessmentTests = completedTests.filter(t =>
+                              !t.exercise_type.toLowerCase().includes('training') &&
+                              !t.exercise_type.toLowerCase().includes('simulazion')
+                            );
+
+                            // Find the last (highest test_number) simulazione
+                            const lastSimulazioneNumber = simulazioniTests.length > 0
+                              ? Math.max(...simulazioniTests.map(t => t.test_number))
                               : null;
 
-                            return (
-                              <>
-                                {avgScore !== null && (
-                                  <span className="text-sm font-semibold text-brand-green flex items-center gap-1">
-                                    {isBocconi ? (
-                                      <span>{avgScore}/50</span>
-                                    ) : (
-                                      <>
-                                        <FontAwesomeIcon icon={faPercent} className="text-xs" />
-                                        {avgScore}%
-                                      </>
-                                    )}
-                                  </span>
-                                )}
-                                <span className="text-sm text-gray-600">
-                                  {sectionCompleted}/{sectionTests.length}
+                            return completedTests.map((test, idx) => {
+                              const percentage = Math.round((test.correct_count! / test.total_questions!) * 100);
+                              const isPassing = percentage >= 75;
+                              const isTraining = test.exercise_type.toLowerCase().includes('training');
+                              const isSimulazioni = test.exercise_type.toLowerCase().includes('simulazion');
+                              const isAssessment = !isTraining && !isSimulazioni;
+
+                              // Only highlight the LAST simulazione
+                              const isLastSimulazione = isSimulazioni && test.test_number === lastSimulazioneNumber;
+
+                              // Label logic:
+                              // - If only 1 training, use "T", otherwise "T1", "T2"...
+                              // - If only 1 simulazioni, use "S", otherwise "S1", "S2"...
+                              // - If only 1 assessment, use "A", otherwise "A1", "A2"...
+                              let label = '';
+                              if (isTraining) {
+                                label = trainingTests.length > 1 ? `T${test.test_number}` : 'T';
+                              } else if (isSimulazioni) {
+                                label = simulazioniTests.length > 1 ? `S${test.test_number}` : 'S';
+                              } else {
+                                label = assessmentTests.length > 1 ? `A${test.test_number}` : 'A';
+                              }
+
+                              return (
+                                <span
+                                  key={test.id}
+                                  className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                                    isAssessment || isLastSimulazione
+                                      ? isPassing
+                                        ? 'bg-purple-100 text-purple-700 border-2 border-purple-400 ring-2 ring-purple-200'
+                                        : 'bg-orange-100 text-orange-700 border-2 border-orange-400 ring-2 ring-orange-200'
+                                      : isPassing
+                                        ? 'bg-green-100 text-green-700'
+                                        : 'bg-red-100 text-red-700'
+                                  }`}
+                                  title={test.test_name}
+                                >
+                                  {label}: {percentage}%
                                 </span>
-                                <div className="w-32 bg-gray-200 rounded-full h-2">
-                                  <div
-                                    className="bg-gradient-to-r from-brand-green to-green-600 h-2 rounded-full"
-                                    style={{ width: `${sectionProgress}%` }}
-                                  />
-                                </div>
-                              </>
-                            );
+                              );
+                            });
                           })()}
+
+                          <span className="text-sm text-gray-600 ml-auto">
+                            {sectionCompleted}/{sectionTests.length}
+                          </span>
+                          <div className="w-32 bg-gray-200 rounded-full h-2">
+                            <div
+                              className="bg-gradient-to-r from-brand-green to-green-600 h-2 rounded-full"
+                              style={{ width: `${sectionProgress}%` }}
+                            />
+                          </div>
                         </div>
                       </button>
 
@@ -1431,19 +1531,25 @@ export default function StudentTestsPage() {
                                           <span>{t('studentTests.completedAt')}: {formatDate(assignment.completed_at)}</span>
                                         </div>
                                       )}
-                                      {/* Show Bocconi score for Bocconi and Bocconi Law tests, percentage for others */}
-                                      {(assignment.test_type.toUpperCase() === 'BOCCONI' || assignment.test_type.toUpperCase() === 'BOCCONI LAW') && assignment.bocconi_score !== null && (
+                                      {/* Show correct/total for all completed tests */}
+                                      {assignment.correct_count !== null && assignment.total_questions !== null && (
                                         <div className="flex items-center gap-2">
                                           <div className="font-bold text-brand-dark">
-                                            {t('studentTests.score')}: {assignment.bocconi_score}/50
+                                            {t('studentTests.score')}: {assignment.correct_count}/{assignment.total_questions} ({Math.round((assignment.correct_count / assignment.total_questions) * 100)}%)
                                           </div>
-                                          <span className={`text-xs font-semibold px-2 py-1 rounded ${
-                                            assignment.bocconi_score >= 30
-                                              ? 'bg-green-100 text-green-700'
-                                              : 'bg-red-100 text-red-700'
-                                          }`}>
-                                            {assignment.bocconi_score >= 30 ? '✓ PASS' : '✗ FAIL'}
-                                          </span>
+                                          {(() => {
+                                            const percentage = Math.round((assignment.correct_count / assignment.total_questions) * 100);
+                                            const isPassing = percentage >= 75;
+                                            return (
+                                              <span className={`text-xs font-semibold px-2 py-1 rounded ${
+                                                isPassing
+                                                ? 'bg-green-100 text-green-700'
+                                                : 'bg-red-100 text-red-700'
+                                              }`}>
+                                                {isPassing ? '✓ PASS' : '✗ FAIL'}
+                                              </span>
+                                            );
+                                          })()}
                                         </div>
                                       )}
                                       {assignment.test_type.toUpperCase() !== 'BOCCONI' && assignment.test_type.toUpperCase() !== 'BOCCONI LAW' && assignment.score !== null && (

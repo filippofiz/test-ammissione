@@ -181,7 +181,14 @@
     "yesLockIt": "Yes, Lock It",
     "min": "min",
     "attempt": "Attempt",
-    "of": "of"
+    "of": "of",
+    "scoringInfo": {
+      "title": "How Scores Are Calculated",
+      "scoreDefinition": "Score: Number of correct answers / Total questions in test",
+      "percentageDefinition": "Percentage: (Correct answers ÷ Total questions) × 100",
+      "passDefinition": "✓ PASS: Percentage ≥ 75%",
+      "failDefinition": "✗ FAIL: Percentage < 75%"
+    }
   },
   "testManagement": {
     "title": "Test Management",
@@ -345,7 +352,9 @@
     "cannotChangeMore": "You cannot change any more answers in this section",
     "testLocked": "Test Locked",
     "testLockedMessage": "This test has been completed and is now locked. Contact your tutor to unlock it if you need to retake the test.",
-    "backToHome": "Back to Home"
+    "backToHome": "Back to Home",
+    "submittingTest": "Submitting Test...",
+    "pleaseWait": "Please wait while we save your answers..."
   },
   "common": {
     "loading": "Loading...",
