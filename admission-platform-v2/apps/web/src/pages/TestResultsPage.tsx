@@ -1370,8 +1370,14 @@ export default function TestResultsPage() {
           </button>
         </div>
 
-        {/* Score Report - Based on Algorithm Config */}
+        {/* Score Report - Based on Algorithm Config (only for Bocconi tests) */}
         {(() => {
+          // Only show score report for Bocconi tests
+          const testType = assignment?.['2V_tests']?.test_type || '';
+          const isBocconiTest = testType.toUpperCase() === 'BOCCONI' || testType.toUpperCase() === 'BOCCONI LAW';
+
+          if (!isBocconiTest) return null;
+
           const scaledScores = calculateScaledScores();
           if (!scaledScores) return null;
 
