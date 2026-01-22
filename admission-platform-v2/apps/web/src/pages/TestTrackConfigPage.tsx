@@ -69,7 +69,7 @@ interface AdaptiveValidation {
 export default function TestTrackConfigPage() {
   const { testType } = useParams<{ testType: string }>();
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
 
   const [trackTypes, setTrackTypes] = useState<Array<{ value: string; label: string; hasConfig: boolean }>>([]);
   const [selectedTrack, setSelectedTrack] = useState<string>('');
@@ -107,7 +107,7 @@ export default function TestTrackConfigPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [sections, setSections] = useState<string[]>([]);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const [sectionTimes, setSectionTimes] = useState<Record<string, number>>({});
+  const [, setSectionTimes] = useState<Record<string, number>>({});
   const [adaptiveValidation, setAdaptiveValidation] = useState<AdaptiveValidation | null>(null);
   const [validatingAdaptive, setValidatingAdaptive] = useState(false);
 
@@ -136,17 +136,17 @@ export default function TestTrackConfigPage() {
     section: string;
     exercise_type: string;
     test_number: number;
-    default_duration_mins: number;
+    default_duration_mins: number | null;
   }>>([]);
 
   // Track which sections have varying times
-  const [sectionsWithVariations, setSectionsWithVariations] = useState<Set<string>>(new Set());
+  const [, setSectionsWithVariations] = useState<Set<string>>(new Set());
 
   // Track if we're showing individual test durations
   const [showDurationDetails, setShowDurationDetails] = useState(false);
 
-  // Track editing state for durations
-  const [editingDuration, setEditingDuration] = useState<string>('');
+  // Track editing state for durations (reserved for future use)
+  const [, ] = useState<string>('');
 
   // Track section duration allocation mode
   const [sectionDurationMode, setSectionDurationMode] = useState<'proportional' | 'specific'>('proportional');
@@ -164,10 +164,17 @@ export default function TestTrackConfigPage() {
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   // Algorithms from library
-  const [algorithms, setAlgorithms] = useState<Array<{ id: string; algorithm_type: string; display_name?: string; description?: string }>>([]);
+  const [algorithms, setAlgorithms] = useState<Array<{ id: string; algorithm_type: string; display_name: string | null; description: string | null }>>([]);
+
+  // Redirect GMAT to dedicated config page
+  useEffect(() => {
+    if (testType === 'GMAT') {
+      navigate('/tutor/gmat-config', { replace: true });
+    }
+  }, [testType, navigate]);
 
   useEffect(() => {
-    if (testType) {
+    if (testType && testType !== 'GMAT') {
       loadTrackTypes();
     }
   }, [testType]);
@@ -289,7 +296,7 @@ export default function TestTrackConfigPage() {
       const { data: questions, error } = await supabase
         .from('2V_questions')
         .select('id, difficulty')
-        .eq('test_type', testType);
+        .eq('test_type', testType || '');
 
       if (error) {
         setValidatingAdaptive(false);
@@ -386,7 +393,7 @@ export default function TestTrackConfigPage() {
       const { data: trackTestsData, error: trackTestsError } = await supabase
         .from('2V_tests')
         .select('id')
-        .eq('test_type', testType)
+        .eq('test_type', testType || '')
         .eq('exercise_type', selectedTrack);  // Filter by the specific track (e.g., 'Assessment Iniziale')
 
       if (trackTestsError) throw trackTestsError;
@@ -409,7 +416,7 @@ export default function TestTrackConfigPage() {
       const { data: sectionOrderData, error: sectionOrderError } = await supabase
         .from('2V_section_order')
         .select('section_order')
-        .eq('test_type', testType)
+        .eq('test_type', testType || '')
         .single();
 
       if (sectionOrderError && sectionOrderError.code !== 'PGRST116') {
@@ -418,21 +425,21 @@ export default function TestTrackConfigPage() {
       }
 
       // Order the sections according to 2V_section_order if available
-      if (sectionOrderData && sectionOrderData.section_order && sectionOrderData.section_order.length > 0) {
-        const globalOrder = sectionOrderData.section_order;
-        const uniqueSectionsSet = new Set(uniqueSections);
+      if (sectionOrderData && sectionOrderData.section_order && Array.isArray(sectionOrderData.section_order) && sectionOrderData.section_order.length > 0) {
+        const globalOrder = (sectionOrderData.section_order as (string | null)[]).filter((s): s is string => s !== null);
+        const uniqueSectionsSet = new Set(uniqueSections as string[]);
 
         // Filter global order to only include sections that exist in this track
-        const orderedSections = globalOrder.filter(section => uniqueSectionsSet.has(section));
+        const orderedSections = globalOrder.filter((section): section is string => uniqueSectionsSet.has(section));
 
         // Add any sections that exist in the track but not in global order (append at end)
         const sectionsInOrder = new Set(orderedSections);
-        const missingSections = uniqueSections.filter(section => !sectionsInOrder.has(section));
+        const missingSections = (uniqueSections as string[]).filter(section => !sectionsInOrder.has(section));
 
         setSections([...orderedSections, ...missingSections.sort()]);
       } else {
         // No global order found, use alphabetical sort
-        setSections(uniqueSections.sort());
+        setSections((uniqueSections as string[]).sort());
       }
 
       // Get tests for this test type and exercise type for time information
@@ -451,7 +458,7 @@ export default function TestTrackConfigPage() {
         const { data: multiTopicData, error: multiTopicError } = await supabase
           .from('2V_tests')
           .select('id, test_type, section, exercise_type, test_number, default_duration_mins')
-          .eq('test_type', testType)
+          .eq('test_type', testType || '')
           .eq('exercise_type', normalizedTrackName)
           .eq('section', 'Multi-topic');
 
@@ -465,7 +472,7 @@ export default function TestTrackConfigPage() {
           const { data: allData, error: allError } = await supabase
             .from('2V_tests')
             .select('id, test_type, section, exercise_type, test_number, default_duration_mins')
-            .eq('test_type', testType)
+            .eq('test_type', testType || '')
             .eq('exercise_type', normalizedTrackName);
 
           testsData = allData;
@@ -476,7 +483,7 @@ export default function TestTrackConfigPage() {
         const { data, error } = await supabase
           .from('2V_tests')
           .select('id, test_type, section, exercise_type, test_number, default_duration_mins')
-          .eq('test_type', testType)
+          .eq('test_type', testType || '')
           .eq('exercise_type', normalizedTrackName);
 
         testsData = data;
@@ -573,7 +580,7 @@ export default function TestTrackConfigPage() {
       const { data, error } = await supabase
         .from('2V_test_track_config')
         .select('track_type')
-        .eq('test_type', testType);
+        .eq('test_type', testType || '');
 
       if (error) throw error;
 
@@ -622,7 +629,7 @@ export default function TestTrackConfigPage() {
       const { data, error } = await supabase
         .from('2V_test_track_config')
         .select('*')
-        .eq('test_type', testType)
+        .eq('test_type', testType || '')
         .eq('track_type', selectedTrack)
         .maybeSingle();
 
@@ -646,9 +653,9 @@ export default function TestTrackConfigPage() {
         setUseMacroSections(detectedUseMacroSections);
 
         // Detect if using section adaptivity
-        if (data.section_adaptivity_config && Object.keys(data.section_adaptivity_config).length > 0) {
+        if (data.section_adaptivity_config && typeof data.section_adaptivity_config === 'object' && Object.keys(data.section_adaptivity_config).length > 0) {
           setUseSectionAdaptivity(true);
-          setSectionAdaptivityConfig(data.section_adaptivity_config);
+          setSectionAdaptivityConfig(data.section_adaptivity_config as Record<string, { type: 'base' | 'adaptive'; difficulty?: string }>);
           if (data.difficulty_levels_count) {
             setDifficultyLevelsCount(data.difficulty_levels_count);
           }
@@ -658,8 +665,19 @@ export default function TestTrackConfigPage() {
         // Normalize section_order_mode to base value for easier UI handling
         setConfig({
           ...data,
-          section_order_mode: normalizedMode
-        });
+          section_order_mode: normalizedMode as TestTrackConfig['section_order_mode'],
+          navigation_mode: (data.navigation_mode || 'forward_only') as TestTrackConfig['navigation_mode'],
+          navigation_between_sections: (data.navigation_between_sections || 'forward_only') as TestTrackConfig['navigation_between_sections'],
+          pause_mode: (data.pause_mode || 'between_sections') as TestTrackConfig['pause_mode'],
+          question_order: (data.question_order || 'sequential') as TestTrackConfig['question_order'],
+          adaptivity_mode: (data.adaptivity_mode || 'non_adaptive') as TestTrackConfig['adaptivity_mode'],
+          base_questions_scope: (data.base_questions_scope || 'entire_test') as TestTrackConfig['base_questions_scope'],
+          time_per_section: data.time_per_section as Record<string, number> | null,
+          questions_per_section: data.questions_per_section as Record<string, number> | undefined,
+          section_adaptivity_config: data.section_adaptivity_config as Record<string, { type: 'base' | 'adaptive'; difficulty?: string }> | null,
+          training_config: data.training_config,
+          assessment_mono_config: data.assessment_mono_config,
+        } as TestTrackConfig);
 
         // Auto-detect if test has sections based on section_order_mode
         if (data.section_order_mode === 'no_sections') {
@@ -678,7 +696,7 @@ export default function TestTrackConfigPage() {
           setTotalTimeMinutes(data.total_time_minutes);
         }
         if (data.time_per_section) {
-          setSpecificSectionDurations(data.time_per_section);
+          setSpecificSectionDurations(data.time_per_section as Record<string, number>);
           setSectionDurationMode('specific');
         } else {
           setSectionDurationMode('proportional');
@@ -686,7 +704,7 @@ export default function TestTrackConfigPage() {
 
         // Load questions per section
         if (data.questions_per_section) {
-          setQuestionsPerSection(data.questions_per_section);
+          setQuestionsPerSection(data.questions_per_section as Record<string, number>);
         }
       } else {
         // Set defaults
@@ -962,7 +980,7 @@ export default function TestTrackConfigPage() {
                           const { error } = await supabase
                             .from('2V_test_track_config')
                             .insert({
-                              test_type: testType,
+                              test_type: testType || '',
                               track_type: track.value,
                               section_order_mode: 'mandatory',
                               navigation_mode: 'forward_only',
@@ -1041,7 +1059,7 @@ export default function TestTrackConfigPage() {
                                 const { data: sourceConfig } = await supabase
                                   .from('2V_test_track_config')
                                   .select('*')
-                                  .eq('test_type', testType)
+                                  .eq('test_type', testType || '')
                                   .eq('track_type', copyFrom)
                                   .single();
 
@@ -1070,7 +1088,7 @@ export default function TestTrackConfigPage() {
                             const { error } = await supabase
                               .from('2V_test_track_config')
                               .insert({
-                                test_type: testType,
+                                test_type: testType || '',
                                 track_type: track.value,
                                 section_order_mode: 'mandatory',
                                 navigation_mode: 'forward_only',
@@ -1579,7 +1597,7 @@ export default function TestTrackConfigPage() {
                         Mark sections as "Base" (to establish baseline) or "Adaptive" (adjusts difficulty based on performance)
                       </p>
                       <div className="space-y-3">
-                        {sections.map((section, index) => {
+                        {sections.map((section) => {
                           // Generate difficulty level options based on count
                           const difficultyLevels = (() => {
                             if (difficultyLevelsCount === 2) return ['easy', 'hard'];

@@ -31,8 +31,8 @@ import * as fs from 'fs';
 
 // Load environment variables
 const possibleEnvPaths = [
+  path.resolve(__dirname, '../../.env'),  // admission-platform-v2/.env (prioritize this)
   path.resolve(process.cwd(), '.env'),
-  path.resolve(__dirname, '../../.env'),
   path.resolve(__dirname, '../../../.env'),
 ];
 

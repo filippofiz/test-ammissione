@@ -221,8 +221,15 @@ export default function StudentTestsPage() {
   const [startTestMode, setStartTestMode] = useState<'student' | 'guided'>('student');
   const [guidedTimed, setGuidedTimed] = useState(true);
 
+  // Redirect GMAT to the dedicated GMAT preparation page
   useEffect(() => {
-    if (studentId && testType) {
+    if (testType === 'GMAT' && studentId) {
+      navigate(`/tutor/student/${studentId}/gmat-preparation`, { replace: true });
+    }
+  }, [testType, studentId, navigate]);
+
+  useEffect(() => {
+    if (studentId && testType && testType !== 'GMAT') {
       loadData();
     }
   }, [studentId, testType]);

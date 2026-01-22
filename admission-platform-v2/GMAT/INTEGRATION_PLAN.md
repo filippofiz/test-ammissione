@@ -119,54 +119,104 @@ Currently these overlap for GMAT causing potential conflicts. Phase 8 isolates G
 
 **Steps:**
 
-- [ ] **8.1** Add GMAT test category system (database)
-  - Add `gmat_test_category` field to `2V_lesson_materials` (or new table)
+- [x] **8.1** Add GMAT test category system (database) ✅
+  - Created migration `037_add_gmat_test_categories.sql`
+  - Added `gmat_test_category` column to `2V_lesson_materials` (NULL allowed)
   - Categories: `placement`, `quick_test`, `training`, `topic_assessment`, `section_assessment`, `mock`
-  - Migration must be non-disruptive (NULL allowed initially)
+  - Created `2V_gmat_assessment_results` table with tutor validation support
+  - Added indexes for fast lookups (pending validations, student results)
+  - Added RLS policies for students (view own) and tutors (full access)
 
-- [ ] **8.2** Update GMATPreparationPage for legacy + new system
-  - Add "Initial Assessment" section showing results from existing Assessment Iniziale
-  - Keep showing cycle-based materials from `2V_lesson_materials`
-  - Clear visual separation between "Initial Phase" and "Cycle-Based Training"
-  - Show assessment results/scores when available
+- [x] **8.2** Update GMATPreparationPage for legacy + new system ✅
+  - Added `getLegacyInitialAssessment()` function to `lib/api/gmat.ts`
+  - Added new types: `LegacyAssessmentResult`, `GmatAssessmentResult`, `GmatAssessmentType`
+  - Added API functions: `getStudentAssessmentResults()`, `getLatestPlacementResult()`, `getPendingValidations()`
+  - GMATPreparationPage now shows "Initial Assessment" section with:
+    - Status badge (Completed/In Progress/Pending)
+    - Score and percentage display
+    - Completion date
+    - "View Results" link to review questions
+  - Added "Cycle-Based Training Materials" section header
+  - Clear visual separation between Initial Assessment and cycle-based materials
 
-- [ ] **8.3** Create dedicated GMAT test configuration page
-  - Replace or modify `/tutor/test-track-config/GMAT` behavior for GMAT
-  - Show GMAT-specific controls (cycle allocation, not generic track config)
-  - Hide generic track configuration UI for GMAT tests
-  - Preserve read-only view of Initial Assessment config (legacy)
+- [x] **8.3** Create dedicated GMAT test configuration page ✅
+  - Created `GMATConfigPage.tsx` at `/tutor/gmat-config`
+  - Added route in `App.tsx` with TUTOR/ADMIN protection
+  - Updated `TestTrackConfigPage.tsx` to redirect GMAT to new page
+  - Updated `TestTypeSelectionPage.tsx` to navigate directly to GMAT config
+  - Features:
+    - Student overview (total count, count by cycle)
+    - Pending cycle validations with tutor approval workflow
+    - Quick actions: Question Allocation, Materials Management, Student Profiles
+    - Legacy configuration display (read-only) for Initial Assessment
 
-- [ ] **8.4** Implement Placement Assessment (auto-assigns cycle)
-  - 45 questions: 15 QR + 15 DI + 15 VR
-  - 5 Easy + 5 Medium + 5 Hard per section
-  - Scoring table from assessment-strategy.md:
-    - 0-17 (0-38%): Foundation Extended
-    - 18-25 (40-55%): Foundation
-    - 26-33 (58-73%): Development
-    - 34-45 (76-100%): Excellence
-  - **Tutor validation required**: Cycle is suggested but NOT auto-applied
-  - Tutor must review results and confirm/override the suggested cycle
-  - Only after tutor validation does `2V_gmat_student_progress.gmat_cycle` get updated
-  - Add `pending_cycle_validation` flag to track unconfirmed assignments
+- [x] **8.4** Implement Placement Assessment (auto-assigns cycle) ✅
+  - Added placement assessment configuration and scoring to `lib/api/gmat.ts`:
+    - `PLACEMENT_CONFIG`: 45 questions (15 per section, 5 Easy + 5 Medium + 5 Hard each)
+    - `PLACEMENT_SCORING`: Thresholds from assessment-strategy.md
+    - `calculateSuggestedCycle()`: Auto-calculates cycle based on score percentage
+    - `getPlacementAssessmentQuestions()`: Fetches balanced questions excluding seen ones
+    - `savePlacementAssessmentResult()`: Saves result with `tutor_validated = false`
+    - `validatePlacementResult()`: Tutor validation function
+    - `hasPendingPlacementValidation()`: Check for pending validation
+  - Updated `GMATPreparationPage.tsx`:
+    - Added "Awaiting Cycle Assignment" banner for pending validations
+    - Shows score, percentage, and suggested cycle while awaiting tutor review
+  - Updated `GMATConfigPage.tsx`:
+    - Refactored to use `validatePlacementResult()` API function
+  - **Tutor validation flow complete**: Student sees "awaiting validation" until tutor confirms
 
-- [ ] **8.5** Implement Section Assessments
+- [x] **8.5** Implement Section Assessments ✅
   - QR: 21 questions, 45 min
   - DI: 20 questions, 45 min
   - VR: 23 questions, 45 min
   - Uses cycle-appropriate difficulty distribution
   - Tracks section readiness for cycle progression
+  - Added to `lib/api/gmat.ts`:
+    - `SECTION_ASSESSMENT_CONFIG`: Question counts and times per section
+    - `SECTION_DIFFICULTY_BY_CYCLE`: Difficulty distribution per cycle (Foundation/Development/Excellence)
+    - `getSectionAssessmentQuestions()`: Fetches questions based on cycle and section
+    - `saveSectionAssessmentResult()`: Saves result (auto-validated, no tutor review needed)
+    - `getSectionAssessmentHistory()`: Get all section assessments for a student
+    - `getLatestSectionAssessments()`: Get most recent result for each section
+    - `isReadyForMockSimulation()`: Check if student passed all sections (≥60%)
+  - Updated `GMATPreparationPage.tsx`:
+    - Added Section Assessments UI card showing all three sections
+    - Shows status (Not Started / Needs Improvement / Passed)
+    - Displays score and completion date for completed assessments
+    - Mock Simulation Readiness indicator showing which sections still needed
 
-- [ ] **8.6** Implement Mock Simulations
+- [x] **8.6** Implement Mock Simulations ✅
   - Full GMAT: 64 questions (21 QR + 20 DI + 23 VR)
   - Time: 2h 15m total
-  - Adaptive difficulty (or cycle-based fixed)
+  - Uses cycle-appropriate difficulty distribution
   - No breaks between sections
-  - Full scoring and analysis
+  - Full scoring and estimated GMAT score calculation (205-805 scale)
+  - Added to `lib/api/gmat.ts`:
+    - `MOCK_SIMULATION_CONFIG`: Total questions (64), time (135 min), per-section breakdown
+    - `MOCK_DIFFICULTY_BY_CYCLE`: Difficulty distribution per cycle (Foundation/Development/Excellence)
+    - `getMockSimulationQuestions()`: Fetches all 3 sections with readiness check
+    - `saveMockSimulationResult()`: Saves result with per-section scores
+    - `getMockSimulationHistory()`: Get all mock results for a student
+    - `getLatestMockSimulation()`: Get most recent mock result
+    - `calculateEstimatedGmatScore()`: Convert percentage to GMAT scale (205-805)
+    - `MockSimulationResult` interface with section score breakdown
+  - Updated `GMATPreparationPage.tsx`:
+    - Added Mock Simulations UI card
+    - Shows locked state when section assessments not passed
+    - Displays section breakdown (QR, DI, VR question counts and times)
+    - Shows estimated GMAT score when completed
+    - "Start Mock Simulation" / "Start New Mock" buttons
 
-- [ ] **8.7** Update ReviewQuestionsPage for GMAT compatibility
-  - Handle questions fetched from allocation system
-  - Support different question sources (Initial Assessment vs cycle-based)
-  - Ensure explanations display correctly for all GMAT question types
+- [x] **8.7** Update ReviewQuestionsPage for GMAT compatibility ✅
+  - Fixed legacy Initial Assessment "View Results" link (was `/review-questions/` → now `/student/test-results/`)
+  - TestResultsPage already supports all GMAT question types (DS, MSR, GI, TA, TPA, MC) with explanations
+  - Created `GMATAssessmentResultsPage.tsx` for new assessment types (Section Assessments, Mock Simulations)
+  - Added routes: `/student/gmat-results/:assessmentId` and `/tutor/gmat-results/:assessmentId`
+  - Added "View Results" buttons to Section Assessments UI cards
+  - Added "View Results" button to Mock Simulations UI card
+  - Questions are loaded from `2V_questions` using `question_ids` array from `2V_gmat_assessment_results`
+  - Full GMAT question rendering with explanations for all DI types and Multiple Choice
 
 - [ ] **8.8** Add Quick Tests support (optional)
   - 10 questions (5 practice + 5 theory)

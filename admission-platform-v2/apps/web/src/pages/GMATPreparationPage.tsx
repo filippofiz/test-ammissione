@@ -23,15 +23,35 @@ import {
   faCheckCircle,
   faTimes,
   faRocket,
+  faClipboardCheck,
+  faHourglass,
+  faExternalLinkAlt,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import { supabase } from '../lib/supabase';
 import { getCurrentProfile } from '../lib/auth';
 import {
   getStudentGMATProgress,
+  getLegacyInitialAssessment,
+  getLatestPlacementResult,
+  getLatestSectionAssessments,
+  getLatestMockSimulation,
+  getTrainingTemplates,
+  getTrainingCompletions,
+  SECTION_ASSESSMENT_CONFIG,
+  MOCK_SIMULATION_CONFIG,
+  calculateEstimatedGmatScore,
   type GmatCycle,
   type GmatProgress,
+  type LegacyAssessmentResult,
+  type GmatAssessmentResult,
+  type GmatSection,
+  type TrainingTemplate,
+  type TrainingCompletion,
 } from '../lib/api/gmat';
+import { useNavigate, useParams } from 'react-router-dom';
+import { MATERIAL_TYPE_LABELS } from '../lib/gmat/questionAllocation';
+import { GMATCycleManager } from '../components/GMATCycleManager';
 
 interface LessonMaterial {
   id: string;
@@ -99,8 +119,21 @@ const MATERIAL_TYPE_ORDER: Record<string, number> = {
   'other': 99,
 };
 
+// Student info for tutor view
+interface StudentInfo {
+  id: string;
+  name: string;
+  email: string;
+}
+
 export default function GMATPreparationPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { studentId } = useParams<{ studentId?: string }>();
+
+  // Tutor mode: when viewing a student's page via /tutor/student/:studentId/gmat-preparation
+  const isTutorView = !!studentId;
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [materials, setMaterials] = useState<MaterialWithStatus[]>([]);
@@ -109,10 +142,24 @@ export default function GMATPreparationPage() {
   const [viewingPdf, setViewingPdf] = useState<{ url: string; title: string } | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [gmatProgress, setGmatProgress] = useState<GmatProgress | null>(null);
+  const [legacyAssessment, setLegacyAssessment] = useState<LegacyAssessmentResult | null>(null);
+  const [placementResult, setPlacementResult] = useState<GmatAssessmentResult | null>(null);
+  const [sectionAssessments, setSectionAssessments] = useState<Record<GmatSection, GmatAssessmentResult | null>>({
+    QR: null,
+    DI: null,
+    VR: null,
+  });
+  const [mockSimulation, setMockSimulation] = useState<GmatAssessmentResult | null>(null);
+  const [trainingTemplates, setTrainingTemplates] = useState<TrainingTemplate[]>([]);
+  const [trainingCompletions, setTrainingCompletions] = useState<Map<string, TrainingCompletion>>(new Map());
+  const [expandedTrainingSections, setExpandedTrainingSections] = useState<Set<string>>(new Set());
+  const [studentInfo, setStudentInfo] = useState<StudentInfo | null>(null);
+  // Track which profile we're viewing data for (used for tutor mode)
+  const [_targetProfileId, setTargetProfileId] = useState<string | null>(null);
 
   useEffect(() => {
     loadMaterials();
-  }, []);
+  }, [studentId]);
 
   // Helper to get cycle display info
   function getCycleInfo(cycle: GmatCycle) {
@@ -147,12 +194,53 @@ export default function GMATPreparationPage() {
     setError(null);
 
     try {
-      const profile = await getCurrentProfile();
-      if (!profile) throw new Error('Profile not found');
+      // Determine which profile ID to use
+      let targetProfileId: string;
 
-      // Load GMAT progress for current student
-      const progress = await getStudentGMATProgress(profile.id);
+      if (isTutorView && studentId) {
+        // Tutor viewing a student - use the studentId from URL
+        targetProfileId = studentId;
+
+        // Fetch student info for the header
+        const { data: studentData, error: studentError } = await supabase
+          .from('2V_profiles')
+          .select('id, name, email')
+          .eq('id', studentId)
+          .single();
+
+        if (studentError) throw new Error('Student not found');
+        setStudentInfo({
+          id: studentData.id,
+          name: studentData.name || '',
+          email: studentData.email,
+        });
+      } else {
+        // Student viewing their own page
+        const profile = await getCurrentProfile();
+        if (!profile) throw new Error('Profile not found');
+        targetProfileId = profile.id;
+      }
+
+      setTargetProfileId(targetProfileId);
+
+      // Load GMAT progress, legacy assessment, placement result, section assessments, mock simulation, and training data in parallel
+      const [progress, legacyResult, placementRes, sectionResults, mockResult, templates, completions] = await Promise.all([
+        getStudentGMATProgress(targetProfileId),
+        getLegacyInitialAssessment(targetProfileId),
+        getLatestPlacementResult(targetProfileId),
+        getLatestSectionAssessments(targetProfileId),
+        getLatestMockSimulation(targetProfileId),
+        getTrainingTemplates(),
+        getTrainingCompletions(targetProfileId),
+      ]);
       setGmatProgress(progress);
+      setLegacyAssessment(legacyResult);
+      setPlacementResult(placementRes);
+      setSectionAssessments(sectionResults);
+      setMockSimulation(mockResult);
+      setTrainingTemplates(templates);
+      setTrainingCompletions(completions);
+
 
       // Fetch all active GMAT materials (excluding templates which are for admin use only)
       const { data: materialsData, error: materialsError } = await supabase
@@ -171,7 +259,7 @@ export default function GMATPreparationPage() {
       const { data: assignmentsData, error: assignmentsError } = await supabase
         .from('2V_material_assignments')
         .select('*')
-        .eq('student_id', profile.id);
+        .eq('student_id', targetProfileId);
 
       if (assignmentsError) throw assignmentsError;
 
@@ -343,8 +431,10 @@ export default function GMATPreparationPage() {
 
   // Loading state
   if (loading) {
+    const pageTitle = isTutorView ? `GMAT - ${studentInfo?.name || 'Student'}` : 'GMAT Preparation';
+    const pageSubtitle = isTutorView ? studentInfo?.email || '' : 'Your personalized learning path';
     return (
-      <Layout pageTitle="GMAT Preparation" pageSubtitle="Your personalized learning path">
+      <Layout pageTitle={pageTitle} pageSubtitle={pageSubtitle}>
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <div className="inline-block w-12 h-12 border-4 border-brand-green border-t-transparent rounded-full animate-spin mb-4" />
@@ -359,14 +449,87 @@ export default function GMATPreparationPage() {
   const sortedSections = getSortedSections(grouped);
   const stats = getProgressStats();
 
+  const pageTitle = isTutorView ? `GMAT - ${studentInfo?.name || 'Student'}` : 'GMAT Preparation';
+  const pageSubtitle = isTutorView ? studentInfo?.email || '' : 'Your personalized learning path';
+
   return (
-    <Layout pageTitle="GMAT Preparation" pageSubtitle="Your personalized learning path">
+    <Layout pageTitle={pageTitle} pageSubtitle={pageSubtitle}>
       <div className="flex-1 p-4 md:p-8">
         <div className="max-w-7xl mx-auto">
+          {/* Tutor View Header */}
+          {isTutorView && studentInfo && (
+            <div className="mb-6">
+              {/* Back Button */}
+              <button
+                onClick={() => navigate('/tutor/students')}
+                className="mb-4 flex items-center gap-2 text-brand-dark hover:text-brand-green transition-colors group"
+              >
+                <FontAwesomeIcon icon={faChevronRight} className="rotate-180 group-hover:-translate-x-1 transition-transform" />
+                <span className="font-medium">Back to Students</span>
+              </button>
+
+              {/* Student Info Card */}
+              <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8 border-t-4 border-brand-green">
+                <div className="flex items-start gap-4">
+                  <div className="w-16 h-16 bg-gradient-to-br from-brand-green to-green-600 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-lg flex-shrink-0">
+                    <FontAwesomeIcon icon={faGraduationCap} />
+                  </div>
+                  <div className="flex-1">
+                    <h2 className="text-2xl font-bold text-brand-dark">{studentInfo.name || studentInfo.email}</h2>
+                    {studentInfo.name && <p className="text-gray-600">{studentInfo.email}</p>}
+                    <div className="flex flex-wrap items-center gap-3 mt-3">
+                      <span className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-semibold border border-blue-200">
+                        GMAT Preparation
+                      </span>
+                      <span className="text-sm text-gray-500">
+                        Viewing as Tutor
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* GMAT Cycle Manager for Tutors */}
+              <div className="mt-6 bg-white rounded-2xl shadow-xl p-6 md:p-8">
+                <div className="flex items-center gap-3 mb-4">
+                  <FontAwesomeIcon icon={faRocket} className="text-xl text-brand-green" />
+                  <h2 className="text-xl font-bold text-brand-dark">GMAT Preparation Cycle</h2>
+                </div>
+                <GMATCycleManager studentId={studentId} editable={true} />
+              </div>
+            </div>
+          )}
+
           {/* Error Display */}
           {error && (
             <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 mb-6">
               <p className="text-red-700 font-medium">{error}</p>
+            </div>
+          )}
+
+          {/* Pending Placement Validation Banner */}
+          {placementResult && !placementResult.tutor_validated && (
+            <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-6 mb-6">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-xl bg-amber-100 border-2 border-amber-300 flex items-center justify-center">
+                  <FontAwesomeIcon icon={faHourglass} className="text-2xl text-amber-600" />
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-xl font-bold text-amber-700">Awaiting Cycle Assignment</h2>
+                  <p className="text-amber-600 text-sm mt-1">
+                    Your placement assessment has been completed. Your tutor will review your results and assign your cycle.
+                  </p>
+                  <div className="flex items-center gap-4 mt-2 text-sm">
+                    <span className="text-gray-600">
+                      Score: <span className="font-semibold">{placementResult.score_raw}/{placementResult.score_total}</span>
+                      {' '}({placementResult.score_percentage.toFixed(1)}%)
+                    </span>
+                    <span className="text-gray-600">
+                      Suggested: <span className="font-semibold text-amber-700">{placementResult.suggested_cycle}</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -387,6 +550,80 @@ export default function GMATPreparationPage() {
                     </span>
                   </div>
                   <p className="text-gray-600 text-sm mt-1">{getCycleInfo(gmatProgress.gmat_cycle).description}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Legacy Initial Assessment Section */}
+          {legacyAssessment && (
+            <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-100 p-6 mb-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center">
+                  <FontAwesomeIcon icon={faClipboardCheck} className="text-orange-600 text-lg" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-800">Initial Assessment</h2>
+                  <p className="text-sm text-gray-500">Your placement assessment result</p>
+                </div>
+              </div>
+
+              <div className="border-2 border-gray-100 rounded-xl p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    {/* Status Badge */}
+                    {legacyAssessment.status === 'completed' ? (
+                      <div className="flex items-center gap-2">
+                        <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium flex items-center gap-1.5">
+                          <FontAwesomeIcon icon={faCheckCircle} className="text-xs" />
+                          Completed
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-sm font-medium flex items-center gap-1.5">
+                        <FontAwesomeIcon icon={faHourglass} className="text-xs" />
+                        {legacyAssessment.status === 'in_progress' ? 'In Progress' : 'Pending'}
+                      </span>
+                    )}
+
+                    {/* Score Display */}
+                    {legacyAssessment.status === 'completed' && legacyAssessment.score !== null && (
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-gray-800">
+                          {legacyAssessment.score}/{legacyAssessment.max_score || '?'}
+                        </div>
+                        <div className="text-xs text-gray-500">Score</div>
+                      </div>
+                    )}
+
+                    {/* Percentage Display */}
+                    {legacyAssessment.status === 'completed' && legacyAssessment.percentage !== null && (
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-blue-600">
+                          {Math.round(legacyAssessment.percentage)}%
+                        </div>
+                        <div className="text-xs text-gray-500">Percentage</div>
+                      </div>
+                    )}
+
+                    {/* Completion Date */}
+                    {legacyAssessment.completed_at && (
+                      <div className="text-sm text-gray-500">
+                        Completed: {new Date(legacyAssessment.completed_at).toLocaleDateString()}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* View Results Link */}
+                  {legacyAssessment.status === 'completed' && (
+                    <a
+                      href={`/student/test-results/${legacyAssessment.id}`}
+                      className="px-4 py-2 bg-brand-green text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors flex items-center gap-2"
+                    >
+                      <FontAwesomeIcon icon={faExternalLinkAlt} />
+                      View Results
+                    </a>
+                  )}
                 </div>
               </div>
             </div>
@@ -424,6 +661,478 @@ export default function GMATPreparationPage() {
               </div>
             )}
           </div>
+
+          {/* Section Assessments */}
+          {gmatProgress && (
+            <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-100 p-6 mb-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
+                  <FontAwesomeIcon icon={faChartLine} className="text-purple-600 text-lg" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-800">Section Assessments</h2>
+                  <p className="text-sm text-gray-500">Test your readiness in each GMAT section</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {(['QR', 'DI', 'VR'] as GmatSection[]).map((section) => {
+                  const config = SECTION_ASSESSMENT_CONFIG[section];
+                  const assessment = sectionAssessments[section];
+                  const isPassed = assessment && assessment.score_percentage >= 60;
+
+                  // Section-specific colors
+                  const sectionColors: Record<GmatSection, { bg: string; border: string; text: string; icon: string }> = {
+                    QR: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', icon: 'text-blue-600' },
+                    DI: { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700', icon: 'text-purple-600' },
+                    VR: { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700', icon: 'text-green-600' },
+                  };
+                  const colors = sectionColors[section];
+
+                  return (
+                    <div
+                      key={section}
+                      className={`${colors.bg} border-2 ${colors.border} rounded-xl p-4`}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className={`font-bold ${colors.text}`}>{config.fullName}</h3>
+                        {assessment ? (
+                          isPassed ? (
+                            <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-1">
+                              <FontAwesomeIcon icon={faCheckCircle} className="text-xs" />
+                              Passed
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">
+                              Needs Improvement
+                            </span>
+                          )
+                        ) : (
+                          <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
+                            Not Started
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="text-sm text-gray-600 mb-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span>{config.totalQuestions} questions</span>
+                          <span>•</span>
+                          <span>{config.timeMinutes} min</span>
+                        </div>
+                      </div>
+
+                      {assessment ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600">Score:</span>
+                            <span className={`font-bold ${isPassed ? 'text-green-600' : 'text-amber-600'}`}>
+                              {assessment.score_raw}/{assessment.score_total} ({assessment.score_percentage.toFixed(0)}%)
+                            </span>
+                          </div>
+                          {assessment.completed_at && (
+                            <div className="text-xs text-gray-500">
+                              Completed: {new Date(assessment.completed_at).toLocaleDateString()}
+                            </div>
+                          )}
+                          <div className="flex gap-2 mt-2">
+                            <a
+                              href={`/student/gmat-results/${assessment.id}`}
+                              className={`flex-1 px-3 py-2 ${colors.bg} ${colors.text} border ${colors.border} rounded-lg text-sm font-medium hover:opacity-80 transition-colors text-center`}
+                            >
+                              View Results
+                            </a>
+                            <button
+                              className={`flex-1 px-3 py-2 bg-gray-100 text-gray-700 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors`}
+                            >
+                              Retake
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          className={`w-full px-4 py-2 bg-brand-green text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2`}
+                        >
+                          <FontAwesomeIcon icon={faRocket} />
+                          Start Assessment
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Mock Simulation Readiness */}
+              {(sectionAssessments.QR || sectionAssessments.DI || sectionAssessments.VR) && (
+                <div className="mt-4 pt-4 border-t-2 border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-semibold text-gray-800">Mock Simulation Readiness</h4>
+                      <p className="text-sm text-gray-500">
+                        Pass all three section assessments (≥60%) to unlock Mock Simulations
+                      </p>
+                    </div>
+                    {sectionAssessments.QR && sectionAssessments.DI && sectionAssessments.VR &&
+                     sectionAssessments.QR.score_percentage >= 60 &&
+                     sectionAssessments.DI.score_percentage >= 60 &&
+                     sectionAssessments.VR.score_percentage >= 60 ? (
+                      <span className="px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-sm font-medium flex items-center gap-2">
+                        <FontAwesomeIcon icon={faCheckCircle} />
+                        Ready for Mock!
+                      </span>
+                    ) : (
+                      <span className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-full text-sm font-medium flex items-center gap-2">
+                        <FontAwesomeIcon icon={faLock} />
+                        {[
+                          !sectionAssessments.QR || sectionAssessments.QR.score_percentage < 60 ? 'QR' : null,
+                          !sectionAssessments.DI || sectionAssessments.DI.score_percentage < 60 ? 'DI' : null,
+                          !sectionAssessments.VR || sectionAssessments.VR.score_percentage < 60 ? 'VR' : null,
+                        ].filter(Boolean).join(', ')} needed
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Mock Simulations */}
+          {gmatProgress && (
+            <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-100 p-6 mb-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center">
+                  <FontAwesomeIcon icon={faGraduationCap} className="text-indigo-600 text-lg" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-800">Mock Simulations</h2>
+                  <p className="text-sm text-gray-500">Full GMAT practice test ({MOCK_SIMULATION_CONFIG.totalQuestions} questions, {Math.floor(MOCK_SIMULATION_CONFIG.timeMinutes / 60)}h {MOCK_SIMULATION_CONFIG.timeMinutes % 60}m)</p>
+                </div>
+              </div>
+
+              {(() => {
+                // Check if mock simulations are unlocked
+                const isUnlocked = sectionAssessments.QR && sectionAssessments.DI && sectionAssessments.VR &&
+                  sectionAssessments.QR.score_percentage >= 60 &&
+                  sectionAssessments.DI.score_percentage >= 60 &&
+                  sectionAssessments.VR.score_percentage >= 60;
+
+                if (!isUnlocked) {
+                  // Locked state
+                  return (
+                    <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-6 text-center">
+                      <FontAwesomeIcon icon={faLock} className="text-4xl text-gray-400 mb-3" />
+                      <h3 className="text-lg font-semibold text-gray-700 mb-2">Mock Simulations Locked</h3>
+                      <p className="text-sm text-gray-500 mb-4">
+                        Complete all three section assessments with at least 60% to unlock mock simulations.
+                      </p>
+                      <div className="flex justify-center gap-4">
+                        {(['QR', 'DI', 'VR'] as GmatSection[]).map((section) => {
+                          const assessment = sectionAssessments[section];
+                          const isPassed = assessment && assessment.score_percentage >= 60;
+                          return (
+                            <div key={section} className="flex items-center gap-1.5">
+                              <FontAwesomeIcon
+                                icon={isPassed ? faCheckCircle : faTimes}
+                                className={isPassed ? 'text-green-500' : 'text-gray-400'}
+                              />
+                              <span className={`text-sm font-medium ${isPassed ? 'text-green-700' : 'text-gray-500'}`}>
+                                {section}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Unlocked state
+                return (
+                  <div className="space-y-4">
+                    {/* Mock test details */}
+                    <div className="bg-indigo-50 border-2 border-indigo-200 rounded-xl p-4">
+                      <div className="grid grid-cols-3 gap-4 text-center">
+                        {MOCK_SIMULATION_CONFIG.sectionOrder.map((section) => {
+                          const sectionConfig = MOCK_SIMULATION_CONFIG.sections[section];
+                          return (
+                            <div key={section}>
+                              <div className="font-semibold text-indigo-700">{section}</div>
+                              <div className="text-xs text-gray-600">
+                                {sectionConfig.questions} questions • {sectionConfig.timeMinutes} min
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Latest mock result or start button */}
+                    {mockSimulation ? (
+                      <div className="border-2 border-gray-100 rounded-xl p-4">
+                        <div className="flex items-center justify-between mb-4">
+                          <div>
+                            <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-1 w-fit mb-2">
+                              <FontAwesomeIcon icon={faCheckCircle} className="text-xs" />
+                              Completed
+                            </span>
+                            <div className="text-sm text-gray-500">
+                              {mockSimulation.completed_at && new Date(mockSimulation.completed_at).toLocaleDateString()}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-3xl font-bold text-indigo-600">
+                              {calculateEstimatedGmatScore(mockSimulation.score_percentage)}
+                            </div>
+                            <div className="text-xs text-gray-500">Estimated GMAT Score</div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                          <div className="flex items-center gap-4">
+                            <div className="text-center">
+                              <div className="font-bold text-gray-800">
+                                {mockSimulation.score_raw}/{mockSimulation.score_total}
+                              </div>
+                              <div className="text-xs text-gray-500">Raw Score</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="font-bold text-gray-800">
+                                {mockSimulation.score_percentage.toFixed(0)}%
+                              </div>
+                              <div className="text-xs text-gray-500">Percentage</div>
+                            </div>
+                            {mockSimulation.time_spent_seconds && (
+                              <div className="text-center">
+                                <div className="font-bold text-gray-800">
+                                  {Math.floor(mockSimulation.time_spent_seconds / 60)}m
+                                </div>
+                                <div className="text-xs text-gray-500">Time</div>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={`/student/gmat-results/${mockSimulation.id}`}
+                              className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors flex items-center gap-2"
+                            >
+                              <FontAwesomeIcon icon={faExternalLinkAlt} />
+                              View Results
+                            </a>
+                            <button
+                              className="px-4 py-2 bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-sm font-medium hover:bg-indigo-200 transition-colors flex items-center gap-2"
+                            >
+                              <FontAwesomeIcon icon={faRocket} />
+                              New Mock
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-4">
+                        <p className="text-gray-600 mb-4">
+                          You're ready for your first mock simulation! This will give you an estimated GMAT score.
+                        </p>
+                        <button
+                          className="px-6 py-3 bg-brand-green text-white rounded-xl text-lg font-semibold hover:bg-green-700 transition-colors flex items-center gap-3 mx-auto"
+                        >
+                          <FontAwesomeIcon icon={faRocket} />
+                          Start Mock Simulation
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* Topic Training Tests Section */}
+          {gmatProgress && trainingTemplates.length > 0 && (
+            <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-100 p-6 mb-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
+                  <FontAwesomeIcon icon={faClipboardCheck} className="text-emerald-600 text-lg" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-800">Topic Training Tests</h2>
+                  <p className="text-sm text-gray-500">
+                    Practice tests tailored to your {gmatProgress.gmat_cycle} cycle
+                  </p>
+                </div>
+              </div>
+
+              {/* Group templates by section */}
+              {(['Quantitative Reasoning', 'Data Insights', 'Verbal Reasoning'] as const).map(sectionName => {
+                const sectionCode = sectionName === 'Quantitative Reasoning' ? 'QR'
+                  : sectionName === 'Data Insights' ? 'DI' : 'VR';
+                const sectionTemplates = trainingTemplates.filter(t =>
+                  t.section === sectionName || t.section === sectionCode
+                );
+
+                if (sectionTemplates.length === 0) return null;
+
+                const sectionColors: Record<string, { bg: string; border: string; text: string; lightBg: string }> = {
+                  'Quantitative Reasoning': { bg: 'bg-blue-100', border: 'border-blue-200', text: 'text-blue-700', lightBg: 'bg-blue-50' },
+                  'Data Insights': { bg: 'bg-purple-100', border: 'border-purple-200', text: 'text-purple-700', lightBg: 'bg-purple-50' },
+                  'Verbal Reasoning': { bg: 'bg-green-100', border: 'border-green-200', text: 'text-green-700', lightBg: 'bg-green-50' },
+                };
+                const colors = sectionColors[sectionName];
+                const isExpanded = expandedTrainingSections.has(sectionName);
+
+                // Group by topic
+                const topicGroups = new Map<string, TrainingTemplate[]>();
+                sectionTemplates.forEach(t => {
+                  const topicName = t.topic || 'General';
+                  if (!topicGroups.has(topicName)) {
+                    topicGroups.set(topicName, []);
+                  }
+                  topicGroups.get(topicName)!.push(t);
+                });
+
+                // Calculate section stats
+                const totalTests = sectionTemplates.length;
+                const completedTests = sectionTemplates.filter(t => trainingCompletions.has(t.id)).length;
+
+                return (
+                  <div key={sectionName} className={`${colors.lightBg} border-2 ${colors.border} rounded-xl mb-4 overflow-hidden`}>
+                    {/* Section Header */}
+                    <button
+                      onClick={() => {
+                        setExpandedTrainingSections(prev => {
+                          const next = new Set(prev);
+                          if (next.has(sectionName)) {
+                            next.delete(sectionName);
+                          } else {
+                            next.add(sectionName);
+                          }
+                          return next;
+                        });
+                      }}
+                      className="w-full px-4 py-3 flex items-center justify-between hover:opacity-90 transition-opacity"
+                    >
+                      <div className="flex items-center gap-3">
+                        <FontAwesomeIcon
+                          icon={isExpanded ? faChevronDown : faChevronRight}
+                          className={`${colors.text} text-sm`}
+                        />
+                        <span className={`font-bold ${colors.text}`}>{sectionName}</span>
+                        <span className={`text-xs ${colors.text} ${colors.bg} px-2 py-1 rounded-full`}>
+                          {completedTests}/{totalTests} completed
+                        </span>
+                      </div>
+                      {completedTests === totalTests && totalTests > 0 && (
+                        <FontAwesomeIcon icon={faCheckCircle} className="text-green-500" />
+                      )}
+                    </button>
+
+                    {/* Section Content */}
+                    {isExpanded && (
+                      <div className="border-t border-gray-200 px-4 py-3 space-y-3 bg-white/50">
+                        {Array.from(topicGroups.entries()).map(([topicName, templates]) => (
+                          <div key={topicName} className="space-y-2">
+                            <h4 className="text-sm font-semibold text-gray-700">{topicName}</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                              {templates
+                                .sort((a, b) => {
+                                  // Sort by material type: training1 < training2 < assessment
+                                  const order = { training1: 1, training2: 2, assessment: 3 };
+                                  return (order[a.material_type as keyof typeof order] || 99) -
+                                         (order[b.material_type as keyof typeof order] || 99);
+                                })
+                                .map(template => {
+                                  const completion = trainingCompletions.get(template.id);
+                                  const isCompleted = !!completion;
+                                  const requirements = template.question_requirements;
+                                  const cycleAlloc = template.question_allocation?.by_cycle?.[gmatProgress.gmat_cycle];
+                                  const hasQuestionsForCycle = cycleAlloc?.allocated_questions &&
+                                    cycleAlloc.allocated_questions.length > 0;
+
+                                  return (
+                                    <div
+                                      key={template.id}
+                                      className={`p-3 rounded-lg border-2 ${
+                                        isCompleted
+                                          ? 'bg-green-50 border-green-200'
+                                          : hasQuestionsForCycle
+                                          ? 'bg-white border-gray-200'
+                                          : 'bg-gray-50 border-gray-200 opacity-60'
+                                      }`}
+                                    >
+                                      <div className="flex items-center justify-between mb-2">
+                                        <span className="text-sm font-medium text-gray-800">
+                                          {MATERIAL_TYPE_LABELS[template.material_type as keyof typeof MATERIAL_TYPE_LABELS] || template.material_type}
+                                        </span>
+                                        {isCompleted ? (
+                                          <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-1">
+                                            <FontAwesomeIcon icon={faCheckCircle} className="text-xs" />
+                                            {Math.round(completion.score_percentage)}%
+                                          </span>
+                                        ) : !hasQuestionsForCycle ? (
+                                          <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full text-xs">
+                                            Not available
+                                          </span>
+                                        ) : null}
+                                      </div>
+
+                                      {requirements && (
+                                        <div className="text-xs text-gray-500 mb-2">
+                                          {requirements.total_questions} questions
+                                          {requirements.time_limit_minutes && ` • ${requirements.time_limit_minutes} min`}
+                                        </div>
+                                      )}
+
+                                      {hasQuestionsForCycle ? (
+                                        isCompleted ? (
+                                          <div className="flex gap-2">
+                                            <button
+                                              onClick={() => navigate(`/student/gmat-results/${completion.template_id}`)}
+                                              className="flex-1 px-2 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-200 transition-colors"
+                                            >
+                                              View Results
+                                            </button>
+                                            <button
+                                              onClick={() => navigate(`/student/take-test/gmat-training/${template.id}`)}
+                                              className="flex-1 px-2 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-200 transition-colors"
+                                            >
+                                              Retake
+                                            </button>
+                                          </div>
+                                        ) : (
+                                          <button
+                                            onClick={() => navigate(`/student/take-test/gmat-training/${template.id}`)}
+                                            className="w-full px-3 py-1.5 bg-brand-green text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                                          >
+                                            <FontAwesomeIcon icon={faRocket} />
+                                            Start
+                                          </button>
+                                        )
+                                      ) : (
+                                        <div className="text-xs text-gray-400 text-center py-1">
+                                          No questions for {gmatProgress.gmat_cycle} cycle
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Section Header for Cycle-Based Materials */}
+          {gmatProgress && (
+            <div className="flex items-center gap-3 mb-4 mt-8">
+              <div className="h-0.5 flex-1 bg-gray-200" />
+              <h2 className="text-lg font-semibold text-gray-600 px-4">Cycle-Based Training Materials</h2>
+              <div className="h-0.5 flex-1 bg-gray-200" />
+            </div>
+          )}
 
           {/* Materials by Section */}
           {sortedSections.length === 0 ? (

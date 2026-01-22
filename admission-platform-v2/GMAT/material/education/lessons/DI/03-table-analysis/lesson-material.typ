@@ -130,7 +130,7 @@ When you click a column header, the entire table reorders so that the values in 
         [Gamma], [180],
         [Alpha], [150],
       )
-      #text(size: 0.85em, fill: rgb("#27ae60"))[← Max value now at top!]
+      #text(size: 0.85em, fill: rgb("#27ae60"))[Max value now at top!]
     ],
   )
 ]
@@ -222,15 +222,16 @@ To find the median, first sort the table by the relevant column. Then identify t
   *Finding the Median:*
 
   1. Sort by the relevant column
-  2. Count the total number of rows (n)
-  3. If n is odd: The median is the value in row $(n+1)/2$
-  4. If n is even: The median is the average of values in rows $n/2$ and $(n/2)+1$
+  2. Count the total number of rows ($n$)
+  3. If n is odd: The median is the value in row $display((n+1)/2)$
+
+  4. If n is even: The median is the average of values in rows $display(n/2)$ and $display((n/2)+1)$
 ]
 
 The visual below demonstrates finding the median in a table with seven rows. After sorting, the fourth row contains the median because three rows fall above it and three rows fall below it.
 
-#block(breakable: false)[
-  #align(center)[
+#align(center)[
+  #block(breakable: false)[
     *Finding the Median (7 rows = odd)*
     #v(0.5em)
     #table(
