@@ -185,6 +185,7 @@ interface TestAssignment {
   test_name: string;
   test_type: string;
   section: string;
+  materia: string | null;
   exercise_type: string;
   test_number: number;
   duration_minutes: number;
@@ -495,6 +496,7 @@ export default function StudentTestsPage() {
           2V_tests!inner (
             test_type,
             section,
+            materia,
             exercise_type,
             test_number,
             default_duration_mins
@@ -832,6 +834,7 @@ export default function StudentTestsPage() {
           test_name: testName,
           test_type: row['2V_tests'].test_type,
           section: displaySection,
+          materia: row['2V_tests'].materia,
           exercise_type: exerciseType,
           question_format: row.question_format,
           test_number: testNumber,
@@ -1358,6 +1361,24 @@ export default function StudentTestsPage() {
                             className="text-brand-green"
                           />
                           <h3 className="text-xl font-bold text-brand-dark">{translatedSections[section] || section}</h3>
+                          {/* Materia Badge */}
+                          {(() => {
+                            // Get unique materias from all tests in this section (exclude "Altro")
+                            const uniqueMaterias = [...new Set(
+                              sectionTests
+                                .map(t => t.materia)
+                                .filter(m => m && m.trim() !== '' && m.toLowerCase() !== 'altro')
+                            )];
+
+                            return uniqueMaterias.map(materia => (
+                              <span
+                                key={materia}
+                                className="px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700 border border-indigo-300"
+                              >
+                                {materia}
+                              </span>
+                            ));
+                          })()}
                         </div>
                         <div className="flex items-center gap-3 flex-wrap">
                           {/* Show percentage badges for each completed test */}
@@ -1484,6 +1505,12 @@ export default function StudentTestsPage() {
                                           <h3 className="text-lg font-bold text-brand-dark">
                                             {assignment.exercise_type} {assignment.test_number}
                                           </h3>
+                                          {/* Materia Badge */}
+                                          {assignment.materia && (
+                                            <span className="px-2 py-1 rounded text-xs font-semibold bg-indigo-100 text-indigo-700 border border-indigo-300">
+                                              {assignment.materia}
+                                            </span>
+                                          )}
                                           {/* PDF/Interactive Badge */}
                                           <span
                                             className={`px-2 py-1 rounded text-xs font-bold ${

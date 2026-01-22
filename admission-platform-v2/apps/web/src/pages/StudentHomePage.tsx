@@ -75,6 +75,7 @@ interface TestAssignment {
   };
   test_type: string;
   section: string;
+  materia: string | null;
   exercise_type: string;
   test_number: number;
   duration_minutes: number;
@@ -367,6 +368,7 @@ export default function StudentHomePage() {
           2V_tests!inner (
             test_type,
             section,
+            materia,
             exercise_type,
             test_number,
             default_duration_mins
@@ -401,6 +403,7 @@ export default function StudentHomePage() {
           results_viewable_by_student: row.results_viewable_by_student || false,
           test_type: row['2V_tests'].test_type,
           section: displaySection,
+          materia: row['2V_tests'].materia,
           exercise_type: exerciseType,
           test_number: row['2V_tests'].test_number,
           duration_minutes: row['2V_tests'].default_duration_mins,
@@ -805,6 +808,24 @@ export default function StudentHomePage() {
                           className="text-brand-green"
                         />
                         <h3 className="text-xl font-bold text-brand-dark">{translatedSections[section] || section}</h3>
+                        {/* Materia Badge */}
+                        {(() => {
+                          // Get unique materias from all tests in this section (exclude "Altro")
+                          const uniqueMaterias = [...new Set(
+                            sectionTests
+                              .map(t => t.materia)
+                              .filter(m => m && m.trim() !== '' && m.toLowerCase() !== 'altro')
+                          )];
+
+                          return uniqueMaterias.map(materia => (
+                            <span
+                              key={materia}
+                              className="px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700 border border-indigo-300"
+                            >
+                              {materia}
+                            </span>
+                          ));
+                        })()}
                       </div>
                       <div className="flex items-center gap-4">
                         <span className="text-sm text-gray-600">

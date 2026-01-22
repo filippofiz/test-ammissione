@@ -19,6 +19,7 @@ import { LanguageSelectionModal } from './LanguageSelectionModal';
 
 interface SectionData {
   section: string;
+  materia: string;
   testPdfFile: File | null;
   testPdfUrl: string | null;
   solutionsPdfFile: File | null;
@@ -51,6 +52,7 @@ export function NewTestCreator({ onConvert, converting, savedSections = [] }: Ne
   const [processedSections, setProcessedSections] = useState<SectionData[]>([]); // Sections that have been converted
   const [currentSection, setCurrentSection] = useState<SectionData>({
     section: '',
+    materia: '',
     testPdfFile: null,
     testPdfUrl: null,
     solutionsPdfFile: null,
@@ -73,6 +75,7 @@ export function NewTestCreator({ onConvert, converting, savedSections = [] }: Ne
   // Existing test types and sections from database
   const [existingTestTypes, setExistingTestTypes] = useState<string[]>([]);
   const [existingSectionsByType, setExistingSectionsByType] = useState<Map<string, string[]>>(new Map());
+  const [existingMateriasByType, setExistingMateriasByType] = useState<Map<string, string[]>>(new Map());
   const [loadingTypes, setLoadingTypes] = useState(true);
 
   // Test configurations
@@ -85,6 +88,7 @@ export function NewTestCreator({ onConvert, converting, savedSections = [] }: Ne
   // UI state for creating new items
   const [isCreatingNewTestType, setIsCreatingNewTestType] = useState(false);
   const [isCreatingNewSection, setIsCreatingNewSection] = useState(false);
+  const [isCreatingNewMateria, setIsCreatingNewMateria] = useState(false);
 
   // Load existing test types, sections, and configs
   useEffect(() => {
@@ -94,7 +98,7 @@ export function NewTestCreator({ onConvert, converting, savedSections = [] }: Ne
         // Load tests (get all test types, not just active)
         const { data: tests, error: testsError } = await supabase
           .from('2V_tests')
-          .select('test_type, section');
+          .select('test_type, section, materia');
 
         if (testsError) throw testsError;
 
@@ -133,6 +137,25 @@ export function NewTestCreator({ onConvert, converting, savedSections = [] }: Ne
           });
 
           setExistingSectionsByType(sectionsByTypeArray);
+
+          // Group materias by test type (filter out nulls and empty strings)
+          const materiasByType = new Map<string, Set<string>>();
+          tests.forEach(test => {
+            if (test.materia && test.materia.trim() !== '') {
+              if (!materiasByType.has(test.test_type)) {
+                materiasByType.set(test.test_type, new Set());
+              }
+              materiasByType.get(test.test_type)!.add(test.materia);
+            }
+          });
+
+          // Convert Sets to sorted Arrays
+          const materiasByTypeArray = new Map<string, string[]>();
+          materiasByType.forEach((materias, type) => {
+            materiasByTypeArray.set(type, Array.from(materias).sort());
+          });
+
+          setExistingMateriasByType(materiasByTypeArray);
         }
 
         if (configs) {
@@ -488,6 +511,7 @@ export function NewTestCreator({ onConvert, converting, savedSections = [] }: Ne
     // Reset for next section
     setCurrentSection({
       section: '',
+      materia: '',
       testPdfFile: null,
       testPdfUrl: null,
       solutionsPdfFile: null,
@@ -703,12 +727,16 @@ export function NewTestCreator({ onConvert, converting, savedSections = [] }: Ne
                       const sectionsFromThisTest = existingTestSections;
 
                       // Sections just added in this session (also greyed out)
-                      const sectionsAddedNow = [...savedSections, ...processedSections.map(s => s.section)];
+                      // NOTE: We only use processedSections (current form), not savedSections from parent
+                      // because savedSections may contain sections from a different test configuration
+                      const sectionsAddedNow = processedSections.map(s => s.section);
 
                       // All sections to grey out
                       const unavailableSections = [...sectionsFromThisTest, ...sectionsAddedNow];
 
                       console.log('🔒 Unavailable sections (will be greyed out):', unavailableSections);
+                      console.log('   - From DB (existingTestSections):', sectionsFromThisTest);
+                      console.log('   - From current form (processedSections):', sectionsAddedNow);
 
                       // Priority 1: Use sections from config if available
                       const configSections = getConfigSections();
@@ -784,6 +812,77 @@ export function NewTestCreator({ onConvert, converting, savedSections = [] }: Ne
                     }
                     return null;
                   })()}
+                </>
+              )}
+            </div>
+
+            {/* Materia Dropdown */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Materia (Subject)
+              </label>
+              {isCreatingNewMateria ? (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={currentSection.materia}
+                    onChange={(e) => setCurrentSection(prev => ({ ...prev, materia: e.target.value }))}
+                    placeholder="Enter new materia name..."
+                    className="flex-1 px-4 py-3 border-2 border-green-500 rounded-lg focus:border-brand-green focus:outline-none"
+                    autoFocus
+                  />
+                  <button
+                    onClick={() => {
+                      setIsCreatingNewMateria(false);
+                      setCurrentSection(prev => ({ ...prev, materia: '' }));
+                    }}
+                    className="px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <select
+                    value={currentSection.materia}
+                    onChange={(e) => {
+                      if (e.target.value === '__create_new__') {
+                        setIsCreatingNewMateria(true);
+                        setCurrentSection(prev => ({ ...prev, materia: '' }));
+                      } else {
+                        setCurrentSection(prev => ({ ...prev, materia: e.target.value }));
+                      }
+                    }}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-brand-green focus:outline-none bg-white"
+                  >
+                    <option value="">Select a materia (optional)...</option>
+                    {(() => {
+                      // Get materias for current test type
+                      const currentMaterias = metadata.test_type && existingMateriasByType.has(metadata.test_type)
+                        ? existingMateriasByType.get(metadata.test_type)!
+                        : [];
+
+                      if (currentMaterias.length === 0) {
+                        return null;
+                      }
+
+                      return currentMaterias.map(materia => (
+                        <option key={materia} value={materia}>{materia}</option>
+                      ));
+                    })()}
+                    <option value="__create_new__" className="font-bold text-green-700">+ Create New Materia...</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {(() => {
+                      if (!metadata.test_type) {
+                        return 'Select a test type to see available materias';
+                      }
+                      const currentMaterias = existingMateriasByType.get(metadata.test_type) || [];
+                      return currentMaterias.length > 0
+                        ? `${currentMaterias.length} existing materia${currentMaterias.length > 1 ? 's' : ''} for ${metadata.test_type}`
+                        : `No materias yet for ${metadata.test_type} - create one or leave blank`;
+                    })()}
+                  </p>
                 </>
               )}
             </div>
