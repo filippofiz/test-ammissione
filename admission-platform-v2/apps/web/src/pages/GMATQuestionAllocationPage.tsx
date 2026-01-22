@@ -221,7 +221,11 @@ export default function GMATQuestionAllocationPage() {
   });
 
   // All used question IDs (across all templates and cycles) for tracking
-  const [usedQuestionIds, setUsedQuestionIds] = useState<Map<string, { template: string; cycle: GmatCycle }>>(new Map());
+  // Key is just the question ID, value contains all places where it's used
+  const [usedQuestionIds, setUsedQuestionIds] = useState<Map<string, Array<{ templateId: string; templateTitle: string; materialType: string; cycle: GmatCycle }>>>(new Map());
+
+  // Track if there are unsaved changes
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Requirements form
   const [requirementsForm, setRequirementsForm] = useState<QuestionRequirements | null>(null);
@@ -229,7 +233,11 @@ export default function GMATQuestionAllocationPage() {
 
   // Filters
   const [difficultyFilter, setDifficultyFilter] = useState<string>('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Available categories (extracted from pool questions)
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
 
   // UI State
   const [viewingPdf, setViewingPdf] = useState<{ url: string; title: string } | null>(null);
@@ -247,7 +255,21 @@ export default function GMATQuestionAllocationPage() {
   // Apply filters when questions or filters change
   useEffect(() => {
     applyFilters();
-  }, [poolQuestions, difficultyFilter, searchQuery, selectedSection, selectedTopicId]);
+  }, [poolQuestions, difficultyFilter, categoryFilter, searchQuery, selectedSection, selectedTopicId]);
+
+  // Extract available categories when pool questions change
+  useEffect(() => {
+    const categories = new Set<string>();
+    for (const q of poolQuestions) {
+      const questionCategories = q.question_data?.categories;
+      if (Array.isArray(questionCategories)) {
+        for (const cat of questionCategories) {
+          categories.add(cat);
+        }
+      }
+    }
+    setAvailableCategories(Array.from(categories).sort());
+  }, [poolQuestions]);
 
   // Update allocated questions when cycle changes
   useEffect(() => {
@@ -313,8 +335,9 @@ export default function GMATQuestionAllocationPage() {
         setPoolQuestions(allQuestions);
       }
 
-      // 4. Build map of all used question IDs from templates (per cycle)
-      const allUsedIds = new Map<string, { template: string; cycle: GmatCycle }>();
+      // 4. Build map of all used question IDs from ALL templates and cycles
+      // This tracks GLOBAL usage - a question used anywhere cannot be used again
+      const allUsedIds = new Map<string, Array<{ templateId: string; templateTitle: string; materialType: string; cycle: GmatCycle }>>();
       (templatesData || []).forEach(template => {
         const allocation = template.question_allocation as QuestionAllocation | null;
         if (allocation?.by_cycle) {
@@ -322,7 +345,15 @@ export default function GMATQuestionAllocationPage() {
             const cycleAlloc = allocation.by_cycle[cycle];
             if (cycleAlloc?.allocated_questions) {
               cycleAlloc.allocated_questions.forEach((id: string) => {
-                allUsedIds.set(`${id}-${cycle}`, { template: template.id, cycle });
+                if (!allUsedIds.has(id)) {
+                  allUsedIds.set(id, []);
+                }
+                allUsedIds.get(id)!.push({
+                  templateId: template.id,
+                  templateTitle: template.title || `${template.section} - ${template.topic}`,
+                  materialType: template.material_type,
+                  cycle
+                });
               });
             }
           });
@@ -357,6 +388,16 @@ export default function GMATQuestionAllocationPage() {
       return sectionMatch && topicMatch && materialMatch;
     });
 
+    // If we have unsaved changes, warn the user
+    if (hasUnsavedChanges) {
+      const shouldContinue = window.confirm(
+        'You have unsaved changes. Do you want to continue? Your changes will be lost.\n\nClick "Save All Cycles" to save before switching.'
+      );
+      if (!shouldContinue) {
+        return; // Don't switch - user wants to save first
+      }
+    }
+
     if (matchingTemplate) {
       selectTemplate(matchingTemplate);
     } else {
@@ -369,6 +410,7 @@ export default function GMATQuestionAllocationPage() {
         Excellence: new Set(),
       });
     }
+    setHasUnsavedChanges(false);
   }
 
   function getDefaultRequirements(): QuestionRequirements {
@@ -387,22 +429,18 @@ export default function GMATQuestionAllocationPage() {
     const totalQuestions = counts[selectedMaterialType];
 
     // Calculate per-cycle counts based on difficulty distribution
+    // Use floor for first two, then calculate last to ensure they sum to total
+    const calcDistribution = (easyPct: number, mediumPct: number, hardPct: number): DifficultyDistribution => {
+      const easy = Math.floor(totalQuestions * easyPct);
+      const medium = Math.floor(totalQuestions * mediumPct);
+      const hard = totalQuestions - easy - medium; // Ensures sum equals total
+      return { easy, medium, hard };
+    };
+
     const difficultyDistribution: Record<GmatCycle, DifficultyDistribution> = {
-      Foundation: {
-        easy: Math.round(totalQuestions * 0.60),
-        medium: Math.round(totalQuestions * 0.30),
-        hard: Math.round(totalQuestions * 0.10),
-      },
-      Development: {
-        easy: Math.round(totalQuestions * 0.25),
-        medium: Math.round(totalQuestions * 0.50),
-        hard: Math.round(totalQuestions * 0.25),
-      },
-      Excellence: {
-        easy: Math.round(totalQuestions * 0.05),
-        medium: Math.round(totalQuestions * 0.30),
-        hard: Math.round(totalQuestions * 0.65),
-      },
+      Foundation: calcDistribution(0.60, 0.30, 0.10),
+      Development: calcDistribution(0.25, 0.50, 0.25),
+      Excellence: calcDistribution(0.05, 0.30, 0.65),
     };
 
     return {
@@ -436,6 +474,14 @@ export default function GMATQuestionAllocationPage() {
     // Filter by difficulty
     if (difficultyFilter) {
       filtered = filtered.filter(q => q.difficulty === difficultyFilter);
+    }
+
+    // Filter by category
+    if (categoryFilter) {
+      filtered = filtered.filter(q => {
+        const categories = q.question_data?.categories;
+        return Array.isArray(categories) && categories.includes(categoryFilter);
+      });
     }
 
     // Search query
@@ -498,6 +544,9 @@ export default function GMATQuestionAllocationPage() {
       ...prev,
       [selectedCycle]: newAllocated,
     }));
+
+    // Mark as having unsaved changes
+    setHasUnsavedChanges(true);
   }
 
   async function saveAllocation() {
@@ -553,6 +602,9 @@ export default function GMATQuestionAllocationPage() {
       // Rebuild used question IDs
       await loadData();
 
+      // Clear unsaved changes flag
+      setHasUnsavedChanges(false);
+
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
 
@@ -600,12 +652,31 @@ export default function GMATQuestionAllocationPage() {
     return requirementsForm.difficulty_distribution[selectedCycle];
   }
 
-  // Check if a question is used in another template/cycle
-  function getQuestionUsage(questionId: string): { template: string; cycle: GmatCycle } | null {
-    const key = `${questionId}-${selectedCycle}`;
-    const usage = usedQuestionIds.get(key);
-    if (usage && usage.template !== selectedTemplate?.id) {
-      return usage;
+  // Check if a question is used in another template/cycle (global check)
+  // Returns usage info if the question is used ANYWHERE except the current template
+  function getQuestionUsage(questionId: string): { templateTitle: string; materialType: string; cycle: GmatCycle } | null {
+    const usages = usedQuestionIds.get(questionId);
+    if (!usages || usages.length === 0) return null;
+
+    // Find usage in a DIFFERENT template (not current one)
+    const externalUsage = usages.find(u => u.templateId !== selectedTemplate?.id);
+    if (externalUsage) {
+      return {
+        templateTitle: externalUsage.templateTitle,
+        materialType: externalUsage.materialType,
+        cycle: externalUsage.cycle
+      };
+    }
+
+    return null;
+  }
+
+  // Check if question is already allocated in CURRENT template (any cycle)
+  function isQuestionAllocatedInCurrentTemplate(questionId: string): { cycle: GmatCycle } | null {
+    for (const cycle of GMAT_CYCLES) {
+      if (cycle !== selectedCycle && cycleAllocations[cycle].has(questionId)) {
+        return { cycle };
+      }
     }
     return null;
   }
@@ -663,16 +734,8 @@ export default function GMATQuestionAllocationPage() {
     const errors: string[] = [];
     const warnings: string[] = [];
 
-    // Check total count
-    const isComplete = allocated.length >= totalRequired;
-    if (!isComplete && totalRequired > 0) {
-      errors.push(`Missing ${totalRequired - allocated.length} questions (have ${allocated.length}/${totalRequired})`);
-    }
-    if (allocated.length > totalRequired && totalRequired > 0) {
-      warnings.push(`${allocated.length - totalRequired} extra questions allocated`);
-    }
-
-    // Check difficulty distribution
+    // Check difficulty distribution - this is the source of truth
+    // Total is simply the sum of difficulty requirements
     let difficultyMatch = true;
     if (requiredDist) {
       if (byDifficulty.easy.allocated < byDifficulty.easy.required) {
@@ -696,6 +759,9 @@ export default function GMATQuestionAllocationPage() {
         warnings.push(`${byDifficulty.hard.allocated - byDifficulty.hard.required} extra hard questions`);
       }
     }
+
+    // Check total count against total_questions (the authoritative value)
+    const isComplete = difficultyMatch && allocated.length >= totalRequired;
 
     // Check for questions without difficulty set
     const unsetDifficulty = allocated.filter(q => !q.difficulty).length;
@@ -1219,6 +1285,31 @@ export default function GMATQuestionAllocationPage() {
                     </select>
                   </div>
 
+                  {/* Category Filter */}
+                  {availableCategories.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={categoryFilter}
+                        onChange={(e) => setCategoryFilter(e.target.value)}
+                        className="px-3 py-1.5 border rounded-lg text-sm bg-blue-50 border-blue-200"
+                      >
+                        <option value="">All Categories</option>
+                        {availableCategories.map((cat) => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
+                      {categoryFilter && (
+                        <button
+                          onClick={() => setCategoryFilter('')}
+                          className="p-1 text-gray-400 hover:text-red-500"
+                          title="Clear category filter"
+                        >
+                          <FontAwesomeIcon icon={faTimes} className="text-xs" />
+                        </button>
+                      )}
+                    </div>
+                  )}
+
                   <div className="flex-1 min-w-[200px]">
                     <div className="relative">
                       <FontAwesomeIcon
@@ -1249,8 +1340,11 @@ export default function GMATQuestionAllocationPage() {
                   ) : (
                     filteredQuestions.map(question => {
                       const isAllocated = allocatedQuestionIds.has(question.id);
-                      const usage = getQuestionUsage(question.id);
-                      const isUsedElsewhere = usage !== null;
+                      const externalUsage = getQuestionUsage(question.id);
+                      const internalUsage = isQuestionAllocatedInCurrentTemplate(question.id);
+                      const isUsedElsewhere = externalUsage !== null;
+                      const isUsedInOtherCycle = internalUsage !== null;
+                      const isDisabled = isUsedElsewhere || isUsedInOtherCycle;
 
                       return (
                         <div
@@ -1259,24 +1353,37 @@ export default function GMATQuestionAllocationPage() {
                             isAllocated
                               ? 'border-green-500 bg-green-50'
                               : isUsedElsewhere
-                              ? 'border-orange-300 bg-orange-50 opacity-60'
+                              ? 'border-red-300 bg-red-50 opacity-60'
+                              : isUsedInOtherCycle
+                              ? 'border-orange-300 bg-orange-50 opacity-75'
                               : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                           }`}
                         >
                           <div className="flex items-start gap-3">
                             <button
-                              onClick={() => !isUsedElsewhere && toggleQuestionAllocation(question.id)}
-                              disabled={isUsedElsewhere}
+                              onClick={() => !isDisabled && toggleQuestionAllocation(question.id)}
+                              disabled={isDisabled}
                               className={`w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${
                                 isAllocated
                                   ? 'bg-green-500 text-white'
                                   : isUsedElsewhere
-                                  ? 'bg-orange-300 text-white cursor-not-allowed'
+                                  ? 'bg-red-400 text-white cursor-not-allowed'
+                                  : isUsedInOtherCycle
+                                  ? 'bg-orange-400 text-white cursor-not-allowed'
                                   : 'border-2 border-gray-300 hover:border-brand-green cursor-pointer'
                               }`}
+                              title={
+                                isUsedElsewhere
+                                  ? `Used in ${externalUsage.materialType} (${externalUsage.cycle})`
+                                  : isUsedInOtherCycle
+                                  ? `Already allocated in ${internalUsage.cycle} cycle`
+                                  : isAllocated
+                                  ? 'Click to remove'
+                                  : 'Click to add'
+                              }
                             >
                               {isAllocated && <FontAwesomeIcon icon={faCheck} className="text-sm" />}
-                              {isUsedElsewhere && <FontAwesomeIcon icon={faMinus} className="text-sm" />}
+                              {(isUsedElsewhere || isUsedInOtherCycle) && !isAllocated && <FontAwesomeIcon icon={faMinus} className="text-sm" />}
                             </button>
 
                             <div className="flex-1 min-w-0">
@@ -1294,9 +1401,28 @@ export default function GMATQuestionAllocationPage() {
                                     {question.difficulty}
                                   </span>
                                 )}
+                                {/* Categories */}
+                                {question.question_data?.categories && question.question_data.categories.length > 0 && (
+                                  <div className="flex flex-wrap gap-1">
+                                    {question.question_data.categories.map((cat: string, idx: number) => (
+                                      <span
+                                        key={idx}
+                                        className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full border border-blue-200"
+                                        title={`Category: ${cat}`}
+                                      >
+                                        {cat}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
                                 {isUsedElsewhere && (
+                                  <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded-full" title={externalUsage.templateTitle}>
+                                    Used in {externalUsage.materialType} ({externalUsage.cycle})
+                                  </span>
+                                )}
+                                {isUsedInOtherCycle && !isUsedElsewhere && (
                                   <span className="text-xs px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full">
-                                    Used in {usage.cycle}
+                                    In {internalUsage.cycle} cycle
                                   </span>
                                 )}
                               </div>
@@ -1418,7 +1544,7 @@ export default function GMATQuestionAllocationPage() {
                     Current Allocation
                   </h3>
 
-                  {/* Progress */}
+                  {/* Progress - use total_questions as the target */}
                   <div className="mb-4">
                     <div className="flex justify-between text-sm mb-2">
                       <span className="text-gray-600">Progress</span>
@@ -1550,23 +1676,40 @@ export default function GMATQuestionAllocationPage() {
                 )}
 
                 {/* Save Button */}
-                <button
-                  onClick={saveAllocation}
-                  disabled={saving}
-                  className="w-full py-3 bg-brand-green text-white rounded-xl font-semibold hover:bg-green-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg"
-                >
-                  {saving ? (
-                    <>
-                      <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <FontAwesomeIcon icon={faSave} />
-                      Save All Cycles
-                    </>
+                <div className="space-y-2">
+                  {hasUnsavedChanges && (
+                    <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-3 text-sm text-yellow-800">
+                      <FontAwesomeIcon icon={faExclamationTriangle} className="mr-2" />
+                      You have unsaved changes. Save before switching to another material type.
+                    </div>
                   )}
-                </button>
+                  <button
+                    onClick={saveAllocation}
+                    disabled={saving}
+                    className={`w-full py-3 text-white rounded-xl font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg ${
+                      hasUnsavedChanges
+                        ? 'bg-yellow-500 hover:bg-yellow-600 animate-pulse'
+                        : 'bg-brand-green hover:bg-green-600'
+                    }`}
+                    title="Save allocations for all 3 cycles (Foundation, Development, Excellence) for this material"
+                  >
+                    {saving ? (
+                      <>
+                        <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <FontAwesomeIcon icon={faSave} />
+                        Save All Cycles
+                        {hasUnsavedChanges && <span className="text-xs ml-1">(unsaved)</span>}
+                      </>
+                    )}
+                  </button>
+                  <p className="text-xs text-gray-500 text-center">
+                    Saves allocations for all 3 cycles of this material type
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -1621,30 +1764,53 @@ export default function GMATQuestionAllocationPage() {
                 <span className="text-sm text-gray-500">{previewingQuestion.section}</span>
               </div>
               <div className="flex items-center gap-2">
-                {!allocatedQuestionIds.has(previewingQuestion.id) && !getQuestionUsage(previewingQuestion.id) && (
-                  <button
-                    onClick={() => {
-                      toggleQuestionAllocation(previewingQuestion.id);
-                      setPreviewingQuestion(null);
-                    }}
-                    className="px-4 py-2 bg-brand-green text-white rounded-lg font-semibold hover:bg-green-600 transition-colors flex items-center gap-2"
-                  >
-                    <FontAwesomeIcon icon={faPlus} />
-                    Add to {selectedCycle}
-                  </button>
-                )}
-                {allocatedQuestionIds.has(previewingQuestion.id) && (
-                  <button
-                    onClick={() => {
-                      toggleQuestionAllocation(previewingQuestion.id);
-                      setPreviewingQuestion(null);
-                    }}
-                    className="px-4 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors flex items-center gap-2"
-                  >
-                    <FontAwesomeIcon icon={faMinus} />
-                    Remove
-                  </button>
-                )}
+                {(() => {
+                  const externalUsage = getQuestionUsage(previewingQuestion.id);
+                  const internalUsage = isQuestionAllocatedInCurrentTemplate(previewingQuestion.id);
+                  const isUsedElsewhere = externalUsage !== null;
+                  const isUsedInOtherCycle = internalUsage !== null;
+                  const isDisabled = isUsedElsewhere || isUsedInOtherCycle;
+                  const isAllocated = allocatedQuestionIds.has(previewingQuestion.id);
+
+                  return (
+                    <>
+                      {!isAllocated && !isDisabled && (
+                        <button
+                          onClick={() => {
+                            toggleQuestionAllocation(previewingQuestion.id);
+                            setPreviewingQuestion(null);
+                          }}
+                          className="px-4 py-2 bg-brand-green text-white rounded-lg font-semibold hover:bg-green-600 transition-colors flex items-center gap-2"
+                        >
+                          <FontAwesomeIcon icon={faPlus} />
+                          Add to {selectedCycle}
+                        </button>
+                      )}
+                      {isAllocated && (
+                        <button
+                          onClick={() => {
+                            toggleQuestionAllocation(previewingQuestion.id);
+                            setPreviewingQuestion(null);
+                          }}
+                          className="px-4 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors flex items-center gap-2"
+                        >
+                          <FontAwesomeIcon icon={faMinus} />
+                          Remove
+                        </button>
+                      )}
+                      {isUsedElsewhere && (
+                        <span className="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm">
+                          Used in {externalUsage.materialType} ({externalUsage.cycle})
+                        </span>
+                      )}
+                      {isUsedInOtherCycle && !isUsedElsewhere && (
+                        <span className="px-4 py-2 bg-orange-100 text-orange-700 rounded-lg text-sm">
+                          Already in {internalUsage.cycle} cycle
+                        </span>
+                      )}
+                    </>
+                  );
+                })()}
                 <button
                   onClick={() => setPreviewingQuestion(null)}
                   className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100"
