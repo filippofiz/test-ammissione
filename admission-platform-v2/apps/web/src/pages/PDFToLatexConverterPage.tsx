@@ -497,6 +497,7 @@ export default function PDFToLatexConverterPage() {
   });
   const [uploadedSections, setUploadedSections] = useState<{
     section: string;
+    materia: string;
     testPdfFile: File | null;
     testPdfUrl: string | null;
     solutionsPdfFile: File | null;
@@ -522,6 +523,8 @@ export default function PDFToLatexConverterPage() {
   // Clear savedSections and baseTestId when test metadata changes (so sections from Training 1 don't grey out Training 2)
   useEffect(() => {
     if (mode === 'new') {
+      console.log('🔄 Test metadata changed, clearing savedSections and baseTestId');
+      console.log('   Metadata:', newTestMetadata);
       setSavedSections([]);
       setBaseTestId(null);
       setSelectedExistingTest(null);
@@ -568,9 +571,39 @@ export default function PDFToLatexConverterPage() {
   // Load existing sections from questions table when baseTestId is set
   useEffect(() => {
     const loadExistingSections = async () => {
-      if (!baseTestId || mode !== 'new') return;
+      if (!baseTestId || mode !== 'new') {
+        console.log('🚫 Not loading existing sections:', { baseTestId, mode });
+        return;
+      }
 
       try {
+        // First, verify the test metadata matches what we're currently working on
+        const { data: testData, error: testError } = await supabase
+          .from('2V_tests')
+          .select('test_type, exercise_type, test_number')
+          .eq('id', baseTestId)
+          .single();
+
+        if (testError || !testData) {
+          console.error('Error loading test metadata:', testError);
+          return;
+        }
+
+        // Check if this test matches our current form metadata
+        const metadataMatches =
+          testData.test_type === newTestMetadata.test_type &&
+          testData.exercise_type === newTestMetadata.exercise_type &&
+          testData.test_number === newTestMetadata.test_number;
+
+        if (!metadataMatches) {
+          console.log('🚫 Test metadata mismatch, clearing baseTestId');
+          console.log('   Test in DB:', testData);
+          console.log('   Current form:', newTestMetadata);
+          setBaseTestId(null);
+          setSavedSections([]);
+          return;
+        }
+
         // Query questions table to find which sections already have questions
         const { data: questions, error } = await supabase
           .from('2V_questions')
@@ -594,7 +627,7 @@ export default function PDFToLatexConverterPage() {
     };
 
     loadExistingSections();
-  }, [baseTestId, mode]);
+  }, [baseTestId, mode, newTestMetadata.test_type, newTestMetadata.exercise_type, newTestMetadata.test_number]);
 
   // Questions from old system
   const [oldQuestions, setOldQuestions] = useState<OldQuestion[]>([]);
@@ -1131,6 +1164,7 @@ export default function PDFToLatexConverterPage() {
     metadata: { test_type: string; exercise_type: string; test_number: number; languages?: 'ITA' | 'ENG' | 'BOTH' },
     sections: {
       section: string;
+      materia: string;
       testPdfFile: File | null;
       testPdfUrl: string | null;
       solutionsPdfFile: File | null;
@@ -1155,6 +1189,7 @@ export default function PDFToLatexConverterPage() {
     metadata: { test_type: string; exercise_type: string; test_number: number },
     sections: {
       section: string;
+      materia: string;
       testPdfFile: File | null;
       testPdfUrl: string | null;
       solutionsPdfFile: File | null;
@@ -1462,28 +1497,24 @@ export default function PDFToLatexConverterPage() {
           }
         }
 
-        // If we already have a baseTestId from a previous section, reuse it
-        if (baseTestId) {
-          testId = baseTestId;
-          console.log(`✓ Reusing test_id from previous section: ${testId}`);
+        // Determine test ID based on creation mode
+        if (creationMode === 'add-section') {
+          // ADD SECTION MODE: Reuse existing test or baseTestId
+          if (baseTestId) {
+            // Reusing test from previous section in this session
+            testId = baseTestId;
+            console.log(`✓ Reusing test_id from previous section: ${testId}`);
+          } else if (selectedExistingTest) {
+            // User selected an existing test to add section to
+            testId = selectedExistingTest;
+            console.log(`✓ Adding section to existing test: ${testId}`);
 
-          // Update the test to "Multi-topic" since we now have multiple sections
-          if (uploadedSections.length > 1) {
-            const { error: updateError } = await supabase
-              .from('2V_tests')
-              .update({ section: 'Multi-topic' })
-              .eq('id', testId);
-
-            if (updateError) {
-              console.warn('Could not update section to Multi-topic:', updateError);
-            } else {
-              console.log(`✓ Updated test section to "Multi-topic"`);
-            }
+            // Save the baseTestId for subsequent sections in this session
+            setBaseTestId(testId);
+            console.log(`✓ Set baseTestId: ${testId}`);
+          } else {
+            throw new Error('No existing test selected for add-section mode');
           }
-        } else if (creationMode === 'add-section' && selectedExistingTest) {
-          // User selected an existing test to add section to
-          testId = selectedExistingTest;
-          console.log(`✓ Adding section to existing test: ${testId}`);
 
           // Update the test to "Multi-topic" since we're adding sections
           const { error: updateError } = await supabase
@@ -1496,37 +1527,56 @@ export default function PDFToLatexConverterPage() {
           } else {
             console.log(`✓ Updated test section to "Multi-topic"`);
           }
-
-          // Save the baseTestId for subsequent sections in this session
-          setBaseTestId(testId);
-          console.log(`✓ Set baseTestId: ${testId}`);
         } else {
-          // Create New Test mode - always create a brand new test
-          const sectionValue = firstSection.section;
-          testId = crypto.randomUUID();
+          // CREATE NEW TEST MODE
+          if (baseTestId) {
+            // Reusing test from previous section in the SAME new test
+            testId = baseTestId;
+            console.log(`✓ Reusing test_id from previous section in same new test: ${testId}`);
 
-          const { error: testInsertError } = await supabase
-            .from('2V_tests')
-            .insert({
-              id: testId,
-              test_type: newTestMetadata.test_type,
-              section: sectionValue,
-              exercise_type: newTestMetadata.exercise_type,
-              test_number: newTestMetadata.test_number,
-              format: 'interactive',
-              is_active: true,
-              created_by: profileId,
-            });
+            // Update the test to "Multi-topic" if we now have multiple sections
+            if (uploadedSections.length > 1) {
+              const { error: updateError } = await supabase
+                .from('2V_tests')
+                .update({ section: 'Multi-topic' })
+                .eq('id', testId);
 
-          if (testInsertError) {
-            console.error('Error inserting test:', testInsertError);
-            throw new Error(`Failed to create test: ${testInsertError.message}`);
+              if (updateError) {
+                console.warn('Could not update section to Multi-topic:', updateError);
+              } else {
+                console.log(`✓ Updated test section to "Multi-topic"`);
+              }
+            }
+          } else {
+            // Create a brand new test
+            const sectionValue = firstSection.section;
+            const materiaValue = firstSection.materia || null; // Get materia from first section
+            testId = crypto.randomUUID();
+
+            const { error: testInsertError } = await supabase
+              .from('2V_tests')
+              .insert({
+                id: testId,
+                test_type: newTestMetadata.test_type,
+                section: sectionValue,
+                materia: materiaValue,
+                exercise_type: newTestMetadata.exercise_type,
+                test_number: newTestMetadata.test_number,
+                format: 'interactive',
+                is_active: true,
+                created_by: profileId,
+              });
+
+            if (testInsertError) {
+              console.error('Error inserting test:', testInsertError);
+              throw new Error(`Failed to create test: ${testInsertError.message}`);
+            }
+            console.log(`✓ Created new test in 2V_tests with id: ${testId}`);
+
+            // Save the baseTestId so subsequent sections can reuse it
+            setBaseTestId(testId);
+            console.log(`✓ Set baseTestId: ${testId}`);
           }
-          console.log(`✓ Created new test in 2V_tests with id: ${testId}`);
-
-          // Save the baseTestId so subsequent sections can reuse it
-          setBaseTestId(testId);
-          console.log(`✓ Set baseTestId: ${testId}`);
         }
         testType = newTestMetadata.test_type;
         pdfUrl = firstSection.testPdfUrl;
@@ -1563,10 +1613,16 @@ export default function PDFToLatexConverterPage() {
       // Create a map of passages by ID for easy lookup
       const passageMap = new Map(passages.map(p => [p.passage_id, p]));
 
+      // Create a map of section name to materia for easy lookup
+      const sectionMateriaMap = new Map(uploadedSections.map(s => [s.section, s.materia || null]));
+
       // Transform to new format and UPDATE/INSERT questions
       const questionsToUpdate = convertedQuestions.map((q: any) => {
         // Get passage data if this question references one
         const passage = q.passage_id ? passageMap.get(q.passage_id) : null;
+
+        // Get materia for this question's section
+        const materia = sectionMateriaMap.get(q.section) || null;
 
         return {
           test_id: testId,
@@ -1574,6 +1630,7 @@ export default function PDFToLatexConverterPage() {
           question_number: q.question_number,
           question_type: 'multiple_choice',
           section: q.section,
+          materia: materia,
           question_data: {
             question_text: q.question_text,
             question_text_eng: q.question_text_eng,
@@ -3387,6 +3444,8 @@ export default function PDFToLatexConverterPage() {
                       onClick={() => {
                         setCreationMode('create-new');
                         setSelectedExistingTest(null);
+                        setBaseTestId(null); // Clear baseTestId to ensure a new test is created
+                        setSavedSections([]); // Clear saved sections
                       }}
                       className={`p-4 rounded-xl border-2 transition-all ${
                         creationMode === 'create-new'
