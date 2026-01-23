@@ -114,9 +114,76 @@ const isTableLine = (line: string): boolean => {
   return line.trim().startsWith('|') && line.trim().endsWith('|');
 };
 
+// Placeholder for extracted display math blocks
+const DISPLAY_MATH_PLACEHOLDER = '\uFFFD_DISPLAY_MATH_';
+
+/**
+ * Extract display math blocks ($$...$$ and \[...\]) from content
+ * Replaces them with unique placeholders to prevent line-splitting from breaking them
+ *
+ * @param content - The text content containing math expressions
+ * @returns Object with content (with placeholders) and extracted blocks array
+ */
+const extractDisplayMathBlocks = (content: string): { content: string; blocks: string[] } => {
+  const blocks: string[] = [];
+
+  // Extract $$...$$ blocks (non-greedy, multi-line)
+  let processedContent = content.replace(/\$\$([\s\S]*?)\$\$/g, (match) => {
+    const index = blocks.length;
+    blocks.push(match);
+    return `${DISPLAY_MATH_PLACEHOLDER}${index}\uFFFD`;
+  });
+
+  // Extract \[...\] blocks (non-greedy, multi-line)
+  processedContent = processedContent.replace(/\\\[([\s\S]*?)\\\]/g, (match) => {
+    const index = blocks.length;
+    blocks.push(match);
+    return `${DISPLAY_MATH_PLACEHOLDER}${index}\uFFFD`;
+  });
+
+  return { content: processedContent, blocks };
+};
+
+/**
+ * Check if a line contains only a display math placeholder
+ *
+ * @param line - The line to check
+ * @returns The block index if line is a standalone placeholder, null otherwise
+ */
+const getStandaloneDisplayMathIndex = (line: string): number | null => {
+  const match = line.match(new RegExp(`${DISPLAY_MATH_PLACEHOLDER}(\\d+)\uFFFD`));
+  if (match && line.trim() === match[0]) {
+    return parseInt(match[1], 10);
+  }
+  return null;
+};
+
+/**
+ * Restore display math blocks in a line by replacing placeholders with actual math
+ *
+ * @param line - The line potentially containing placeholders
+ * @param blocks - Array of extracted display math blocks
+ * @returns Line with placeholders replaced by math blocks
+ */
+const restoreDisplayMathInLine = (line: string, blocks: string[]): string => {
+  let restoredLine = line;
+  const placeholderRegex = new RegExp(`${DISPLAY_MATH_PLACEHOLDER}(\\d+)\uFFFD`, 'g');
+  const matches = line.matchAll(placeholderRegex);
+
+  for (const match of matches) {
+    const blockIndex = parseInt(match[1], 10);
+    if (blockIndex < blocks.length) {
+      const mathBlock = blocks[blockIndex];
+      restoredLine = restoredLine.replace(match[0], mathBlock);
+    }
+  }
+
+  return restoredLine;
+};
+
 export const MathJaxRenderer: React.FC<MathJaxRendererProps> = ({ children, className = '' }) => {
   // Handle both string content and React elements
-  // For string content, preserve newlines and render markdown tables
+  // For string content, preserve newlines and render markdown tables and display math
   const renderContent = () => {
     if (typeof children !== 'string') {
       return children;
@@ -134,19 +201,37 @@ export const MathJaxRenderer: React.FC<MathJaxRendererProps> = ({ children, clas
       return <MathJax dynamic>{processedContent}</MathJax>;
     }
 
-    // Process lines, detecting and grouping table rows
+    // STEP 1: Extract display math blocks before line splitting
+    // This prevents multi-line display math ($$...$$ and \[...\]) from being broken apart
+    const { content: contentWithPlaceholders, blocks: displayMathBlocks } = extractDisplayMathBlocks(processedContent);
+
+    // STEP 2: Split by lines (display math blocks are now safe as placeholders)
+    const linesWithPlaceholders = contentWithPlaceholders.split('\n');
+
+    // STEP 3: Process lines, handling tables and restoring display math
     const elements: React.ReactNode[] = [];
     let i = 0;
 
-    while (i < lines.length) {
-      const line = lines[i];
+    while (i < linesWithPlaceholders.length) {
+      const line = linesWithPlaceholders[i];
 
-      // Check if this starts a markdown table
-      if (isTableLine(line)) {
+      // Check if this line is a standalone display math placeholder
+      const standaloneIndex = getStandaloneDisplayMathIndex(line);
+      if (standaloneIndex !== null) {
+        // Render display math block without inline prop
+        const mathBlock = displayMathBlocks[standaloneIndex];
+        elements.push(
+          <React.Fragment key={elements.length}>
+            {elements.length > 0 && <br />}
+            <MathJax dynamic>{mathBlock}</MathJax>
+          </React.Fragment>
+        );
+        i++;
+      } else if (isTableLine(line)) {
         // Collect all consecutive table lines
         const tableLines: string[] = [];
-        while (i < lines.length && isTableLine(lines[i])) {
-          tableLines.push(lines[i]);
+        while (i < linesWithPlaceholders.length && isTableLine(linesWithPlaceholders[i])) {
+          tableLines.push(linesWithPlaceholders[i]);
           i++;
         }
         // Render the table
@@ -156,11 +241,13 @@ export const MathJaxRenderer: React.FC<MathJaxRendererProps> = ({ children, clas
           </React.Fragment>
         );
       } else {
-        // Regular line - render with MathJax
+        // Regular line - restore any inline display math and render with inline prop
+        const restoredLine = restoreDisplayMathInLine(line, displayMathBlocks);
+
         elements.push(
           <React.Fragment key={elements.length}>
             {elements.length > 0 && <br />}
-            <MathJax dynamic inline>{line}</MathJax>
+            <MathJax dynamic inline>{restoredLine}</MathJax>
           </React.Fragment>
         );
         i++;

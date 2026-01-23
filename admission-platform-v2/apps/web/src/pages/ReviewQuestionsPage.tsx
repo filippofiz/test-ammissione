@@ -37,6 +37,7 @@ import RechartsRenderer from '../components/RechartsRenderer';
 import { FlaggedQuestionEditor } from '../components/FlaggedQuestionEditor';
 import { DataInsightsPreview } from '../components/questions/DataInsightsPreview';
 import { supabase } from '../lib/supabase';
+import { normalizeWhitespace } from '../lib/textUtils';
 import * as pdfjsLib from 'pdfjs-dist';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -2515,9 +2516,9 @@ export default function ReviewQuestionsPage() {
                               <div className="bg-white rounded-lg p-4 text-gray-700 overflow-x-auto">
                                 <div className="whitespace-pre-wrap">
                                   <MathJaxRenderer>
-                                    {getQuestionLanguage(question.id) === 'en' && passage.passage_text_eng
+                                    {normalizeWhitespace(getQuestionLanguage(question.id) === 'en' && passage.passage_text_eng
                                       ? passage.passage_text_eng
-                                      : passage.passage_text || ''}
+                                      : passage.passage_text || '')}
                                   </MathJaxRenderer>
                                 </div>
                               </div>
@@ -2758,7 +2759,7 @@ export default function ReviewQuestionsPage() {
                             ) : (
                               <div className="overflow-x-auto">
                                 <MathJaxRenderer>
-                                  {getLocalizedText(question, 'question_text', 'question_text_eng') || 'No question text'}
+                                  {normalizeWhitespace(getLocalizedText(question, 'question_text', 'question_text_eng') || 'No question text')}
                                 </MathJaxRenderer>
                               </div>
                             )}
