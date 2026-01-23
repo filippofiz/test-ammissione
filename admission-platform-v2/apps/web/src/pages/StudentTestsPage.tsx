@@ -216,6 +216,7 @@ export default function StudentTestsPage() {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [translatedSections, setTranslatedSections] = useState<Record<string, string>>({});
   const [sectionOrder, setSectionOrder] = useState<string[]>([]);
+  const [scoringInfoExpanded, setScoringInfoExpanded] = useState(false);
 
   // Start Test Modal state
   const [showStartTestModal, setShowStartTestModal] = useState(false);
@@ -1302,20 +1303,31 @@ export default function StudentTestsPage() {
             </div>
           )}
 
-          {/* Scoring Info Note */}
-          <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 mb-6 animate-fadeInUp">
-            <div className="flex items-start gap-3">
+          {/* Scoring Info Note - Collapsible */}
+          <div className="bg-blue-50 border-2 border-blue-200 rounded-xl mb-6 animate-fadeInUp overflow-hidden">
+            <button
+              onClick={() => setScoringInfoExpanded(!scoringInfoExpanded)}
+              className="w-full p-4 flex items-start gap-3 hover:bg-blue-100 transition-colors"
+            >
               <FontAwesomeIcon icon={faInfoCircle} className="text-blue-600 text-xl mt-0.5" />
-              <div className="flex-1">
-                <h4 className="font-bold text-blue-900 mb-2">{t('studentTests.scoringInfo.title')}</h4>
-                <ul className="text-sm text-blue-800 space-y-1">
+              <div className="flex-1 text-left">
+                <h4 className="font-bold text-blue-900">{t('studentTests.scoringInfo.title')}</h4>
+              </div>
+              <FontAwesomeIcon
+                icon={scoringInfoExpanded ? faChevronDown : faChevronRight}
+                className="text-blue-600 mt-0.5"
+              />
+            </button>
+            {scoringInfoExpanded && (
+              <div className="px-4 pb-4 pt-0">
+                <ul className="text-sm text-blue-800 space-y-1 ml-8">
                   <li>• {t('studentTests.scoringInfo.scoreDefinition')}</li>
                   <li>• {t('studentTests.scoringInfo.percentageDefinition')}</li>
                   <li>• {t('studentTests.scoringInfo.passDefinition')}</li>
                   <li>• {t('studentTests.scoringInfo.failDefinition')}</li>
                 </ul>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Note: Tests are now auto-assigned when student visits this page */}
