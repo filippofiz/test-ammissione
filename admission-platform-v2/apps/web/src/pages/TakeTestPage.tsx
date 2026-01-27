@@ -390,6 +390,7 @@ export default function TakeTestPage() {
   const [showPauseScreen, setShowPauseScreen] = useState(false);
   const [showPauseChoiceScreen, setShowPauseChoiceScreen] = useState(false);
   const [showCompletionScreen, setShowCompletionScreen] = useState(false);
+  const [hasSpecialNeeds, setHasSpecialNeeds] = useState(false); // Student has special needs (30% extra time)
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const [pauseTimeRemaining, setPauseTimeRemaining] = useState<number | null>(null);
   const [testStartTime, setTestStartTime] = useState<Date | null>(null);
@@ -2020,6 +2021,16 @@ export default function TakeTestPage() {
       setStudentId(assignment.student_id);
       setCurrentAttempt(currentAttemptNum);
 
+      // Load student profile to check for special needs (extra time)
+      const { data: studentProfile } = await db
+        .from('2V_profiles')
+        .select('esigenze_speciali')
+        .eq('id', assignment.student_id)
+        .single();
+
+      const studentHasSpecialNeeds = studentProfile?.esigenze_speciali || false;
+      setHasSpecialNeeds(studentHasSpecialNeeds);
+
       const testInfo = (assignment['2V_tests'] || assignment['2V_tests_test'])!;
       const testType = testInfo.test_type;
       const exerciseType = testInfo.exercise_type;
@@ -2242,7 +2253,18 @@ export default function TakeTestPage() {
 
       // Initialize timer if needed (skip if guided mode with no time limit)
       if (configData.total_time_minutes && (!isGuidedMode || guidedTimed)) {
-        setTimeRemaining(configData.total_time_minutes * 60); // Convert to seconds
+        let totalTimeSeconds = configData.total_time_minutes * 60; // Convert to seconds
+
+        // Apply 30% extra time for students with special needs
+        if (studentHasSpecialNeeds) {
+          totalTimeSeconds = Math.round(totalTimeSeconds * 1.3);
+          console.log('⏰ Special needs: Applied 30% extra time', {
+            original: configData.total_time_minutes,
+            adjusted: Math.round(totalTimeSeconds / 60)
+          });
+        }
+
+        setTimeRemaining(totalTimeSeconds);
       }
 
       // Load existing answers if test is in progress (for current attempt only)
@@ -2572,11 +2594,29 @@ export default function TakeTestPage() {
       }
     } else if (config?.total_time_minutes && sections.length > 0) {
       // Proportional time: divide total time by number of sections
-      sectionTime = Math.round(config.total_time_minutes / sections.length);
+      let totalTime = config.total_time_minutes;
+      // Apply 30% extra time for students with special needs (done here at total level)
+      if (hasSpecialNeeds) {
+        totalTime = Math.round(totalTime * 1.3);
+      }
+      sectionTime = Math.round(totalTime / sections.length);
     }
 
     if (sectionTime) {
-      setTimeRemaining(sectionTime * 60); // Convert to seconds
+      let sectionTimeSeconds = sectionTime * 60; // Convert to seconds
+
+      // Apply 30% extra time for students with special needs
+      // ONLY if using time_per_section (not proportional time, which already applied it above)
+      if (hasSpecialNeeds && config?.time_per_section && section) {
+        sectionTimeSeconds = Math.round(sectionTimeSeconds * 1.3);
+        console.log('⏰ Special needs: Applied 30% extra time to section', {
+          section,
+          original: sectionTime,
+          adjusted: Math.round(sectionTimeSeconds / 60)
+        });
+      }
+
+      setTimeRemaining(sectionTimeSeconds);
       timerRef.current = setInterval(() => {
         setTimeRemaining(prev => {
           if (prev === null) return prev;
@@ -4813,7 +4853,7 @@ export default function TakeTestPage() {
                     <div className="text-sm text-gray-500">
                       {config?.questions_per_section?.[section] || allQuestions.filter(q => getSectionField(q) === section).length} {t('takeTest.questions')}
                       {config.time_per_section?.[section] && (
-                        <> • {config.time_per_section[section]} {t('common.minutes')}</>
+                        <> • {hasSpecialNeeds ? Math.round(config.time_per_section[section] * 1.3) : config.time_per_section[section]} {t('common.minutes')}</>
                       )}
                     </div>
                   </div>
