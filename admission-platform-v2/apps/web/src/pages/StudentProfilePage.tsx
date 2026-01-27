@@ -22,6 +22,7 @@ import {
   faStickyNote,
   faGraduationCap,
   faSpinner,
+  faUniversalAccess,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import { CountdownTimer } from '../components/CountdownTimer';
@@ -35,6 +36,7 @@ interface StudentProfile {
   average_school_grade: number | null;
   past_test_results: PastTestResult[];
   student_notes: string | null;
+  esigenze_speciali: boolean;
 }
 
 interface PastTestResult {
@@ -61,6 +63,7 @@ export default function StudentProfilePage() {
   const [averageGrade, setAverageGrade] = useState<string>('');
   const [studentNotes, setStudentNotes] = useState<string>('');
   const [pastResults, setPastResults] = useState<PastTestResult[]>([]);
+  const [esigenzeSpeciali, setEsigenzeSpeciali] = useState<boolean>(false);
 
   // New past result form
   const [showAddResult, setShowAddResult] = useState(false);
@@ -84,7 +87,7 @@ export default function StudentProfilePage() {
     try {
       const { data, error: fetchError } = await supabase
         .from('2V_profiles')
-        .select('id, name, email, real_test_date, average_school_grade, past_test_results, student_notes')
+        .select('id, name, email, real_test_date, average_school_grade, past_test_results, student_notes, esigenze_speciali')
         .eq('id', studentId)
         .single();
 
@@ -102,6 +105,7 @@ export default function StudentProfilePage() {
         average_school_grade: data.average_school_grade,
         past_test_results: data.past_test_results || [],
         student_notes: data.student_notes,
+        esigenze_speciali: data.esigenze_speciali || false,
       };
 
       setProfile(profileData);
@@ -109,6 +113,7 @@ export default function StudentProfilePage() {
       setAverageGrade(data.average_school_grade?.toString() || '');
       setStudentNotes(data.student_notes || '');
       setPastResults(data.past_test_results || []);
+      setEsigenzeSpeciali(data.esigenze_speciali || false);
     } catch (err) {
       console.error('Error loading student profile:', err);
       setError(err instanceof Error ? err.message : 'Failed to load student profile');
@@ -197,6 +202,35 @@ export default function StudentProfilePage() {
     setPastResults(pastResults.filter(r => r.id !== id));
   }
 
+  async function handleEsigenzeSpecialiToggle(checked: boolean) {
+    if (!studentId) return;
+
+    setEsigenzeSpeciali(checked);
+
+    try {
+      const { error: updateError } = await supabase
+        .from('2V_profiles')
+        .update({ esigenze_speciali: checked })
+        .eq('id', studentId);
+
+      if (updateError) throw updateError;
+
+      setSuccessMessage(
+        checked
+          ? 'Special needs flag enabled and saved'
+          : 'Special needs flag disabled and saved'
+      );
+
+      // Clear success message after 2 seconds
+      setTimeout(() => setSuccessMessage(null), 2000);
+    } catch (err) {
+      console.error('Error updating special needs flag:', err);
+      setError(err instanceof Error ? err.message : 'Failed to update special needs flag');
+      // Revert the checkbox state on error
+      setEsigenzeSpeciali(!checked);
+    }
+  }
+
   if (loading) {
     return (
       <Layout>
@@ -283,6 +317,32 @@ export default function StudentProfilePage() {
 
           {/* Main Form */}
           <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8 space-y-8">
+            {/* Special Needs Section */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <FontAwesomeIcon icon={faUniversalAccess} className="text-brand-green text-xl" />
+                <h3 className="text-xl font-bold text-brand-dark">Special Needs / Accommodations</h3>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-4">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={esigenzeSpeciali}
+                    onChange={(e) => handleEsigenzeSpecialiToggle(e.target.checked)}
+                    className="w-5 h-5 text-brand-green focus:ring-brand-green rounded"
+                  />
+                  <div>
+                    <span className="text-sm font-semibold text-gray-700">
+                      Student has special needs (Esigenze Speciali)
+                    </span>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Auto-saves when toggled. Extra time functionality will be implemented soon.
+                    </p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
             {/* Real Test Date Section */}
             <div>
               <div className="flex items-center gap-2 mb-4">
