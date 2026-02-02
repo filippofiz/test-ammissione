@@ -6,7 +6,6 @@
  * - 'scientific': Desmos scientific calculator (complete/SAT mode)
  */
 
-import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCalculator } from '@fortawesome/free-solid-svg-icons';
 import { GMATCalculator } from './GMATCalculator';

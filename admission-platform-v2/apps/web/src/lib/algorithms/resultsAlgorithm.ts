@@ -84,12 +84,14 @@ interface TestResult {
   metadata?: Record<string, any>;
 }
 
-interface HistoricalScore {
-  score: number;
-  scaled_score?: number;
-  student_id: string;
-  completed_at: string;
-}
+// Note: HistoricalScore interface reserved for future implementation
+// when historical percentile calculation is implemented
+// interface HistoricalScore {
+//   score: number;
+//   scaled_score?: number;
+//   student_id: string;
+//   completed_at: string;
+// }
 
 // ============================================================================
 // RESULTS ALGORITHM CLASS
@@ -181,7 +183,7 @@ export class ResultsAlgorithm {
    * Calculate pass/fail status
    */
   private calculatePassFail(
-    rawScore: number,
+    _rawScore: number,
     scaledScore?: number,
     percentage?: number
   ): boolean {
@@ -275,49 +277,21 @@ export class ResultsAlgorithm {
 
   /**
    * Historical Percentile: Based on actual student scores in database
+   * Note: Currently returns undefined as the 2V_test_assignments table
+   * doesn't have raw_score/scaled_score columns. Scores are stored in completion_details JSON.
+   * TODO: Implement score extraction from completion_details when needed.
    */
   private async calculateHistoricalPercentile(
-    testType: string,
-    trackType: string,
-    rawScore: number,
-    scaledScore?: number
+    _testType: string,
+    _trackType: string,
+    _rawScore: number,
+    _scaledScore?: number
   ): Promise<number | undefined> {
-    try {
-      // Get all completed test scores for this test type and track
-      const { data: scores, error } = await supabase
-        .from('2V_test_assignments')
-        .select('raw_score, scaled_score')
-        .eq('test_type', testType)
-        .eq('track_type', trackType)
-        .eq('status', 'completed')
-        .not('raw_score', 'is', null);
-
-      if (error || !scores || scores.length === 0) {
-        console.warn('No historical data available for percentile calculation');
-        return undefined;
-      }
-
-      // Use scaled score if available, otherwise raw score
-      const useScaled = scaledScore !== undefined;
-      const currentScore = useScaled ? scaledScore : rawScore;
-
-      const historicalScores = scores
-        .map((s) => (useScaled ? s.scaled_score : s.raw_score))
-        .filter((s) => s !== null && s !== undefined) as number[];
-
-      if (historicalScores.length === 0) {
-        return undefined;
-      }
-
-      // Calculate percentile: percentage of scores below current score
-      const belowCount = historicalScores.filter((s) => s < currentScore).length;
-      const percentile = (belowCount / historicalScores.length) * 100;
-
-      return Math.round(percentile);
-    } catch (err) {
-      console.error('Error calculating historical percentile:', err);
-      return undefined;
-    }
+    // The 2V_test_assignments table doesn't have raw_score/scaled_score columns
+    // Scores are stored in completion_details JSON field
+    // For now, return undefined until we implement score extraction from completion_details
+    console.warn('Historical percentile calculation not yet implemented - scores are stored in completion_details JSON');
+    return undefined;
   }
 
   /**
@@ -325,8 +299,8 @@ export class ResultsAlgorithm {
    * Used for standardized tests with published norms
    */
   private calculateNormativePercentile(
-    rawScore: number,
-    scaledScore?: number
+    _rawScore: number,
+    _scaledScore?: number
   ): number | undefined {
     // This would use pre-defined percentile tables from test publishers
     // For now, return undefined as this requires external data
@@ -506,7 +480,7 @@ export class ResultsAlgorithm {
    */
   private generateRecommendations(
     passed: boolean,
-    grade?: string,
+    _grade?: string,
     percentile?: number,
     sectionScores?: Array<{ section_id: string; section_name: string; score: number }>
   ): string[] {
@@ -572,21 +546,24 @@ export async function loadResultsConfig(
       return null;
     }
 
+    // Convert null values to undefined and handle missing columns
+    // Note: Some columns may not exist in the database schema yet
+    const configData = data as Record<string, unknown>;
     return {
       id: data.id,
       test_type: testType,
       track_type: trackType,
       algorithm_category: 'results',
-      percentile_calculation: data.percentile_calculation || 'historical',
-      pass_threshold: data.pass_threshold,
-      use_scaled_for_pass: data.use_scaled_for_pass,
-      grade_boundaries: data.grade_boundaries,
-      grade_labels: data.grade_labels,
-      percentile_bands: data.percentile_bands,
-      college_readiness_benchmarks: data.college_readiness_benchmarks,
-      custom_rules: data.custom_rules,
-      created_at: data.created_at,
-      updated_at: data.updated_at,
+      percentile_calculation: (data.percentile_calculation as 'historical' | 'normative' | 'irt_based' | null) ?? 'historical',
+      pass_threshold: data.pass_threshold ?? undefined,
+      use_scaled_for_pass: (configData.use_scaled_for_pass as boolean | null) ?? undefined,
+      grade_boundaries: (data.grade_boundaries as Record<string, number> | null) ?? undefined,
+      grade_labels: (configData.grade_labels as string[] | null) ?? undefined,
+      percentile_bands: (configData.percentile_bands as ResultsConfig['percentile_bands']) ?? undefined,
+      college_readiness_benchmarks: (configData.college_readiness_benchmarks as Record<string, number> | null) ?? undefined,
+      custom_rules: (configData.custom_rules as Record<string, unknown> | null) ?? undefined,
+      created_at: data.created_at ?? undefined,
+      updated_at: data.updated_at ?? undefined,
     };
   } catch (err) {
     console.error('Error loading results config:', err);

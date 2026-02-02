@@ -197,7 +197,7 @@ export class SimpleAdaptiveAlgorithm {
    */
   private selectBaseQuestion(
     availableQuestions: Question[],
-    sectionId?: string
+    _sectionId?: string
   ): Question {
     // Prefer medium difficulty questions (3 on 1-5 scale)
     const mediumQuestions = availableQuestions.filter((q) => normalizeDifficulty(q.difficulty) === 3);
@@ -380,7 +380,8 @@ export class ComplexAdaptiveAlgorithm {
 
     // Select question with maximum information at current theta
     const currentTheta = this.state.theta || 0;
-    const maxInfoWeight = this.config.max_information_weight || 1.0;
+    // Note: maxInfoWeight reserved for future weighted information selection
+    // const maxInfoWeight = this.config.max_information_weight || 1.0;
 
     // Calculate information for each question
     const questionsWithInfo = availableQuestions.map((q) => ({
@@ -807,28 +808,29 @@ export async function loadAdaptiveConfig(
     }
 
     // Combine algorithm config with base questions config
+    // Convert null values to undefined for interface compatibility
     return {
       id: algorithmData.id,
       test_type: testType,
       track_type: trackType,
-      algorithm_type: algorithmData.algorithm_type,
+      algorithm_type: algorithmData.algorithm_type as 'simple' | 'complex',
 
       // Simple algorithm parameters (from database)
-      simple_difficulty_increment: algorithmData.simple_difficulty_increment,
+      simple_difficulty_increment: algorithmData.simple_difficulty_increment ?? undefined,
 
       // Complex algorithm parameters (from database)
-      irt_model: algorithmData.irt_model,
-      initial_theta: algorithmData.initial_theta,
-      theta_min: algorithmData.theta_min,
-      theta_max: algorithmData.theta_max,
-      se_threshold: algorithmData.se_threshold,
-      max_information_weight: algorithmData.max_information_weight,
-      exposure_control: algorithmData.exposure_control,
+      irt_model: (algorithmData.irt_model as '1PL' | '2PL' | '3PL' | null) ?? undefined,
+      initial_theta: algorithmData.initial_theta ?? undefined,
+      theta_min: algorithmData.theta_min ?? undefined,
+      theta_max: algorithmData.theta_max ?? undefined,
+      se_threshold: algorithmData.se_threshold ?? undefined,
+      max_information_weight: algorithmData.max_information_weight ?? undefined,
+      exposure_control: algorithmData.exposure_control ?? undefined,
 
       // Base questions config (from test track config)
-      use_base_questions: trackData?.use_base_questions,
-      base_questions_scope: trackData?.base_questions_scope,
-      base_questions_count: trackData?.base_questions_count,
+      use_base_questions: trackData?.use_base_questions ?? undefined,
+      base_questions_scope: (trackData?.base_questions_scope as 'entire_test' | 'per_section' | null) ?? undefined,
+      base_questions_count: trackData?.base_questions_count ?? undefined,
     };
   } catch (err) {
     console.error('Error loading adaptive config:', err);

@@ -1,5 +1,8 @@
 import { supabase } from './supabase';
-import type { Profile } from './database.types';
+// Import from full generated Supabase types
+import type { Database } from '../../database.types';
+
+type Profile = Database['public']['Tables']['2V_profiles']['Row'];
 
 export interface LoginResult {
   success: boolean;
@@ -51,11 +54,12 @@ export async function signIn(email: string, password: string): Promise<LoginResu
       };
     }
 
-    const profile = profileData[0];
+    // The RPC returns a subset of Profile fields, cast to full Profile type
+    const profile = profileData[0] as Profile;
 
     return {
       success: true,
-      mustChangePassword: profile.must_change_password,
+      mustChangePassword: profile.must_change_password ?? false,
       profile,
       error: null,
     };
@@ -146,7 +150,8 @@ export async function getCurrentProfile(): Promise<Profile | null> {
       return null;
     }
 
-    return profileData[0];
+    // The RPC returns a subset of Profile fields, cast to full Profile type
+    return profileData[0] as Profile;
   } catch {
     return null;
   }

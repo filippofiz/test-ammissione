@@ -1,6 +1,6 @@
 #import "/templates/uptoten-template.typ": *
-#import "@preview/cetz:0.3.2"
-#import "@preview/cetz-plot:0.1.1"
+#import "@preview/cetz:0.4.2"
+#import "@preview/cetz-plot:0.1.3": plot, chart
 
 #show: uptoten-doc.with(
   title: "GMAT Data Insights",
@@ -10,11 +10,14 @@
   logo: "/Logo.png"
 )
 
-= Lesson Overview
+/*
+===============================================================================
+LESSON OVERVIEW - FOR TUTOR REFERENCE ONLY
+===============================================================================
 
-*Topic:* Two-Part Analysis (TPA)\
-*Section:* Data Insights\
-*Lesson Sequence:* DI-04 (Fourth of 5 DI topics)\
+*Topic:* Two-Part Analysis (TPA)
+*Section:* Data Insights
+*Lesson Sequence:* DI-04 (Fourth of 5 DI topics)
 *Total Sessions:* 3 lessons (A, B, C)
 
 == Learning Objectives
@@ -32,20 +35,26 @@ By the end of this topic, students should be able to:
 
 Two-Part Analysis tests the ability to solve interconnected problems—a skill essential for business analysis where multiple related factors must be considered simultaneously.
 
+===============================================================================
+END OF LESSON OVERVIEW
+===============================================================================
+*/
+
+#outline(title: "Table of Contents", indent: auto, depth: 2)
+
 #pagebreak()
 
-= Part 1: TPA Question Format
+= Introduction to Two-Part Analysis
 
-== Structure
+Two-Part Analysis (TPA) questions test your ability to solve problems where two related quantities or elements must be determined simultaneously. Unlike other question types where you select a single answer, TPA requires you to make two selections from a shared list of options, with each selection answering a different aspect of the problem.
 
-#info-box[
-  *Every TPA Question Has:*
-  1. A problem statement or scenario
-  2. A table with two question columns and shared answer options
-  3. You select ONE option for each column
+This question format mirrors real-world business decision-making, where managers often need to determine multiple variables that are interconnected. For example, a pricing decision might require determining both the optimal price point and the corresponding sales volume, or a resource allocation problem might involve finding the right balance between two competing investments.
 
-  Both selections must come from the SAME set of answer options.
-]
+The distinctive feature of TPA is that both answers come from the same set of options. This means that understanding the relationship between the two parts is often the key to solving the problem efficiently. In some cases, the two parts are mathematically dependent—finding one automatically determines the other. In other cases, they are conceptually related but require separate analysis.
+
+== Question Structure
+
+Every Two-Part Analysis question follows a consistent format. You receive a problem statement or scenario that establishes the context and constraints. Below the problem statement, a table presents two question columns on the left (one for each part you must answer) and a single column of answer options on the right. Your task is to select one option for each column, and notably, both selections must come from this same shared list of options.
 
 #example-box[
   *Sample TPA Format:*
@@ -60,130 +69,105 @@ Two-Part Analysis tests the ability to solve interconnected problems—a skill e
       align: center,
       fill: (col, row) => if row == 0 { rgb("#3498db").lighten(70%) } else { white },
       [*Product A Qty*], [*Product B Qty*], [*Options*],
-      [#sym.circle.stroked], [#sym.circle.stroked], [0],
-      [#sym.circle.stroked], [#sym.circle.stroked], [1],
-      [#sym.circle.stroked], [#sym.circle.stroked], [2],
-      [#sym.circle.filled], [#sym.circle.stroked], [4],
-      [#sym.circle.stroked], [#sym.circle.filled], [2],
-      [#sym.circle.stroked], [#sym.circle.stroked], [5],
+      [#sym.circle.stroked.big], [#sym.circle.stroked.big], [0],
+      [#sym.circle.stroked.big], [#sym.circle.stroked.big], [1],
+      [#sym.circle.stroked.big], [#sym.circle.stroked.big], [2],
+      [#sym.circle.filled.big], [#sym.circle.stroked.big], [4],
+      [#sym.circle.stroked.big], [#sym.circle.filled.big], [2],
+      [#sym.circle.stroked.big], [#sym.circle.stroked.big], [5],
     )
   ]
 
-  Select 4 for Product A ($4 times dollar 15 = dollar 60$) and 2 for Product B ($2 times dollar 20 = dollar 40$)\
-  Total $= dollar 100$ #sym.checkmark
+  Select 4 for Product A ($4 times 15 = 60$) and 2 for Product B ($2 times 20 = 40$)\
+  Total $= 100$ #sym.checkmark
 ]
 
-== Scoring
+In this example, the constraint that the total must equal \$100 creates a mathematical relationship between the two quantities. Once you determine that 4 units of Product A is correct, you can verify that 2 units of Product B completes the equation.
 
-#info-box[
-  Each column selection is scored independently.
-  - Getting one correct but not the other: partial credit
-  - Both must be from the same option list
-]
+== Scoring and Partial Credit
+
+Each column selection in a TPA question is scored independently. This means that getting one part correct while missing the other still earns partial credit—you receive credit for each correct selection regardless of your performance on the other part.
+
+This scoring system has strategic implications. You should always make selections for both columns, even if you are uncertain about one of them. An educated guess on an uncertain part has a chance of being correct, while leaving it blank guarantees no credit. Additionally, if you can confidently determine one part, focus on getting that one right while making your best attempt on the other.
 
 == Visual: TPA Answer Format
 
 #align(center)[
-  #cetz.canvas({
-    import cetz.draw: *
-
-    // Title
-    content((3.5, 7), text(size: 10pt, weight: "bold")[Two-Part Analysis Answer Grid])
-
-    // Column headers with better spacing
-    let header_y = 6.2
-    let row_height = 0.7
-    let col_a_width = 2.2
-    let col_b_width = 2.2
-    let opt_width = 2.6
-
-    rect((0, header_y), (col_a_width, header_y + 0.5), fill: rgb("#3498db").lighten(40%), stroke: 0.5pt)
-    rect((col_a_width, header_y), (col_a_width + col_b_width, header_y + 0.5), fill: rgb("#e74c3c").lighten(40%), stroke: 0.5pt)
-    rect((col_a_width + col_b_width, header_y), (col_a_width + col_b_width + opt_width, header_y + 0.5), fill: gray.lighten(50%), stroke: 0.5pt)
-    content((col_a_width / 2, header_y + 0.25), text(size: 8pt, weight: "bold")[Column A])
-    content((col_a_width + col_b_width / 2, header_y + 0.25), text(size: 8pt, weight: "bold")[Column B])
-    content((col_a_width + col_b_width + opt_width / 2, header_y + 0.25), text(size: 8pt, weight: "bold")[Options])
-
-    // Option rows with better spacing
-    let options = ("Option 1", "Option 2", "Option 3", "Option 4", "Option 5")
-    for (i, opt) in options.enumerate() {
-      let y = header_y - 0.35 - i * row_height
-      let row_fill = if calc.rem(i, 2) == 0 { white } else { gray.lighten(90%) }
-
-      // Column A cell
-      rect((0, y - row_height/2 + 0.02), (col_a_width, y + row_height/2 - 0.02), fill: row_fill, stroke: 0.5pt)
-      circle((col_a_width / 2, y), radius: 0.12, stroke: gray + 1pt, fill: if i == 2 { rgb("#3498db") } else { white })
-
-      // Column B cell
-      rect((col_a_width, y - row_height/2 + 0.02), (col_a_width + col_b_width, y + row_height/2 - 0.02), fill: row_fill, stroke: 0.5pt)
-      circle((col_a_width + col_b_width / 2, y), radius: 0.12, stroke: gray + 1pt, fill: if i == 3 { rgb("#e74c3c") } else { white })
-
-      // Option text cell
-      rect((col_a_width + col_b_width, y - row_height/2 + 0.02), (col_a_width + col_b_width + opt_width, y + row_height/2 - 0.02), fill: row_fill, stroke: 0.5pt)
-      content((col_a_width + col_b_width + opt_width / 2, y), text(size: 8pt)[#opt])
-    }
-
-    // Annotation labels - positioned to the right of the table (no crossing arrows)
-    let selected_a_y = header_y - 0.35 - 2 * row_height
-    let selected_b_y = header_y - 0.35 - 3 * row_height
-    let label_x = col_a_width + col_b_width + opt_width + 0.3
-
-    // Label for Column A selection (Option 3) - simple horizontal line from table edge
-    line((col_a_width + col_b_width + opt_width, selected_a_y), (label_x + 0.5, selected_a_y), stroke: rgb("#3498db") + 1.5pt)
-    content((label_x + 1.3, selected_a_y), text(size: 7pt, fill: rgb("#3498db"))[Selected for A])
-
-    // Label for Column B selection (Option 4) - simple horizontal line from table edge
-    line((col_a_width + col_b_width + opt_width, selected_b_y), (label_x + 0.5, selected_b_y), stroke: rgb("#e74c3c") + 1.5pt)
-    content((label_x + 1.3, selected_b_y), text(size: 7pt, fill: rgb("#e74c3c"))[Selected for B])
-
-    // Key insight box at bottom
-    let bottom_y = header_y - 0.35 - 5 * row_height - 0.8
-    rect((-0.5, bottom_y), (col_a_width + col_b_width + opt_width + 0.5, bottom_y + 0.7), fill: rgb("#f1c40f").lighten(70%), stroke: rgb("#f39c12") + 1pt, radius: 3pt)
-    content(((col_a_width + col_b_width + opt_width) / 2, bottom_y + 0.35), text(size: 8pt)[*Key:* Select ONE option per column — both from the same list])
-  })
+  #block(breakable: false)[
+    *Two-Part Analysis Answer Grid*
+    #v(0.5em)
+    #table(
+      columns: 4,
+      stroke: 0.5pt + gray,
+      inset: 8pt,
+      align: center,
+      fill: (x, y) => {
+        if y == 0 {
+          if x == 0 { rgb("#3498db").lighten(60%) }
+          else if x == 1 { rgb("#e74c3c").lighten(60%) }
+          else { gray.lighten(70%) }
+        } else if y == 3 and x == 0 {
+          rgb("#3498db").lighten(80%)
+        } else if y == 4 and x == 1 {
+          rgb("#e74c3c").lighten(80%)
+        } else {
+          white
+        }
+      },
+      table.header([*Column A*], [*Column B*], [*Options*], []),
+      [#sym.circle.stroked.big], [#sym.circle.stroked.big], [Option 1], [],
+      [#sym.circle.stroked.big], [#sym.circle.stroked.big], [Option 2], [],
+      [#text(fill: rgb("#3498db"))[#sym.circle.filled.big]], [#sym.circle.stroked.big], [Option 3], table.cell(fill: white)[#text(size: 0.85em, fill: rgb("#3498db"))[← Selected for A]],
+      [#sym.circle.stroked.big], [#text(fill: rgb("#e74c3c"))[#sym.circle.filled.big]], [Option 4], table.cell(fill: white)[#text(size: 0.85em, fill: rgb("#e74c3c"))[← Selected for B]],
+      [#sym.circle.stroked.big], [#sym.circle.stroked.big], [Option 5], [],
+    )
+    #v(0.5em)
+    #block(
+      fill: rgb("#f1c40f").lighten(70%),
+      stroke: rgb("#f39c12") + 1pt,
+      radius: 4pt,
+      inset: 8pt,
+    )[
+      *Key:* Select ONE option per column — both from the same list
+    ]
+  ]
 ]
 
 #pagebreak()
 
-= Part 2: Types of TPA Problems
+= Types of TPA Problems
 
-== Type 1: Mathematical/Constraint Problems
+Two-Part Analysis questions appear in three main varieties, each requiring a somewhat different approach. Recognizing which type you are facing helps you choose the most efficient solving strategy.
 
-#info-box[
-  *Characteristics:*
-  - Two unknowns related by equations or constraints
-  - Answer options are numerical values
-  - Solutions must satisfy given conditions
-]
+== Mathematical and Constraint Problems
+
+The most common type of TPA involves mathematical relationships between two unknowns. These problems present equations, inequalities, or other constraints that the two values must satisfy. The answer options are typically numerical values, and your task is to find the pair of values that satisfies all given conditions.
+
+Mathematical TPA problems often involve systems of equations, where you have two equations relating two unknowns. They may also involve a single constraint with multiple valid solutions, where additional conditions narrow down the possibilities. The key insight is that these problems have a definite mathematical structure—there is a correct answer that can be derived through calculation.
 
 #example-box[
   *Given: $x + y = 10$ and $x - y = 4$*
 
   Find $x$ and $y$ from the options.
 
-  Solving: $x = 7$, $y = 3$
+  Adding the equations: $2x = 14$, so $x = 7$
+
+  Substituting back: $7 + y = 10$, so $y = 3$
 ]
 
-== Type 2: Logical/Argument Problems
+== Logical and Argument Problems
 
-#info-box[
-  *Characteristics:*
-  - Argument or scenario described
-  - One column: "Strengthens the argument"
-  - Other column: "Weakens the argument"
-  - Options are statements or facts
+The second major type of TPA resembles Critical Reasoning questions but with a twist. These problems present an argument or scenario, and the two columns typically ask you to identify statements that strengthen and weaken the argument, respectively. The answer options are statements or facts rather than numbers.
 
-  These are like Critical Reasoning questions with a twist.
-]
+This format tests your ability to analyze arguments from multiple perspectives simultaneously. You must understand not just what supports the conclusion but also what undermines it. The same set of statement options serves both purposes, so you need to evaluate each option's relationship to the argument carefully.
 
-== Type 3: Business Scenario Problems
+These logical TPA questions draw on the same skills used in Critical Reasoning: identifying the conclusion, recognizing the evidence, finding the underlying assumption, and understanding how additional information affects the argument's strength. The difference is that you must apply these skills in two directions at once.
 
-#info-box[
-  *Characteristics:*
-  - Real-world business scenario
-  - Find two related quantities (cost and revenue, supply and demand)
-  - May involve optimization
-]
+== Business Scenario Problems
+
+The third type presents realistic business situations where two related quantities must be determined. These might involve cost and revenue analysis, supply and demand relationships, resource allocation decisions, or optimization problems where you must find the best values for two variables.
+
+Business scenario TPA questions often blend mathematical and logical elements. You might need to perform calculations to test different combinations while also reasoning about which combinations make business sense. These problems tend to be the most complex because they require integrating multiple types of analysis.
 
 == Visual: TPA Problem Types Overview
 
@@ -244,18 +228,19 @@ Two-Part Analysis tests the ability to solve interconnected problems—a skill e
 
 #pagebreak()
 
-= Part 3: Solving Mathematical TPA
+= Solving Mathematical TPA
+
+Mathematical Two-Part Analysis problems require systematic approaches to find values that satisfy given constraints. The key is to identify the mathematical relationship between the two unknowns and use that relationship to narrow down possibilities efficiently.
 
 == Identifying Relationships
 
-#strategy-box[
-  *Look for:*
-  - Equations relating the two unknowns
-  - Constraints limiting possible values
-  - Whether the two parts are independent or dependent
-]
+Before attempting any calculations, take a moment to understand the structure of the problem. Look for explicit equations relating the two unknowns, constraints that limit what values are possible (such as requiring positive integers or values within a certain range), and clues about whether the two parts are dependent (knowing one determines the other) or independent (each can be solved separately).
+
+The relationship between the parts determines your solving strategy. If the parts are tightly coupled through an equation, solving for one immediately gives you the other. If they are loosely related through a constraint with multiple valid solutions, you may need to test several combinations against the available options.
 
 == Constraint Analysis
+
+Many TPA problems involve a single constraint equation with multiple possible solutions. In these cases, the answer options themselves become part of the solving process—you test which combinations from the options satisfy the constraint.
 
 #example-box[
   *Problem: A vendor sells apples for \$2 and bananas for \$3. Total revenue was \$50.*
@@ -266,70 +251,60 @@ Two-Part Analysis tests the ability to solve interconnected problems—a skill e
   - If $A = 4$: $2(4) + 3B = 50 arrow.r 3B = 42 arrow.r B = 14$ #sym.checkmark
   - If $A = 10$: $2(10) + 3B = 50 arrow.r 3B = 30 arrow.r B = 10$ #sym.checkmark
 
-  Multiple solutions possible! Need additional constraint or check options.
+  Multiple solutions are mathematically possible. Check which combinations appear in the answer options.
 ]
+
+When a constraint equation has multiple valid solutions, look at the answer options to see which solutions are actually available. Sometimes the options themselves eliminate possibilities, leaving only one valid combination.
 
 == Systems of Equations
 
-#tip-box[
-  *For two equations with two unknowns:*
-  1. Use substitution or elimination
-  2. Verify solution satisfies both equations
-  3. Match to answer options
-]
+When a problem provides two equations relating two unknowns, you can solve for exact values using algebraic methods. The two standard approaches are substitution (solve one equation for one variable, then substitute into the other) and elimination (add or subtract equations to eliminate one variable).
+
+Once you have calculated the values, verify that your solution satisfies both original equations before selecting your answers. Careless arithmetic errors can lead you to values that satisfy one equation but not both. After verification, match your calculated values to the answer options.
 
 #pagebreak()
 
-= Part 4: Solving Logical TPA
+= Solving Logical TPA
+
+Logical Two-Part Analysis questions apply critical reasoning skills in a distinctive format. Instead of selecting a single answer, you must identify both a statement that strengthens an argument and a statement that weakens it, drawing both from the same set of options.
 
 == The Strengthen/Weaken Format
 
-#info-box[
-  *Common logical TPA format:*
+The most common logical TPA format presents an argument and asks you to select one statement that strengthens the conclusion and another that weakens it. This requires analyzing the argument from opposing perspectives simultaneously.
 
-  "Select the statement that strengthens the conclusion and the statement that weakens the conclusion."
-
-  Apply Critical Reasoning skills to both columns.
-]
+The challenge lies in the shared option pool. Each statement in the options must be evaluated for its potential to support or undermine the argument. Some statements might do neither (these are irrelevant), some might clearly strengthen, some might clearly weaken, and occasionally a statement's effect might depend on interpretation.
 
 == Approach for Logical TPA
 
-#strategy-box[
-  1. Identify the conclusion in the argument
-  2. Identify the evidence supporting it
-  3. Find the assumption (gap between evidence and conclusion)
-  4. Look for options that:
-     - Support the assumption (strengthen)
-     - Attack the assumption (weaken)
-]
+The systematic approach to logical TPA begins with understanding the argument's structure. First, identify the conclusion—what claim is the argument trying to establish? Then identify the evidence—what facts or observations support the conclusion? Finally, find the assumption—what unstated premise connects the evidence to the conclusion?
 
-== Common Logical Relationships
+Once you understand the argument's structure, evaluate each option against the assumption. Statements that support or reinforce the assumption strengthen the argument. Statements that challenge or undermine the assumption weaken it. Statements that have no bearing on the assumption are irrelevant.
 
-#info-box[
-  *Strengthening:*
-  - Provides additional evidence
-  - Rules out alternative explanations
-  - Supports the assumption
+== Strengthening and Weakening Mechanisms
 
-  *Weakening:*
-  - Provides counter-evidence
-  - Suggests alternative explanations
-  - Attacks the assumption
-]
+Understanding how statements affect arguments helps you evaluate options more quickly.
+
+Statements strengthen arguments when they provide additional evidence supporting the conclusion, rule out alternative explanations that could account for the evidence, or directly support the underlying assumption. A strengthening statement makes the conclusion more likely to be true given the evidence.
+
+Statements weaken arguments when they provide counter-evidence that contradicts the conclusion, suggest alternative explanations for the evidence that do not require the conclusion, or directly attack the underlying assumption. A weakening statement makes the conclusion less likely to be true even if the evidence is accepted.
+
+Some statements have no effect on the argument because they address topics unrelated to the conclusion or assumption. Learning to quickly identify and dismiss irrelevant options saves valuable time.
 
 #pagebreak()
 
-= Part 5: Strategic Solving
+= Strategic Solving
 
-== Which Part First?
+Efficiency matters in TPA questions because they require more work than single-answer questions—you must evaluate options against two different criteria. Strategic approaches help you find correct answers without wasting time on unnecessary analysis.
 
-#strategy-box[
-  *Solve the more constrained part first:*
+== Deciding Which Part to Solve First
 
-  - If one column has fewer valid options, start there
-  - If one part is independent, solve it first
-  - If neither is clearly easier, just pick one and test
-]
+Not all TPA questions are symmetric. Often, one part is more constrained or easier to solve than the other. Identifying and tackling the easier part first can significantly streamline your work.
+
+If one column has fewer valid options based on the constraints, start with that column. Narrowing down possibilities in the more constrained part often eliminates options that you would otherwise need to test for the other part.
+
+If one part can be solved independently while the other depends on the first, solve the independent part first. Your answer to the independent part may directly determine or at least narrow the possibilities for the dependent part.
+
+If neither part is clearly easier or more constrained, simply pick one and begin testing. Paralysis from over-analyzing which to start with wastes more time than just diving in. You can always adjust your approach if you hit a dead end.
 
 == TPA Solving Flowchart
 
@@ -418,53 +393,69 @@ Two-Part Analysis tests the ability to solve interconnected problems—a skill e
   })
 ]
 
-== Testing Efficiency
+== Testing Efficiently
 
-#tip-box[
-  *Smart Testing:*
-  1. Don't test all options for both columns
-  2. Narrow down one column first
-  3. Then test remaining candidates in the other
-]
+A common mistake is to exhaustively test every option against both columns. This brute-force approach wastes time and increases the chance of errors. Instead, work strategically to minimize the number of tests required.
 
-== Checking Consistency
+Start by eliminating obviously wrong options. Some options may clearly fail one column's requirements, so there is no need to test them against the other column. Once you have narrowed the field, focus your detailed testing on the remaining candidates.
+
+After identifying a likely answer for one column, check whether it constrains the possibilities for the other. In mathematical TPA, determining one value often immediately gives you the other through the constraint equation. In logical TPA, eliminating the strengthening answer from consideration for the weakening column (and vice versa) reduces your remaining work.
+
+== Verifying Consistency
+
+Before finalizing your selections, verify that both choices work together and satisfy all given conditions. This verification step catches errors that might occur when you solve the two parts separately.
+
+For mathematical problems, plug both values back into the original equations or constraints. Both values must satisfy all conditions simultaneously—it is not enough for each to satisfy some conditions independently.
+
+For logical problems, confirm that your strengthening choice genuinely supports the argument and your weakening choice genuinely undermines it. Re-read the argument with each choice in mind to ensure the effect is what you expect.
 
 #warning-box[
-  *Before finalizing:*
-  - Verify both selections satisfy ALL given conditions
-  - For math problems: plug values back into equations
-  - For logical problems: ensure one truly strengthens and one truly weakens
+  *Common Verification Errors:*
+
+  Selecting two answers that each satisfy their respective column's requirement individually but are inconsistent with each other, or selecting the same answer for both columns when the question requires different values.
 ]
 
 #pagebreak()
 
-= Part 6: Common TPA Patterns
+= Common TPA Patterns
 
-== Pattern 1: Sum and Difference
+Certain mathematical structures appear repeatedly in TPA questions. Recognizing these patterns allows you to apply established formulas rather than deriving solutions from scratch, saving valuable time.
 
-If given $x + y$ and $x - y$, you can find $x$ and $y$:\
-\
-$x = display(("sum" + "difference") / 2)$\
-\
-$y = display(("sum" - "difference") / 2)$
+== Sum and Difference Pattern
 
-== Pattern 2: Price $times$ Quantity
+When a problem gives you both the sum and the difference of two quantities, you can solve directly for each quantity using these formulas:
 
-#info-box[
-  $"Total" = "Price"_1 times "Quantity"_1 + "Price"_2 times "Quantity"_2$
+$ x = ("sum" + "difference") / 2 $
 
-  If you know the total and prices, test quantity combinations from options.
-]
+$ y = ("sum" - "difference") / 2 $
 
-== Pattern 3: Ratio Problems
+This pattern appears when problems state things like "the total of two numbers is 24 and their difference is 6." Applying the formulas: $x = (24 + 6) / 2 = 15$ and $y = (24 - 6) / 2 = 9$. You can verify: $15 + 9 = 24$ and $15 - 9 = 6$.
 
-If items are in ratio $a:b$ and total is known:
-- First item $= display(a / (a+b)) times "Total"$
-- Second item $= display(b / (a+b)) times "Total"$
+== Price Times Quantity Pattern
 
-== Pattern 4: Rate $times$ Time Problems
+Many TPA problems involve purchasing multiple items at different prices. The fundamental relationship is:
 
-$"Distance" = "Rate" times "Time"$ or $"Work" = "Rate" times "Time"$
+$ "Total Cost" = "Price"_1 times "Quantity"_1 + "Price"_2 times "Quantity"_2 $
+
+When you know the total cost and the individual prices, test quantity combinations from the answer options to find which pair satisfies the equation. Start with extreme values (high quantity of the cheaper item or high quantity of the expensive item) to bracket the solution, then narrow down.
+
+== Ratio Problems
+
+When two quantities are in a known ratio and their total is given, you can find each quantity directly:
+
+$ "First item" = a / (a+b) times "Total" $
+
+$ "Second item" = b / (a+b) times "Total" $
+
+For example, if items are in ratio 3:5 and the total is 80, the first item equals $(3/8) times 80 = 30$ and the second equals $(5/8) times 80 = 50$.
+
+== Rate Times Time Pattern
+
+Work and distance problems follow the same fundamental relationship:
+
+$ "Distance" = "Rate" times "Time" $ or $ "Work Done" = "Rate" times "Time" $
+
+These problems often involve two entities working at different rates or traveling at different speeds. The TPA format might ask you to find the rate for one entity and the time for another, where a constraint ties the quantities together.
 
 == Visual: Common Patterns at a Glance
 
@@ -519,26 +510,35 @@ $"Distance" = "Rate" times "Time"$ or $"Work" = "Rate" times "Time"$
 
 #pagebreak()
 
-= Part 7: Time Management
+= Time Management
+
+Two-Part Analysis questions require more work than single-answer questions, but they should not consume disproportionate amounts of your testing time. Effective time management ensures you complete TPA questions thoroughly while preserving time for other questions.
 
 == Pacing Guidelines
 
-#info-box[
-  *Target Time:* 2-2.5 minutes per TPA question
+Plan to spend approximately 2 to 2.5 minutes on each TPA question. This allows enough time to understand the problem structure, identify the relationship between parts, test candidates, and verify your selections.
 
-  TPA requires careful analysis but shouldn't take too long if you identify the relationship quickly.
-]
+If you find yourself exceeding 3 minutes on a TPA question, consider whether you have missed a simpler approach. Sometimes stepping back and re-reading the problem reveals a pattern or shortcut you overlooked. If no simpler approach emerges, make your best selections and move on—partial credit is better than spending excessive time and risking incomplete sections elsewhere.
 
-== Efficiency Tips
+== Working Efficiently
 
-#strategy-box[
-  1. *Identify problem type immediately* - math or logical?
-  2. *Write down relationships/constraints* - don't solve in your head
-  3. *Eliminate impossible options* - reduce testing
-  4. *Check both parts together* - they must be consistent
-]
+Several practices help you work efficiently on TPA questions.
 
-#pagebreak()
+Identify the problem type immediately upon reading the stem. Knowing whether you face a mathematical, logical, or business scenario problem shapes your entire approach. Mathematical problems call for equation-solving techniques; logical problems call for argument analysis; business scenarios may require a blend of both.
+
+Write down relationships and constraints rather than holding them in your head. The cognitive load of tracking multiple conditions while simultaneously testing options leads to errors. A quick note of key equations or the argument's conclusion saves mental energy for analysis.
+
+Eliminate clearly impossible options before detailed testing. If an option obviously fails one column's requirements, remove it from consideration entirely. This reduces the number of combinations you need to evaluate.
+
+Always verify that both parts work together before confirming your selections. A few seconds spent on verification can prevent errors that would cost you points.
+
+/*
+===============================================================================
+TEACHING NOTES FOR TUTORS
+The following section contains detailed guidance for tutors on how to structure
+and deliver the Two-Part Analysis lessons. This content is internal and should
+not be displayed to students.
+===============================================================================
 
 = Teaching Notes for Tutors
 
@@ -582,6 +582,9 @@ $"Distance" = "Rate" times "Time"$ or $"Work" = "Rate" times "Time"$
 4. Struggling with logical TPA vs. math TPA
 5. Spending too long on complex calculations
 
-#warning-box[
-  *Tutor Tip:* Have students explicitly state the relationship between parts before solving. This prevents inconsistent answers.
-]
+*Tutor Tip:* Have students explicitly state the relationship between parts before solving. This prevents inconsistent answers.
+
+===============================================================================
+END OF TUTOR NOTES SECTION
+===============================================================================
+*/

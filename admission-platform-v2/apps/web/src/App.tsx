@@ -28,7 +28,11 @@ import AIValidationDashboard from './pages/AIValidationDashboard';
 import CloneTestsPage from './pages/CloneTestsPage';
 import GMATPreparationPage from './pages/GMATPreparationPage';
 import GMATMaterialsManagementPage from './pages/GMATMaterialsManagementPage';
+import GMATMaterialPage from './pages/GMATMaterialPage';
 import GMATQuestionAllocationPage from './pages/GMATQuestionAllocationPage';
+import GMATConfigPage from './pages/GMATConfigPage';
+import GMATAssessmentResultsPage from './pages/GMATAssessmentResultsPage';
+import GMATTrainingTestPage from './pages/GMATTrainingTestPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 function App() {
@@ -93,6 +97,30 @@ function App() {
           }
         />
         <Route
+          path="/student/take-test/gmat-training/:templateId"
+          element={
+            <ProtectedRoute requiredRoles={['STUDENT']}>
+              <GMATTrainingTestPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/student/gmat-results/:assessmentId"
+          element={
+            <ProtectedRoute requiredRoles={['STUDENT']}>
+              <GMATAssessmentResultsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/student/gmat-materials"
+          element={
+            <ProtectedRoute requiredRoles={['STUDENT']}>
+              <GMATMaterialPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/tutor"
           element={
             <ProtectedRoute requiredRoles={['TUTOR', 'ADMIN']}>
@@ -124,6 +152,24 @@ function App() {
             </ProtectedRoute>
           }
         />
+        {/* Tutor view of student's GMAT materials - view mode with lock/unlock */}
+        <Route
+          path="/tutor/student/:studentId/gmat-materials-view"
+          element={
+            <ProtectedRoute requiredRoles={['TUTOR', 'ADMIN']}>
+              <GMATMaterialPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* Tutor view of student's GMAT preparation - uses same page as student */}
+        <Route
+          path="/tutor/student/:studentId/gmat-preparation"
+          element={
+            <ProtectedRoute requiredRoles={['TUTOR', 'ADMIN']}>
+              <GMATPreparationPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/tutor/analytics"
           element={
@@ -145,6 +191,14 @@ function App() {
           element={
             <ProtectedRoute requiredRoles={['TUTOR', 'ADMIN']}>
               <TestResultsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tutor/gmat-results/:assessmentId"
+          element={
+            <ProtectedRoute requiredRoles={['TUTOR', 'ADMIN']}>
+              <GMATAssessmentResultsPage />
             </ProtectedRoute>
           }
         />
@@ -185,6 +239,14 @@ function App() {
           element={
             <ProtectedRoute requiredRoles={['TUTOR', 'ADMIN']}>
               <GMATQuestionAllocationPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tutor/gmat-config"
+          element={
+            <ProtectedRoute requiredRoles={['TUTOR', 'ADMIN']}>
+              <GMATConfigPage />
             </ProtectedRoute>
           }
         />

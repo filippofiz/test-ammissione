@@ -16,7 +16,10 @@ import {
   faUserShield,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
-import type { Profile } from '../lib/database.types';
+// Import from full generated Supabase types
+import type { Database } from '../../database.types';
+
+type Profile = Database['public']['Tables']['2V_profiles']['Row'];
 
 export default function TutorSelectionPage() {
   const { t } = useTranslation();

@@ -149,7 +149,7 @@ export default function TestTypeSelectionPage() {
                 return (
                   <button
                     key={testType.name}
-                    onClick={() => navigate(`/tutor/test-track-config/${testType.name}`)}
+                    onClick={() => navigate(testType.name === 'GMAT' ? '/tutor/gmat-config' : `/tutor/test-track-config/${testType.name}`)}
                     className={`group relative rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 border-2 ${cardClasses} ${hoverBorderColor} transform hover:scale-105 animate-fadeInUp`}
                     style={{ animationDelay: `${index * 0.1}s` }}
                   >

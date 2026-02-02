@@ -5,7 +5,8 @@
  */
 
 import { supabase } from '../supabase';
-import type { Database } from '../database.types';
+// Import from full generated Supabase types
+import type { Database } from '../../../database.types';
 
 // Types from database
 type Profile = Database['public']['Tables']['2V_profiles']['Row'];
