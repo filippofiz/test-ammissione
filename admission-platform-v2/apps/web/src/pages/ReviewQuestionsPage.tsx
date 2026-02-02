@@ -279,6 +279,29 @@ export default function ReviewQuestionsPage() {
 
       if (testsError) throw testsError;
 
+      setTests(testsData || []);
+
+      // Set default track filter to first available test type
+      if (testsData && testsData.length > 0 && !trackFilter) {
+        const firstTestType = testsData[0].test_type;
+        setTrackFilter(firstTestType);
+      }
+    } catch (err) {
+      console.error('Error loading tests:', err);
+    } finally {
+      setLoadingTests(false);
+    }
+  }
+
+  async function loadTestDetails(testType: string) {
+    try {
+      // Get test IDs for the selected test type
+      const filteredTestIds = tests
+        .filter(t => t.test_type === testType)
+        .map(t => t.id);
+
+      if (filteredTestIds.length === 0) return;
+
       // Bulk fetch all questions with test_id and question_type (optimized - single query)
       const { data: allQuestions } = await supabase
         .from('2V_questions')
@@ -310,9 +333,8 @@ export default function ReviewQuestionsPage() {
         .select('question_id')
         .eq('is_flagged', true);
 
-          (flaggedAnswers || []).forEach(a => flaggedQuestionIdSet.add(a.question_id));
-        }
-      }
+      // Create a set of flagged question IDs for quick lookup
+      const flaggedQuestionIdSet = new Set((flaggedAnswers || []).map(a => a.question_id));
 
       // Build details map
       const newDetails = new Map<string, { question_count: number; format: 'pdf' | 'interactive' | 'mixed'; flagged_count: number }>();
@@ -362,23 +384,15 @@ export default function ReviewQuestionsPage() {
         .or(`test_id.eq.${testId},additional_test_ids.cs.["${testId}"]`)
         .order('question_number');
 
-        if (error) throw error;
+      if (error) throw error;
 
-        if (data && data.length > 0) {
-          allQuestions = [...allQuestions, ...data];
-          offset += BATCH_SIZE;
-          hasMore = data.length === BATCH_SIZE;
-        } else {
-          hasMore = false;
-        }
-      }
-
-      setQuestions(allQuestions);
+      const loadedQuestions = data || [];
+      setQuestions(loadedQuestions);
 
       // Extract passages from question data
-      if (allQuestions.length > 0) {
+      if (loadedQuestions.length > 0) {
         const passageMap = new Map<string, any>();
-        allQuestions.forEach((q: any) => {
+        loadedQuestions.forEach((q: any) => {
           if (q.question_data?.passage_id && q.question_data?.passage_text) {
             if (!passageMap.has(q.question_data.passage_id)) {
               passageMap.set(q.question_data.passage_id, {
@@ -396,7 +410,7 @@ export default function ReviewQuestionsPage() {
         setPassages(Array.from(passageMap.values()));
 
         // Get flagged question IDs (batch in chunks of 500 to avoid query limits)
-        const questionIds = allQuestions.map(q => q.id);
+        const questionIds = loadedQuestions.map(q => q.id);
         const flaggedIds = new Set<string>();
         const FLAGGED_BATCH_SIZE = 500;
 
