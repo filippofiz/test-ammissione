@@ -225,6 +225,14 @@ interface AttemptData {
   sections_completed?: string[];
   section_times?: Record<string, number>;
   total_questions?: number;
+  device_diagnostics?: {
+    connection_latency_ms: number | null;
+    connection_status: 'good' | 'warning' | 'error';
+    performance_benchmark_ms: number | null;
+    performance_status: 'good' | 'warning' | 'error';
+    overall_status: 'ready' | 'warning' | 'error';
+    tested_at: string;
+  };
   [key: string]: unknown; // Allow additional properties
 }
 
@@ -385,6 +393,11 @@ export default function TakeTestPage() {
   const [isPDFTest, setIsPDFTest] = useState(false); // PDF test format
   const [currentPageGroup, setCurrentPageGroup] = useState(0); // For PDF tests: current page group
   const [showStartScreen, setShowStartScreen] = useState(true);
+  const [deviceDiagnostics, setDeviceDiagnostics] = useState<{
+    connection: { status: 'checking' | 'good' | 'warning' | 'error'; value?: number };
+    performance: { status: 'checking' | 'good' | 'warning' | 'error'; value?: number };
+    overall: 'checking' | 'ready' | 'warning' | 'error';
+  } | null>(null);
   const [testLanguage, setTestLanguage] = useState<string>('it'); // Language captured at test start
   const [exerciseType, setExerciseType] = useState<string>(''); // Exercise type from assignment
   const [showSectionSelectionScreen, setShowSectionSelectionScreen] = useState(false);
@@ -1983,7 +1996,15 @@ export default function TakeTestPage() {
             completed_at: new Date().toISOString(),
             browser_info: navigator.userAgent,
             screen_resolution: `${window.screen.width}x${window.screen.height}`,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            device_diagnostics: deviceDiagnostics ? {
+              connection_latency_ms: deviceDiagnostics.connection.value ?? null,
+              connection_status: deviceDiagnostics.connection.status === 'checking' ? 'warning' : deviceDiagnostics.connection.status,
+              performance_benchmark_ms: deviceDiagnostics.performance.value ?? null,
+              performance_status: deviceDiagnostics.performance.status === 'checking' ? 'warning' : deviceDiagnostics.performance.status,
+              overall_status: deviceDiagnostics.overall === 'checking' ? 'warning' : deviceDiagnostics.overall,
+              tested_at: new Date().toISOString()
+            } : undefined
           };
 
           // Check if attempt already exists (update instead of duplicating)
@@ -4434,7 +4455,17 @@ export default function TakeTestPage() {
         // Environment/security info
         browser_info: navigator.userAgent,
         screen_resolution: `${window.screen.width}x${window.screen.height}`,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+
+        // Device diagnostics from pre-test check
+        device_diagnostics: deviceDiagnostics ? {
+          connection_latency_ms: deviceDiagnostics.connection.value ?? null,
+          connection_status: deviceDiagnostics.connection.status === 'checking' ? 'warning' : deviceDiagnostics.connection.status,
+          performance_benchmark_ms: deviceDiagnostics.performance.value ?? null,
+          performance_status: deviceDiagnostics.performance.status === 'checking' ? 'warning' : deviceDiagnostics.performance.status,
+          overall_status: deviceDiagnostics.overall === 'checking' ? 'warning' : deviceDiagnostics.overall,
+          tested_at: new Date().toISOString()
+        } : undefined
       };
 
       if (annulmentReason) {
@@ -4796,6 +4827,7 @@ export default function TakeTestPage() {
             <PreTestDiagnostics
               supabaseUrl={import.meta.env.VITE_SUPABASE_URL}
               supabaseKey={import.meta.env.VITE_SUPABASE_ANON_KEY}
+              onDiagnosticsComplete={(results) => setDeviceDiagnostics(results)}
             />
 
             <div className="flex gap-4">
@@ -5372,6 +5404,27 @@ export default function TakeTestPage() {
                   ⚠️ {saveError}
                 </span>
               )
+            )}
+            {/* Device Diagnostics Status from pre-test check */}
+            {deviceDiagnostics && deviceDiagnostics.overall !== 'ready' && !saveError && (
+              <span className={`text-xs font-semibold px-2 py-1 rounded-full flex items-center gap-1 ${
+                deviceDiagnostics.overall === 'error'
+                  ? 'bg-red-100 text-red-700'
+                  : 'bg-yellow-100 text-yellow-700'
+              }`}>
+                {deviceDiagnostics.connection.status !== 'good' && (
+                  <span title={`Latency: ${deviceDiagnostics.connection.value}ms`}>
+                    🌐 {deviceDiagnostics.connection.status === 'error' ? 'Poor connection' : 'Slow connection'}
+                  </span>
+                )}
+                {deviceDiagnostics.connection.status !== 'good' && deviceDiagnostics.performance.status !== 'good' && ' | '}
+                {deviceDiagnostics.performance.status !== 'good' && (
+                  <span title={`Benchmark: ${deviceDiagnostics.performance.value}ms`}>
+                    🖥️ {deviceDiagnostics.performance.status === 'error' ? 'Slow device' : 'Slow device'}
+                  </span>
+                )}
+                <span className="ml-1">— you might experience delays</span>
+              </span>
             )}
             {/* Review Mode Indicator with Changes Counter */}
             {isInReviewMode && config?.max_answer_changes !== undefined && (
