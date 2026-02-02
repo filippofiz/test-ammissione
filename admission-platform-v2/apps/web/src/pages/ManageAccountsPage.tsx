@@ -17,6 +17,7 @@ import {
   faEye,
   faEyeSlash,
   faKey,
+  faExchangeAlt,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import { supabase } from '../lib/supabase';
@@ -53,6 +54,12 @@ export default function ManageAccountsPage() {
     esigenze_speciali: false,
     student_ids: [],
   });
+
+  // Reassignment modal state
+  const [showReassignModal, setShowReassignModal] = useState(false);
+  const [reassigningStudent, setReassigningStudent] = useState<Profile | null>(null);
+  const [selectedNewTutor, setSelectedNewTutor] = useState<string>('');
+  const [reassigning, setReassigning] = useState(false);
 
   useEffect(() => {
     loadUsers();
@@ -282,6 +289,44 @@ export default function ManageAccountsPage() {
     }
   };
 
+  const handleOpenReassign = (student: Profile) => {
+    setReassigningStudent(student);
+    setSelectedNewTutor(student.tutor_id || '');
+    setShowReassignModal(true);
+  };
+
+  const handleReassignStudent = async () => {
+    if (!reassigningStudent) return;
+
+    setReassigning(true);
+    try {
+      const newTutorId = selectedNewTutor || null;
+
+      const { error } = await supabase
+        .from('2V_profiles')
+        .update({ tutor_id: newTutorId })
+        .eq('id', reassigningStudent.id);
+
+      if (error) throw error;
+
+      const newTutorName = newTutorId
+        ? tutors.find(t => t.id === newTutorId)?.name || 'Unknown'
+        : 'No tutor';
+
+      alert(`✅ Successfully reassigned ${reassigningStudent.name} to ${newTutorName}`);
+
+      setShowReassignModal(false);
+      setReassigningStudent(null);
+      setSelectedNewTutor('');
+      loadUsers();
+    } catch (err: any) {
+      console.error('Error reassigning student:', err);
+      alert(`Failed to reassign student: ${err.message}`);
+    } finally {
+      setReassigning(false);
+    }
+  };
+
   const filteredUsers = users.filter(user => {
     const roles = Array.isArray(user.roles) ? user.roles : [];
     const matchesRole = filterRole === 'ALL' || roles.includes(filterRole);
@@ -477,9 +522,19 @@ export default function ManageAccountsPage() {
                           )}
                         </td>
                         <td className="px-6 py-4 text-right">
+                          {/* Reassign button - only for students */}
+                          {Array.isArray(user.roles) && user.roles.includes('STUDENT') && (
+                            <button
+                              onClick={() => handleOpenReassign(user)}
+                              className="text-amber-600 hover:text-amber-800 transition-colors"
+                              title="Reassign to different tutor"
+                            >
+                              <FontAwesomeIcon icon={faExchangeAlt} />
+                            </button>
+                          )}
                           <button
                             onClick={() => handleResetPassword(user.id, user.auth_uid, user.email)}
-                            className="text-blue-600 hover:text-blue-800 transition-colors"
+                            className="text-blue-600 hover:text-blue-800 transition-colors ml-3"
                             title="Reset password to 123456"
                           >
                             <FontAwesomeIcon icon={faKey} />
@@ -719,6 +774,87 @@ export default function ManageAccountsPage() {
             <p className="mt-4 text-xs text-gray-500 text-center">
               A temporary password will be generated and displayed after creation. The user will be required to change it on first login.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Reassign Student Modal */}
+      {showReassignModal && reassigningStudent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6">
+            <h2 className="text-2xl font-bold text-brand-dark mb-2">Reassign Student</h2>
+            <p className="text-gray-600 mb-6">
+              Change the tutor assignment for <span className="font-semibold">{reassigningStudent.name}</span>
+            </p>
+
+            <div className="space-y-4">
+              {/* Current Tutor Display */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                  Current Tutor
+                </label>
+                <div className="text-gray-800 font-medium">
+                  {reassigningStudent.tutor_id
+                    ? tutors.find(t => t.id === reassigningStudent.tutor_id)?.name || 'Unknown'
+                    : 'No tutor assigned'
+                  }
+                </div>
+              </div>
+
+              {/* New Tutor Selection */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <FontAwesomeIcon icon={faExchangeAlt} className="mr-2 text-amber-600" />
+                  Assign to New Tutor
+                </label>
+                <select
+                  value={selectedNewTutor}
+                  onChange={(e) => setSelectedNewTutor(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-brand-green focus:outline-none"
+                >
+                  <option value="">No tutor (unassign)</option>
+                  {tutors.map(tutor => (
+                    <option key={tutor.id} value={tutor.id}>
+                      {tutor.name} ({tutor.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Warning if reassigning */}
+              {selectedNewTutor !== (reassigningStudent.tutor_id || '') && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">
+                  <span className="font-semibold text-amber-700">Note:</span>
+                  <span className="text-amber-600 ml-1">
+                    {selectedNewTutor
+                      ? `This student will be reassigned to ${tutors.find(t => t.id === selectedNewTutor)?.name}.`
+                      : 'This student will be unassigned from their current tutor.'
+                    }
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => {
+                  setShowReassignModal(false);
+                  setReassigningStudent(null);
+                  setSelectedNewTutor('');
+                }}
+                disabled={reassigning}
+                className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReassignStudent}
+                disabled={reassigning || selectedNewTutor === (reassigningStudent.tutor_id || '')}
+                className="flex-1 px-4 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {reassigning ? 'Reassigning...' : 'Confirm Reassignment'}
+              </button>
+            </div>
           </div>
         </div>
       )}

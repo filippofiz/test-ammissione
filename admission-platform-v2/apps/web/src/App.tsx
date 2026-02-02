@@ -26,6 +26,7 @@ import AdminMigrateAnswersPage from './pages/AdminMigrateAnswersPage';
 import ManageAccountsPage from './pages/ManageAccountsPage';
 import GMATPreparationPage from './pages/GMATPreparationPage';
 import GMATMaterialsManagementPage from './pages/GMATMaterialsManagementPage';
+import GMATMaterialPage from './pages/GMATMaterialPage';
 import GMATQuestionAllocationPage from './pages/GMATQuestionAllocationPage';
 import GMATConfigPage from './pages/GMATConfigPage';
 import GMATAssessmentResultsPage from './pages/GMATAssessmentResultsPage';
@@ -110,6 +111,14 @@ function App() {
           }
         />
         <Route
+          path="/student/gmat-materials"
+          element={
+            <ProtectedRoute requiredRoles={['STUDENT']}>
+              <GMATMaterialPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/tutor"
           element={
             <ProtectedRoute requiredRoles={['TUTOR', 'ADMIN']}>
@@ -138,6 +147,15 @@ function App() {
           element={
             <ProtectedRoute requiredRoles={['TUTOR', 'ADMIN']}>
               <GMATMaterialsManagementPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* Tutor view of student's GMAT materials - view mode with lock/unlock */}
+        <Route
+          path="/tutor/student/:studentId/gmat-materials-view"
+          element={
+            <ProtectedRoute requiredRoles={['TUTOR', 'ADMIN']}>
+              <GMATMaterialPage />
             </ProtectedRoute>
           }
         />

@@ -122,14 +122,17 @@ export default function ReviewQuestionsPage() {
   const [flaggedQuestions, setFlaggedQuestions] = useState<any[]>([]);
   const [loadingFlagged, setLoadingFlagged] = useState(false);
 
-  // Filters
+  // Filters - trackFilter defaults to first available test type (set in useEffect after loading)
   const [searchTerm, setSearchTerm] = useState('');
-  const [trackFilter, setTrackFilter] = useState<string>('all');
+  const [trackFilter, setTrackFilter] = useState<string>('');
   const [formatFilter, setFormatFilter] = useState<'all' | 'pdf' | 'interactive' | 'mixed'>('all');
   const [reviewedFilter, setReviewedFilter] = useState<'all' | 'reviewed' | 'unreviewed'>('all');
   const [flaggedFilter, setFlaggedFilter] = useState<'all' | 'flagged' | 'not_flagged'>('all');
   const [sectionFilter, setSectionFilter] = useState<string>('all');
   const [questionReviewedFilter, setQuestionReviewedFilter] = useState<'all' | 'reviewed' | 'unreviewed'>('all');
+
+  // Test details loaded for current filter (question counts, formats, etc.)
+  const [testDetails, setTestDetails] = useState<Map<string, { question_count: number; format: 'pdf' | 'interactive' | 'mixed'; flagged_count: number }>>(new Map());
 
   // Questions state
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -144,6 +147,9 @@ export default function ReviewQuestionsPage() {
   const [markingReviewed, setMarkingReviewed] = useState(false);
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const [savingQuestion, setSavingQuestion] = useState(false);
+
+  // Local editing state - holds a copy of the question being edited to avoid re-rendering entire list on each keystroke
+  const [localEditingQuestion, setLocalEditingQuestion] = useState<Question | null>(null);
 
   // Language toggle
   const [viewLanguage, setViewLanguage] = useState<'it' | 'en'>('it');
@@ -214,6 +220,13 @@ export default function ReviewQuestionsPage() {
     loadTests();
   }, []);
 
+  // Load test details when track filter changes
+  useEffect(() => {
+    if (trackFilter && tests.length > 0) {
+      loadTestDetails(trackFilter);
+    }
+  }, [trackFilter, tests.length]);
+
   useEffect(() => {
     if (viewMode === 'flaggedQuestions') {
       loadFlaggedQuestions();
@@ -254,7 +267,7 @@ export default function ReviewQuestionsPage() {
   async function loadTests() {
     setLoadingTests(true);
     try {
-      // Load tests with review_info
+      // Load only tests metadata (lightweight - no question fetching)
       const { data: testsData, error: testsError } = await supabase
         .from('2V_tests')
         .select('id, test_type, section, exercise_type, test_number, review_info')
@@ -264,53 +277,105 @@ export default function ReviewQuestionsPage() {
 
       if (testsError) throw testsError;
 
-      // Bulk fetch all questions with test_id and question_type (with pagination to avoid 1000 row limit)
+      // Set tests without details (details will be loaded when filter is applied)
+      const testsWithoutDetails: Test[] = (testsData || []).map((test) => ({
+        ...test,
+        review_info: test.review_info as ReviewInfo | null,
+        question_count: 0,
+        format: 'pdf' as const,
+        flagged_count: 0,
+      }));
+
+      setTests(testsWithoutDetails);
+
+      // Auto-select first test type if none selected
+      const uniqueTypes = [...new Set((testsData || []).map(t => t.test_type))].sort();
+      if (uniqueTypes.length > 0 && !trackFilter) {
+        setTrackFilter(uniqueTypes[0]);
+      }
+    } catch (err) {
+      console.error('Error loading tests:', err);
+    } finally {
+      setLoadingTests(false);
+    }
+  }
+
+  // Load test details (question counts, formats, flagged counts) for filtered tests
+  async function loadTestDetails(testType: string) {
+    if (!testType) return;
+
+    try {
+      // Get tests of this type
+      const filteredTestIds = tests
+        .filter(t => t.test_type === testType)
+        .map(t => t.id);
+
+      if (filteredTestIds.length === 0) return;
+
+      // Fetch questions for these tests only (much smaller dataset)
       let allQuestions: { id: string; test_id: string; question_type: string }[] = [];
       const batchSize = 1000;
-      let from = 0;
-      let hasMore = true;
 
-      while (hasMore) {
-        const { data: questionBatch, error: questionsError } = await supabase
-          .from('2V_questions')
-          .select('id, test_id, question_type')
-          .range(from, from + batchSize - 1);
+      // Split test IDs into batches to avoid query limits
+      for (let i = 0; i < filteredTestIds.length; i += 50) {
+        const testIdBatch = filteredTestIds.slice(i, i + 50);
+        let from = 0;
+        let hasMore = true;
 
-        if (questionsError) {
-          console.error('Error fetching questions batch:', questionsError);
-          break;
-        }
+        while (hasMore) {
+          const { data: questionBatch, error: questionsError } = await supabase
+            .from('2V_questions')
+            .select('id, test_id, question_type')
+            .in('test_id', testIdBatch)
+            .range(from, from + batchSize - 1);
 
-        if (questionBatch && questionBatch.length > 0) {
-          allQuestions = [...allQuestions, ...questionBatch];
-          from += batchSize;
-          hasMore = questionBatch.length === batchSize;
-        } else {
-          hasMore = false;
+          if (questionsError) {
+            console.error('Error fetching questions batch:', questionsError);
+            break;
+          }
+
+          if (questionBatch && questionBatch.length > 0) {
+            allQuestions = [...allQuestions, ...questionBatch];
+            from += batchSize;
+            hasMore = questionBatch.length === batchSize;
+          } else {
+            hasMore = false;
+          }
         }
       }
 
-      // Group questions by test_id for quick lookup
+      // Group questions by test_id
       const questionsByTestId = new Map<string, { id: string; question_type: string }[]>();
-      (allQuestions || []).forEach(q => {
+      allQuestions.forEach(q => {
         if (!questionsByTestId.has(q.test_id)) {
           questionsByTestId.set(q.test_id, []);
         }
         questionsByTestId.get(q.test_id)!.push(q);
       });
 
-      // Bulk fetch all flagged answers (optimized - single query)
-      const { data: flaggedAnswers } = await supabase
-        .from('2V_student_answers')
-        .select('question_id')
-        .eq('is_flagged', true);
+      // Fetch flagged answers for these questions
+      const questionIds = allQuestions.map(q => q.id);
+      let flaggedQuestionIdSet = new Set<string>();
 
-      // Create a set of flagged question IDs for quick lookup
-      const flaggedQuestionIdSet = new Set((flaggedAnswers || []).map(a => a.question_id));
+      if (questionIds.length > 0) {
+        // Batch the flagged query too
+        for (let i = 0; i < questionIds.length; i += 1000) {
+          const idBatch = questionIds.slice(i, i + 1000);
+          const { data: flaggedAnswers } = await supabase
+            .from('2V_student_answers')
+            .select('question_id')
+            .in('question_id', idBatch)
+            .eq('is_flagged', true);
 
-      // Process tests using the pre-fetched data (no additional queries)
-      const testsWithDetails = (testsData || []).map((test) => {
-        const questions = questionsByTestId.get(test.id) || [];
+          (flaggedAnswers || []).forEach(a => flaggedQuestionIdSet.add(a.question_id));
+        }
+      }
+
+      // Build details map
+      const newDetails = new Map<string, { question_count: number; format: 'pdf' | 'interactive' | 'mixed'; flagged_count: number }>();
+
+      filteredTestIds.forEach(testId => {
+        const questions = questionsByTestId.get(testId) || [];
 
         let format: 'pdf' | 'interactive' | 'mixed' = 'pdf';
         if (questions.length > 0) {
@@ -324,7 +389,6 @@ export default function ReviewQuestionsPage() {
           }
         }
 
-        // Count flagged answers for this test's questions
         let flaggedCount = 0;
         questions.forEach(q => {
           if (flaggedQuestionIdSet.has(q.id)) {
@@ -332,38 +396,53 @@ export default function ReviewQuestionsPage() {
           }
         });
 
-        return {
-          ...test,
+        newDetails.set(testId, {
           question_count: questions.length,
           format,
           flagged_count: flaggedCount,
-        };
+        });
       });
 
-      setTests(testsWithDetails);
+      setTestDetails(newDetails);
     } catch (err) {
-      console.error('Error loading tests:', err);
-    } finally {
-      setLoadingTests(false);
+      console.error('Error loading test details:', err);
     }
   }
 
   async function loadQuestions(testId: string) {
     setLoadingQuestions(true);
     try {
-      const { data, error } = await supabase
-        .from('2V_questions')
-        .select('*')
-        .eq('test_id', testId)
-        .order('question_number');
+      // Use pagination to fetch all questions (Supabase default limit is 1000)
+      const BATCH_SIZE = 1000;
+      let allQuestions: any[] = [];
+      let offset = 0;
+      let hasMore = true;
 
-      if (error) throw error;
-      setQuestions(data || []);
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('2V_questions')
+          .select('*')
+          .eq('test_id', testId)
+          .order('question_number')
+          .range(offset, offset + BATCH_SIZE - 1);
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          allQuestions = [...allQuestions, ...data];
+          offset += BATCH_SIZE;
+          hasMore = data.length === BATCH_SIZE;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      setQuestions(allQuestions);
 
       // Extract passages from question data
-      if (data && data.length > 0) {
+      if (allQuestions.length > 0) {
         const passageMap = new Map<string, any>();
-        data.forEach((q: any) => {
+        allQuestions.forEach((q: any) => {
           if (q.question_data?.passage_id && q.question_data?.passage_text) {
             if (!passageMap.has(q.question_data.passage_id)) {
               passageMap.set(q.question_data.passage_id, {
@@ -380,15 +459,22 @@ export default function ReviewQuestionsPage() {
         });
         setPassages(Array.from(passageMap.values()));
 
-        // Get flagged question IDs
-        const questionIds = data.map(q => q.id);
-        const { data: flaggedAnswers } = await supabase
-          .from('2V_student_answers')
-          .select('question_id')
-          .in('question_id', questionIds)
-          .eq('is_flagged', true);
+        // Get flagged question IDs (batch in chunks of 500 to avoid query limits)
+        const questionIds = allQuestions.map(q => q.id);
+        const flaggedIds = new Set<string>();
+        const FLAGGED_BATCH_SIZE = 500;
 
-        const flaggedIds = new Set(flaggedAnswers?.map(a => a.question_id) || []);
+        for (let i = 0; i < questionIds.length; i += FLAGGED_BATCH_SIZE) {
+          const batchIds = questionIds.slice(i, i + FLAGGED_BATCH_SIZE);
+          const { data: flaggedAnswers } = await supabase
+            .from('2V_student_answers')
+            .select('question_id')
+            .in('question_id', batchIds)
+            .eq('is_flagged', true);
+
+          flaggedAnswers?.forEach(a => flaggedIds.add(a.question_id));
+        }
+
         setFlaggedQuestionIds(flaggedIds);
       } else {
         setFlaggedQuestionIds(new Set());
@@ -601,12 +687,27 @@ export default function ReviewQuestionsPage() {
     }
   }
 
-  // Edit question handlers
-  const handleEditQuestion = (questionId: string, field: string, value: any) => {
-    setQuestions(prev => prev.map(q => {
-      if (q.id !== questionId) return q;
+  // Start editing a question - copy to local state
+  const startEditingQuestion = (questionId: string) => {
+    const question = questions.find(q => q.id === questionId);
+    if (question) {
+      setLocalEditingQuestion({ ...question });
+      setEditingQuestionId(questionId);
+    }
+  };
 
-      const updated = { ...q };
+  // Cancel editing - discard local changes
+  const cancelEditingQuestion = () => {
+    setLocalEditingQuestion(null);
+    setEditingQuestionId(null);
+  };
+
+  // Edit question handlers - update LOCAL state only (fast, no re-render of entire list)
+  const handleEditQuestion = (questionId: string, field: string, value: any) => {
+    setLocalEditingQuestion(prev => {
+      if (!prev || prev.id !== questionId) return prev;
+
+      const updated = { ...prev };
 
       // Handle nested Data Insights fields (e.g., question_data.problem, question_data.statement1)
       if (field.startsWith('question_data.')) {
@@ -648,11 +749,14 @@ export default function ReviewQuestionsPage() {
       }
 
       return updated;
-    }));
+    });
   };
 
   const handleSaveQuestion = async (questionId: string) => {
-    const question = questions.find(q => q.id === questionId);
+    // Use local editing state if available, otherwise fall back to main state
+    const question = localEditingQuestion?.id === questionId
+      ? localEditingQuestion
+      : questions.find(q => q.id === questionId);
     if (!question) return;
 
     setSavingQuestion(true);
@@ -673,6 +777,15 @@ export default function ReviewQuestionsPage() {
 
       if (answerError) throw answerError;
 
+      // Sync local changes back to main questions state
+      if (localEditingQuestion?.id === questionId) {
+        setQuestions(prev => prev.map(q =>
+          q.id === questionId ? { ...localEditingQuestion } : q
+        ));
+      }
+
+      // Clear editing state
+      setLocalEditingQuestion(null);
       setEditingQuestionId(null);
       console.log('Question saved successfully');
     } catch (err) {
@@ -1941,35 +2054,53 @@ export default function ReviewQuestionsPage() {
     }
   };
 
-  // Filter tests
-  const filteredTests = tests.filter(test => {
-    // Search filter
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase();
-      const matchesSearch =
-        test.test_type.toLowerCase().includes(search) ||
-        test.section.toLowerCase().includes(search) ||
-        test.exercise_type.toLowerCase().includes(search) ||
-        `${test.test_number}`.includes(search);
-      if (!matchesSearch) return false;
-    }
+  // Filter tests and merge with loaded details
+  const filteredTests = tests
+    .filter(test => {
+      // Track filter is required
+      if (!trackFilter || test.test_type !== trackFilter) return false;
 
-    // Track filter
-    if (trackFilter !== 'all' && test.test_type !== trackFilter) return false;
+      // Search filter
+      if (searchTerm) {
+        const search = searchTerm.toLowerCase();
+        const matchesSearch =
+          test.test_type.toLowerCase().includes(search) ||
+          test.section.toLowerCase().includes(search) ||
+          test.exercise_type.toLowerCase().includes(search) ||
+          `${test.test_number}`.includes(search);
+        if (!matchesSearch) return false;
+      }
 
-    // Format filter
-    if (formatFilter !== 'all' && test.format !== formatFilter) return false;
+      // Get details from loaded data
+      const details = testDetails.get(test.id);
 
-    // Reviewed filter
-    if (reviewedFilter === 'reviewed' && !test.review_info) return false;
-    if (reviewedFilter === 'unreviewed' && test.review_info) return false;
+      // Format filter
+      if (formatFilter !== 'all') {
+        const format = details?.format || 'pdf';
+        if (format !== formatFilter) return false;
+      }
 
-    // Flagged filter
-    if (flaggedFilter === 'flagged' && (test.flagged_count || 0) === 0) return false;
-    if (flaggedFilter === 'not_flagged' && (test.flagged_count || 0) > 0) return false;
+      // Reviewed filter
+      if (reviewedFilter === 'reviewed' && !test.review_info) return false;
+      if (reviewedFilter === 'unreviewed' && test.review_info) return false;
 
-    return true;
-  });
+      // Flagged filter
+      const flaggedCount = details?.flagged_count || 0;
+      if (flaggedFilter === 'flagged' && flaggedCount === 0) return false;
+      if (flaggedFilter === 'not_flagged' && flaggedCount > 0) return false;
+
+      return true;
+    })
+    .map(test => {
+      // Merge with loaded details
+      const details = testDetails.get(test.id);
+      return {
+        ...test,
+        question_count: details?.question_count || 0,
+        format: details?.format || ('pdf' as const),
+        flagged_count: details?.flagged_count || 0,
+      };
+    });
 
   // Get PDF URL from first question
   const pdfUrl = questions.length > 0 ? questions[0]?.question_data?.pdf_url : null;
@@ -2046,13 +2177,13 @@ export default function ReviewQuestionsPage() {
                       />
                     </div>
 
-                    {/* Track Filter */}
+                    {/* Track Filter (Required) */}
                     <select
                       value={trackFilter}
                       onChange={(e) => setTrackFilter(e.target.value)}
-                      className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green bg-white"
+                      className="px-4 py-2 border-2 border-brand-green rounded-lg focus:ring-2 focus:ring-brand-green bg-white font-semibold"
                     >
-                      <option value="all">All Tracks</option>
+                      <option value="" disabled>Select Track</option>
                       {testTypes.map(type => (
                         <option key={type} value={type}>{type}</option>
                       ))}
@@ -2116,9 +2247,22 @@ export default function ReviewQuestionsPage() {
                     <FontAwesomeIcon icon={faSpinner} className="animate-spin text-4xl text-brand-green mb-4" />
                     <p className="text-gray-600">Loading tests...</p>
                   </div>
+                ) : !trackFilter ? (
+                  <div className="text-center py-12 bg-blue-50 rounded-xl border-2 border-blue-200">
+                    <FontAwesomeIcon icon={faFilter} className="text-4xl text-blue-400 mb-4" />
+                    <p className="text-blue-700 font-semibold">Please select a Track to view tests</p>
+                    <p className="text-blue-600 text-sm mt-2">
+                      Tests are filtered by track to improve performance
+                    </p>
+                  </div>
+                ) : testDetails.size === 0 ? (
+                  <div className="text-center py-12">
+                    <FontAwesomeIcon icon={faSpinner} className="animate-spin text-4xl text-brand-green mb-4" />
+                    <p className="text-gray-600">Loading {trackFilter} tests...</p>
+                  </div>
                 ) : filteredTests.length === 0 ? (
                   <div className="text-center py-12">
-                    <p className="text-gray-500">No tests found</p>
+                    <p className="text-gray-500">No tests found matching your filters</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -2668,7 +2812,7 @@ export default function ReviewQuestionsPage() {
                                     {savingQuestion ? 'Saving...' : 'Save'}
                                   </button>
                                   <button
-                                    onClick={() => setEditingQuestionId(null)}
+                                    onClick={cancelEditingQuestion}
                                     className="px-3 py-1 bg-gray-200 text-gray-700 text-xs rounded hover:bg-gray-300"
                                   >
                                     Cancel
@@ -2676,7 +2820,7 @@ export default function ReviewQuestionsPage() {
                                 </>
                               ) : (
                                 <button
-                                  onClick={() => setEditingQuestionId(question.id)}
+                                  onClick={() => startEditingQuestion(question.id)}
                                   className="px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded hover:bg-blue-200"
                                 >
                                   <FontAwesomeIcon icon={faEdit} className="mr-1" />
@@ -2689,10 +2833,10 @@ export default function ReviewQuestionsPage() {
                           <div className="bg-blue-50 p-4 rounded-lg mb-3 border border-blue-200 overflow-x-auto">
                             {question.question_data?.di_type ? (
                               /* Data Insights Question - Show editor if editing, otherwise preview */
-                              editingQuestionId === question.id ? (
+                              editingQuestionId === question.id && localEditingQuestion ? (
                                 <DataInsightsEditor
-                                  questionData={question.question_data}
-                                  answers={question.answers}
+                                  questionData={localEditingQuestion.question_data}
+                                  answers={localEditingQuestion.answers}
                                   onChange={(field, value) => handleEditQuestion(question.id, field, value)}
                                 />
                               ) : (
@@ -2702,12 +2846,12 @@ export default function ReviewQuestionsPage() {
                                   showCorrectAnswer={true}
                                 />
                               )
-                            ) : editingQuestionId === question.id ? (
+                            ) : editingQuestionId === question.id && localEditingQuestion ? (
                               <textarea
                                 value={
                                   getQuestionLanguage(question.id) === 'en'
-                                    ? (question.question_data?.question_text_eng || '')
-                                    : (question.question_data?.question_text || '')
+                                    ? (localEditingQuestion.question_data?.question_text_eng || '')
+                                    : (localEditingQuestion.question_data?.question_text || '')
                                 }
                                 onChange={(e) => {
                                   const field = getQuestionLanguage(question.id) === 'en' ? 'question_text_eng' : 'question_text';
@@ -2872,9 +3016,9 @@ export default function ReviewQuestionsPage() {
                             /* Open-Ended Answer */
                             <div className="mt-3 p-4 bg-purple-50 border-2 border-purple-300 rounded-lg">
                               <h4 className="text-sm font-semibold text-purple-900 mb-2">Answer:</h4>
-                              {editingQuestionId === question.id ? (
+                              {editingQuestionId === question.id && localEditingQuestion ? (
                                 <textarea
-                                  value={question.answers?.correct_answer || ''}
+                                  value={localEditingQuestion.answers?.correct_answer || ''}
                                   onChange={(e) => handleEditQuestion(question.id, 'correct_answer', e.target.value)}
                                   className="w-full p-3 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent min-h-[100px] font-mono text-sm"
                                   placeholder="Enter correct answer..."
@@ -2888,18 +3032,18 @@ export default function ReviewQuestionsPage() {
                           ) : localizedOptions && (
                             /* Multiple Choice Options */
                             <div className="space-y-2">
-                              {editingQuestionId === question.id && (
+                              {editingQuestionId === question.id && localEditingQuestion && (
                                 <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                                   <label className="block text-sm font-medium text-yellow-800 mb-2">
                                     Correct Answer:
                                   </label>
                                   <div className="flex flex-wrap gap-2">
-                                    {Object.keys(question.question_data.options || {}).map((key) => (
+                                    {Object.keys(localEditingQuestion.question_data.options || {}).map((key) => (
                                       <button
                                         key={key}
                                         onClick={() => handleEditQuestion(question.id, 'correct_answer', key)}
                                         className={`px-4 py-2 rounded-lg font-bold text-sm transition ${
-                                          question.answers?.correct_answer === key
+                                          localEditingQuestion.answers?.correct_answer === key
                                             ? 'bg-green-600 text-white'
                                             : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                                         }`}
@@ -2945,14 +3089,14 @@ export default function ReviewQuestionsPage() {
                                           </div>
                                         )}
                                       </div>
-                                    ) : editingQuestionId === question.id ? (
+                                    ) : editingQuestionId === question.id && localEditingQuestion ? (
                                       <div className="flex gap-2 items-center">
                                         <input
                                           type="text"
                                           value={String(
                                             getQuestionLanguage(question.id) === 'en'
-                                              ? (question.question_data?.options_eng?.[key] || '')
-                                              : (question.question_data?.options?.[key] || '')
+                                              ? (localEditingQuestion.question_data?.options_eng?.[key] || '')
+                                              : (localEditingQuestion.question_data?.options?.[key] || '')
                                           )}
                                           onChange={(e) => {
                                             const isEnglish = getQuestionLanguage(question.id) === 'en';
