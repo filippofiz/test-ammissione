@@ -35,6 +35,7 @@ import { createAdaptiveAlgorithm, SimpleAdaptiveAlgorithm, ComplexAdaptiveAlgori
 import { translateTestTrack } from '../lib/translateTestTrack';
 import { syncTestResultsToExternal } from '../lib/api/externalStudents';
 import { calculateResultsForExternalSync } from '../lib/utils/externalSyncCalculator';
+import { PreTestDiagnostics } from '../components/PreTestDiagnostics';
 
 interface TestConfig {
   test_type: string;
@@ -791,6 +792,7 @@ export default function TakeTestPage() {
         // Try to make a simple request to Supabase
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const startTime = Date.now();
 
         const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/`, {
           method: 'HEAD',
@@ -801,15 +803,23 @@ export default function TakeTestPage() {
         });
 
         clearTimeout(timeoutId);
+        const responseTime = Date.now() - startTime;
 
         // If request succeeds, we're back online
         if (response.ok) {
-          setSaveError('✅ Sei di nuovo online');
+          // Check if connection is slow (> 1.5 seconds)
+          if (responseTime > 1500) {
+            setSaveError('🐢 Connessione lenta');
+            console.log('🐢 Slow connection detected:', responseTime, 'ms');
+            // No auto-clear - persists until connection improves
+          } else {
+            setSaveError('✅ Sei di nuovo online');
 
-          // Clear message after 5 seconds
-          setTimeout(() => {
-            setSaveError(null);
-          }, 5000);
+            // Clear message after 5 seconds
+            setTimeout(() => {
+              setSaveError(null);
+            }, 5000);
+          }
         }
       } catch (error) {
         // Still offline, do nothing
@@ -4641,7 +4651,10 @@ export default function TakeTestPage() {
     annulTest();
   }
 
-  if (loading) {
+  // Wait until all critical state is loaded to prevent race condition
+  // where sections is set to ['All Questions'] but config is not yet loaded,
+  // causing the filter to incorrectly return 0 questions
+  if (loading || !config || sections.length === 0) {
     return (
       <Layout>
         <div className="flex items-center justify-center min-h-[60vh]">
@@ -4778,6 +4791,13 @@ export default function TakeTestPage() {
                 {(i18n.language === 'en' ? config.test_start_message : config.messaggio_iniziale_test) || t('takeTest.welcome') || 'Welcome to the test!'}
               </pre>
             </div>
+
+            {/* Pre-test System Diagnostics */}
+            <PreTestDiagnostics
+              supabaseUrl={import.meta.env.VITE_SUPABASE_URL}
+              supabaseKey={import.meta.env.VITE_SUPABASE_ANON_KEY}
+            />
+
             <div className="flex gap-4">
               <button
                 onClick={() => navigate(-1)}
@@ -5331,9 +5351,27 @@ export default function TakeTestPage() {
               </span>
             )}
             {saveError && (
-              <span className="text-xs text-red-600 font-semibold flex items-center gap-1">
-                ⚠️ {saveError}
-              </span>
+              saveError.includes('internet') ? (
+                <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 bg-red-600 text-white px-8 py-6 rounded-xl shadow-2xl text-center max-w-md">
+                  <div className="text-5xl mb-4">⚠️</div>
+                  <div className="text-2xl font-bold mb-2">No Internet Connection</div>
+                  <div className="text-lg">Cannot proceed until connection is restored.</div>
+                </div>
+              ) : saveError.includes('online') ? (
+                <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 bg-green-600 text-white px-8 py-6 rounded-xl shadow-2xl text-center max-w-md">
+                  <div className="text-5xl mb-4">✅</div>
+                  <div className="text-2xl font-bold mb-2">Sei di nuovo online</div>
+                  <div className="text-lg">Connessione ripristinata.</div>
+                </div>
+              ) : saveError.includes('lenta') ? (
+                <span className="text-sm text-yellow-600 font-semibold flex items-center gap-1 bg-yellow-100 px-3 py-1 rounded-full">
+                  🐢 Connessione lenta
+                </span>
+              ) : (
+                <span className="text-xs text-red-600 font-semibold flex items-center gap-1">
+                  ⚠️ {saveError}
+                </span>
+              )
             )}
             {/* Review Mode Indicator with Changes Counter */}
             {isInReviewMode && config?.max_answer_changes !== undefined && (
