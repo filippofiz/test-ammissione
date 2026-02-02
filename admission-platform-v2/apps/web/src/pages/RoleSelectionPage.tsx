@@ -5,7 +5,10 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faGraduationCap, faChalkboardTeacher, faUserShield, faInbox } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import { getCurrentProfile } from '../lib/auth';
-import type { Profile } from '../lib/database.types';
+// Import from full generated Supabase types
+import type { Database } from '../../database.types';
+
+type Profile = Database['public']['Tables']['2V_profiles']['Row'];
 
 export function RoleSelectionPage() {
   const { t } = useTranslation();

@@ -395,7 +395,7 @@ export class ScoringAlgorithm {
   /**
    * Convert raw score to scaled score using conversion table
    */
-  private rawToScaled(rawScore: number, sectionId?: string): number {
+  private rawToScaled(rawScore: number, _sectionId?: string): number {
     const table = this.config.raw_to_scaled_table;
 
     if (!table || table.length === 0) {
@@ -489,22 +489,25 @@ export async function loadScoringConfig(
       return null;
     }
 
+    // Convert null values to undefined and handle missing columns
+    // Note: Some columns may not exist in the database schema yet
+    const configData = data as Record<string, unknown>;
     return {
       id: data.id,
       test_type: testType,
       track_type: trackType,
       algorithm_category: 'scoring',
-      scoring_method: data.scoring_method || 'raw_score',
-      penalty_for_wrong: data.penalty_for_wrong,
-      penalty_for_blank: data.penalty_for_blank,
-      section_weights: data.section_weights,
-      scale_min: data.scale_min,
-      scale_max: data.scale_max,
-      raw_to_scaled_table: data.raw_to_scaled_table,
-      use_theta_for_score: data.use_theta_for_score,
-      custom_rules: data.custom_rules,
-      created_at: data.created_at,
-      updated_at: data.updated_at,
+      scoring_method: (data.scoring_method as ScoringConfig['scoring_method']) || 'raw_score',
+      penalty_for_wrong: (data.penalty_for_wrong as number | Record<string, number> | null) ?? undefined,
+      penalty_for_blank: data.penalty_for_blank ?? undefined,
+      section_weights: (data.section_weights as Record<string, number> | null) ?? undefined,
+      scale_min: (configData.scale_min as number | null) ?? undefined,
+      scale_max: (configData.scale_max as number | null) ?? undefined,
+      raw_to_scaled_table: (configData.raw_to_scaled_table as ScoringConfig['raw_to_scaled_table']) ?? undefined,
+      use_theta_for_score: (configData.use_theta_for_score as boolean | null) ?? undefined,
+      custom_rules: (configData.custom_rules as Record<string, unknown> | null) ?? undefined,
+      created_at: data.created_at ?? undefined,
+      updated_at: data.updated_at ?? undefined,
     };
   } catch (err) {
     console.error('Error loading scoring config:', err);

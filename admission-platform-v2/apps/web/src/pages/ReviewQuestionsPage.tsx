@@ -36,6 +36,7 @@ import { AdvancedGraphRenderer } from '../components/GraphRenderer';
 import RechartsRenderer from '../components/RechartsRenderer';
 import { FlaggedQuestionEditor } from '../components/FlaggedQuestionEditor';
 import { DataInsightsPreview } from '../components/questions/DataInsightsPreview';
+import { DataInsightsEditor } from '../components/questions/DataInsightsEditor';
 import { supabase } from '../lib/supabase';
 import { normalizeWhitespace } from '../lib/textUtils';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -122,13 +123,17 @@ export default function ReviewQuestionsPage() {
   const [flaggedQuestions, setFlaggedQuestions] = useState<any[]>([]);
   const [loadingFlagged, setLoadingFlagged] = useState(false);
 
-  // Filters
+  // Filters - trackFilter defaults to first available test type (set in useEffect after loading)
   const [searchTerm, setSearchTerm] = useState('');
-  const [trackFilter, setTrackFilter] = useState<string>('all');
+  const [trackFilter, setTrackFilter] = useState<string>('');
   const [formatFilter, setFormatFilter] = useState<'all' | 'pdf' | 'interactive' | 'mixed'>('all');
   const [reviewedFilter, setReviewedFilter] = useState<'all' | 'reviewed' | 'unreviewed'>('all');
   const [flaggedFilter, setFlaggedFilter] = useState<'all' | 'flagged' | 'not_flagged'>('all');
   const [sectionFilter, setSectionFilter] = useState<string>('all');
+  const [questionReviewedFilter, setQuestionReviewedFilter] = useState<'all' | 'reviewed' | 'unreviewed'>('all');
+
+  // Test details loaded for current filter (question counts, formats, etc.)
+  const [testDetails, setTestDetails] = useState<Map<string, { question_count: number; format: 'pdf' | 'interactive' | 'mixed'; flagged_count: number }>>(new Map());
 
   // Questions state
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -143,6 +148,9 @@ export default function ReviewQuestionsPage() {
   const [markingReviewed, setMarkingReviewed] = useState(false);
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const [savingQuestion, setSavingQuestion] = useState(false);
+
+  // Local editing state - holds a copy of the question being edited to avoid re-rendering entire list on each keystroke
+  const [localEditingQuestion, setLocalEditingQuestion] = useState<Question | null>(null);
 
   // Language toggle
   const [viewLanguage, setViewLanguage] = useState<'it' | 'en'>('it');
@@ -214,6 +222,13 @@ export default function ReviewQuestionsPage() {
     loadTests();
   }, []);
 
+  // Load test details when track filter changes
+  useEffect(() => {
+    if (trackFilter && tests.length > 0) {
+      loadTestDetails(trackFilter);
+    }
+  }, [trackFilter, tests.length]);
+
   useEffect(() => {
     if (viewMode === 'flaggedQuestions') {
       loadFlaggedQuestions();
@@ -254,7 +269,7 @@ export default function ReviewQuestionsPage() {
   async function loadTests() {
     setLoadingTests(true);
     try {
-      // Load tests with review_info
+      // Load only tests metadata (lightweight - no question fetching)
       const { data: testsData, error: testsError } = await supabase
         .from('2V_tests')
         .select('id, test_type, section, exercise_type, test_number, review_info')
@@ -295,12 +310,15 @@ export default function ReviewQuestionsPage() {
         .select('question_id')
         .eq('is_flagged', true);
 
-      // Create a set of flagged question IDs for quick lookup
-      const flaggedQuestionIdSet = new Set((flaggedAnswers || []).map(a => a.question_id));
+          (flaggedAnswers || []).forEach(a => flaggedQuestionIdSet.add(a.question_id));
+        }
+      }
 
-      // Process tests using the pre-fetched data (no additional queries)
-      const testsWithDetails = (testsData || []).map((test) => {
-        const questions = questionsByTestId.get(test.id) || [];
+      // Build details map
+      const newDetails = new Map<string, { question_count: number; format: 'pdf' | 'interactive' | 'mixed'; flagged_count: number }>();
+
+      filteredTestIds.forEach(testId => {
+        const questions = questionsByTestId.get(testId) || [];
 
         let format: 'pdf' | 'interactive' | 'mixed' = 'pdf';
         if (questions.length > 0) {
@@ -314,7 +332,6 @@ export default function ReviewQuestionsPage() {
           }
         }
 
-        // Count flagged answers for this test's questions
         let flaggedCount = 0;
         questions.forEach(q => {
           if (flaggedQuestionIdSet.has(q.id)) {
@@ -322,19 +339,16 @@ export default function ReviewQuestionsPage() {
           }
         });
 
-        return {
-          ...test,
+        newDetails.set(testId, {
           question_count: questions.length,
           format,
           flagged_count: flaggedCount,
-        };
+        });
       });
 
-      setTests(testsWithDetails);
+      setTestDetails(newDetails);
     } catch (err) {
-      console.error('Error loading tests:', err);
-    } finally {
-      setLoadingTests(false);
+      console.error('Error loading test details:', err);
     }
   }
 
@@ -348,13 +362,23 @@ export default function ReviewQuestionsPage() {
         .or(`test_id.eq.${testId},additional_test_ids.cs.["${testId}"]`)
         .order('question_number');
 
-      if (error) throw error;
-      setQuestions(data || []);
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          allQuestions = [...allQuestions, ...data];
+          offset += BATCH_SIZE;
+          hasMore = data.length === BATCH_SIZE;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      setQuestions(allQuestions);
 
       // Extract passages from question data
-      if (data && data.length > 0) {
+      if (allQuestions.length > 0) {
         const passageMap = new Map<string, any>();
-        data.forEach((q: any) => {
+        allQuestions.forEach((q: any) => {
           if (q.question_data?.passage_id && q.question_data?.passage_text) {
             if (!passageMap.has(q.question_data.passage_id)) {
               passageMap.set(q.question_data.passage_id, {
@@ -371,15 +395,22 @@ export default function ReviewQuestionsPage() {
         });
         setPassages(Array.from(passageMap.values()));
 
-        // Get flagged question IDs
-        const questionIds = data.map(q => q.id);
-        const { data: flaggedAnswers } = await supabase
-          .from('2V_student_answers')
-          .select('question_id')
-          .in('question_id', questionIds)
-          .eq('is_flagged', true);
+        // Get flagged question IDs (batch in chunks of 500 to avoid query limits)
+        const questionIds = allQuestions.map(q => q.id);
+        const flaggedIds = new Set<string>();
+        const FLAGGED_BATCH_SIZE = 500;
 
-        const flaggedIds = new Set(flaggedAnswers?.map(a => a.question_id) || []);
+        for (let i = 0; i < questionIds.length; i += FLAGGED_BATCH_SIZE) {
+          const batchIds = questionIds.slice(i, i + FLAGGED_BATCH_SIZE);
+          const { data: flaggedAnswers } = await supabase
+            .from('2V_student_answers')
+            .select('question_id')
+            .in('question_id', batchIds)
+            .eq('is_flagged', true);
+
+          flaggedAnswers?.forEach(a => flaggedIds.add(a.question_id));
+        }
+
         setFlaggedQuestionIds(flaggedIds);
       } else {
         setFlaggedQuestionIds(new Set());
@@ -630,14 +661,40 @@ export default function ReviewQuestionsPage() {
     }
   }
 
-  // Edit question handlers
+  // Start editing a question - copy to local state
+  const startEditingQuestion = (questionId: string) => {
+    const question = questions.find(q => q.id === questionId);
+    if (question) {
+      setLocalEditingQuestion({ ...question });
+      setEditingQuestionId(questionId);
+    }
+  };
+
+  // Cancel editing - discard local changes
+  const cancelEditingQuestion = () => {
+    setLocalEditingQuestion(null);
+    setEditingQuestionId(null);
+  };
+
+  // Edit question handlers - update LOCAL state only (fast, no re-render of entire list)
   const handleEditQuestion = (questionId: string, field: string, value: any) => {
-    setQuestions(prev => prev.map(q => {
-      if (q.id !== questionId) return q;
+    setLocalEditingQuestion(prev => {
+      if (!prev || prev.id !== questionId) return prev;
 
-      const updated = { ...q };
+      const updated = { ...prev };
 
-      if (field === 'question_text' || field === 'question_text_eng') {
+      // Handle nested Data Insights fields (e.g., question_data.problem, question_data.statement1)
+      if (field.startsWith('question_data.')) {
+        const nestedField = field.replace('question_data.', '');
+        updated.question_data = { ...updated.question_data, [nestedField]: value };
+      }
+      // Handle nested answers fields (e.g., answers.correct_answer)
+      else if (field.startsWith('answers.')) {
+        const nestedField = field.replace('answers.', '');
+        updated.answers = { ...updated.answers, [nestedField]: value };
+      }
+      // Legacy handlers for regular multiple choice questions
+      else if (field === 'question_text' || field === 'question_text_eng') {
         updated.question_data = { ...updated.question_data, [field]: value };
       } else if (field === 'correct_answer') {
         updated.answers = { ...updated.answers, correct_answer: value };
@@ -666,11 +723,14 @@ export default function ReviewQuestionsPage() {
       }
 
       return updated;
-    }));
+    });
   };
 
   const handleSaveQuestion = async (questionId: string) => {
-    const question = questions.find(q => q.id === questionId);
+    // Use local editing state if available, otherwise fall back to main state
+    const question = localEditingQuestion?.id === questionId
+      ? localEditingQuestion
+      : questions.find(q => q.id === questionId);
     if (!question) return;
 
     setSavingQuestion(true);
@@ -691,6 +751,15 @@ export default function ReviewQuestionsPage() {
 
       if (answerError) throw answerError;
 
+      // Sync local changes back to main questions state
+      if (localEditingQuestion?.id === questionId) {
+        setQuestions(prev => prev.map(q =>
+          q.id === questionId ? { ...localEditingQuestion } : q
+        ));
+      }
+
+      // Clear editing state
+      setLocalEditingQuestion(null);
       setEditingQuestionId(null);
       console.log('Question saved successfully');
     } catch (err) {
@@ -2016,35 +2085,53 @@ export default function ReviewQuestionsPage() {
     }
   };
 
-  // Filter tests
-  const filteredTests = tests.filter(test => {
-    // Search filter
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase();
-      const matchesSearch =
-        test.test_type.toLowerCase().includes(search) ||
-        test.section.toLowerCase().includes(search) ||
-        test.exercise_type.toLowerCase().includes(search) ||
-        `${test.test_number}`.includes(search);
-      if (!matchesSearch) return false;
-    }
+  // Filter tests and merge with loaded details
+  const filteredTests = tests
+    .filter(test => {
+      // Track filter is required
+      if (!trackFilter || test.test_type !== trackFilter) return false;
 
-    // Track filter
-    if (trackFilter !== 'all' && test.test_type !== trackFilter) return false;
+      // Search filter
+      if (searchTerm) {
+        const search = searchTerm.toLowerCase();
+        const matchesSearch =
+          test.test_type.toLowerCase().includes(search) ||
+          test.section.toLowerCase().includes(search) ||
+          test.exercise_type.toLowerCase().includes(search) ||
+          `${test.test_number}`.includes(search);
+        if (!matchesSearch) return false;
+      }
 
-    // Format filter
-    if (formatFilter !== 'all' && test.format !== formatFilter) return false;
+      // Get details from loaded data
+      const details = testDetails.get(test.id);
 
-    // Reviewed filter
-    if (reviewedFilter === 'reviewed' && !test.review_info) return false;
-    if (reviewedFilter === 'unreviewed' && test.review_info) return false;
+      // Format filter
+      if (formatFilter !== 'all') {
+        const format = details?.format || 'pdf';
+        if (format !== formatFilter) return false;
+      }
 
-    // Flagged filter
-    if (flaggedFilter === 'flagged' && (test.flagged_count || 0) === 0) return false;
-    if (flaggedFilter === 'not_flagged' && (test.flagged_count || 0) > 0) return false;
+      // Reviewed filter
+      if (reviewedFilter === 'reviewed' && !test.review_info) return false;
+      if (reviewedFilter === 'unreviewed' && test.review_info) return false;
 
-    return true;
-  });
+      // Flagged filter
+      const flaggedCount = details?.flagged_count || 0;
+      if (flaggedFilter === 'flagged' && flaggedCount === 0) return false;
+      if (flaggedFilter === 'not_flagged' && flaggedCount > 0) return false;
+
+      return true;
+    })
+    .map(test => {
+      // Merge with loaded details
+      const details = testDetails.get(test.id);
+      return {
+        ...test,
+        question_count: details?.question_count || 0,
+        format: details?.format || ('pdf' as const),
+        flagged_count: details?.flagged_count || 0,
+      };
+    });
 
   // Get PDF URL from first question
   const pdfUrl = questions.length > 0 ? questions[0]?.question_data?.pdf_url : null;
@@ -2121,13 +2208,13 @@ export default function ReviewQuestionsPage() {
                       />
                     </div>
 
-                    {/* Track Filter */}
+                    {/* Track Filter (Required) */}
                     <select
                       value={trackFilter}
                       onChange={(e) => setTrackFilter(e.target.value)}
-                      className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green bg-white"
+                      className="px-4 py-2 border-2 border-brand-green rounded-lg focus:ring-2 focus:ring-brand-green bg-white font-semibold"
                     >
-                      <option value="all">All Tracks</option>
+                      <option value="" disabled>Select Track</option>
                       {testTypes.map(type => (
                         <option key={type} value={type}>{type}</option>
                       ))}
@@ -2191,9 +2278,22 @@ export default function ReviewQuestionsPage() {
                     <FontAwesomeIcon icon={faSpinner} className="animate-spin text-4xl text-brand-green mb-4" />
                     <p className="text-gray-600">Loading tests...</p>
                   </div>
+                ) : !trackFilter ? (
+                  <div className="text-center py-12 bg-blue-50 rounded-xl border-2 border-blue-200">
+                    <FontAwesomeIcon icon={faFilter} className="text-4xl text-blue-400 mb-4" />
+                    <p className="text-blue-700 font-semibold">Please select a Track to view tests</p>
+                    <p className="text-blue-600 text-sm mt-2">
+                      Tests are filtered by track to improve performance
+                    </p>
+                  </div>
+                ) : testDetails.size === 0 ? (
+                  <div className="text-center py-12">
+                    <FontAwesomeIcon icon={faSpinner} className="animate-spin text-4xl text-brand-green mb-4" />
+                    <p className="text-gray-600">Loading {trackFilter} tests...</p>
+                  </div>
                 ) : filteredTests.length === 0 ? (
                   <div className="text-center py-12">
-                    <p className="text-gray-500">No tests found</p>
+                    <p className="text-gray-500">No tests found matching your filters</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -2393,6 +2493,23 @@ export default function ReviewQuestionsPage() {
                             ))}
                           </select>
                         </div>
+
+                        {/* Question Reviewed Filter */}
+                        <div className="flex items-center gap-2">
+                          <FontAwesomeIcon icon={faCheckCircle} className="text-gray-500" />
+                          <select
+                            value={questionReviewedFilter}
+                            onChange={(e) => {
+                              setQuestionReviewedFilter(e.target.value as 'all' | 'reviewed' | 'unreviewed');
+                              setQuestionsPage(1); // Reset to page 1 when filter changes
+                            }}
+                            className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green bg-white"
+                          >
+                            <option value="all">All Questions</option>
+                            <option value="reviewed">Reviewed</option>
+                            <option value="unreviewed">Not Reviewed</option>
+                          </select>
+                        </div>
                       </div>
 
                       {/* AI Check Button */}
@@ -2425,7 +2542,12 @@ export default function ReviewQuestionsPage() {
                     <div className="space-y-4">
                       {/* Pagination Controls */}
                       {(() => {
-                        const filteredQuestions = questions.filter(q => sectionFilter === 'all' || q.section === sectionFilter);
+                        const filteredQuestions = questions.filter(q => {
+                          if (sectionFilter !== 'all' && q.section !== sectionFilter) return false;
+                          if (questionReviewedFilter === 'reviewed' && !q.review_info) return false;
+                          if (questionReviewedFilter === 'unreviewed' && q.review_info) return false;
+                          return true;
+                        });
                         const totalPages = Math.ceil(filteredQuestions.length / QUESTIONS_PER_PAGE);
                         if (totalPages > 1) {
                           return (
@@ -2458,7 +2580,12 @@ export default function ReviewQuestionsPage() {
                         return null;
                       })()}
                       {(() => {
-                        const filteredQuestions = questions.filter(q => sectionFilter === 'all' || q.section === sectionFilter);
+                        const filteredQuestions = questions.filter(q => {
+                          if (sectionFilter !== 'all' && q.section !== sectionFilter) return false;
+                          if (questionReviewedFilter === 'reviewed' && !q.review_info) return false;
+                          if (questionReviewedFilter === 'unreviewed' && q.review_info) return false;
+                          return true;
+                        });
                         const paginatedQuestions = filteredQuestions.slice((questionsPage - 1) * QUESTIONS_PER_PAGE, questionsPage * QUESTIONS_PER_PAGE);
                         // Track which passages have been shown on this page
                         const shownPassagesOnPage = new Set<string>();
@@ -2716,7 +2843,7 @@ export default function ReviewQuestionsPage() {
                                     {savingQuestion ? 'Saving...' : 'Save'}
                                   </button>
                                   <button
-                                    onClick={() => setEditingQuestionId(null)}
+                                    onClick={cancelEditingQuestion}
                                     className="px-3 py-1 bg-gray-200 text-gray-700 text-xs rounded hover:bg-gray-300"
                                   >
                                     Cancel
@@ -2724,7 +2851,7 @@ export default function ReviewQuestionsPage() {
                                 </>
                               ) : (
                                 <button
-                                  onClick={() => setEditingQuestionId(question.id)}
+                                  onClick={() => startEditingQuestion(question.id)}
                                   className="px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded hover:bg-blue-200"
                                 >
                                   <FontAwesomeIcon icon={faEdit} className="mr-1" />
@@ -2736,18 +2863,26 @@ export default function ReviewQuestionsPage() {
                           {/* Question Content - Different rendering for Data Insights vs regular questions */}
                           <div className="bg-blue-50 p-4 rounded-lg mb-3 border border-blue-200 overflow-x-auto">
                             {question.question_data?.di_type ? (
-                              /* Data Insights Question - Use specialized preview component */
-                              <DataInsightsPreview
-                                questionData={question.question_data}
-                                answers={question.answers}
-                                showCorrectAnswer={true}
-                              />
-                            ) : editingQuestionId === question.id ? (
+                              /* Data Insights Question - Show editor if editing, otherwise preview */
+                              editingQuestionId === question.id && localEditingQuestion ? (
+                                <DataInsightsEditor
+                                  questionData={localEditingQuestion.question_data}
+                                  answers={localEditingQuestion.answers}
+                                  onChange={(field, value) => handleEditQuestion(question.id, field, value)}
+                                />
+                              ) : (
+                                <DataInsightsPreview
+                                  questionData={question.question_data}
+                                  answers={question.answers}
+                                  showCorrectAnswer={true}
+                                />
+                              )
+                            ) : editingQuestionId === question.id && localEditingQuestion ? (
                               <textarea
                                 value={
                                   getQuestionLanguage(question.id) === 'en'
-                                    ? (question.question_data?.question_text_eng || '')
-                                    : (question.question_data?.question_text || '')
+                                    ? (localEditingQuestion.question_data?.question_text_eng || '')
+                                    : (localEditingQuestion.question_data?.question_text || '')
                                 }
                                 onChange={(e) => {
                                   const field = getQuestionLanguage(question.id) === 'en' ? 'question_text_eng' : 'question_text';
@@ -2924,9 +3059,9 @@ export default function ReviewQuestionsPage() {
                             /* Open-Ended Answer */
                             <div className="mt-3 p-4 bg-purple-50 border-2 border-purple-300 rounded-lg">
                               <h4 className="text-sm font-semibold text-purple-900 mb-2">Answer:</h4>
-                              {editingQuestionId === question.id ? (
+                              {editingQuestionId === question.id && localEditingQuestion ? (
                                 <textarea
-                                  value={question.answers?.correct_answer || ''}
+                                  value={localEditingQuestion.answers?.correct_answer || ''}
                                   onChange={(e) => handleEditQuestion(question.id, 'correct_answer', e.target.value)}
                                   className="w-full p-3 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent min-h-[100px] font-mono text-sm"
                                   placeholder="Enter correct answer..."
@@ -2940,18 +3075,18 @@ export default function ReviewQuestionsPage() {
                           ) : localizedOptions && (
                             /* Multiple Choice Options */
                             <div className="space-y-2">
-                              {editingQuestionId === question.id && (
+                              {editingQuestionId === question.id && localEditingQuestion && (
                                 <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                                   <label className="block text-sm font-medium text-yellow-800 mb-2">
                                     Correct Answer:
                                   </label>
                                   <div className="flex flex-wrap gap-2">
-                                    {Object.keys(question.question_data.options || {}).map((key) => (
+                                    {Object.keys(localEditingQuestion.question_data.options || {}).map((key) => (
                                       <button
                                         key={key}
                                         onClick={() => handleEditQuestion(question.id, 'correct_answer', key)}
                                         className={`px-4 py-2 rounded-lg font-bold text-sm transition ${
-                                          question.answers?.correct_answer === key
+                                          localEditingQuestion.answers?.correct_answer === key
                                             ? 'bg-green-600 text-white'
                                             : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                                         }`}
@@ -3001,14 +3136,14 @@ export default function ReviewQuestionsPage() {
                                           </div>
                                         )}
                                       </div>
-                                    ) : editingQuestionId === question.id ? (
+                                    ) : editingQuestionId === question.id && localEditingQuestion ? (
                                       <div className="flex gap-2 items-center">
                                         <input
                                           type="text"
                                           value={String(
                                             getQuestionLanguage(question.id) === 'en'
-                                              ? (question.question_data?.options_eng?.[key] || '')
-                                              : (question.question_data?.options?.[key] || '')
+                                              ? (localEditingQuestion.question_data?.options_eng?.[key] || '')
+                                              : (localEditingQuestion.question_data?.options?.[key] || '')
                                           )}
                                           onChange={(e) => {
                                             const isEnglish = getQuestionLanguage(question.id) === 'en';
@@ -3041,7 +3176,12 @@ export default function ReviewQuestionsPage() {
                       })()}
                       {/* Bottom Pagination Controls */}
                       {(() => {
-                        const filteredQuestions = questions.filter(q => sectionFilter === 'all' || q.section === sectionFilter);
+                        const filteredQuestions = questions.filter(q => {
+                          if (sectionFilter !== 'all' && q.section !== sectionFilter) return false;
+                          if (questionReviewedFilter === 'reviewed' && !q.review_info) return false;
+                          if (questionReviewedFilter === 'unreviewed' && q.review_info) return false;
+                          return true;
+                        });
                         const totalPages = Math.ceil(filteredQuestions.length / QUESTIONS_PER_PAGE);
                         if (totalPages > 1) {
                           return (

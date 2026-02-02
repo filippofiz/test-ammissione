@@ -4,7 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHome } from '@fortawesome/free-solid-svg-icons';
 import { getCurrentProfile, signOut } from '../lib/auth';
-import type { Profile } from '../lib/database.types';
+// Import from full generated Supabase types
+import type { Database } from '../../database.types';
+
+type Profile = Database['public']['Tables']['2V_profiles']['Row'];
 
 interface LayoutProps {
   children: ReactNode;

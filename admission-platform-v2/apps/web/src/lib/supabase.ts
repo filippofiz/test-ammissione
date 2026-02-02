@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
-import type { Database } from './database.types';
+// Import full generated types from Supabase CLI (npx supabase gen types typescript)
+import type { Database } from '../../database.types';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;

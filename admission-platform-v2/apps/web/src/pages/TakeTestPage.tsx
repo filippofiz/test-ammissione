@@ -33,6 +33,16 @@ import { MultipleChoiceQuestion } from '../components/questions/MultipleChoiceQu
 import { PDFTestView } from '../components/PDFTestView';
 import { createAdaptiveAlgorithm, SimpleAdaptiveAlgorithm, ComplexAdaptiveAlgorithm } from '../lib/algorithms/adaptiveAlgorithm';
 import { translateTestTrack } from '../lib/translateTestTrack';
+import {
+  getStudentGMATProgress,
+  addSeenQuestions,
+  type GmatCycle
+} from '../lib/api/gmat';
+import {
+  findMatchingTemplate,
+  getAllocatedQuestionIds,
+  parseTestIdentifier
+} from '../lib/gmat/questionAllocation';
 import { syncTestResultsToExternal } from '../lib/api/externalStudents';
 import { calculateResultsForExternalSync } from '../lib/utils/externalSyncCalculator';
 import { PreTestDiagnostics } from '../components/PreTestDiagnostics';
@@ -1861,30 +1871,45 @@ export default function TakeTestPage() {
       });
 
       // Load questions - SEQUENTIAL ORDER (no randomization in preview)
-      // For GMAT Assessment Iniziale 1, fetch from general pool by test_type
-      // For all other tests, fetch by test_id OR additional_test_ids
-      let questions: any[] | null = null;
-      let questionsError: any = null;
+      let questions: any[] = [];
 
+      // For GMAT Assessment Iniziale 1, fetch from general pool by test_type (with pagination)
+      // For all other tests, fetch by test_id
       if (isGMATAssessmentInitial1) {
         console.log('✅ [PREVIEW] Fetching from GMAT question pool (all test_type=GMAT questions)');
-        const result = await supabase
-          .from('2V_questions')
-          .select('*')
-          .eq('test_type', testType)
-          .order('question_number', { ascending: true });
-        questions = result.data;
-        questionsError = result.error;
+        // Use pagination to avoid 1000 row limit
+        const batchSize = 1000;
+        let from = 0;
+        let hasMore = true;
+
+        while (hasMore) {
+          const { data: batch, error: batchError } = await supabase
+            .from('2V_questions')
+            .select('*')
+            .eq('test_type', testType)
+            .order('question_number', { ascending: true })
+            .range(from, from + batchSize - 1);
+
+          if (batchError) throw batchError;
+
+          if (batch && batch.length > 0) {
+            questions = [...questions, ...batch];
+            from += batchSize;
+            hasMore = batch.length === batchSize;
+          } else {
+            hasMore = false;
+          }
+        }
       } else {
-        console.log('📋 [PREVIEW] Fetching questions for test_id OR additional_test_ids:', previewTestId);
-        // Fetch questions where test_id matches OR additional_test_ids contains the test_id
-        const result = await supabase
+        console.log('📋 [PREVIEW] Fetching questions for specific test_id:', previewTestId);
+        const { data, error: questionsError } = await supabase
           .from('2V_questions')
           .select('*')
-          .or(`test_id.eq.${previewTestId},additional_test_ids.cs.["${previewTestId}"]`)
+          .eq('test_id', previewTestId)
           .order('question_number', { ascending: true });
-        questions = result.data;
-        questionsError = result.error;
+
+        if (questionsError) throw questionsError;
+        questions = data || [];
       }
 
       console.log('📊 [PREVIEW] Questions fetched:', {
@@ -1892,7 +1917,6 @@ export default function TakeTestPage() {
         sections: questions ? [...new Set(questions.map(q => q.section))].filter(Boolean) : []
       });
 
-      if (questionsError) throw questionsError;
       if (!questions || questions.length === 0) {
         alert('No questions found for this test');
         navigate('/admin/review-questions');
@@ -2149,52 +2173,141 @@ export default function TakeTestPage() {
         exerciseType === 'Assessment Iniziale' &&
         testInfo.test_number === 1;
 
+      // Check if this is a GMAT test that uses cycle-based allocation (training/assessment, not initial)
+      const isGMATCycleBasedTest =
+        testType === 'GMAT' &&
+        !isGMATAssessmentInitial1 &&
+        (exerciseType.toLowerCase().includes('training') || exerciseType.toLowerCase().includes('assessment'));
+
       console.log('🎯 Question Fetching Debug:', {
         testType,
         exerciseType,
         test_number: testInfo.test_number,
-        isGMATAssessmentInitial1
+        isGMATAssessmentInitial1,
+        isGMATCycleBasedTest
       });
 
       // For no_sections mode, order only by question_number; otherwise by section then question_number
-      // For GMAT Assessment Iniziale 1, fetch from general pool by test_type
-      // For all other tests, fetch by test_id OR additional_test_ids
-      let questions: Question[] | null = null;
-      let questionsError: unknown = null;
+      let questions: Question[] = [];
 
+      // For GMAT Assessment Iniziale 1, fetch from general pool by test_type (with pagination)
+      // For GMAT cycle-based tests, fetch allocated questions based on student's cycle
+      // For all other tests, fetch by test_id
       if (isGMATAssessmentInitial1) {
         console.log('✅ Fetching from GMAT question pool (all test_type=GMAT questions)');
-        const query = supabase
-          .from('2V_questions')
-          .select('*')
-          .eq('test_type', testType);
+        // Use pagination to avoid 1000 row limit
+        const batchSize = 1000;
+        let from = 0;
+        let hasMore = true;
 
-        if (configData.section_order_mode === 'no_sections') {
-          query.order('question_number');
-        } else {
-          query.order('section').order('question_number');
+        while (hasMore) {
+          let query = supabase
+            .from('2V_questions')
+            .select('*')
+            .eq('test_type', testType);
+
+          if (configData.section_order_mode === 'no_sections') {
+            query = query.order('question_number');
+          } else {
+            query = query.order('section').order('question_number');
+          }
+
+          const { data: batch, error: batchError } = await query.range(from, from + batchSize - 1);
+
+          if (batchError) throw batchError;
+
+          if (batch && batch.length > 0) {
+            questions = [...questions, ...batch] as Question[];
+            from += batchSize;
+            hasMore = batch.length === batchSize;
+          } else {
+            hasMore = false;
+          }
+        }
+      } else if (isGMATCycleBasedTest) {
+        // GMAT Cycle-Based Test: Get student's cycle and fetch allocated questions
+        console.log('🔄 GMAT Cycle-Based Test: Fetching allocated questions');
+
+        // Get student's GMAT progress (cycle)
+        const studentProgress = await getStudentGMATProgress(assignment.student_id);
+
+        if (!studentProgress) {
+          // Student hasn't been assigned a cycle yet
+          alert('You have not been assigned a GMAT preparation cycle yet. Please contact your tutor.');
+          navigate(-1);
+          return;
         }
 
-        const result = await query as { data: Question[] | null; error: unknown };
-        questions = result.data;
-        questionsError = result.error;
+        const studentCycle = studentProgress.gmat_cycle as GmatCycle;
+        console.log('📊 Student GMAT Cycle:', studentCycle);
+
+        // Parse test identifier to find matching template
+        const { section, topic, materialType } = parseTestIdentifier({
+          section: testInfo.section,
+          exercise_type: exerciseType,
+          materia: testInfo.materia,
+          test_number: testInfo.test_number
+        });
+
+        console.log('🔍 Template matching:', { section, topic, materialType });
+
+        // Find matching template
+        const template = await findMatchingTemplate(section, topic, materialType);
+
+        if (!template) {
+          console.error('No matching template found for:', { section, topic, materialType });
+          alert('No question allocation found for this test. Please contact your tutor.');
+          navigate(-1);
+          return;
+        }
+
+        console.log('✅ Found template:', template.id, template.title);
+
+        // Get allocated question IDs for student's cycle
+        const allocatedIds = await getAllocatedQuestionIds(template.id, studentCycle);
+
+        if (!allocatedIds || allocatedIds.length === 0) {
+          console.error('No questions allocated for cycle:', studentCycle);
+          alert(`No questions have been allocated for the ${studentCycle} cycle. Please contact your tutor.`);
+          navigate(-1);
+          return;
+        }
+
+        console.log('📋 Allocated question IDs:', allocatedIds.length);
+
+        // Fetch allocated questions by their IDs
+        const { data: allocatedQuestions, error: allocError } = await supabase
+          .from('2V_questions')
+          .select('*')
+          .in('id', allocatedIds);
+
+        if (allocError) throw allocError;
+
+        // Sort questions according to the allocation order
+        const idOrderMap = new Map(allocatedIds.map((id, idx) => [id, idx]));
+        questions = (allocatedQuestions || []).sort((a, b) => {
+          const orderA = idOrderMap.get(a.id) ?? 999;
+          const orderB = idOrderMap.get(b.id) ?? 999;
+          return orderA - orderB;
+        }) as Question[];
+
+        console.log('✅ Fetched allocated GMAT questions:', questions.length);
       } else {
-        console.log('📋 Fetching questions for test_id OR additional_test_ids:', testId);
-        // Fetch questions where test_id matches OR additional_test_ids contains the test_id
-        const query = supabase
+        console.log('📋 Fetching questions for specific test_id:', testId);
+        let query = supabase
           .from('2V_questions')
           .select('*')
-          .or(`test_id.eq.${testId},additional_test_ids.cs.["${testId}"]`);
+          .eq('test_id', testId);
 
         if (configData.section_order_mode === 'no_sections') {
-          query.order('question_number');
+          query = query.order('question_number');
         } else {
-          query.order('section').order('question_number');
+          query = query.order('section').order('question_number');
         }
 
-        const result = await query as { data: Question[] | null; error: unknown };
-        questions = result.data;
-        questionsError = result.error;
+        const { data, error: questionsError } = await query as { data: Question[] | null; error: unknown };
+        if (questionsError) throw questionsError;
+        questions = data || [];
       }
 
       console.log('📊 Questions fetched:', {
@@ -2205,8 +2318,6 @@ export default function TakeTestPage() {
           question_number: questions[0].question_number
         } : null
       });
-
-      if (questionsError) throw questionsError;
 
       // Parse question_data and answers fields if they are strings
       const parsedQuestions = (questions || []).map(q => ({
@@ -4345,6 +4456,18 @@ export default function TakeTestPage() {
 
       if (!success) {
         throw new Error('Failed to save completion details');
+      }
+
+      // For GMAT tests, track seen questions
+      if (config?.test_type === 'GMAT' && studentId && allQuestions.length > 0) {
+        try {
+          const questionIds = allQuestions.map(q => q.id);
+          await addSeenQuestions(studentId, questionIds);
+          console.log('✅ Added seen questions to GMAT progress:', questionIds.length);
+        } catch (seenErr) {
+          // Non-critical error - log but don't block completion
+          console.error('Failed to track seen questions:', seenErr);
+        }
       }
 
       // Show completion screen

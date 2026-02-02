@@ -1,5 +1,5 @@
 #import "/templates/uptoten-template.typ": *
-#import "@preview/cetz:0.3.2": canvas, draw
+#import "@preview/cetz:0.4.2": canvas, draw
 
 #show: uptoten-doc.with(
   title: "GMAT Data Insights",
@@ -9,6 +9,11 @@
   logo: "/Logo.png"
 )
 
+#outline(title: "Table of Contents", indent: auto, depth: 2)
+
+#pagebreak()
+
+/*
 = Lesson Overview
 
 *Topic:* Multi-Source Reasoning (MSR)\
@@ -32,382 +37,417 @@ By the end of this topic, students should be able to:
 Multi-Source Reasoning mirrors real business scenarios where information comes from multiple reports, emails, and data sources. This is arguably the most "real-world" question type on the GMAT.
 
 #pagebreak()
+*/
 
-= Part 1: MSR Question Format
+= Understanding Multi-Source Reasoning
 
-== Structure
+Multi-Source Reasoning (MSR) represents one of the most distinctive and professionally relevant question types on the GMAT Data Insights section. Unlike other question formats that present information in a single, unified display, MSR questions simulate the real-world experience of gathering and synthesizing information from multiple documents, reports, or data sources. This format directly mirrors how business professionals work in practice, where decisions rarely depend on a single source of information.
+
+The core challenge in MSR questions lies not in the complexity of any individual calculation or inference, but in your ability to efficiently navigate between sources, identify relevant information, and combine data points from different places to reach a conclusion. Success requires both strategic navigation skills and careful attention to how different pieces of information relate to one another.
+
+MSR questions also test your ability to handle information that may seem contradictory at first glance. Different sources might present figures at different points in time, use different units of measurement, or focus on different aspects of the same situation. Understanding these distinctions and knowing when information truly conflicts versus when it simply represents different perspectives is a crucial skill for both the GMAT and professional life.
+
+#pagebreak()
+
+= MSR Question Format and Structure
+
+== The Tabbed Interface
+
+Every Multi-Source Reasoning set presents information through a distinctive tabbed interface. Rather than displaying all information at once, MSR questions require you to click between different tabs to access different sources of information. This design choice is intentional, as it tests your ability to mentally organize and recall where different types of information are located.
 
 #info-box[
-  *Every MSR Set Has:*
-  1. 2-3 tabs of information (click to switch between)
-  2. 1-3 questions based on ALL sources
-  3. Questions may require information from one OR multiple tabs
+  *Structure of an MSR Set:*
+  - 2-3 tabs containing different information sources
+  - 1-3 questions based on all available sources combined
+  - Each question may require information from one tab, multiple tabs, or all tabs
 
-  *Tab types:* Text (emails, reports), Tables, Charts, Descriptions
+  *Common Tab Types:*
+  - Text documents (emails, memos, reports, articles)
+  - Data tables with numerical information
+  - Charts and graphs showing trends or comparisons
+  - Descriptive text providing context, definitions, or constraints
 ]
 
-#example-box[
-  *Sample MSR Structure:*
-
-  *Tab 1 - Email:* Project timeline and budget overview
-  *Tab 2 - Report:* Detailed cost breakdown by department
-  *Tab 3 - Chart:* Historical spending trends
-
-  Questions ask about:
-  - Total budget (requires Tab 1 + Tab 2)
-  - Comparison to last year (requires Tab 3)
-  - Timeline feasibility (Tab 1)
-]
+The tabbed structure creates a unique challenge. You cannot see all information simultaneously, which means you must develop effective scanning and navigation strategies. Unlike a physical document where you might flip pages back and forth, the digital interface requires you to remember what you've seen and efficiently return to specific locations when needed.
 
 #v(0.5em)
 
 #align(center)[
-  #canvas(length: 1cm, {
-    import draw: *
-
-    // Colors
-    let tab_active = rgb("#4a5568")
-    let tab_inactive = rgb("#e2e8f0")
-    let border_color = rgb("#2d3748")
-    let content_bg = rgb("#f7fafc")
-    let question_bg = rgb("#edf2f7")
-    let accent = rgb("#3182ce")
-
-    // Dimensions
-    let prompt_width = 5.5
-    let prompt_height = 4.5
-    let question_width = 4.5
-    let question_height = 4.5
-    let tab_width = 1.4
-    let tab_height = 0.5
-    let gap = 0.8
-
-    // Prompt panel (left side)
-    let px = 0
-    let py = 0
-
-    // Prompt label
-    content((px + 0.3, py + prompt_height + 0.3), text(size: 8pt, weight: "bold")[Prompt])
-
-    // Main prompt box
-    rect((px, py), (px + prompt_width, py + prompt_height), stroke: border_color + 1.5pt, fill: content_bg)
-
-    // Tabs at top of prompt box
-    let tab1_x = px + 0.2
-    let tab2_x = px + 0.2 + tab_width + 0.1
-    let tab3_x = px + 0.2 + 2 * (tab_width + 0.1)
-    let tab_y = py + prompt_height - 0.1
-
-    // Tab 1 - Proposal (inactive, white background)
-    rect((tab1_x, tab_y - tab_height), (tab1_x + tab_width, tab_y), stroke: border_color + 1pt, fill: white)
-    content((tab1_x + tab_width/2, tab_y - tab_height/2), text(size: 7pt)[Proposal])
-
-    // Tab 2 - Objectives (active, gray background)
-    rect((tab2_x, tab_y - tab_height), (tab2_x + tab_width, tab_y), stroke: border_color + 1pt, fill: tab_inactive)
-    content((tab2_x + tab_width/2, tab_y - tab_height/2), text(size: 7pt, weight: "bold")[Objectives])
-
-    // Tab 3 - Budget (inactive, white background)
-    rect((tab3_x, tab_y - tab_height), (tab3_x + tab_width, tab_y), stroke: border_color + 1pt, fill: white)
-    content((tab3_x + tab_width/2, tab_y - tab_height/2), text(size: 7pt)[Budget])
-
-    // "Click tabs to read" annotation with arrows
-    let arrow_y = tab_y + 0.8
-    content((px + prompt_width/2, arrow_y + 0.3), text(size: 7pt)[Click tabs to read.])
-    line((px + prompt_width/2 - 1.2, arrow_y), (tab1_x + tab_width/2, tab_y + 0.15), stroke: 0.8pt, mark: (end: "stealth", scale: 0.4))
-    line((px + prompt_width/2, arrow_y), (tab2_x + tab_width/2, tab_y + 0.15), stroke: 0.8pt, mark: (end: "stealth", scale: 0.4))
-    line((px + prompt_width/2 + 1.2, arrow_y), (tab3_x + tab_width/2, tab_y + 0.15), stroke: 0.8pt, mark: (end: "stealth", scale: 0.4))
-
-    // Content area (below tabs)
-    let content_y = tab_y - tab_height - 0.3
-
-    // Email header
-    content((px + 0.4, content_y - 0.2), anchor: "west", text(size: 7pt)[Email from #text(weight: "bold")[manager] to staff])
-    content((px + 0.4, content_y - 0.55), anchor: "west", text(size: 7pt, style: "italic")[April 7, 1:03 pm])
-
-    // Email body
-    content((px + 0.4, content_y - 1.1), anchor: "west", text(size: 7pt)[The results of the recent])
-    content((px + 0.4, content_y - 1.4), anchor: "west", text(size: 7pt)[marketing survey have been])
-    content((px + 0.4, content_y - 1.7), anchor: "west", text(size: 7pt)[compiled . . . .])
-
-    // Body annotation
-    let body_note_y = py + 0.5
-    content((px + prompt_width/2, body_note_y - 1), text(size: 6.5pt)[Body may include text, tables,])
-    content((px + prompt_width/2, body_note_y - 1.25), text(size: 6.5pt)[graphs, or other diagrams.])
-    line((px + prompt_width/2, body_note_y - 0.55), (px + prompt_width/2, py - 0.4), stroke: 0.8pt, mark: (end: "stealth", scale: 0.4))
-
-    // Question panel (right side)
-    let qx = px + prompt_width + gap
-    let qy = py
-
-    // Question label
-    content((qx + question_width/2, qy + prompt_height + 0.3), text(size: 8pt, weight: "bold")[Question: Standard Multiple-Choice])
-
-    // Question box
-    rect((qx, qy), (qx + question_width, qy + question_height), stroke: border_color + 1.5pt, fill: question_bg)
-
-    // Question text
-    content((qx + 0.3, qy + question_height - 0.5), anchor: "west", text(size: 8pt, weight: "bold")[What is the increase . . . ?])
-
-    // Answer options
-    let opt_x = qx + 0.6
-    let opt_start_y = qy + question_height - 1.2
-    let opt_spacing = 0.5
-
-    // Radio circles and options
-    circle((opt_x, opt_start_y), radius: 0.12, stroke: border_color + 0.8pt, fill: white)
-    content((opt_x + 0.3, opt_start_y), anchor: "west", text(size: 7.5pt)[10%])
-
-    circle((opt_x, opt_start_y - opt_spacing), radius: 0.12, stroke: border_color + 0.8pt, fill: tab_active)
-    content((opt_x + 0.3, opt_start_y - opt_spacing), anchor: "west", text(size: 7.5pt)[20%])
-
-    circle((opt_x, opt_start_y - 2*opt_spacing), radius: 0.12, stroke: border_color + 0.8pt, fill: white)
-    content((opt_x + 0.3, opt_start_y - 2*opt_spacing), anchor: "west", text(size: 7.5pt)[30%])
-
-    circle((opt_x, opt_start_y - 3*opt_spacing), radius: 0.12, stroke: border_color + 0.8pt, fill: white)
-    content((opt_x + 0.3, opt_start_y - 3*opt_spacing), anchor: "west", text(size: 7.5pt)[40%])
-
-    circle((opt_x, opt_start_y - 4*opt_spacing), radius: 0.12, stroke: border_color + 0.8pt, fill: white)
-    content((opt_x + 0.3, opt_start_y - 4*opt_spacing), anchor: "west", text(size: 7.5pt)[50%])
-
-    // Answer annotation
-    let ans_note_y = qy + 0.5
-    content((qx + question_width/2, ans_note_y - 1), text(size: 6.5pt)[Choose one answer from five.])
-    line((qx + question_width/2, ans_note_y - 0.55), (qx + question_width/2, qy - 0.4), stroke: 0.8pt, mark: (end: "stealth", scale: 0.4))
-  })
+  #block(breakable: false)[
+    *MSR Interface Layout*
+    #v(0.5em)
+    #table(
+      columns: (1fr, 1fr),
+      stroke: 1pt + rgb("#2d3748"),
+      inset: 0pt,
+      align: center,
+      // Left panel - Prompt with tabs
+      table.cell(fill: rgb("#f7fafc"))[
+        #block(inset: 10pt)[
+          #text(size: 9pt, weight: "bold")[PROMPT PANEL]
+          #v(0.3em)
+          #table(
+            columns: (1fr, 1fr, 1fr),
+            stroke: 0.5pt + gray,
+            inset: 6pt,
+            align: center,
+            table.cell(fill: white)[#text(size: 8pt)[Proposal]],
+            table.cell(fill: rgb("#e2e8f0"))[#text(size: 8pt, weight: "bold")[Objectives]],
+            table.cell(fill: white)[#text(size: 8pt)[Budget]],
+          )
+          #v(0.3em)
+          #align(left)[
+            #text(size: 8pt, style: "italic")[Email from *manager* to staff]\
+            #text(size: 7pt, fill: gray)[April 7, 1:03 pm]
+            #v(0.3em)
+            #text(size: 8pt)[The results of the recent marketing survey have been compiled...]
+          ]
+          #v(0.5em)
+          #block(fill: rgb("#edf2f7"), inset: 6pt, radius: 3pt)[
+            #text(size: 7pt)[Body may include text, tables, graphs, or other diagrams]
+          ]
+        ]
+      ],
+      // Right panel - Question
+      table.cell(fill: rgb("#edf2f7"))[
+        #block(inset: 10pt)[
+          #text(size: 9pt, weight: "bold")[QUESTION PANEL]
+          #v(0.5em)
+          #text(size: 8pt, weight: "bold")[What is the increase...?]
+          #v(0.5em)
+          #align(left)[
+            #text(size: 8pt)[#sym.circle.stroked.small  10%]\
+            #text(size: 8pt)[#sym.circle.filled.small  20%  ← Selected]\
+            #text(size: 8pt)[#sym.circle.stroked.small  30%]\
+            #text(size: 8pt)[#sym.circle.stroked.small  40%]\
+            #text(size: 8pt)[#sym.circle.stroked.small  50%]
+          ]
+          #v(0.5em)
+          #block(fill: white, inset: 6pt, radius: 3pt)[
+            #text(size: 7pt)[Choose one answer from five options]
+          ]
+        ]
+      ],
+    )
+    #v(0.3em)
+    #text(size: 8pt, style: "italic")[MSR Interface: Click tabs to access different information sources (left), then answer questions (right)]
+  ]
 ]
 
-#v(0.3em)
-#align(center)[
-  #text(size: 8pt, style: "italic")[MSR Interface: Tabbed information sources (left) with standard question format (right)]
-]
+== Question Types in MSR
 
-== Question Types
+MSR questions can appear in several different formats, each requiring slightly different approaches. Understanding these formats helps you anticipate what kind of answer you're looking for and how to structure your search through the sources.
 
 #info-box[
-  *Common MSR question formats:*
-  - Yes/No/Cannot be determined
-  - Multiple choice
-  - Inference questions
-  - Calculation questions
-  - "According to" questions
+  *Common MSR Question Formats:*
+  - *Standard Multiple Choice:* Five answer options, select one
+  - *Yes/No/Cannot Be Determined:* Three-option questions testing inference limits
+  - *Inference Questions:* "Which can be concluded based on the sources?"
+  - *Calculation Questions:* Requiring numerical computation from source data
+  - *"According to" Questions:* Direct reference to specific source content
 ]
+
+The variety of question formats means that your approach must be flexible. Some questions require precise calculation, while others test your understanding of what can and cannot be logically concluded from the available information.
 
 #pagebreak()
 
-= Part 2: Source Types
+= Types of Information Sources
 
-== Text Sources (Emails, Reports, Memos)
+== Text-Based Sources
 
-#info-box[
-  *Characteristics:*
-  - Written communication between parties
-  - May contain opinions vs. facts
-  - Time-sensitive information
-  - May update or contradict other sources
-]
-
-*What to look for:*
-- Key facts and figures mentioned
-- Dates and timelines
-- Recommendations or decisions
-- Updates to previous information
-
-== Tabular Data
+Text sources in MSR questions typically take the form of business communications such as emails, memos, reports, or meeting notes. These sources often contain crucial contextual information that shapes how you should interpret the numerical data found in other tabs.
 
 #info-box[
-  *Characteristics:*
-  - Organized numerical data
-  - May be sortable (like Table Analysis)
-  - Precise values available
+  *Characteristics of Text Sources:*
+  - Written communication between specific parties
+  - May contain opinions, recommendations, or decisions alongside facts
+  - Often include time-sensitive information with specific dates
+  - May update, clarify, or even contradict information from other sources
 ]
 
-*What to look for:*
-- Column headers and what they measure
-- Units (thousands, millions, percentages)
-- Totals and subtotals
+When reading text sources, pay particular attention to the following elements. First, note who is communicating with whom, as this context can affect how you interpret statements. Second, identify the date or time stamp, as this determines whether information is current or potentially outdated. Third, distinguish between facts, projections, recommendations, and decisions, as these carry different levels of certainty. Finally, watch for any explicit references to information in other tabs, as these create important connections.
 
-== Graphical Data
+Text sources often contain the "why" behind decisions or the context that explains numerical data. An email might explain why projected figures differ from actual results, or a memo might describe constraints that affect how resources should be allocated.
+
+== Tabular Data Sources
+
+Tables in MSR questions present organized numerical information in rows and columns. These sources provide precise values and often serve as the foundation for calculations required to answer questions.
 
 #info-box[
-  *Characteristics:*
-  - Visual representation of trends or comparisons
-  - May show time series or categorical data
-  - Often requires estimation
+  *Characteristics of Tabular Sources:*
+  - Organized data in rows and columns with clear headers
+  - May be sortable (similar to Table Analysis questions)
+  - Contain precise numerical values rather than approximations
+  - Often include categories, time periods, or other organizational structures
 ]
 
-== Descriptive Text
+When examining tabular data, start by understanding the structure. Read the column headers carefully to understand what each column measures. Check for units of measurement, as tables may use thousands, millions, percentages, or other units that significantly affect interpretation. Look for totals, subtotals, or summary rows that might provide shortcuts to answers. Finally, note any footnotes or annotations that clarify the data.
+
+== Graphical Data Sources
+
+Charts and graphs in MSR questions present visual representations of trends, comparisons, or relationships. These sources are particularly useful for identifying patterns over time or comparing relative magnitudes.
 
 #info-box[
-  *Characteristics:*
-  - Background information
-  - Definitions or context
-  - Rules or constraints
+  *Characteristics of Graphical Sources:*
+  - Visual representation of quantitative relationships
+  - May show time series data, categorical comparisons, or proportional relationships
+  - Often require estimation rather than precise reading
+  - Particularly useful for identifying trends and patterns
 ]
+
+When working with graphical sources, take time to understand the axes and what they represent. Pay attention to the scale, as graphs can sometimes exaggerate or minimize differences depending on how the axis is calibrated. Remember that readings from graphs are often approximate, so look for answer choices that account for this uncertainty.
+
+== Descriptive and Contextual Sources
+
+Some tabs provide background information, definitions, rules, or constraints that frame the other information. While these sources may not contain specific data points, they often provide crucial context for interpreting other sources correctly.
+
+These contextual sources might define terminology used elsewhere, establish rules or constraints that limit possible outcomes, provide historical background that explains current situations, or describe assumptions underlying projections or analyses. Never skip these sources, even if they seem less important than numerical data. Missing a key definition or constraint can lead to incorrect interpretations of otherwise straightforward information.
 
 #pagebreak()
 
-= Part 3: Navigation Strategy
+= Strategic Navigation Approaches
 
-== Initial Scan
+== The Initial Survey
 
-#strategy-box[
-  *Before answering questions:*
-  1. Click through ALL tabs quickly (30-45 seconds)
-  2. Note what type of information each tab contains
-  3. Don't read in detail yet—just survey
-  4. Create a mental "index" of what's where
-]
-
-== Question-Driven Approach
+Before diving into the questions, take 30 to 45 seconds to survey all available tabs. This initial investment pays dividends throughout the question set by helping you navigate efficiently when searching for specific information.
 
 #strategy-box[
-  *For each question:*
-  1. Read the question carefully
-  2. Identify what information you need
-  3. Go to the relevant tab(s)
-  4. Find the specific data
-  5. Synthesize if multiple tabs needed
+  *The Initial Survey Process:*
+  1. Click through each tab quickly without reading in detail
+  2. Note the type of information each tab contains (text, table, chart, description)
+  3. Identify the general topic or focus of each source
+  4. Create a mental "index" mapping types of information to specific tabs
+  5. Note any obvious connections between sources (same categories, time periods, etc.)
 ]
+
+The goal of the initial survey is orientation, not comprehension. You're building a mental map of where different types of information are located. This map allows you to navigate directly to relevant sources when answering questions, rather than searching through tabs randomly.
+
+For example, after surveying a three-tab set, your mental index might look something like: "Tab 1 has the email with the timeline, Tab 2 has the budget breakdown by department, Tab 3 has the historical spending chart." This simple index dramatically improves efficiency when questions ask about specific topics.
+
+== The Question-Driven Approach
+
+Once you've completed the initial survey, adopt a question-driven approach to working through the set. Rather than trying to master all the information before looking at questions, let each question guide your detailed reading.
+
+#strategy-box[
+  *Question-Driven Process:*
+  1. Read the question carefully and identify what information you need
+  2. Determine which tab(s) likely contain the relevant information
+  3. Navigate to the appropriate tab(s) and find the specific data
+  4. If multiple tabs are needed, gather information from each
+  5. Synthesize the information to determine the answer
+  6. Select your answer and move to the next question
+]
+
+This approach is efficient because you only read in detail what you actually need. Many test-takers waste time thoroughly reading all sources before looking at questions, only to discover that certain details they memorized are never tested. The question-driven approach ensures your detailed reading is always purposeful.
 
 #warning-box[
-  *Don't:*
-  - Read all sources thoroughly before looking at questions
-  - Toggle between tabs randomly
-  - Memorize data you might not need
+  *Common Navigation Mistakes to Avoid:*
+  - Reading all sources thoroughly before looking at questions
+  - Toggling between tabs randomly without a clear purpose
+  - Trying to memorize data that may not be tested
+  - Ignoring contextual or background information tabs
 ]
 
 #pagebreak()
 
-= Part 4: Information Synthesis
+= Information Synthesis Skills
 
-== Cross-Referencing
+== Cross-Referencing Between Sources
+
+Many MSR questions require combining information from multiple tabs to reach an answer. This cross-referencing skill is central to the question type and mirrors how professionals synthesize information in real business situations.
 
 #info-box[
-  *When questions require multiple sources:*
-  1. Identify what each source contributes
-  2. Note any common reference points (same categories, time periods)
-  3. Combine information logically
-  4. Watch for unit differences between sources
+  *Cross-Referencing Process:*
+  1. Identify what information each relevant source contributes to the answer
+  2. Note common reference points between sources (same categories, time periods, units)
+  3. Check for unit consistency and convert if necessary
+  4. Combine information logically, noting any calculations required
+  5. Verify that your synthesis uses the most appropriate data from each source
 ]
+
+Effective cross-referencing requires attention to detail. Sources may use different units (one tab in thousands, another in actual figures), different time periods (one tab showing projections, another showing actuals), or different categorizations (one tab breaking down by region, another by product line). Recognizing and accounting for these differences is essential for accurate synthesis.
 
 #example-box[
-  *Question: What was the total marketing expense in Q3?*
+  *Cross-Referencing Example:*
 
-  - Tab 1 (Email): "Marketing budget is 15% of total budget"
-  - Tab 2 (Report): "Total Q3 budget: \$2 million"
+  *Question:* What was the total marketing expense in Q3?
 
-  Synthesis: Q3 Marketing = 15% × \$2M = \$300,000
+  *Tab 1 (Executive Email):* "The marketing budget has been set at 15% of the total quarterly budget."
+
+  *Tab 2 (Financial Report):* "Total Q3 budget allocation: \$2 million"
+
+  *Synthesis Process:*
+  - Tab 1 provides the percentage relationship
+  - Tab 2 provides the total budget figure
+  - Calculation: 15% × \$2,000,000 = \$300,000
+
+  Neither source alone contains the answer. Only by combining information from both tabs can you determine the marketing expense.
 ]
 
-== Handling Contradictions
+== Handling Apparent Contradictions
+
+Sometimes sources appear to present conflicting information. Rather than assuming an error, look for explanations that reconcile the apparent contradiction. The GMAT often tests your ability to recognize when information that seems contradictory is actually compatible.
 
 #warning-box[
-  *Sources may contradict each other!*
+  *Sources of Apparent Contradiction:*
+  - *Time differences:* Later information may update earlier figures
+  - *Projected vs. actual:* Plans and outcomes often differ
+  - *Different scopes:* Sources may cover different time periods, regions, or categories
+  - *Different definitions:* Terms may be used differently in different contexts
 
-  Look for:
-  - Time stamps (later information may update earlier)
-  - Projected vs. actual figures
-  - Different scopes or definitions
-
-  Usually, more recent or actual data supersedes projections.
+  *Resolution Strategy:* When sources seem to conflict, check dates, scopes, and definitions before concluding that information is genuinely inconsistent.
 ]
+
+In most cases, more recent information supersedes older information, and actual results supersede projections. However, be careful not to assume this automatically. Sometimes a question specifically asks about the projected figure, or the most recent information might be preliminary while earlier information is confirmed.
 
 #pagebreak()
 
-= Part 5: Question Types in MSR
+= Question Type Deep Dives
 
-== Type 1: Single Source Questions
+== Single-Source Questions
 
-"According to the email, what was the proposed deadline?"
+Some MSR questions can be answered from a single tab alone. These questions typically use language like "According to the email..." or "Based on the budget table..." that directs you to a specific source.
 
-*Strategy:* Go directly to the relevant tab, find the answer.
+*Strategy:* Navigate directly to the indicated source, find the relevant information, and select the answer. These are generally the most straightforward MSR questions, though they may still require careful reading to avoid misinterpretation.
 
-== Type 2: Multi-Source Synthesis
+Even for single-source questions, your initial survey pays off. Because you've already mapped the content of each tab, you can navigate directly to the correct source without searching through all tabs.
 
-"What is the total cost if the project uses the recommended approach?"
+== Multi-Source Synthesis Questions
 
-*Strategy:* Identify all relevant sources, combine information.
+These questions require combining information from two or more tabs. They may ask for calculations that use data from different sources, or conclusions that depend on synthesizing separate pieces of information.
 
-== Type 3: Inference Questions
+*Strategy:* Identify all relevant sources based on what the question asks. Navigate to each source and note the specific information needed. Then combine the information to calculate or determine the answer. These questions take longer but follow a logical process.
 
-"Which of the following can be inferred from the information provided?"
+The key challenge is identifying all relevant sources. Sometimes the connection is obvious (a question about "total cost" when costs are spread across multiple tabs), but sometimes it's subtle. If your answer seems incomplete or doesn't match any option, consider whether you're missing information from another tab.
 
-*Strategy:* Test each answer choice against the sources.
+== Inference Questions
 
-== Type 4: Yes/No/Cannot Be Determined
+Inference questions test your ability to draw logical conclusions from the provided information. They typically ask which statement "can be concluded" or "is supported by" the sources.
 
-"Can it be determined whether the project will be profitable?"
+*Strategy:* Approach these questions by testing each answer choice against the sources. An inference is valid only if it follows logically from the information provided, without requiring additional assumptions. Be especially careful to distinguish between what is explicitly stated, what can be logically concluded, and what is merely possible or plausible.
+
+A strong inference is one that must be true given the information in the sources. A weak or invalid inference is one that might be true but isn't guaranteed by the available information.
+
+== Yes/No/Cannot Be Determined Questions
+
+These three-option questions test your understanding of what can and cannot be concluded from the available information. They are particularly important to approach systematically, as the "Cannot Be Determined" option creates a common trap.
 
 #info-box[
-  *The three options:*
-  - *Yes:* Information definitively supports it
-  - *No:* Information definitively contradicts it
-  - *Cannot be determined:* Information is insufficient
+  *Understanding the Three Options:*
 
-  "Cannot be determined" is NOT the same as "No"!
+  *Yes:* The available information definitively supports the statement. Based on the sources, the statement must be true.
+
+  *No:* The available information definitively contradicts the statement. Based on the sources, the statement must be false.
+
+  *Cannot Be Determined:* The available information is insufficient to determine whether the statement is true or false. The statement might be true or might be false, but the sources don't tell us which.
 ]
 
-== Type 5: Calculation Questions
+#warning-box[
+  *Critical Distinction:*
 
-"What percentage of total revenue came from Division A?"
+  "Cannot Be Determined" is NOT the same as "No"!
 
-*Strategy:* Find relevant numbers in sources, calculate.
+  - "No" means the sources prove the statement is false
+  - "Cannot Be Determined" means the sources simply don't address the question
+
+  Many test-takers incorrectly select "No" when the correct answer is "Cannot Be Determined," or vice versa. Always ask yourself: Do the sources prove this false, or do they simply not provide enough information?
+]
+
+== Calculation Questions
+
+Some MSR questions require numerical calculations using data from one or more sources. These questions test both your ability to locate relevant data and your quantitative skills.
+
+*Strategy:* First identify all the numbers you need and where to find them. Check units carefully and convert if necessary. Perform the calculation, being mindful of percentage calculations and order of operations. Finally, verify that your answer matches the magnitude and units expected.
 
 #pagebreak()
 
-= Part 6: Time Management
+= Time Management for MSR
 
-== Pacing Guidelines
+== Understanding the Time Challenge
+
+MSR sets are typically the most time-consuming question type in the Data Insights section. The need to navigate between tabs, synthesize information, and potentially answer multiple questions per set means that MSR questions require careful time management.
 
 #info-box[
-  *Target Time:* 3-4 minutes per MSR set (not per question)
+  *Time Guidelines for MSR:*
+  - Target: 3-4 minutes per MSR set (for all questions in the set combined)
+  - Hard limit: Avoid spending more than 4 minutes on any single MSR set
+  - Initial survey: 30-45 seconds (investment that saves time later)
 
-  MSR sets are the most time-consuming in DI. Budget time carefully!
-
-  *Hard limit:* Don't spend more than 4 minutes on any MSR set.
+  Remember that the time allocation is for the entire set, not per question. A set with three questions should still stay within the 4-minute guideline total.
 ]
 
-== Efficiency Tips
+== Efficiency Strategies
+
+Effective time management for MSR questions depends on maintaining efficiency throughout the process. Several strategies can help you work through sets more quickly without sacrificing accuracy.
 
 #strategy-box[
-  1. *Don't read everything* - question-driven approach
-  2. *Note tab contents quickly* - build mental index
-  3. *Answer easier questions first* - if a set has 3 questions
-  4. *Cut losses* - if a question is too time-consuming, make best guess
+  *Time-Saving Approaches:*
+  1. *Use the question-driven approach:* Don't read sources in detail until you know what you're looking for
+  2. *Trust your initial survey:* Navigate directly to relevant tabs rather than searching
+  3. *Answer easier questions first:* If a set has multiple questions, tackle straightforward ones before complex ones
+  4. *Know when to move on:* If a question is consuming too much time, make your best guess and proceed
+  5. *Watch for shortcuts:* Sometimes answer choices or source structure can guide you to faster solutions
 ]
 
 #warning-box[
-  *MSR Time Trap:*
+  *The MSR Time Trap:*
 
-  It's easy to spend 5+ minutes on an MSR set. This hurts your overall section timing. Set a mental alarm at 3 minutes to check progress.
+  It's easy to spend 5 or more minutes on a challenging MSR set. This creates a cascading problem, as time lost on one set must be made up elsewhere in the section.
+
+  Set a mental checkpoint at 3 minutes. At this point, assess your progress. If you haven't answered any questions yet, or if you're stuck on a particularly difficult question, consider making your best guess and moving on. One questionable answer is preferable to compromising your performance on multiple subsequent questions due to time pressure.
 ]
 
 #pagebreak()
 
-= Part 7: Common MSR Patterns
+= Common MSR Scenarios
 
-== Pattern 1: Budget/Financial Analysis
+== Financial and Budget Analysis
 
-Sources: Proposal, budget table, historical data
-Questions: Total cost, variance from budget, comparison to previous period
+One of the most common MSR scenarios involves analyzing budgets, costs, or financial performance. These sets typically combine narrative context with numerical data.
 
-== Pattern 2: Project Management
+*Typical Source Structure:*
+- Tab 1: Proposal or email describing budget approach and allocations
+- Tab 2: Detailed budget table with line items and figures
+- Tab 3: Historical data or comparison information
 
-Sources: Timeline email, task list, resource allocation
-Questions: Completion date, resource requirements, schedule impact
+*Common Question Themes:* Total costs or expenses, variance from budget or plan, comparison to previous periods, impact of changes or decisions
 
-== Pattern 3: Business Decision
+== Project Management Scenarios
 
-Sources: Options description, pros/cons analysis, market data
-Questions: Best option, key factors, risks
+Project management scenarios focus on timelines, resources, and task coordination. These sets often require you to trace dependencies and calculate impacts of changes.
 
-== Pattern 4: Research Summary
+*Typical Source Structure:*
+- Tab 1: Project overview email or memo with timeline information
+- Tab 2: Task list or schedule with durations and dependencies
+- Tab 3: Resource allocation or constraints information
 
-Sources: Study description, results table, conclusions
-Questions: Findings interpretation, limitations, implications
+*Common Question Themes:* Project completion dates, resource requirements, impact of delays, critical path identification
+
+== Business Decision Scenarios
+
+Decision-focused scenarios present options along with data relevant to choosing between them. These sets test your ability to evaluate alternatives systematically.
+
+*Typical Source Structure:*
+- Tab 1: Description of options or alternatives
+- Tab 2: Analysis of costs, benefits, or other decision factors
+- Tab 3: Market data or contextual constraints
+
+*Common Question Themes:* Best option identification, key factors affecting decisions, risks and trade-offs, recommendations
+
+== Research and Analysis Scenarios
+
+Research scenarios present study results or analytical findings. These sets often test your ability to interpret findings and recognize their limitations.
+
+*Typical Source Structure:*
+- Tab 1: Study description and methodology
+- Tab 2: Results table or chart
+- Tab 3: Conclusions or interpretation
+
+*Common Question Themes:* Findings interpretation, study limitations, implications of results, validity of conclusions
 
 #pagebreak()
 
+/*
 = Teaching Notes for Tutors
 
 == Lesson A Focus (Introduction)
@@ -457,3 +497,4 @@ Questions: Findings interpretation, limitations, implications
 #tip-box[
   *After this topic:* DI section is complete! Next, the student will take DI section assessments before moving to Verbal Reasoning.
 ]
+*/

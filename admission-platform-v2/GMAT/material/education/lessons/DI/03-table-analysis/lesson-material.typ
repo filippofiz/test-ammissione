@@ -1,6 +1,6 @@
 #import "/templates/uptoten-template.typ": *
-#import "@preview/cetz:0.3.2"
-#import "@preview/cetz-plot:0.1.1"
+#import "@preview/cetz:0.4.2"
+#import "@preview/cetz-plot:0.1.3": plot, chart
 
 #show: uptoten-doc.with(
   title: "GMAT Data Insights",
@@ -9,6 +9,17 @@
   intro: "Comprehensive guide covering table sorting, True/False statement evaluation, calculations from tables, and analytical strategies.",
   logo: "/Logo.png"
 )
+
+#outline(title: "Table of Contents", indent: auto, depth: 2)
+
+#pagebreak()
+
+/*
+===============================================================================
+LESSON OVERVIEW AND TUTOR NOTES
+The following section contains lesson structure information and teaching notes.
+This content is intended for tutors and should not be displayed to students.
+===============================================================================
 
 = Lesson Overview
 
@@ -32,246 +43,285 @@ By the end of this topic, students should be able to:
 
 Table Analysis questions test your ability to organize and analyze data—a critical business skill. The sortable table format requires strategic thinking about how to extract information efficiently.
 
+===============================================================================
+END OF TUTOR-ONLY SECTION
+===============================================================================
+*/
+
+= Introduction to Table Analysis
+
+Table Analysis questions test one of the most practical skills in business: the ability to extract meaningful insights from tabular data. In business settings, professionals constantly work with spreadsheets, databases, and reports organized in table format. The GMAT includes Table Analysis specifically because this skill translates directly to success in business school case studies and real-world business analysis.
+
+What makes Table Analysis unique among GMAT question types is the interactive sorting feature. Unlike static tables you might encounter in printed materials, the tables in this section can be sorted by any column with a single click. This functionality mirrors the way professionals actually work with data in spreadsheet applications, and learning to use it strategically is key to performing well on these questions.
+
+Table Analysis appears in the Data Insights section of the GMAT Focus Edition. Each question presents a data table and three True/False statements that you must evaluate based on the information in the table. The statements range from simple lookups to complex analyses requiring calculations or pattern recognition. Your task is to determine whether each statement is true or false given the data provided.
+
+The interactive nature of these questions means that success depends not just on analytical ability but also on strategic thinking. Knowing when to sort, which column to sort by, and how to extract information efficiently can save valuable time and reduce errors.
+
 #pagebreak()
 
-= Part 1: TA Question Format
+= The Table Analysis Format
 
-== Structure
+== Question Structure
+
+Every Table Analysis question follows a consistent format. Understanding this structure helps you approach each question systematically and allocate your time effectively.
+
+The question presents a data table containing multiple rows and columns of information. The table might show company financial data, survey results, demographic information, or any other type of structured data. Each column represents a different variable or attribute, and each row represents a different entity or observation.
+
+Below the table, you find exactly three statements, each requiring a True or False response. These statements make claims about the data—for example, "Company X has the highest revenue" or "The median number of employees is greater than 2,500." Your task is to evaluate each statement independently and determine whether it is true or false based on the information in the table.
 
 #info-box[
-  *Every TA Question Has:*
-  1. A sortable data table (you can sort by any column)
+  *Components of Every TA Question:*
+
+  1. A sortable data table with multiple rows and columns
   2. Three True/False statements to evaluate
-  3. Each statement is evaluated independently
+  3. Each statement is scored independently
 
-  *You must determine if each statement is True or False.*
+  You must determine if each statement is True or False based on the table data.
 ]
 
-== The Sortable Table
+== The Sortable Table Feature
 
-#info-box[
-  *Key Feature:* You can sort the table by clicking on column headers.
+The most distinctive feature of Table Analysis is that you can sort the table by clicking on any column header. This sorting capability is not just a convenience—it is an essential tool for answering many types of questions efficiently.
 
-  - Sort ascending or descending
-  - Sorting changes the order of rows
-  - Use sorting to quickly find maxima, minima, medians
-]
+When you click a column header, the entire table reorders so that the values in that column appear in ascending or descending order. Clicking the same header again reverses the sort order. This allows you to quickly identify maximum and minimum values, find medians, count items above or below thresholds, and spot patterns in the data.
 
 #align(center)[
-  #cetz.canvas({
-    import cetz.draw: *
-
-    // Original table (left)
-    content((-4, 4), text(size: 9pt, weight: "bold")[Original Order])
-
-    // Headers
-    rect((-6.5, 3), (-4.5, 3.5), fill: rgb("#3498db").lighten(30%), stroke: 0.5pt)
-    rect((-4.5, 3), (-1.5, 3.5), fill: rgb("#3498db").lighten(30%), stroke: 0.5pt)
-    content((-5.5, 3.25), text(size: 7pt, weight: "bold")[Company])
-    content((-3, 3.25), text(size: 7pt, weight: "bold")[Revenue])
-
-    // Data rows
-    let data = (("Alpha", "150"), ("Beta", "220"), ("Gamma", "180"))
-    for (i, (name, rev)) in data.enumerate() {
-      let y = 2.5 - i * 0.5
-      rect((-6.5, y), (-4.5, y + 0.5), fill: white, stroke: 0.5pt)
-      rect((-4.5, y), (-1.5, y + 0.5), fill: white, stroke: 0.5pt)
-      content((-5.5, y + 0.25), text(size: 7pt)[#name])
-      content((-3, y + 0.25), text(size: 7pt)[#rev])
-    }
-
-    // Arrow
-    line((-0.5, 2), (0.5, 2), stroke: 1.5pt, mark: (end: ">"))
-    content((0, 2.5), text(size: 7pt)[Sort by\ Revenue])
-
-    // Sorted table (right)
-    content((4, 4), text(size: 9pt, weight: "bold")[Sorted (Descending)])
-
-    // Headers
-    rect((1.5, 3), (3.5, 3.5), fill: rgb("#3498db").lighten(30%), stroke: 0.5pt)
-    rect((3.5, 3), (6.5, 3.5), fill: rgb("#e74c3c").lighten(50%), stroke: 0.5pt)
-    content((2.5, 3.25), text(size: 7pt, weight: "bold")[Company])
-    content((5, 3.25), text(size: 7pt, weight: "bold")[Revenue #sym.arrow.b])
-
-    // Sorted data rows
-    let sorted_data = (("Beta", "220"), ("Gamma", "180"), ("Alpha", "150"))
-    for (i, (name, rev)) in sorted_data.enumerate() {
-      let y = 2.5 - i * 0.5
-      let fill_color = if i == 0 { rgb("#d5f5e3") } else { white }
-      rect((1.5, y), (3.5, y + 0.5), fill: fill_color, stroke: 0.5pt)
-      rect((3.5, y), (6.5, y + 0.5), fill: fill_color, stroke: 0.5pt)
-      content((2.5, y + 0.25), text(size: 7pt)[#name])
-      content((5, y + 0.25), text(size: 7pt)[#rev])
-    }
-
-    // Callout for max
-    content((7.5, 2.75), text(size: 7pt, fill: rgb("#27ae60"))[Max value\ now at top!])
-  })
-]
-
-== Scoring
-
-#info-box[
-  Each True/False selection is scored independently.
-  - Getting 2 of 3 correct: partial credit
-  - You must answer all three to proceed
-]
-
-#pagebreak()
-
-= Part 2: Common Table Types
-
-== Comparative Tables
-
-Multiple entities compared across several metrics.
-
-#example-box[
-  *Sample Comparative Table:*
-
-  #table(
-    columns: 4,
-    stroke: 0.5pt + gray,
-    inset: 6pt,
-    [*Company*], [*Revenue (\$M)*], [*Employees*], [*Founded*],
-    [Alpha], [150], [2,500], [1985],
-    [Beta], [220], [3,100], [1992],
-    [Gamma], [180], [2,800], [1988],
+  #grid(
+    columns: (auto, auto, auto),
+    gutter: 1.5em,
+    align: center + horizon,
+    [
+      *Original Order*
+      #table(
+        columns: 2,
+        stroke: 0.5pt + gray,
+        inset: 8pt,
+        align: center,
+        fill: (_, y) => if y == 0 { rgb("#3498db").lighten(60%) } else { white },
+        table.header([*Company*], [*Revenue*]),
+        [Alpha], [150],
+        [Beta], [220],
+        [Gamma], [180],
+      )
+    ],
+    [
+      #text(size: 1.5em)[→]\
+      #text(size: 0.8em)[Sort by Revenue]
+    ],
+    [
+      *Sorted (Descending)*
+      #table(
+        columns: 2,
+        stroke: 0.5pt + gray,
+        inset: 8pt,
+        align: center,
+        fill: (x, y) => {
+          if y == 0 {
+            if x == 1 { rgb("#e74c3c").lighten(60%) } else { rgb("#3498db").lighten(60%) }
+          } else if y == 1 {
+            rgb("#d5f5e3")
+          } else {
+            white
+          }
+        },
+        table.header([*Company*], [*Revenue* ↓]),
+        [Beta], [*220*],
+        [Gamma], [180],
+        [Alpha], [150],
+      )
+      #text(size: 0.85em, fill: rgb("#27ae60"))[Max value now at top!]
+    ],
   )
 ]
 
-== Time Series Tables
+The diagram above illustrates how sorting transforms the table. In the original order, identifying the company with the highest revenue requires scanning all values and comparing them. After sorting by revenue in descending order, the maximum value appears immediately at the top of the table, making the answer instantly visible.
 
-Same entity measured over multiple time periods.
+== Scoring and Partial Credit
 
-== Mixed Tables
+Each of the three True/False selections is scored independently. This means that getting two statements correct and one incorrect results in partial credit—you receive credit for each correct selection regardless of how you performed on the others.
 
-Combination of categories and time periods or multiple groupings.
+This scoring system has important implications for your approach. You should always answer all three statements, even if you are uncertain about some. An educated guess has a 50% chance of being correct, while leaving a statement blank guarantees zero credit for that selection. Additionally, you cannot proceed to the next question until you have answered all three statements.
+
+#info-box[
+  *Scoring Facts:*
+
+  - Each True/False selection is scored independently
+  - Partial credit is possible (e.g., 2 out of 3 correct)
+  - You must answer all three statements to proceed
+]
 
 #pagebreak()
 
-= Part 3: Strategic Sorting
+= Common Table Types
+
+Table Analysis questions present data in several common formats. Recognizing these formats helps you understand what the data represents and anticipate the types of questions that might be asked.
+
+== Comparative Tables
+
+Comparative tables present multiple entities (companies, products, countries, etc.) with several attributes measured for each. This format allows direct comparison across entities for any given attribute.
+
+#example-box[
+  *Sample Comparative Table:*
+  #align(center)[
+    #table(
+      columns: 4,
+      stroke: 0.5pt + gray,
+      inset: 6pt,
+      [*Company*], [*Revenue (\$M)*], [*Employees*], [*Founded*],
+      [Alpha], [150], [2,500], [1985],
+      [Beta], [220], [3,100], [1992],
+      [Gamma], [180], [2,800], [1988],
+    )
+  ]
+]
+
+In a comparative table, you might be asked to identify which entity has the highest or lowest value for a particular attribute, calculate derived values like revenue per employee, or analyze relationships between different attributes across entities.
+
+== Time Series Tables
+
+Time series tables track the same entity or entities over multiple time periods. These tables are excellent for analyzing trends, growth rates, and changes over time. You might see quarterly revenue figures, annual population data, or monthly sales numbers.
+
+With time series data, questions often focus on identifying periods of growth or decline, calculating percentage changes between periods, or determining when certain thresholds were crossed.
+
+== Mixed and Multi-Dimensional Tables
+
+Some tables combine elements of both comparative and time series formats, or present data grouped by multiple categories. For example, a table might show sales data for multiple products across multiple regions, or financial metrics for several companies over several years.
+
+These more complex tables require careful attention to understand how the data is organized. Before attempting to answer any statements, take a moment to identify what the rows represent, what the columns represent, and how the data is structured.
+
+#pagebreak()
+
+= Strategic Sorting
+
+Sorting is your most powerful tool in Table Analysis. Using it strategically can dramatically reduce the time needed to evaluate statements and minimize the risk of errors.
 
 == When to Sort
 
+Sorting is particularly valuable when you need to identify extreme values, find medians, or count items meeting certain conditions. Before calculating or scanning manually, ask yourself whether sorting might provide the answer more directly.
+
 #strategy-box[
   *Sort when you need to find:*
-  - Maximum or minimum values (sort that column)
-  - Median (sort that column, find middle)
-  - Rankings or positions
-  - Values above or below a threshold
+
+  - Maximum or minimum values in a column
+  - The median of a dataset
+  - Rankings or relative positions
+  - How many values fall above or below a threshold
+  - Patterns or trends in ordered data
 ]
+
+For example, if a statement claims "Company X has the highest revenue," sorting by revenue immediately reveals whether this is true—Company X will either be at the top of the sorted list or it will not. No calculation or comparison is necessary once the data is sorted.
 
 == Finding the Median
 
+The median is the middle value in an ordered dataset. Table Analysis questions frequently ask about medians because finding them requires understanding how to use sorting effectively.
+
+To find the median, first sort the table by the relevant column. Then identify the middle row. If the table has an odd number of rows, the median is simply the value in the middle row. If the table has an even number of rows, the median is the average of the two middle values.
+
 #info-box[
-  *To find the median using sorting:*
+  *Finding the Median:*
+
   1. Sort by the relevant column
-  2. Count total rows (n)
-  3. If n is odd: Median is the middle value (row (n+1)/2)
-  4. If n is even: Median is average of two middle values
+  2. Count the total number of rows ($n$)
+  3. If n is odd: The median is the value in row $display((n+1)/2)$
+
+  4. If n is even: The median is the average of values in rows $display(n/2)$ and $display((n/2)+1)$
 ]
 
-#example-box[
-  *Table has 7 rows. Find median of "Sales" column.*
-
-  1. Sort by Sales column
-  2. Middle row = $(7+1)/2 =$ 4th row
-  3. Median = value in Sales column of 4th row
-]
+The visual below demonstrates finding the median in a table with seven rows. After sorting, the fourth row contains the median because three rows fall above it and three rows fall below it.
 
 #align(center)[
-  #cetz.canvas({
-    import cetz.draw: *
-
-    // Title
-    content((3, 5), text(size: 9pt, weight: "bold")[Finding the Median (7 rows = odd)])
-
-    // Header
-    rect((0, 4), (2, 4.5), fill: rgb("#3498db").lighten(30%), stroke: 0.5pt)
-    rect((2, 4), (4, 4.5), fill: rgb("#3498db").lighten(30%), stroke: 0.5pt)
-    rect((4, 4), (6, 4.5), fill: rgb("#3498db").lighten(30%), stroke: 0.5pt)
-    content((1, 4.25), text(size: 7pt, weight: "bold")[Row])
-    content((3, 4.25), text(size: 7pt, weight: "bold")[Item])
-    content((5, 4.25), text(size: 7pt, weight: "bold")[Sales])
-
-    // Data rows (already sorted by Sales)
-    let sales_data = ((1, "G", "85"), (2, "A", "92"), (3, "E", "105"), (4, "B", "120"), (5, "D", "135"), (6, "C", "148"), (7, "F", "162"))
-    for (i, (row, item, sales)) in sales_data.enumerate() {
-      let y = 3.5 - i * 0.5
-      let fill_color = if i == 3 { rgb("#f1c40f").lighten(50%) } else { white }
-      rect((0, y), (2, y + 0.5), fill: fill_color, stroke: 0.5pt)
-      rect((2, y), (4, y + 0.5), fill: fill_color, stroke: 0.5pt)
-      rect((4, y), (6, y + 0.5), fill: fill_color, stroke: 0.5pt)
-      content((1, y + 0.25), text(size: 7pt)[#row])
-      content((3, y + 0.25), text(size: 7pt)[#item])
-      content((5, y + 0.25), text(size: 7pt)[#sales])
-    }
-
-    // Arrow pointing to median row
-    line((6.3, 2.25), (6.8, 2.25), stroke: rgb("#f39c12") + 1.5pt, mark: (start: ">"))
-    content((8, 2.25), text(size: 8pt, fill: rgb("#e67e22"), weight: "bold")[Median = 120])
-
-    // Explanation
-    content((3, -0.5), text(size: 8pt)[4th row is the middle: 3 rows above, 3 rows below])
-  })
+  #block(breakable: false)[
+    *Finding the Median (7 rows = odd)*
+    #v(0.5em)
+    #table(
+      columns: 4,
+      stroke: 0.5pt + gray,
+      inset: 8pt,
+      align: center,
+      fill: (x, y) => {
+        if y == 0 { rgb("#3498db").lighten(60%) }
+        else if y == 4 { rgb("#f1c40f").lighten(60%) }
+        else { white }
+      },
+      table.header([*Row*], [*Item*], [*Sales*], []),
+      [1], [G], [85], [],
+      [2], [A], [92], [],
+      [3], [E], [105], [],
+      [*4*], [*B*], [*120*], table.cell(fill: rgb("#f1c40f").lighten(60%))[#text(fill: rgb("#e67e22"), weight: "bold")[← Median]],
+      [5], [D], [135], [],
+      [6], [C], [148], [],
+      [7], [F], [162], [],
+    )
+    #v(0.3em)
+    #text(size: 0.9em)[_4th row is the middle: 3 rows above, 3 rows below_]
+  ]
 ]
 
-== Sorting for Percentages
+== Sorting for Threshold Analysis
+
+Many statements ask about the number or proportion of items meeting certain conditions. Sorting can make these counts easier by grouping qualifying items together.
+
+For example, if you need to determine how many companies have revenue above \$100 million, sorting by revenue places all high-revenue companies at one end of the table. You can then quickly count how many fall above the threshold without scanning the entire unsorted table.
 
 #tip-box[
-  To find what percentage of items meet a condition:
+  *Counting Items Meeting a Condition:*
+
   1. Sort by the relevant column
-  2. Count rows meeting the condition
-  3. Divide by total rows
+  2. Locate where the threshold falls in the sorted order
+  3. Count rows above (or below) that point
+  4. For percentages, divide this count by the total number of rows
 ]
 
 #pagebreak()
 
-= Part 4: Calculation Strategies
+= Calculation Strategies
+
+While sorting handles many Table Analysis questions, some statements require calculations. Understanding common calculation types and approaches helps you work efficiently.
 
 == Percentages from Tables
 
-#info-box[
-  *Common percentage calculations:*
-  - $"Part" / "Total" times 100$
-  - Items meeting condition / Total items
-  - Category sum / Grand total
-]
+Percentage calculations appear frequently in Table Analysis. The basic formula is straightforward: divide the part by the whole and multiply by 100.
 
-== Ratios from Tables
+Common percentage scenarios include calculating what percentage of total revenue comes from a single company, what percentage of items meet a certain condition, or how a value compares to some benchmark as a percentage.
 
 #info-box[
-  *Ratio calculations:*
-  - Column A value / Column B value for same row
-  - Compare ratios across rows
-  - Average ratios (careful: this is NOT sum of ratios / count)
+  *Common Percentage Calculations:*
+
+  - Part / Total × 100 (e.g., one company's revenue as a percentage of total revenue)
+  - Items meeting condition / Total items × 100 (e.g., percentage of companies founded before 1990)
+  - (New - Old) / Old × 100 (percentage change between periods)
 ]
 
-== Derived Values
+== Ratios and Derived Values
 
-#example-box[
-  *Calculate "Revenue per Employee" when table shows Revenue and Employees:*
+Some statements require you to calculate values that are not directly shown in the table. For example, if a table shows revenue and number of employees, you might need to calculate revenue per employee for each company to determine which has the highest efficiency.
 
-  For each row: $"Revenue" div "Employees"$
-
-  May need to find max, min, or median of these derived values.
-]
+These derived values require calculation for each relevant row. Since the derived values are not in the table, you cannot sort by them directly—you must calculate them and compare manually or on scratch paper.
 
 #warning-box[
-  *Derived values may not be sortable directly!*
+  *Derived Values Cannot Be Sorted Directly:*
 
-  The table shows the raw data; you must calculate derived values mentally or on scratch paper.
+  The table shows only raw data. If a statement asks about a derived value (like revenue per employee), you must calculate it for each relevant row yourself. The sorting feature only works on columns that exist in the table.
+]
+
+#example-box[
+  *Calculating Revenue per Employee:*
+
+  For each company: Revenue ÷ Employees = Revenue per Employee
+
+  - Alpha: 150 ÷ 2,500 = 0.060 (\$M per employee)
+  - Beta: 220 ÷ 3,100 = 0.071 (\$M per employee)
+  - Gamma: 180 ÷ 2,800 = 0.064 (\$M per employee)
+
+  Beta has the highest revenue per employee.
 ]
 
 == The GMAT Calculator
 
-#info-box[
-  *On the GMAT, you have access to an on-screen calculator for the Data Insights section.*
+The Data Insights section provides access to an on-screen calculator. This tool can save time on complex calculations, but you should use it judiciously—simple mental math is often faster than navigating the calculator interface.
 
-  - Basic operations: $+$, $-$, $times$, $div$
-  - Memory functions: MC, MR, MS, M+, M-
-  - Special functions: $sqrt("")$, $%$, $1\/x$, $plus.minus$
-]
+The calculator includes basic arithmetic operations, memory functions for storing intermediate results, and special functions like square root and percentage. Familiarizing yourself with these features before test day helps you use the calculator efficiently when you need it.
 
 #align(center)[
   #cetz.canvas({
@@ -361,15 +411,19 @@ Combination of categories and time periods or multiple groupings.
 
 #tip-box[
   *Calculator Tips:*
-  - Use M+ to accumulate sums without re-entering
-  - Use 1/x for quick reciprocal calculations
-  - The % button calculates percentages directly
+
+  - Use M+ to accumulate running totals without re-entering intermediate results
+  - The 1/x button quickly calculates reciprocals for ratio comparisons
+  - The % button can calculate percentages directly
+  - For simple arithmetic, mental math is often faster than using the calculator
 ]
 
 #pagebreak()
 
-= Part 5: True/False Statement Types
-#v(10pt)
+= Types of True/False Statements
+
+Table Analysis statements fall into several categories, each requiring different approaches. Understanding these categories helps you recognize what each statement requires and choose the most efficient strategy.
+
 #align(center)[
   #cetz.canvas({
     import cetz.draw: *
@@ -396,117 +450,188 @@ Combination of categories and time periods or multiple groupings.
 
 == Type 1: Direct Lookup
 
-"Company X has the highest revenue."
+Direct lookup statements can be verified simply by finding the right information in the table. These are typically the easiest statements to evaluate.
 
-*Strategy:* Sort by revenue, check if Company X is at top.
+*Example:* "Company X has the highest revenue."
+
+*Strategy:* Sort by revenue in descending order. If Company X appears at the top, the statement is true; otherwise, it is false. No calculation is needed—just locate the information.
 
 == Type 2: Calculation Required
 
-"The median number of employees is greater than 2,500."
+These statements require you to perform a calculation before you can evaluate them. The calculation might involve finding a median, computing a sum, or determining a percentage.
 
-*Strategy:* Sort by employees, find median, compare.
+*Example:* "The median number of employees is greater than 2,500."
+
+*Strategy:* Sort by employees, identify the median row(s), determine the median value, and compare it to 2,500. The statement is true if the median exceeds 2,500.
 
 == Type 3: Conditional Counting
 
-"More than half of the companies founded before 1990 have revenue above \$100M."
+Conditional counting statements ask about items that meet multiple criteria or about proportions of items meeting certain conditions.
 
-*Strategy:*
-1. Identify companies founded before 1990
-2. Count how many have revenue $> dollar 100$M
-3. Check if this is more than half
+*Example:* "More than half of the companies founded before 1990 have revenue above \$100M."
+
+*Strategy:* First identify all companies founded before 1990 (this is your denominator). Then count how many of those companies have revenue above \$100M (this is your numerator). Compare the numerator to half the denominator.
 
 == Type 4: Derived Values
 
-"Company Alpha has the highest revenue per employee."
+Derived value statements require calculating values that are not directly in the table, such as ratios, rates, or differences between columns.
 
-*Strategy:* Calculate ratio for each company, compare.
+*Example:* "Company Alpha has the highest revenue per employee."
 
-== Type 5: Relationships
+*Strategy:* Calculate revenue per employee for each company. Compare the calculated values to determine which company has the highest. This requires multiple calculations since the derived values cannot be sorted.
 
-"As revenue increases, the number of employees tends to increase."
+== Type 5: Relationship Statements
 
-*Strategy:* Look for correlation pattern in sorted data.
+Relationship statements make claims about patterns or correlations in the data. These are often the most challenging because they require analyzing the overall structure of the data.
+
+*Example:* "As revenue increases, the number of employees tends to increase."
+
+*Strategy:* Sort by one variable and observe whether the other variable generally follows the same pattern. Look for the overall trend rather than expecting a perfect correlation.
 
 #pagebreak()
 
-= Part 6: Time Management
+= Time Management
+
+Table Analysis questions typically take slightly longer than other Data Insights questions because you must evaluate three separate statements. Effective time management is essential for completing these questions without rushing.
 
 == Pacing Guidelines
 
-#info-box[
-  *Target Time:* 2-2.5 minutes per TA question
+Plan to spend approximately 2 to 2.5 minutes on each Table Analysis question. This allows adequate time to understand the table, evaluate all three statements, and verify your answers without excessive rushing.
 
-  TA questions take slightly longer due to three statements, but sorting helps speed up analysis.
+If you find yourself spending significantly more than 2.5 minutes on a single question, consider making your best judgments on any remaining statements and moving on. The partial credit system means that getting two out of three correct is valuable, and spending too long on difficult statements can hurt your performance on subsequent questions.
+
+#info-box[
+  *Target Timing:*
+
+  2 to 2.5 minutes per Table Analysis question.
+
+  This accounts for the three statements and any necessary sorting or calculations.
 ]
 
-== Efficiency Tips
+== Working Efficiently
+
+Several strategies can help you work more efficiently on Table Analysis questions.
+
+Before evaluating any individual statement, read all three statements to understand what information you will need. This allows you to plan your sorting strategy—you may find that a single sort helps with multiple statements, saving time compared to sorting separately for each one.
+
+Start with the statements that appear easiest to evaluate. Building confidence on straightforward statements helps maintain momentum and ensures you capture those points before tackling more challenging statements.
+
+Avoid over-verifying your answers. Once you are confident in a response, mark it and move on. Re-checking each answer multiple times consumes valuable time that could be better spent on other questions.
 
 #strategy-box[
-  1. *Read all three statements first* - identify what data you need
-  2. *Sort strategically* - one sort may help multiple statements
-  3. *Evaluate easiest statements first* - build momentum
-  4. *Don't over-verify* - once you're confident, move on
+  *Efficiency Tips:*
+
+  1. Read all three statements first to identify what data you need
+  2. Plan your sorting strategy to minimize redundant sorts
+  3. Evaluate easiest statements first to build confidence
+  4. Once confident, move on without excessive re-checking
 ]
 
-== Common Mistakes
+== Common Mistakes to Avoid
+
+Awareness of common errors helps you avoid them. Many test-takers lose points on Table Analysis not because they lack analytical skills but because they make preventable mistakes.
+
+Sorting errors occur when test-takers forget to sort or sort by the wrong column. Before evaluating a statement, confirm that you have sorted by the appropriate column if sorting is needed.
+
+Counting errors are common, especially with conditional statements. Take care to count accurately, and consider using your finger or scratch paper to track which rows meet the conditions.
+
+Threshold confusion involves misinterpreting words like "at least," "more than," and "at most." These phrases have precise mathematical meanings: "at least 5" includes 5, while "more than 5" does not.
 
 #warning-box[
-  *Avoid:*
-  - Sorting multiple times unnecessarily
-  - Calculating without sorting first (when sorting would help)
-  - Confusing "at least" with "more than"
-  - Missing rows that meet conditions
+  *Common Mistakes:*
+
+  - Failing to sort when sorting would help
+  - Sorting by the wrong column
+  - Miscounting rows that meet conditions
+  - Confusing "at least" (≥) with "more than" (>)
+  - Missing rows that meet multiple conditions
 ]
 
 #pagebreak()
 
-= Part 7: Advanced TA Skills
+= Advanced Table Analysis Skills
+
+Some Table Analysis questions require more sophisticated analytical approaches. Developing these skills prepares you for the most challenging questions.
 
 == Multi-Column Analysis
 
-Some statements require looking at relationships between columns.
+Some statements require examining relationships across multiple columns simultaneously. For example, a statement might claim that all companies meeting one condition also meet another condition.
 
-#example-box[
-  "All companies with revenue above \$200M were founded after 1990."
+*Example:* "All companies with revenue above \$200M were founded after 1990."
 
-  Check both conditions for each row meeting the first criterion.
-]
+To evaluate this statement, you must identify all companies with revenue above \$200M, then check whether every one of them was founded after 1990. A single counterexample makes the statement false.
 
-== Handling Ties
+For "all" statements, you are looking for any exception. For "some" or "at least one" statements, you need to find just one example that satisfies the condition.
+
+== Handling Ties and Edge Cases
+
+Tables sometimes contain tied values, and statements may hinge on how ties are interpreted. Understanding how ties affect different types of questions helps you evaluate statements accurately.
+
+For "highest" or "lowest" questions, ties mean that multiple items share the extreme value. If a statement asks whether a specific item has the highest value, it is true if that item is tied for the highest (unless the statement specifies "unique highest").
+
+For median calculations with an even number of rows, remember that the median is the average of the two middle values, not simply one of them.
 
 #info-box[
-  When values are tied:
-  - "Highest" questions: Any tied value is acceptable
-  - "Unique highest": No unique answer if tied
+  *Handling Ties:*
+
+  - "Highest value" questions: Any tied value at the top qualifies
+  - "Unique highest" questions: Ties mean no single item qualifies
   - Rankings: Tied values share the same rank
+  - Medians with even n: Average the two middle values
 ]
 
-== Edge Cases
+== Precision in Language
+
+Table Analysis statements often use precise language that must be interpreted carefully. Pay close attention to quantifiers and comparison operators.
+
+*"At least"* means greater than or equal to (≥). A statement "at least 5 companies" is true if there are 5, 6, 7, or more companies meeting the condition.
+
+*"More than"* means strictly greater (>). A statement "more than 5 companies" requires 6 or more companies; exactly 5 would make it false.
+
+*"At most"* means less than or equal to (≤). This sets an upper limit including the boundary value.
+
+*"All"* requires every single item to meet the condition with no exceptions. *"Some"* requires at least one item to meet the condition. *"None"* requires zero items to meet the condition.
 
 #warning-box[
-  *Watch for:*
+  *Watch for Precise Language:*
+
   - "At least" vs. "more than" vs. "at most"
   - "All" vs. "some" vs. "none"
+  - "Greater than" vs. "greater than or equal to"
   - Inclusive vs. exclusive boundaries
 ]
 
-#pagebreak()
+/*
+===============================================================================
+TEACHING NOTES AND LESSON BREAKDOWN
+The following section contains detailed guidance for tutors on how to structure
+and deliver the Table Analysis lessons. This content is internal and should not
+be displayed to students.
+===============================================================================
 
 = Teaching Notes for Tutors
 
 == Lesson A Focus (Introduction)
 
-*Prioritize:*
+*Primary Objectives:*
 1. TA format and True/False structure
 2. Sorting mechanics and when to sort
 3. Direct lookup statements
 4. Finding median using sorting
 
-*Question Time:* 5-6 TA questions with straightforward tables
+*Suggested Pacing:*
+Spend time demonstrating the sorting interface and having students practice sorting on sample tables before introducing actual questions.
+
+*Practice Questions:* 5-6 TA questions with straightforward tables
+
+*Common Session A Issues:*
+- Students not using sorting when it would help
+- Confusion about how to find medians
+- Not reading all three statements before beginning
 
 == Lesson B Focus (Deep Dive)
 
-*Prioritize:*
+*Primary Objectives:*
 1. Calculation-required statements
 2. Derived value problems
 3. Conditional counting
@@ -517,23 +642,49 @@ Some statements require looking at relationships between columns.
 - Counting mistakes
 - Missing sorting opportunities
 
+*Practice Questions:* 6-8 questions with more complex tables and calculations
+
+*Key Teaching Point:*
+Emphasize that derived values cannot be sorted—students must calculate them. Practice identifying when a statement requires derived value calculations.
+
 == Lesson C Focus (Assessment Prep)
 
-*Brief review of:*
-- Any patterns from Training #2 errors
-- Efficient sorting strategies
-- Edge case awareness
+*Primary Objectives:*
+1. Brief review of any patterns from Training #2 errors
+2. Efficient sorting strategies
+3. Edge case awareness
+4. Time management practice
+
+*Session Structure:*
+- 15 minutes: Quick review of trouble areas
+- 25 minutes: Timed practice set with full questions
+- 10 minutes: Discussion of timing and strategy
 
 *Assessment:* 20 questions, 50 minutes
 
 == Common Student Difficulties
 
-1. Not using sorting when it would help
-2. Miscounting rows meeting conditions
-3. Median calculation errors with even number of rows
-4. Confusing derived values with sortable columns
-5. "At least" vs. "more than" confusion
+The following issues appear most frequently:
 
-#warning-box[
-  *Tutor Tip:* Have students practice sorting and finding medians on sample tables before tackling full questions.
-]
+1. *Not using sorting when it would help*
+   - Solution: Before each statement, ask "would sorting make this easier?"
+
+2. *Miscounting rows meeting conditions*
+   - Solution: Use scratch paper to track counts systematically
+
+3. *Median calculation errors with even number of rows*
+   - Solution: Practice identifying middle rows and averaging when needed
+
+4. *Confusing derived values with sortable columns*
+   - Solution: Highlight that only existing columns can be sorted
+
+5. *"At least" vs. "more than" confusion*
+   - Solution: Emphasize the mathematical meaning of each phrase
+
+*General Tutoring Advice:*
+Have students practice sorting and finding medians on sample tables before tackling full questions. Build familiarity with the sorting mechanic so it becomes automatic.
+
+===============================================================================
+END OF TUTOR NOTES SECTION
+===============================================================================
+*/
