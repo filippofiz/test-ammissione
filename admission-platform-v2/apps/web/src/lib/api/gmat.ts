@@ -19,6 +19,12 @@ export interface GmatProgress {
   student_id: string;
   gmat_cycle: GmatCycle;
   seen_question_ids: string[];
+  simulation_unlocked: boolean;
+  section_qr_locked: boolean;
+  section_di_locked: boolean;
+  section_vr_locked: boolean;
+  initial_assessment_visible: boolean;
+  initial_assessment_results_visible: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -27,11 +33,26 @@ export interface GmatProgress {
  * Convert database row to GmatProgress interface
  */
 function toGmatProgress(row: GmatProgressRow): GmatProgress {
+  // Type extension for columns added in migrations 038, 039, and 040
+  const extendedRow = row as GmatProgressRow & {
+    simulation_unlocked?: boolean;
+    section_qr_locked?: boolean;
+    section_di_locked?: boolean;
+    section_vr_locked?: boolean;
+    initial_assessment_visible?: boolean;
+    initial_assessment_results_visible?: boolean;
+  };
   return {
     id: row.id,
     student_id: row.student_id,
     gmat_cycle: row.gmat_cycle as GmatCycle,
     seen_question_ids: row.seen_question_ids || [],
+    simulation_unlocked: extendedRow.simulation_unlocked ?? false,
+    section_qr_locked: extendedRow.section_qr_locked ?? false,
+    section_di_locked: extendedRow.section_di_locked ?? false,
+    section_vr_locked: extendedRow.section_vr_locked ?? false,
+    initial_assessment_visible: extendedRow.initial_assessment_visible ?? true,
+    initial_assessment_results_visible: extendedRow.initial_assessment_results_visible ?? true,
     created_at: row.created_at || '',
     updated_at: row.updated_at || '',
   };
@@ -118,6 +139,186 @@ export async function updateStudentGMATCycle(
   if (error) {
     console.error('Error updating GMAT cycle:', error);
     throw new Error(`Failed to update GMAT cycle: ${error.message}`);
+  }
+}
+
+/**
+ * Unlock GMAT simulations for a student (tutor action)
+ * This allows the student to access Mock Simulation tests
+ *
+ * @param studentId - The student's profile ID
+ * @throws Error if update fails or student has no progress record
+ */
+export async function unlockSimulation(studentId: string): Promise<void> {
+  // Note: simulation_unlocked column added in migration 038
+  // Type cast needed until database.types.ts is regenerated
+  const { error } = await supabase
+    .from('2V_gmat_student_progress')
+    .update({
+      simulation_unlocked: true,
+    } as Record<string, unknown>)
+    .eq('student_id', studentId);
+
+  if (error) {
+    console.error('Error unlocking simulation:', error);
+    throw new Error(`Failed to unlock simulation: ${error.message}`);
+  }
+}
+
+/**
+ * Lock GMAT simulations for a student (tutor action)
+ * This prevents the student from accessing Mock Simulation tests
+ *
+ * @param studentId - The student's profile ID
+ * @throws Error if update fails or student has no progress record
+ */
+export async function lockSimulation(studentId: string): Promise<void> {
+  // Note: simulation_unlocked column added in migration 038
+  // Type cast needed until database.types.ts is regenerated
+  const { error } = await supabase
+    .from('2V_gmat_student_progress')
+    .update({
+      simulation_unlocked: false,
+    } as Record<string, unknown>)
+    .eq('student_id', studentId);
+
+  if (error) {
+    console.error('Error locking simulation:', error);
+    throw new Error(`Failed to lock simulation: ${error.message}`);
+  }
+}
+
+/**
+ * Lock a section assessment for a student (tutor action)
+ * This prevents the student from starting/retaking that section's assessment
+ *
+ * @param studentId - The student's profile ID
+ * @param section - The section to lock (QR, DI, or VR)
+ * @throws Error if update fails or student has no progress record
+ */
+export async function lockSectionAssessment(studentId: string, section: GmatSection): Promise<void> {
+  // Note: section_*_locked columns added in migration 039
+  // Type cast needed until database.types.ts is regenerated
+  const columnName = `section_${section.toLowerCase()}_locked`;
+  const { error } = await supabase
+    .from('2V_gmat_student_progress')
+    .update({
+      [columnName]: true,
+    } as Record<string, unknown>)
+    .eq('student_id', studentId);
+
+  if (error) {
+    console.error(`Error locking ${section} section assessment:`, error);
+    throw new Error(`Failed to lock ${section} assessment: ${error.message}`);
+  }
+}
+
+/**
+ * Unlock a section assessment for a student (tutor action)
+ * This allows the student to start/retake that section's assessment
+ *
+ * @param studentId - The student's profile ID
+ * @param section - The section to unlock (QR, DI, or VR)
+ * @throws Error if update fails or student has no progress record
+ */
+export async function unlockSectionAssessment(studentId: string, section: GmatSection): Promise<void> {
+  // Note: section_*_locked columns added in migration 039
+  // Type cast needed until database.types.ts is regenerated
+  const columnName = `section_${section.toLowerCase()}_locked`;
+  const { error } = await supabase
+    .from('2V_gmat_student_progress')
+    .update({
+      [columnName]: false,
+    } as Record<string, unknown>)
+    .eq('student_id', studentId);
+
+  if (error) {
+    console.error(`Error unlocking ${section} section assessment:`, error);
+    throw new Error(`Failed to unlock ${section} assessment: ${error.message}`);
+  }
+}
+
+/**
+ * Show the initial assessment section for a student (tutor action)
+ *
+ * @param studentId - The student's profile ID
+ * @throws Error if update fails or student has no progress record
+ */
+export async function showInitialAssessment(studentId: string): Promise<void> {
+  // Note: initial_assessment_visible column added in migration 040
+  const { error } = await supabase
+    .from('2V_gmat_student_progress')
+    .update({
+      initial_assessment_visible: true,
+    } as Record<string, unknown>)
+    .eq('student_id', studentId);
+
+  if (error) {
+    console.error('Error showing initial assessment:', error);
+    throw new Error(`Failed to show initial assessment: ${error.message}`);
+  }
+}
+
+/**
+ * Hide the initial assessment section for a student (tutor action)
+ *
+ * @param studentId - The student's profile ID
+ * @throws Error if update fails or student has no progress record
+ */
+export async function hideInitialAssessment(studentId: string): Promise<void> {
+  // Note: initial_assessment_visible column added in migration 040
+  const { error } = await supabase
+    .from('2V_gmat_student_progress')
+    .update({
+      initial_assessment_visible: false,
+    } as Record<string, unknown>)
+    .eq('student_id', studentId);
+
+  if (error) {
+    console.error('Error hiding initial assessment:', error);
+    throw new Error(`Failed to hide initial assessment: ${error.message}`);
+  }
+}
+
+/**
+ * Show the initial assessment results for a student (tutor action)
+ *
+ * @param studentId - The student's profile ID
+ * @throws Error if update fails or student has no progress record
+ */
+export async function showInitialAssessmentResults(studentId: string): Promise<void> {
+  // Note: initial_assessment_results_visible column added in migration 040
+  const { error } = await supabase
+    .from('2V_gmat_student_progress')
+    .update({
+      initial_assessment_results_visible: true,
+    } as Record<string, unknown>)
+    .eq('student_id', studentId);
+
+  if (error) {
+    console.error('Error showing initial assessment results:', error);
+    throw new Error(`Failed to show initial assessment results: ${error.message}`);
+  }
+}
+
+/**
+ * Hide the initial assessment results for a student (tutor action)
+ *
+ * @param studentId - The student's profile ID
+ * @throws Error if update fails or student has no progress record
+ */
+export async function hideInitialAssessmentResults(studentId: string): Promise<void> {
+  // Note: initial_assessment_results_visible column added in migration 040
+  const { error } = await supabase
+    .from('2V_gmat_student_progress')
+    .update({
+      initial_assessment_results_visible: false,
+    } as Record<string, unknown>)
+    .eq('student_id', studentId);
+
+  if (error) {
+    console.error('Error hiding initial assessment results:', error);
+    throw new Error(`Failed to hide initial assessment results: ${error.message}`);
   }
 }
 
@@ -1713,4 +1914,316 @@ export async function getTrainingQuestions(
     .filter((q): q is { id: string; question_number: number } => q !== undefined);
 
   return { questions: orderedQuestions };
+}
+
+// ============================================
+// GMAT Question Generation with AI
+// ============================================
+
+export type DIType = 'DS' | 'GI' | 'TA' | 'TPA' | 'MSR';
+
+export interface GeneratedQuestion {
+  question_data: Record<string, unknown>;
+  answers: {
+    correct_answer: unknown;
+    wrong_answers: unknown[];
+  };
+  section: string;
+  question_type: string;
+  difficulty: string;
+}
+
+export interface GenerateQuestionsRequest {
+  section: 'Quantitative Reasoning' | 'Data Insights';
+  diType?: DIType;
+  difficulty: 'easy' | 'medium' | 'hard';
+  count: number;
+  categories: string[];
+  exampleQuestions: {
+    question_data: Record<string, unknown>;
+    answers: Record<string, unknown>;
+    difficulty: string;
+  }[];
+}
+
+export interface GenerateQuestionsResponse {
+  success: boolean;
+  questions: GeneratedQuestion[];
+  usage: {
+    input_tokens: number;
+    output_tokens: number;
+    total_tokens: number;
+    cost_usd: number;
+  };
+  error?: string;
+}
+
+/**
+ * Generate GMAT questions using Claude AI
+ */
+export async function generateGMATQuestions(
+  request: GenerateQuestionsRequest
+): Promise<GenerateQuestionsResponse> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    return { success: false, questions: [], usage: { input_tokens: 0, output_tokens: 0, total_tokens: 0, cost_usd: 0 }, error: 'Not authenticated' };
+  }
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+
+  const response = await fetch(`${supabaseUrl}/functions/v1/generate-gmat-question`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    return {
+      success: false,
+      questions: [],
+      usage: { input_tokens: 0, output_tokens: 0, total_tokens: 0, cost_usd: 0 },
+      error: `API error: ${response.status} - ${errorText}`
+    };
+  }
+
+  return response.json();
+}
+
+/**
+ * Get the next available AI question ID for a given section
+ * Format: SS-GMAT-AI__-XXXXX (e.g., QR-GMAT-AI__-00001, DI-GMAT-AI__-00001)
+ */
+export async function getNextAIQuestionId(section: 'Quantitative Reasoning' | 'Data Insights'): Promise<string> {
+  const prefix = section === 'Quantitative Reasoning' ? 'QR' : 'DI';
+  const pattern = `${prefix}-GMAT-AI__-`;
+
+  // Find all AI-generated questions for this section to determine the next number
+  // We fetch all and filter in JS because JSON path queries can be unreliable
+  const { data: questions, error } = await supabase
+    .from('2V_questions')
+    .select('question_data')
+    .eq('test_type', 'GMAT')
+    .eq('section', section);
+
+  if (error) {
+    console.error('Error fetching questions for ID generation:', error);
+  }
+
+  let maxNumber = 0;
+
+  if (questions && questions.length > 0) {
+    for (const q of questions) {
+      const questionData = q.question_data as Record<string, unknown> | null;
+      const gmatId = questionData?.gmat_question_id as string | undefined;
+
+      if (gmatId && gmatId.startsWith(pattern)) {
+        // Extract the number part (last 5 digits)
+        const match = gmatId.match(/-(\d{5})$/);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (num > maxNumber) {
+            maxNumber = num;
+          }
+        }
+      }
+    }
+  }
+
+  const nextNumber = maxNumber + 1;
+  return `${prefix}-GMAT-AI__-${String(nextNumber).padStart(5, '0')}`;
+}
+
+/**
+ * Save a generated question to the database
+ */
+export async function saveGeneratedQuestion(
+  question: GeneratedQuestion,
+  questionPoolTestId: string
+): Promise<{ success: boolean; questionId?: string; error?: string }> {
+  // Get the next AI question ID
+  const gmatQuestionId = await getNextAIQuestionId(
+    question.section as 'Quantitative Reasoning' | 'Data Insights'
+  );
+
+  // Get the next question_number for this test
+  const { data: maxQuestion } = await supabase
+    .from('2V_questions')
+    .select('question_number')
+    .eq('test_id', questionPoolTestId)
+    .order('question_number', { ascending: false })
+    .limit(1);
+
+  const nextQuestionNumber = (maxQuestion?.[0]?.question_number || 0) + 1;
+
+  // Prepare question_data with the gmat_question_id
+  const questionData = {
+    ...question.question_data,
+    gmat_question_id: gmatQuestionId,
+  };
+
+  // Insert the question
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await supabase
+    .from('2V_questions')
+    .insert({
+      test_id: questionPoolTestId,
+      test_type: 'GMAT',
+      question_number: nextQuestionNumber,
+      question_type: question.question_type,
+      section: question.section,
+      difficulty: question.difficulty,
+      question_data: questionData as any,
+      answers: question.answers as any,
+      is_active: true,
+    })
+    .select('id')
+    .single();
+
+  if (error) {
+    console.error('Error saving question:', error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true, questionId: data.id };
+}
+
+/**
+ * Get the GMAT Question Pool test ID
+ */
+export async function getGMATQuestionPoolId(): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('2V_tests')
+    .select('id')
+    .eq('test_type', 'GMAT')
+    .eq('section', 'Question Pool')
+    .single();
+
+  if (error || !data) {
+    console.error('Error fetching Question Pool:', error);
+    return null;
+  }
+
+  return data.id;
+}
+
+/**
+ * Estimate the cost of generating questions
+ * Based on average token usage for GMAT questions
+ */
+export function estimateGenerationCost(questionCount: number): number {
+  // Rough estimates based on typical GMAT question generation
+  const avgInputTokensPerQuestion = 2000; // Example questions + prompt
+  const avgOutputTokensPerQuestion = 800;  // Generated question JSON
+
+  const inputCost = (questionCount * avgInputTokensPerQuestion / 1_000_000) * 3;  // $3/1M
+  const outputCost = (questionCount * avgOutputTokensPerQuestion / 1_000_000) * 15; // $15/1M
+
+  return Math.round((inputCost + outputCost) * 1000) / 1000; // Round to 3 decimals
+}
+
+// ============================================================================
+// GMAT Test Lock/Unlock Management
+// ============================================================================
+
+/**
+ * Interface for GMAT training test lock status
+ * Uses the dedicated 2V_gmat_training_locks table
+ */
+export interface GMATTrainingAssignment {
+  id: string;
+  student_id: string;
+  test_id: string; // template_id
+  status: 'locked' | 'unlocked';
+  assigned_by: string | null;
+  assigned_at: string | null;
+  completed_at: string | null;
+}
+
+/**
+ * Get all GMAT training test lock statuses for a student
+ * Uses the dedicated 2V_gmat_training_locks table
+ */
+export async function getGMATTrainingAssignments(
+  studentId: string
+): Promise<Map<string, GMATTrainingAssignment>> {
+  // Note: 2V_gmat_training_locks table created in migration 041
+  const { data, error } = await supabase
+    .from('2V_gmat_training_locks')
+    .select('*')
+    .eq('student_id', studentId);
+
+  if (error) {
+    console.error('Error fetching GMAT training locks:', error);
+    return new Map();
+  }
+
+  const assignmentMap = new Map<string, GMATTrainingAssignment>();
+  (data || []).forEach((lock: any) => {
+    assignmentMap.set(lock.template_id, {
+      id: lock.id,
+      student_id: lock.student_id,
+      test_id: lock.template_id,
+      status: lock.is_locked ? 'locked' : 'unlocked',
+      assigned_by: lock.locked_by,
+      assigned_at: lock.created_at,
+      completed_at: null,
+    });
+  });
+
+  return assignmentMap;
+}
+
+/**
+ * Create or update a GMAT training test lock status
+ * Uses the dedicated 2V_gmat_training_locks table
+ */
+export async function upsertGMATTrainingLock(
+  studentId: string,
+  templateId: string,
+  isLocked: boolean,
+  tutorId?: string
+): Promise<void> {
+  // Note: 2V_gmat_training_locks table created in migration 041
+  // Use upsert with on_conflict
+  const { error } = await supabase
+    .from('2V_gmat_training_locks')
+    .upsert({
+      student_id: studentId,
+      template_id: templateId,
+      is_locked: isLocked,
+      locked_by: tutorId || null,
+    }, {
+      onConflict: 'student_id,template_id',
+    });
+
+  if (error) {
+    console.error('Error upserting GMAT training lock:', error);
+    throw new Error(`Failed to ${isLocked ? 'lock' : 'unlock'} training test`);
+  }
+}
+
+/**
+ * Lock a GMAT training test for a student
+ */
+export async function lockGMATTrainingTest(
+  studentId: string,
+  templateId: string,
+  tutorId?: string
+): Promise<void> {
+  await upsertGMATTrainingLock(studentId, templateId, true, tutorId);
+}
+
+/**
+ * Unlock a GMAT training test for a student
+ */
+export async function unlockGMATTrainingTest(
+  studentId: string,
+  templateId: string,
+  tutorId?: string
+): Promise<void> {
+  await upsertGMATTrainingLock(studentId, templateId, false, tutorId);
 }

@@ -7,7 +7,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faArrowLeft,
@@ -16,6 +16,7 @@ import {
   faCheckCircle,
   faSpinner,
   faExclamationTriangle,
+  faEye,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import { supabase } from '../lib/supabase';
@@ -56,6 +57,10 @@ interface Answer {
 export default function GMATTrainingTestPage() {
   const { templateId } = useParams<{ templateId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Check if this is preview mode (tutor/admin preview)
+  const isPreviewMode = searchParams.get('preview') === 'true';
 
   // State
   const [loading, setLoading] = useState(true);
@@ -121,16 +126,7 @@ export default function GMATTrainingTestPage() {
       }
       setStudentId(profile.id);
 
-      // Get student's GMAT progress (cycle)
-      const progress = await getStudentGMATProgress(profile.id);
-      if (!progress) {
-        setError('You have not been assigned a GMAT preparation cycle. Please contact your tutor.');
-        setLoading(false);
-        return;
-      }
-      setStudentCycle(progress.gmat_cycle);
-
-      // Get template details
+      // Get template details first (needed for both preview and normal mode)
       const templateDetails = await getTrainingTemplateDetails(templateId);
       if (!templateDetails) {
         setError('Training template not found');
@@ -139,12 +135,48 @@ export default function GMATTrainingTestPage() {
       }
       setTemplate(templateDetails);
 
-      // Get allocated question IDs for student's cycle
-      const allocatedIds = await getAllocatedQuestionIds(templateId, progress.gmat_cycle);
-      if (!allocatedIds || allocatedIds.length === 0) {
-        setError(`No questions have been allocated for your ${progress.gmat_cycle} cycle. Please contact your tutor.`);
-        setLoading(false);
-        return;
+      let cycleToUse: GmatCycle;
+      let allocatedIds: string[] = [];
+
+      if (isPreviewMode) {
+        // Preview mode: use first available cycle with questions
+        // Try each cycle in order to find one with allocated questions
+        const cyclesToTry: GmatCycle[] = ['Foundation', 'Development', 'Excellence'];
+
+        for (const cycle of cyclesToTry) {
+          const ids = await getAllocatedQuestionIds(templateId, cycle);
+          if (ids && ids.length > 0) {
+            cycleToUse = cycle;
+            allocatedIds = ids;
+            break;
+          }
+        }
+
+        if (allocatedIds.length === 0) {
+          setError('No questions have been allocated for any cycle. Please allocate questions first.');
+          setLoading(false);
+          return;
+        }
+
+        setStudentCycle(cycleToUse!);
+      } else {
+        // Normal mode: require student's assigned cycle
+        const progress = await getStudentGMATProgress(profile.id);
+        if (!progress) {
+          setError('You have not been assigned a GMAT preparation cycle. Please contact your tutor.');
+          setLoading(false);
+          return;
+        }
+        cycleToUse = progress.gmat_cycle;
+        setStudentCycle(cycleToUse);
+
+        // Get allocated question IDs for student's cycle
+        allocatedIds = await getAllocatedQuestionIds(templateId, cycleToUse);
+        if (!allocatedIds || allocatedIds.length === 0) {
+          setError(`No questions have been allocated for your ${cycleToUse} cycle. Please contact your tutor.`);
+          setLoading(false);
+          return;
+        }
       }
 
       // Fetch full question data
@@ -279,7 +311,27 @@ export default function GMATTrainingTestPage() {
       // Calculate total time
       const totalTimeSeconds = Array.from(answers.values()).reduce((sum, a) => sum + a.timeSpent, 0);
 
-      // Save result
+      // In preview mode, don't save results - just show them
+      if (isPreviewMode) {
+        const previewResult: GmatAssessmentResult = {
+          id: 'preview',
+          student_id: studentId,
+          assessment_type: 'training',
+          section: template.section,
+          score_raw: correctCount,
+          score_total: questions.length,
+          score_percentage: (correctCount / questions.length) * 100,
+          question_ids: questionIds,
+          difficulty_breakdown: difficultyBreakdown,
+          time_spent_seconds: totalTimeSeconds,
+          completed_at: new Date().toISOString(),
+        };
+        setResult(previewResult);
+        setTestCompleted(true);
+        return;
+      }
+
+      // Save result (only for non-preview mode)
       const savedResult = await saveTrainingResult(
         studentId,
         template.id,
@@ -463,16 +515,27 @@ export default function GMATTrainingTestPage() {
       <Layout pageTitle="Training Complete" pageSubtitle={template?.title || 'GMAT Training'}>
         <div className="flex-1 p-4 md:p-8">
           <div className="max-w-2xl mx-auto">
+            {/* Preview Mode Notice */}
+            {isPreviewMode && (
+              <div className="mb-4 bg-amber-50 border-2 border-amber-300 rounded-xl p-4 flex items-center gap-3">
+                <FontAwesomeIcon icon={faEye} className="text-amber-600 text-xl" />
+                <div>
+                  <h3 className="font-semibold text-amber-800">Preview Results</h3>
+                  <p className="text-sm text-amber-700">These results were not saved since you are in preview mode.</p>
+                </div>
+              </div>
+            )}
+
             <div className={`${isPassed ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'} border-2 rounded-2xl p-8 text-center`}>
               <FontAwesomeIcon
                 icon={faCheckCircle}
                 className={`text-6xl ${isPassed ? 'text-green-500' : 'text-amber-500'} mb-4`}
               />
               <h2 className={`text-2xl font-bold ${isPassed ? 'text-green-700' : 'text-amber-700'} mb-2`}>
-                Training Complete!
+                {isPreviewMode ? 'Preview Complete!' : 'Training Complete!'}
               </h2>
               <p className="text-gray-600 mb-6">
-                {template?.title} - {studentCycle} Cycle
+                {template?.title} - {studentCycle} Cycle{isPreviewMode && ' (Preview)'}
               </p>
 
               <div className="grid grid-cols-3 gap-4 mb-6">
@@ -519,12 +582,23 @@ export default function GMATTrainingTestPage() {
       <Layout pageTitle="GMAT Training" pageSubtitle={template?.title || ''}>
         <div className="flex-1 p-4 md:p-8">
           <div className="max-w-2xl mx-auto">
+            {/* Preview Mode Banner */}
+            {isPreviewMode && (
+              <div className="mb-4 bg-amber-50 border-2 border-amber-300 rounded-xl p-4 flex items-center gap-3">
+                <FontAwesomeIcon icon={faEye} className="text-amber-600 text-xl" />
+                <div>
+                  <h3 className="font-semibold text-amber-800">Preview Mode</h3>
+                  <p className="text-sm text-amber-700">You are previewing this test. Results will not be saved.</p>
+                </div>
+              </div>
+            )}
+
             <div className="bg-white rounded-2xl shadow-xl p-8">
               <div className="text-center mb-8">
                 <h1 className="text-2xl font-bold text-gray-800 mb-2">{materialTypeLabel}</h1>
                 <p className="text-gray-600">{template?.topic} - {template?.section}</p>
                 <div className="inline-block mt-4 px-4 py-2 bg-blue-100 text-blue-700 rounded-full font-semibold">
-                  {studentCycle} Cycle
+                  {studentCycle} Cycle{isPreviewMode && ' (Preview)'}
                 </div>
               </div>
 
@@ -546,7 +620,7 @@ export default function GMATTrainingTestPage() {
                   onClick={startTest}
                   className="px-8 py-4 bg-brand-green text-white rounded-xl font-bold text-lg hover:bg-green-700 transition-colors shadow-lg"
                 >
-                  Start Training
+                  {isPreviewMode ? 'Start Preview' : 'Start Training'}
                 </button>
               </div>
             </div>
@@ -565,6 +639,14 @@ export default function GMATTrainingTestPage() {
     <MathJaxProvider>
       <Layout pageTitle="GMAT Training" pageSubtitle={`Question ${currentIndex + 1} of ${questions.length}`}>
         <div className="flex flex-col h-[calc(100vh-64px)]">
+          {/* Preview Mode Indicator */}
+          {isPreviewMode && (
+            <div className="bg-amber-400 text-amber-900 px-4 py-2 text-center text-sm font-medium flex items-center justify-center gap-2">
+              <FontAwesomeIcon icon={faEye} />
+              Preview Mode - Results will not be saved
+            </div>
+          )}
+
           {/* Top Bar */}
           <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-4">

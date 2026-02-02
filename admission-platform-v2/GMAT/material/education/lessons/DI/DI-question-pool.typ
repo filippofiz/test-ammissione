@@ -199,13 +199,13 @@ Select the minimum number of premium widgets that must have been sold for the to
   [#sym.circle.stroked.big], [#sym.circle.stroked.big], [128],
   [#sym.circle.stroked.big], [#sym.circle.stroked.big], [150],
 )]
+#pagebreak()
 
 === S1-Q11 (TPA - Medium)
 _Source: DI-GMAT-OG-00415_
 
-Over a period of 5 academic years, the number of faculty at a college increased despite a decrease in student enrollment from 5,500 students. Let $F$ represent the percent change in faculty, $S$ represent the percent change in students, and $R$ represent the students per faculty member initially.
-
-Select the expression for the number of faculty initially, and select the expression for students per faculty member after the 5-year period.
+Over a period of 5 academic years from Fall 1999 through Spring 2004, the number of faculty at a certain college increased despite a decrease in student enrollment from 5,500 students in Fall 1999. In the given expressions, $F$ and $S$ represent the percent change in the number of faculty and students, respectively, over the 5 academic years, and $R$ represents the number of students per faculty member in Fall 1999. The percent change in a quantity $X$ is calculated using the formula $(X_{"new"} - X_{"old"}/X_{"old"})(100)$.
+Select the expression that represents the number of faculty in Fall 1999, and select the expression that represents the number of students per faculty member in Spring 2004. Make only two selections, one in each column.
 
 #align(center)[#table(
   columns: 3,
@@ -586,57 +586,57 @@ _Source: MSR-POOL-001_
 // SET 1 ANSWER KEY
 // ============================================================
 
-// = Set 1: Answer Key
+= Set 1: Answer Key
 
-// #warning-box[
-//   *Complete all questions before reviewing answers!*
-// ]
+#warning-box[
+  *Complete all questions before reviewing answers!*
+]
 
-// == DS Answers (Set 1)
+== DS Answers (Set 1)
 
-// #align(center)[#table(
-//   columns: 4,
-//   stroke: 0.5pt + gray,
-//   inset: 8pt,
-//   table.cell(fill: rgb("#3498db").lighten(90%))[*Q*],
-//   table.cell(fill: rgb("#3498db").lighten(90%))[*Answer*],
-//   table.cell(fill: rgb("#3498db").lighten(90%))[*Difficulty*],
-//   table.cell(fill: rgb("#3498db").lighten(90%))[*Key Insight*],
-//   [S1-Q1], [C], [Easy], [Ratio 4:1 + total 20 → tulips = 4],
-//   [S1-Q2], [D], [Easy], [Each gives exchange rate to find 250Y in X],
-//   [S1-Q3], [C], [Easy], [3P + S = 1300 and P = 4S → 13S = 1300 → S = 100],
-//   [S1-Q4], [A], [Medium], [Statement 1 ensures divisibility; Statement 2 is insufficient],
-//   [S1-Q5], [D], [Medium], [Both give n = 2],
-//   [S1-Q6], [C], [Hard], [Need both to ensure (r,s) satisfies y = 3x + 2],
-//   [S1-Q7], [A], [Hard], [Statement 1 is definition of prime; Statement 2 allows 5 or 7],
-//   [S1-Q8], [E], [Hard], [Neither statement alone nor together determines rodent count],
-// )]
+#align(center)[#table(
+  columns: 4,
+  stroke: 0.5pt + gray,
+  inset: 8pt,
+  table.cell(fill: rgb("#3498db").lighten(90%))[*Q*],
+  table.cell(fill: rgb("#3498db").lighten(90%))[*Answer*],
+  table.cell(fill: rgb("#3498db").lighten(90%))[*Difficulty*],
+  table.cell(fill: rgb("#3498db").lighten(90%))[*Key Insight*],
+  [S1-Q1], [C], [Easy], [Ratio 4:1 + total 20 → tulips = 4],
+  [S1-Q2], [D], [Easy], [Each gives exchange rate to find 250Y in X],
+  [S1-Q3], [C], [Easy], [3P + S = 1300 and P = 4S → 13S = 1300 → S = 100],
+  [S1-Q4], [A], [Medium], [Statement 1 ensures divisibility; Statement 2 is insufficient],
+  [S1-Q5], [D], [Medium], [Both give n = 2],
+  [S1-Q6], [C], [Hard], [Need both to ensure (r,s) satisfies y = 3x + 2],
+  [S1-Q7], [A], [Hard], [Statement 1 is definition of prime; Statement 2 allows 5 or 7],
+  [S1-Q8], [E], [Hard], [Neither statement alone nor together determines rodent count],
+)]
 
-// == TPA Answers (Set 1)
+== TPA Answers (Set 1)
 
-// - *S1-Q9:* Total Time = $5d/120$, Average Speed = $48$
-// - *S1-Q10:* Min Premium = 72, Max Standard = 128
-// - *S1-Q11:* Initial Faculty = $5500/R$, Final Ratio = $((100+S)/(100+F))R$
-// - *S1-Q12:* 1 Hour = $S/E$, 60 km = $60/E$
-// - *S1-Q13:* Either Day = Murasaki, Neither Day = Longfellow
+- *S1-Q9:* Total Time = $5d/120$, Average Speed = $48$
+- *S1-Q10:* Min Premium = 72, Max Standard = 128
+- *S1-Q11:* Initial Faculty = $5500/R$, Final Ratio = $((100+S)/(100+F))R$
+- *S1-Q12:* 1 Hour = $S/E$, 60 km = $60/E$
+- *S1-Q13:* Either Day = Murasaki, Neither Day = Longfellow
 
-// == GI Answers (Set 1)
+== GI Answers (Set 1)
 
-// - *S1-Q14:* Blank 1 = Commuter Trains (0.7→0.9 = 28.6%), Blank 2 = 45% (2.8/6.2)
-// - *S1-Q15:* Blank 1 = 36.6% (15/41), Blank 2 = 200% ((9-3)/3)
-// - *S1-Q16:* Blank 1 = Houston (lowest density), Blank 2 = positively correlated
+- *S1-Q14:* Blank 1 = Commuter Trains (0.7→0.9 = 28.6%), Blank 2 = 45% (2.8/6.2)
+- *S1-Q15:* Blank 1 = 36.6% (15/41), Blank 2 = 200% ((9-3)/3)
+- *S1-Q16:* Blank 1 = Houston (lowest density), Blank 2 = positively correlated
 
-// == TA Answers (Set 1)
+== TA Answers (Set 1)
 
-// - *S1-Q17:* Yes, Yes, Yes
-// - *S1-Q18:* Need not be true, Need not be true, Must be true (all offices increased Q1→Q4)
+- *S1-Q17:* Yes, Yes, Yes
+- *S1-Q18:* Need not be true, Need not be true, Must be true (all offices increased Q1→Q4)
 
-// == MSR Answers (Set 1)
+== MSR Answers (Set 1)
 
-// - *S1-Q19:* No, No, Yes
-// - *S1-Q20:* 800 (\$12,000 ÷ \$15 = 800)
+- *S1-Q19:* No, No, Yes
+- *S1-Q20:* 800 (\$12,000 ÷ \$15 = 800)
 
-// #pagebreak()
+#pagebreak()
 
 // ============================================================
 // SET 2

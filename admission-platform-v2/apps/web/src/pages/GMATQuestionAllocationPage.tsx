@@ -9,7 +9,7 @@
  * - Each cycle has different difficulty distributions
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -30,10 +30,22 @@ import {
   faChartBar,
   faSpinner,
   faFilter,
+  faRobot,
+  faMagic,
+  faDollarSign,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import { supabase } from '../lib/supabase';
 import { MathJaxProvider, MathJaxRenderer } from '../components/MathJaxRenderer';
+import {
+  generateGMATQuestions,
+  saveGeneratedQuestion,
+  getGMATQuestionPoolId,
+  estimateGenerationCost,
+  type GeneratedQuestion,
+  type DIType,
+} from '../lib/api/gmat';
+
 
 // ============================================
 // GMAT PROGRAM STRUCTURE (from documentation)
@@ -235,6 +247,7 @@ export default function GMATQuestionAllocationPage() {
   const [difficultyFilter, setDifficultyFilter] = useState<string>('');
   const [categoryFilter, setCategoryFilter] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [usageFilter, setUsageFilter] = useState<'all' | 'unused' | 'used'>('all');
 
   // Available categories (extracted from pool questions)
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
@@ -242,9 +255,76 @@ export default function GMATQuestionAllocationPage() {
   // UI State
   const [viewingPdf, setViewingPdf] = useState<{ url: string; title: string } | null>(null);
   const [previewingQuestion, setPreviewingQuestion] = useState<Question | null>(null);
+  const [editingCategories, setEditingCategories] = useState(false);
+  const [editedCategories, setEditedCategories] = useState<string[]>([]);
+  const [newCategoryInput, setNewCategoryInput] = useState('');
+  const [savingCategories, setSavingCategories] = useState(false);
+
+  // AI Question Generation State
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [generateDifficulty, setGenerateDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+  const [generateCount, setGenerateCount] = useState(3);
+  const [generateCategories, setGenerateCategories] = useState<string[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedQuestions, setGeneratedQuestions] = useState<GeneratedQuestion[]>([]);
+  const [currentGeneratedIndex, setCurrentGeneratedIndex] = useState(0);
+  const [showValidationModal, setShowValidationModal] = useState(false);
+  const [editingGeneratedJson, setEditingGeneratedJson] = useState(false);
+  const [generatedJsonEdit, setGeneratedJsonEdit] = useState('');
+  const [generationCost, setGenerationCost] = useState<{ input_tokens: number; output_tokens: number; cost_usd: number } | null>(null);
+  const [acceptedCount, setAcceptedCount] = useState(0);
+  const [rejectedCount, setRejectedCount] = useState(0);
+  const [questionPoolTestId, setQuestionPoolTestId] = useState<string | null>(null);
+  const [exampleQuestionsUsed, setExampleQuestionsUsed] = useState<Array<{ question_data: any; difficulty: string }>>([]);
+
+  // Compute matching questions for generation preview (shows how many questions will be used as examples)
+  const generationMatchingQuestions = useMemo(() => {
+    // Start from ALL pool questions and filter by section/topic
+    let matching = [...poolQuestions];
+
+    // Filter by section
+    const sectionConfig = GMAT_STRUCTURE[selectedSection];
+    matching = matching.filter(q => {
+      const qSection = q.section.toLowerCase();
+      return qSection.includes(selectedSection.toLowerCase()) ||
+             qSection.includes(sectionConfig.code.toLowerCase());
+    });
+
+    // Filter by topic/DI type for Data Insights
+    if (selectedSection === 'Data Insights') {
+      const topic = sectionConfig.topics.find(t => t.id === selectedTopicId);
+      if (topic && 'diType' in topic) {
+        matching = matching.filter(q => {
+          return q.question_data?.di_type === topic.diType;
+        });
+      }
+    }
+
+    // Store section/topic filtered count for fallback info
+    const sectionTopicCount = matching.length;
+
+    // Filter by the modal's difficulty selection
+    matching = matching.filter(q => q.difficulty === generateDifficulty);
+
+    // Filter by the modal's category selections (AND condition - must have ALL selected categories)
+    if (generateCategories.length > 0) {
+      matching = matching.filter(q => {
+        const qCategories = q.question_data?.categories as string[] || [];
+        return generateCategories.every(cat => qCategories.includes(cat));
+      });
+    }
+
+    return {
+      exactMatch: matching.length,
+      sectionTopicTotal: sectionTopicCount,
+      questions: matching,
+    };
+  }, [poolQuestions, selectedSection, selectedTopicId, generateDifficulty, generateCategories]);
 
   useEffect(() => {
     loadData();
+    // Load question pool ID for saving generated questions
+    getGMATQuestionPoolId().then(id => setQuestionPoolTestId(id));
   }, []);
 
   // Find matching template when selection changes
@@ -255,12 +335,32 @@ export default function GMATQuestionAllocationPage() {
   // Apply filters when questions or filters change
   useEffect(() => {
     applyFilters();
-  }, [poolQuestions, difficultyFilter, categoryFilter, searchQuery, selectedSection, selectedTopicId]);
+  }, [poolQuestions, difficultyFilter, categoryFilter, searchQuery, selectedSection, selectedTopicId, usageFilter, usedQuestionIds]);
 
-  // Extract available categories when pool questions change
+  // Extract available categories from section-filtered questions (not all pool questions)
   useEffect(() => {
     const categories = new Set<string>();
-    for (const q of poolQuestions) {
+
+    // Filter to current section first
+    const sectionConfig = GMAT_STRUCTURE[selectedSection];
+    let sectionQuestions = poolQuestions.filter(q => {
+      const qSection = q.section.toLowerCase();
+      return qSection.includes(selectedSection.toLowerCase()) ||
+             qSection.includes(sectionConfig.code.toLowerCase());
+    });
+
+    // For Data Insights, also filter by DI type
+    if (selectedSection === 'Data Insights') {
+      const topic = sectionConfig.topics.find(t => t.id === selectedTopicId);
+      if (topic && 'diType' in topic) {
+        sectionQuestions = sectionQuestions.filter(q => {
+          return q.question_data?.di_type === topic.diType;
+        });
+      }
+    }
+
+    // Extract categories from section-filtered questions
+    for (const q of sectionQuestions) {
       const questionCategories = q.question_data?.categories;
       if (Array.isArray(questionCategories)) {
         for (const cat of questionCategories) {
@@ -269,7 +369,7 @@ export default function GMATQuestionAllocationPage() {
       }
     }
     setAvailableCategories(Array.from(categories).sort());
-  }, [poolQuestions]);
+  }, [poolQuestions, selectedSection, selectedTopicId]);
 
   // Update allocated questions when cycle changes
   useEffect(() => {
@@ -496,6 +596,14 @@ export default function GMATQuestionAllocationPage() {
       });
     }
 
+    // Filter by usage status
+    if (usageFilter !== 'all') {
+      filtered = filtered.filter(q => {
+        const isUsed = usedQuestionIds.has(q.id);
+        return usageFilter === 'used' ? isUsed : !isUsed;
+      });
+    }
+
     setFilteredQuestions(filtered);
   }
 
@@ -628,6 +736,496 @@ export default function GMATQuestionAllocationPage() {
     } catch (err) {
       console.error('Error loading PDF:', err);
     }
+  }
+
+  // ============================================
+  // AI QUESTION GENERATION HANDLERS
+  // ============================================
+
+  async function handleGenerateQuestions() {
+    if (poolQuestions.length === 0) {
+      setError('No questions available in the pool.');
+      return;
+    }
+
+    setIsGenerating(true);
+    setError(null);
+
+    try {
+      // Start from ALL pool questions and filter by section/topic (context-based)
+      // This removes the need to manually pre-filter the question pool UI
+      let matchingQuestions = [...poolQuestions];
+
+      // Filter by section
+      const sectionConfig = GMAT_STRUCTURE[selectedSection];
+      matchingQuestions = matchingQuestions.filter(q => {
+        const qSection = q.section.toLowerCase();
+        return qSection.includes(selectedSection.toLowerCase()) ||
+               qSection.includes(sectionConfig.code.toLowerCase());
+      });
+
+      // Filter by topic/DI type for Data Insights
+      if (selectedSection === 'Data Insights') {
+        const topic = sectionConfig.topics.find(t => t.id === selectedTopicId);
+        if (topic && 'diType' in topic) {
+          matchingQuestions = matchingQuestions.filter(q => {
+            return q.question_data?.di_type === topic.diType;
+          });
+        }
+      }
+
+      // Filter by the modal's difficulty selection
+      matchingQuestions = matchingQuestions.filter(q =>
+        q.difficulty === generateDifficulty
+      );
+
+      // Filter by the modal's category selections (AND condition - must have ALL selected categories)
+      if (generateCategories.length > 0) {
+        matchingQuestions = matchingQuestions.filter(q => {
+          const qCategories = q.question_data?.categories as string[] || [];
+          return generateCategories.every(cat => qCategories.includes(cat));
+        });
+      }
+
+      // If no questions match the exact criteria, fall back to section/topic questions only
+      if (matchingQuestions.length === 0) {
+        // Reset to section/topic filtered questions
+        matchingQuestions = [...poolQuestions];
+        matchingQuestions = matchingQuestions.filter(q => {
+          const qSection = q.section.toLowerCase();
+          return qSection.includes(selectedSection.toLowerCase()) ||
+                 qSection.includes(sectionConfig.code.toLowerCase());
+        });
+        if (selectedSection === 'Data Insights') {
+          const topic = sectionConfig.topics.find(t => t.id === selectedTopicId);
+          if (topic && 'diType' in topic) {
+            matchingQuestions = matchingQuestions.filter(q => {
+              return q.question_data?.di_type === topic.diType;
+            });
+          }
+        }
+      }
+
+      // Send ALL matching questions to Claude (not just 5) so it knows what exists
+      // This ensures it doesn't generate duplicates of AI-generated questions
+      const exampleQuestions = matchingQuestions.map(q => ({
+        question_data: q.question_data,
+        answers: q.answers,
+        difficulty: q.difficulty || 'medium',
+      }));
+
+      // Store example questions for comparison in validation modal
+      setExampleQuestionsUsed(exampleQuestions.map(q => ({
+        question_data: q.question_data,
+        difficulty: q.difficulty,
+      })));
+
+      // Determine DI type if applicable
+      const topic = GMAT_STRUCTURE[selectedSection].topics.find(t => t.id === selectedTopicId);
+      const diType = selectedSection === 'Data Insights' ? (topic as { diType?: DIType })?.diType : undefined;
+
+      const response = await generateGMATQuestions({
+        section: selectedSection as 'Quantitative Reasoning' | 'Data Insights',
+        diType,
+        difficulty: generateDifficulty,
+        count: generateCount,
+        categories: generateCategories,
+        exampleQuestions,
+      });
+
+      if (!response.success || response.questions.length === 0) {
+        setError(response.error || 'No questions were generated. Please try again.');
+        setIsGenerating(false);
+        return;
+      }
+
+      // Store the generated questions and show validation modal
+      setGeneratedQuestions(response.questions);
+      setGenerationCost({
+        input_tokens: response.usage.input_tokens,
+        output_tokens: response.usage.output_tokens,
+        cost_usd: response.usage.cost_usd,
+      });
+      setCurrentGeneratedIndex(0);
+      setAcceptedCount(0);
+      setRejectedCount(0);
+      setShowGenerateModal(false);
+      setShowValidationModal(true);
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to generate questions');
+    } finally {
+      setIsGenerating(false);
+    }
+  }
+
+  async function handleSaveCategories() {
+    if (!previewingQuestion) return;
+
+    setSavingCategories(true);
+    try {
+      // Update the question_data with new categories
+      const updatedQuestionData = {
+        ...previewingQuestion.question_data,
+        categories: editedCategories,
+      };
+
+      const { error } = await supabase
+        .from('2V_questions')
+        .update({ question_data: updatedQuestionData })
+        .eq('id', previewingQuestion.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setPoolQuestions(prev => prev.map(q =>
+        q.id === previewingQuestion.id
+          ? { ...q, question_data: updatedQuestionData }
+          : q
+      ));
+
+      // Update the previewing question state
+      setPreviewingQuestion(prev => prev ? { ...prev, question_data: updatedQuestionData } : null);
+
+      setEditingCategories(false);
+      setNewCategoryInput('');
+    } catch (err) {
+      console.error('Error saving categories:', err);
+      setError('Failed to save categories');
+    } finally {
+      setSavingCategories(false);
+    }
+  }
+
+  function handleStartEditingCategories() {
+    if (!previewingQuestion) return;
+    const currentCategories = previewingQuestion.question_data?.categories as string[] || [];
+    setEditedCategories([...currentCategories]);
+    setEditingCategories(true);
+  }
+
+  function handleAddCategory() {
+    const trimmed = newCategoryInput.trim();
+    if (trimmed && !editedCategories.includes(trimmed)) {
+      setEditedCategories(prev => [...prev, trimmed]);
+      setNewCategoryInput('');
+    }
+  }
+
+  function handleRemoveCategory(cat: string) {
+    setEditedCategories(prev => prev.filter(c => c !== cat));
+  }
+
+  async function handleAcceptQuestion() {
+    if (!questionPoolTestId) {
+      setError('Question pool not found. Cannot save question.');
+      return;
+    }
+
+    const currentQuestion = generatedQuestions[currentGeneratedIndex];
+
+    // Save to database
+    const result = await saveGeneratedQuestion(currentQuestion, questionPoolTestId);
+
+    if (!result.success) {
+      setError(result.error || 'Failed to save question');
+      return;
+    }
+
+    // Add to current allocation
+    if (result.questionId) {
+      toggleQuestionAllocation(result.questionId);
+
+      // Reload pool questions to include the new one
+      // This is a simplified approach - in production you might want to just add to local state
+      loadData();
+    }
+
+    setAcceptedCount(prev => prev + 1);
+    moveToNextQuestion();
+  }
+
+  function handleRejectQuestion() {
+    setRejectedCount(prev => prev + 1);
+    moveToNextQuestion();
+  }
+
+  function moveToNextQuestion() {
+    if (currentGeneratedIndex < generatedQuestions.length - 1) {
+      setCurrentGeneratedIndex(prev => prev + 1);
+    } else {
+      // All questions processed
+      setShowValidationModal(false);
+      setGeneratedQuestions([]);
+    }
+  }
+
+  // Render generated question preview (similar to pool question preview)
+  function renderGeneratedQuestionPreview(question: GeneratedQuestion) {
+    const data = question.question_data;
+
+    if (question.question_type === 'data_insights') {
+      const diType = data.di_type as string;
+
+      return (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-sm font-medium">
+              {diType}
+            </span>
+            <span className={`px-2 py-1 rounded text-sm font-medium ${
+              question.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
+              question.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+              'bg-red-100 text-red-700'
+            }`}>
+              {question.difficulty}
+            </span>
+            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm font-medium">
+              AI Generated
+            </span>
+          </div>
+
+          {diType === 'DS' && (
+            <div className="space-y-4">
+              <div>
+                <div className="font-medium text-gray-600 mb-2">Problem:</div>
+                <MathJaxRenderer>{data.problem as string || ''}</MathJaxRenderer>
+              </div>
+              <div className="pl-4 border-l-2 border-blue-300 space-y-2">
+                <div>
+                  <span className="text-sm font-semibold text-blue-600">(1)</span>{' '}
+                  <MathJaxRenderer>{data.statement1 as string || ''}</MathJaxRenderer>
+                </div>
+                <div>
+                  <span className="text-sm font-semibold text-blue-600">(2)</span>{' '}
+                  <MathJaxRenderer>{data.statement2 as string || ''}</MathJaxRenderer>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {diType === 'GI' && (
+            <div className="space-y-4">
+              <div>
+                <div className="font-medium text-gray-600 mb-2">Context:</div>
+                <p>{data.context_text as string}</p>
+              </div>
+              {!!data.chart_config && (
+                <div className="bg-gray-100 p-4 rounded-lg text-center">
+                  <p className="text-sm text-gray-500">[Chart Preview: {String((data.chart_config as { title?: string }).title || 'Untitled')}]</p>
+                  <p className="text-xs text-gray-400">Type: {String((data.chart_config as { type?: string }).type || 'unknown')}</p>
+                </div>
+              )}
+              <div>
+                <div className="font-medium text-gray-600 mb-2">Statement:</div>
+                <MathJaxRenderer>{data.statement_text as string || ''}</MathJaxRenderer>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm font-medium text-gray-500 mb-1">BLANK 1 Options:</div>
+                  <div className="space-y-1">
+                    {(data.blank1_options as string[] || []).map((opt, i) => (
+                      <div key={i} className={`px-2 py-1 rounded text-sm ${opt === data.blank1_correct ? 'bg-green-100 text-green-700 font-medium' : 'bg-gray-100'}`}>
+                        {opt}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-gray-500 mb-1">BLANK 2 Options:</div>
+                  <div className="space-y-1">
+                    {(data.blank2_options as string[] || []).map((opt, i) => (
+                      <div key={i} className={`px-2 py-1 rounded text-sm ${opt === data.blank2_correct ? 'bg-green-100 text-green-700 font-medium' : 'bg-gray-100'}`}>
+                        {opt}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {diType === 'TA' && (
+            <div className="space-y-4">
+              <div className="font-medium">{String(data.table_title || '')}</div>
+              {!!data.stimulus_text && <p className="text-gray-600">{String(data.stimulus_text)}</p>}
+              <div className="overflow-x-auto">
+                <table className="min-w-full border rounded-lg">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      {(data.column_headers as string[] || []).map((h, i) => (
+                        <th key={i} className="px-3 py-2 text-left text-sm font-medium border-b">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(data.table_data as string[][] || []).map((row, i) => (
+                      <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                        {row.map((cell, j) => (
+                          <td key={j} className="px-3 py-2 text-sm border-b">{cell}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="space-y-2">
+                <div className="font-medium text-gray-600">Statements:</div>
+                {(data.statements as Array<{ text: string; is_true: boolean }> || []).map((stmt, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${stmt.is_true ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                      {stmt.is_true ? 'TRUE' : 'FALSE'}
+                    </span>
+                    <span>{stmt.text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {diType === 'TPA' && (
+            <div className="space-y-4">
+              <div>
+                <div className="font-medium text-gray-600 mb-2">Scenario:</div>
+                <MathJaxRenderer>{data.scenario as string || ''}</MathJaxRenderer>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-sm font-medium text-gray-500">{data.column1_title as string}</div>
+                <div className="text-sm font-medium text-gray-500">{data.column2_title as string}</div>
+              </div>
+              <div className="space-y-1">
+                {(data.shared_options as string[] || []).map((opt, i) => (
+                  <div key={i} className={`px-3 py-2 rounded text-sm ${
+                    opt === (data.correct_answers as { col1?: string; col2?: string })?.col1 ||
+                    opt === (data.correct_answers as { col1?: string; col2?: string })?.col2
+                      ? 'bg-green-100 text-green-700 font-medium'
+                      : 'bg-gray-100'
+                  }`}>
+                    {opt}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {diType === 'MSR' && (
+            <div className="space-y-4">
+              <div className="font-medium text-gray-600 mb-2">Sources:</div>
+              {(data.sources as Array<{ tab_name: string; content_type: string; content?: string }> || []).map((source, i) => (
+                <div key={i} className="border rounded-lg p-3">
+                  <div className="font-medium text-sm text-blue-600 mb-2">{source.tab_name}</div>
+                  {source.content_type === 'text' && <p className="text-sm">{source.content}</p>}
+                  {source.content_type === 'table' && <p className="text-sm text-gray-500">[Table content]</p>}
+                </div>
+              ))}
+              <div className="font-medium text-gray-600 mb-2">Questions:</div>
+              {(data.questions as Array<{ text: string; options: Record<string, string>; correct_answer: string }> || []).map((q, i) => (
+                <div key={i} className="border rounded-lg p-3">
+                  <p className="font-medium mb-2">{q.text}</p>
+                  <div className="space-y-1">
+                    {Object.entries(q.options || {}).map(([key, value]) => (
+                      <div key={key} className={`px-2 py-1 rounded text-sm ${key === q.correct_answer ? 'bg-green-100 text-green-700 font-medium' : 'bg-gray-50'}`}>
+                        ({key}) {value}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Multiple Choice (QR)
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 mb-4">
+          <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm font-medium">
+            Multiple Choice
+          </span>
+          <span className={`px-2 py-1 rounded text-sm font-medium ${
+            question.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
+            question.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+            'bg-red-100 text-red-700'
+          }`}>
+            {question.difficulty}
+          </span>
+          <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-sm font-medium">
+            AI Generated
+          </span>
+        </div>
+
+        <div>
+          <MathJaxRenderer>{data.question_text as string || ''}</MathJaxRenderer>
+        </div>
+
+        <div className="space-y-2 mt-4">
+          {Object.entries((data.options || {}) as Record<string, string>).map(([key, value]) => {
+            const isCorrect = question.answers.correct_answer === key;
+            return (
+              <div
+                key={key}
+                className={`px-4 py-3 rounded-lg border ${
+                  isCorrect
+                    ? 'bg-green-50 border-green-300 text-green-800'
+                    : 'bg-gray-50 border-gray-200'
+                }`}
+              >
+                <span className="font-semibold mr-2">({key})</span>
+                <MathJaxRenderer>{value}</MathJaxRenderer>
+              </div>
+            );
+          })}
+        </div>
+
+        {(data.categories as string[] || []).length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-4">
+            {(data.categories as string[]).map((cat) => (
+              <span key={cat} className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
+                {cat}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Extract question text from question_data for comparison display
+  function getQuestionText(questionData: any): string {
+    // For QR (multiple choice)
+    if (questionData.question_text) {
+      return questionData.question_text;
+    }
+    // For DS (Data Sufficiency)
+    if (questionData.di_type === 'DS') {
+      return `${questionData.problem || ''}\n(1) ${questionData.statement1 || ''}\n(2) ${questionData.statement2 || ''}`;
+    }
+    // For GI (Graphics Interpretation)
+    if (questionData.di_type === 'GI') {
+      return `${questionData.context_text || ''}\n${questionData.statement_text || ''}`;
+    }
+    // For TA (Table Analysis)
+    if (questionData.di_type === 'TA') {
+      const statements = (questionData.statements as Array<{ text: string }> || [])
+        .map((s, i) => `${i + 1}. ${s.text}`)
+        .join('\n');
+      return `${questionData.stimulus_text || ''}\n\nStatements:\n${statements}`;
+    }
+    // For TPA (Two-Part Analysis)
+    if (questionData.di_type === 'TPA') {
+      return questionData.scenario || '';
+    }
+    // For MSR (Multi-Source Reasoning)
+    if (questionData.di_type === 'MSR') {
+      const questions = (questionData.questions as Array<{ text: string }> || [])
+        .map((q, i) => `Q${i + 1}: ${q.text}`)
+        .join('\n');
+      return questions || 'Multi-source reasoning question';
+    }
+    // Fallback
+    return questionData.stem || questionData.problem || 'Question text not available';
   }
 
   // Get allocation stats for current cycle
@@ -1267,6 +1865,26 @@ export default function GMATQuestionAllocationPage() {
                       ({filteredQuestions.length} questions)
                     </span>
                   </h2>
+                  {/* Generate with AI Button - Only for QR and DI sections */}
+                  {selectedSection !== 'Verbal Reasoning' && (
+                    <button
+                      onClick={() => {
+                        // Pre-populate modal with current UI filter values if set, otherwise use defaults
+                        setGenerateCategories(categoryFilter ? [categoryFilter] : []);
+                        const validDifficulties = ['easy', 'medium', 'hard'] as const;
+                        const difficulty = validDifficulties.includes(difficultyFilter as typeof validDifficulties[number])
+                          ? (difficultyFilter as 'easy' | 'medium' | 'hard')
+                          : 'medium';
+                        setGenerateDifficulty(difficulty);
+                        setGenerateCount(3);
+                        setShowGenerateModal(true);
+                      }}
+                      className="px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2"
+                    >
+                      <FontAwesomeIcon icon={faRobot} />
+                      Generate with AI
+                    </button>
+                  )}
                 </div>
 
                 {/* Filters */}
@@ -1309,6 +1927,40 @@ export default function GMATQuestionAllocationPage() {
                       )}
                     </div>
                   )}
+
+                  {/* Usage Filter Toggle */}
+                  <div className="flex items-center gap-1 bg-white border rounded-lg p-0.5">
+                    <button
+                      onClick={() => setUsageFilter('all')}
+                      className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                        usageFilter === 'all'
+                          ? 'bg-gray-700 text-white'
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      All
+                    </button>
+                    <button
+                      onClick={() => setUsageFilter('unused')}
+                      className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                        usageFilter === 'unused'
+                          ? 'bg-green-600 text-white'
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      Unused
+                    </button>
+                    <button
+                      onClick={() => setUsageFilter('used')}
+                      className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                        usageFilter === 'used'
+                          ? 'bg-orange-500 text-white'
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      Used
+                    </button>
+                  </div>
 
                   <div className="flex-1 min-w-[200px]">
                     <div className="relative">
@@ -1812,15 +2464,605 @@ export default function GMATQuestionAllocationPage() {
                   );
                 })()}
                 <button
-                  onClick={() => setPreviewingQuestion(null)}
+                  onClick={() => {
+                    setPreviewingQuestion(null);
+                    setEditingCategories(false);
+                  }}
                   className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100"
                 >
                   <FontAwesomeIcon icon={faTimes} className="text-gray-500" />
                 </button>
               </div>
             </div>
+
+            {/* Category Editor Section */}
+            <div className="px-6 py-4 border-b bg-gray-50">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-semibold text-gray-700">Categories</span>
+                {!editingCategories ? (
+                  <button
+                    onClick={handleStartEditingCategories}
+                    className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+                  >
+                    <FontAwesomeIcon icon={faEdit} className="text-xs" />
+                    Edit
+                  </button>
+                ) : (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setEditingCategories(false);
+                        setNewCategoryInput('');
+                      }}
+                      className="text-sm text-gray-600 hover:text-gray-800 font-medium"
+                      disabled={savingCategories}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSaveCategories}
+                      disabled={savingCategories}
+                      className="text-sm text-green-600 hover:text-green-800 font-medium flex items-center gap-1"
+                    >
+                      {savingCategories ? (
+                        <FontAwesomeIcon icon={faSpinner} className="animate-spin text-xs" />
+                      ) : (
+                        <FontAwesomeIcon icon={faSave} className="text-xs" />
+                      )}
+                      Save
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {!editingCategories ? (
+                // Display mode
+                <div className="flex flex-wrap gap-2">
+                  {(previewingQuestion.question_data?.categories as string[] || []).length > 0 ? (
+                    (previewingQuestion.question_data?.categories as string[]).map((cat) => (
+                      <span
+                        key={cat}
+                        className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium"
+                      >
+                        {cat}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-gray-400 text-sm italic">No categories assigned</span>
+                  )}
+                </div>
+              ) : (
+                // Edit mode
+                <div className="space-y-3">
+                  {/* Current categories */}
+                  <div className="flex flex-wrap gap-2">
+                    {editedCategories.map((cat) => (
+                      <span
+                        key={cat}
+                        className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium flex items-center gap-1"
+                      >
+                        {cat}
+                        <button
+                          onClick={() => handleRemoveCategory(cat)}
+                          className="hover:text-red-600 ml-1"
+                        >
+                          <FontAwesomeIcon icon={faTimes} className="text-xs" />
+                        </button>
+                      </span>
+                    ))}
+                    {editedCategories.length === 0 && (
+                      <span className="text-gray-400 text-sm italic">No categories</span>
+                    )}
+                  </div>
+
+                  {/* Add new category */}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newCategoryInput}
+                      onChange={(e) => setNewCategoryInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddCategory();
+                        }
+                      }}
+                      placeholder="Type new category..."
+                      className="flex-1 px-3 py-1.5 border rounded-lg text-sm"
+                    />
+                    <button
+                      onClick={handleAddCategory}
+                      disabled={!newCategoryInput.trim()}
+                      className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Add
+                    </button>
+                  </div>
+
+                  {/* Quick add from existing categories */}
+                  {availableCategories.filter(c => !editedCategories.includes(c)).length > 0 && (
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Quick add:</p>
+                      <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
+                        {availableCategories
+                          .filter(c => !editedCategories.includes(c))
+                          .map((cat) => (
+                            <button
+                              key={cat}
+                              onClick={() => setEditedCategories(prev => [...prev, cat])}
+                              className="px-2 py-0.5 bg-gray-200 text-gray-700 rounded text-xs hover:bg-gray-300 transition-colors"
+                            >
+                              + {cat}
+                            </button>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             <div className="flex-1 overflow-y-auto p-6">
               {renderQuestionContent(previewingQuestion)}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Question Generation Modal - Two Column Layout */}
+      {showGenerateModal && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => !isGenerating && setShowGenerateModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 border-b bg-gradient-to-r from-purple-500 to-indigo-600 rounded-t-2xl">
+              <div className="flex items-center gap-3 text-white">
+                <FontAwesomeIcon icon={faRobot} className="text-2xl" />
+                <div>
+                  <h3 className="font-bold text-xl">Generate GMAT Questions</h3>
+                  <p className="text-purple-100 text-sm">
+                    {selectedSection} - {GMAT_STRUCTURE[selectedSection].topics.find(t => t.id === selectedTopicId)?.name}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <div className="grid grid-cols-2 gap-6">
+                {/* Left Column - Categories */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Categories
+                      <span className="ml-2 text-xs font-normal text-gray-500">
+                        (click to select/deselect)
+                      </span>
+                    </label>
+                    <div className="border rounded-lg bg-gray-50 p-3 max-h-64 overflow-y-auto">
+                      {availableCategories.length > 0 ? (
+                        <div className="space-y-2">
+                          {availableCategories.map((cat) => (
+                            <button
+                              key={cat}
+                              onClick={() => {
+                                setGenerateCategories(prev =>
+                                  prev.includes(cat)
+                                    ? prev.filter(c => c !== cat)
+                                    : [...prev, cat]
+                                );
+                              }}
+                              className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                                generateCategories.includes(cat)
+                                  ? 'bg-purple-500 text-white'
+                                  : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                              }`}
+                            >
+                              <FontAwesomeIcon
+                                icon={generateCategories.includes(cat) ? faCheck : faPlus}
+                                className="w-4"
+                              />
+                              {cat}
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-gray-500 text-sm">No categories available</span>
+                      )}
+                    </div>
+                    {generateCategories.length > 0 && (
+                      <div className="mt-2 flex items-center justify-between">
+                        <p className="text-sm text-purple-600">
+                          {generateCategories.length} categor{generateCategories.length === 1 ? 'y' : 'ies'} selected
+                        </p>
+                        <button
+                          onClick={() => setGenerateCategories([])}
+                          className="text-xs text-gray-500 hover:text-gray-700"
+                        >
+                          Clear all
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Right Column - Settings */}
+                <div className="space-y-5">
+                  {/* Difficulty Selection */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Difficulty
+                    </label>
+                    <div className="flex gap-2">
+                      {(['easy', 'medium', 'hard'] as const).map((diff) => (
+                        <button
+                          key={diff}
+                          onClick={() => setGenerateDifficulty(diff)}
+                          className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
+                            generateDifficulty === diff
+                              ? diff === 'easy'
+                                ? 'bg-green-500 text-white'
+                                : diff === 'medium'
+                                ? 'bg-yellow-500 text-white'
+                                : 'bg-red-500 text-white'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          {diff.charAt(0).toUpperCase() + diff.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Question Count */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Number of Questions
+                    </label>
+                    <select
+                      value={generateCount}
+                      onChange={(e) => setGenerateCount(parseInt(e.target.value))}
+                      className="w-full px-4 py-2 border rounded-lg"
+                    >
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                        <option key={n} value={n}>{n} question{n > 1 ? 's' : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Matching Questions Preview */}
+                  <div className={`rounded-lg p-4 ${
+                    generationMatchingQuestions.exactMatch > 0
+                      ? 'bg-blue-50 border border-blue-200'
+                      : 'bg-amber-50 border border-amber-200'
+                  }`}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <FontAwesomeIcon
+                        icon={faFilter}
+                        className={generationMatchingQuestions.exactMatch > 0 ? 'text-blue-500' : 'text-amber-500'}
+                      />
+                      <span className="font-semibold text-gray-700">Example Questions for AI:</span>
+                    </div>
+                    <div className="text-sm">
+                      {generationMatchingQuestions.exactMatch > 0 ? (
+                        <div className="text-blue-700">
+                          <p>
+                            <span className="font-bold text-lg">{generationMatchingQuestions.exactMatch}</span> questions match your criteria
+                          </p>
+                          <div className="text-xs text-blue-600 mt-2 space-y-1">
+                            <p>Section: <span className="font-medium">{selectedSection}</span> ({generationMatchingQuestions.sectionTopicTotal} total)</p>
+                            <p>Difficulty: <span className="font-medium">{generateDifficulty}</span></p>
+                            <p>Categories: <span className="font-medium">{generateCategories.length > 0 ? generateCategories.join(', ') : 'Any'}</span></p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-amber-700">
+                          <p>
+                            No exact matches. Will use <span className="font-bold">{generationMatchingQuestions.sectionTopicTotal}</span> questions from this section as examples.
+                          </p>
+                          <div className="text-xs text-amber-600 mt-2 space-y-1">
+                            <p>Section: <span className="font-medium">{selectedSection}</span></p>
+                            <p>Difficulty: <span className="font-medium">{generateDifficulty}</span></p>
+                            <p>Categories: <span className="font-medium">{generateCategories.length > 0 ? generateCategories.join(', ') : 'Any'}</span></p>
+                          </div>
+                          <p className="mt-2 text-xs">Try selecting different categories or difficulty.</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Estimated Cost */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <FontAwesomeIcon icon={faDollarSign} className="text-green-500" />
+                      <span className="font-medium">Estimated Cost:</span>
+                      <span className="font-bold text-green-600">
+                        ~${estimateGenerationCost(generateCount).toFixed(3)}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Based on average token usage. Actual cost may vary.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 border-t flex justify-end gap-3">
+              <button
+                onClick={() => setShowGenerateModal(false)}
+                disabled={isGenerating}
+                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleGenerateQuestions}
+                disabled={isGenerating || poolQuestions.length === 0}
+                className="px-6 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 flex items-center gap-2"
+              >
+                {isGenerating ? (
+                  <>
+                    <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <FontAwesomeIcon icon={faMagic} />
+                    Generate
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Question Validation Modal - Side-by-Side Layout */}
+      {showValidationModal && generatedQuestions.length > 0 && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl max-h-[95vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="p-4 border-b bg-gradient-to-r from-purple-500 to-indigo-600 rounded-t-2xl flex-shrink-0">
+              <div className="flex items-center justify-between text-white">
+                <div className="flex items-center gap-3">
+                  <FontAwesomeIcon icon={faRobot} className="text-2xl" />
+                  <div>
+                    <h3 className="font-bold text-xl">
+                      Review Generated Question ({currentGeneratedIndex + 1}/{generatedQuestions.length})
+                    </h3>
+                    <p className="text-purple-100 text-sm">
+                      Accepted: {acceptedCount} | Rejected: {rejectedCount}
+                    </p>
+                  </div>
+                </div>
+                {generationCost && (
+                  <div className="bg-white/20 rounded-lg px-3 py-1.5">
+                    <span className="text-sm">
+                      Cost: ${generationCost.cost_usd.toFixed(4)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Content - Side by Side Layout */}
+            <div className="flex-1 overflow-hidden flex">
+              {/* Left Panel - Generated Question */}
+              <div className="flex-1 flex flex-col border-r overflow-hidden">
+                <div className="p-3 bg-purple-50 border-b flex-shrink-0">
+                  <h4 className="font-semibold text-purple-800 flex items-center gap-2">
+                    <FontAwesomeIcon icon={faMagic} />
+                    Generated Question
+                  </h4>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4">
+                  {editingGeneratedJson ? (
+                    <div className="space-y-4 h-full flex flex-col">
+                      <label className="block text-sm font-semibold text-gray-700">
+                        Edit Question JSON
+                      </label>
+                      <textarea
+                        value={generatedJsonEdit}
+                        onChange={(e) => setGeneratedJsonEdit(e.target.value)}
+                        className="flex-1 w-full font-mono text-sm p-4 border rounded-lg bg-gray-50 min-h-[300px]"
+                        spellCheck={false}
+                      />
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => setEditingGeneratedJson(false)}
+                          className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => {
+                            try {
+                              const parsed = JSON.parse(generatedJsonEdit);
+                              setGeneratedQuestions(prev => {
+                                const updated = [...prev];
+                                updated[currentGeneratedIndex] = {
+                                  ...updated[currentGeneratedIndex],
+                                  question_data: parsed.question_data,
+                                  answers: parsed.answers,
+                                };
+                                return updated;
+                              });
+                              setEditingGeneratedJson(false);
+                            } catch (err) {
+                              alert('Invalid JSON. Please check your syntax.');
+                            }
+                          }}
+                          className="px-4 py-2 bg-brand-green text-white rounded-lg font-medium"
+                        >
+                          Apply Changes
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Question Preview */}
+                      <div className="border rounded-xl p-4 bg-gray-50">
+                        {renderGeneratedQuestionPreview(generatedQuestions[currentGeneratedIndex])}
+                      </div>
+
+                      {/* Correct Answer Display */}
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div className="flex items-center gap-2 text-green-700">
+                          <FontAwesomeIcon icon={faCheckCircle} />
+                          <span className="font-semibold">Correct Answer:</span>
+                          <code className="bg-green-100 px-2 py-1 rounded">
+                            {JSON.stringify(generatedQuestions[currentGeneratedIndex].answers.correct_answer)}
+                          </code>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Right Panel - Example Questions for Comparison */}
+              <div className="w-96 flex flex-col bg-blue-50/50 overflow-hidden">
+                <div className="p-3 bg-blue-100 border-b flex-shrink-0">
+                  <h4 className="font-semibold text-blue-800 flex items-center gap-2">
+                    <FontAwesomeIcon icon={faClipboardList} />
+                    Existing Questions ({exampleQuestionsUsed.length})
+                  </h4>
+                  <p className="text-xs text-blue-600 mt-1">
+                    Compare to ensure the generated question is unique
+                  </p>
+                </div>
+                <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                  {exampleQuestionsUsed.length === 0 ? (
+                    <p className="text-gray-500 text-sm text-center py-4">
+                      No existing questions to compare
+                    </p>
+                  ) : (
+                    exampleQuestionsUsed.map((example, index) => (
+                      <div
+                        key={index}
+                        className="p-3 bg-white rounded-lg border border-blue-200 shadow-sm"
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center">
+                            {index + 1}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                            example.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
+                            example.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-red-100 text-red-700'
+                          }`}>
+                            {example.difficulty}
+                          </span>
+                          {example.question_data?.gmat_question_id && (
+                            <span className="text-xs text-gray-400 ml-auto">
+                              {String(example.question_data.gmat_question_id).includes('AI__') ? '🤖' : '📚'}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-sm text-gray-700 whitespace-pre-wrap line-clamp-6">
+                          <MathJaxRenderer>
+                            {getQuestionText(example.question_data)}
+                          </MathJaxRenderer>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t flex items-center justify-between flex-shrink-0">
+              <button
+                onClick={() => {
+                  const currentQ = generatedQuestions[currentGeneratedIndex];
+                  setGeneratedJsonEdit(JSON.stringify({
+                    question_data: currentQ.question_data,
+                    answers: currentQ.answers,
+                  }, null, 2));
+                  setEditingGeneratedJson(true);
+                }}
+                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium flex items-center gap-2"
+              >
+                <FontAwesomeIcon icon={faEdit} />
+                Edit JSON
+              </button>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={handleRejectQuestion}
+                  className="px-5 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg font-semibold transition-colors"
+                >
+                  Reject
+                </button>
+                <button
+                  onClick={handleAcceptQuestion}
+                  className="px-5 py-2 bg-brand-green text-white rounded-lg font-semibold hover:bg-green-600 transition-colors flex items-center gap-2"
+                >
+                  <FontAwesomeIcon icon={faCheck} />
+                  Accept & Save
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Generation Summary Modal */}
+      {!showValidationModal && generatedQuestions.length === 0 && (acceptedCount > 0 || rejectedCount > 0) && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => {
+            setAcceptedCount(0);
+            setRejectedCount(0);
+            setGenerationCost(null);
+          }}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-center">
+              <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FontAwesomeIcon icon={faCheckCircle} className="text-3xl text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-brand-dark mb-2">
+                Generation Complete
+              </h3>
+              <div className="flex justify-center gap-6 my-4">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-green-600">{acceptedCount}</div>
+                  <div className="text-sm text-gray-500">Accepted</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-red-500">{rejectedCount}</div>
+                  <div className="text-sm text-gray-500">Rejected</div>
+                </div>
+              </div>
+              {generationCost && (
+                <p className="text-gray-600">
+                  Total cost: <span className="font-semibold">${generationCost.cost_usd.toFixed(4)}</span>
+                </p>
+              )}
+              <button
+                onClick={() => {
+                  setAcceptedCount(0);
+                  setRejectedCount(0);
+                  setGenerationCost(null);
+                }}
+                className="mt-4 px-6 py-2 bg-brand-green text-white rounded-lg font-semibold"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
