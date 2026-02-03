@@ -753,12 +753,40 @@ export default function TakeTestPage() {
   const questionsToUse = selectedQuestions.length > 0
     ? selectedQuestions
     : allQuestions;
+
+  console.log('🎯 [RENDER] Questions to use:', {
+    selectedQuestionsCount: selectedQuestions.length,
+    allQuestionsCount: allQuestions.length,
+    questionsToUseCount: questionsToUse.length,
+    currentSection,
+    sectionOrderMode: config?.section_order_mode
+  });
+
   // In no_sections mode, use all questions; otherwise filter by section
   const sectionQuestions = config?.section_order_mode === 'no_sections'
     ? questionsToUse
     : questionsToUse.filter(q => getSectionField(q) === currentSection);
+
+  console.log('📊 [RENDER] Section questions filtered:', {
+    sectionQuestionsCount: sectionQuestions.length,
+    currentQuestionIndex,
+    currentSection,
+    firstSectionQuestion: sectionQuestions[0] ? {
+      id: sectionQuestions[0].id,
+      section: getSectionField(sectionQuestions[0])
+    } : null
+  });
+
   const currentQuestion = sectionQuestions[currentQuestionIndex];
   const totalQuestionsInSection = sectionQuestions.length;
+
+  console.log('🔎 [RENDER] Current question:', {
+    exists: !!currentQuestion,
+    currentQuestionIndex,
+    totalQuestionsInSection,
+    questionId: currentQuestion?.id,
+    hasQuestionData: !!currentQuestion?.question_data
+  });
 
   // Alias for review functions (same as sectionQuestions)
   const currentSectionQuestionsList = sectionQuestions;
@@ -1970,6 +1998,14 @@ export default function TakeTestPage() {
       if (assignmentError) throw assignmentError;
       if (!assignment) throw new Error('Assignment not found');
 
+      console.log('🔐 [RLS CHECK] Assignment loaded:', {
+        assignmentId,
+        student_id: assignment.student_id,
+        test_id: assignment.test_id,
+        status: assignment.status,
+        tableSuffix
+      });
+
 
       // Check if test is locked (completed tests are auto-locked)
       if (assignment.status === 'locked') {
@@ -2294,10 +2330,20 @@ export default function TakeTestPage() {
         console.log('✅ Fetched allocated GMAT questions:', questions.length);
       } else {
         console.log('📋 Fetching questions for specific test_id:', testId);
+
+        // Check current auth state for RLS debugging
+        const { data: { user } } = await supabase.auth.getUser();
+        console.log('🔐 [RLS CHECK] Current auth user:', {
+          userId: user?.id,
+          email: user?.email,
+          testId
+        });
+
+        // Query for questions where test_id matches OR testId is in additional_test_ids
         let query = supabase
           .from('2V_questions')
           .select('*')
-          .eq('test_id', testId);
+          .or(`test_id.eq.${testId},additional_test_ids.cs.["${testId}"]`);
 
         if (configData.section_order_mode === 'no_sections') {
           query = query.order('question_number');
@@ -2306,6 +2352,16 @@ export default function TakeTestPage() {
         }
 
         const { data, error: questionsError } = await query as { data: Question[] | null; error: unknown };
+
+        console.log('🔍 [DB QUERY] Query result:', {
+          hasError: !!questionsError,
+          error: questionsError,
+          dataIsNull: data === null,
+          dataLength: data?.length || 0,
+          testId,
+          tableName: '2V_questions'
+        });
+
         if (questionsError) throw questionsError;
         questions = data || [];
       }
@@ -2329,6 +2385,15 @@ export default function TakeTestPage() {
           ? JSON.parse(q.answers)
           : q.answers
       }));
+
+      console.log('🔍 [QUESTIONS] Parsed questions:', {
+        totalQuestions: parsedQuestions.length,
+        firstQuestion: parsedQuestions[0] ? {
+          id: parsedQuestions[0].id,
+          question_data: parsedQuestions[0].question_data,
+          section: parsedQuestions[0].section
+        } : null
+      });
 
       setAllQuestions(parsedQuestions);
       setQuestionPool(parsedQuestions); // Store full pool
@@ -2362,6 +2427,12 @@ export default function TakeTestPage() {
         sectionsToUse = filterSectionsWithAdaptivity(sectionsToUse, configData.section_adaptivity_config, useMacroSectionAdaptivity);
       }
 
+      console.log('📑 [SECTIONS] Sections configured:', {
+        sectionsToUse,
+        sectionCount: sectionsToUse.length,
+        sectionOrderMode: configData.section_order_mode
+      });
+
       setSections(sectionsToUse);
 
       // Initialize question selection based on config
@@ -2370,6 +2441,16 @@ export default function TakeTestPage() {
         configData,
         algorithmConfigData
       );
+
+      console.log('✅ [INIT] Initial questions prepared:', {
+        initialQuestionCount: initialQuestions.length,
+        allQuestionsCount: questions?.length || 0,
+        firstInitialQuestion: initialQuestions[0] ? {
+          id: initialQuestions[0].id,
+          section: initialQuestions[0].section
+        } : null
+      });
+
       setSelectedQuestions(initialQuestions);
 
       // Initialize adaptive algorithm if adaptive mode is enabled
@@ -5445,6 +5526,16 @@ export default function TakeTestPage() {
   }
 
   // Main Test Interface
+  console.log('🎨 [MAIN RENDER] Component rendering:', {
+    hasCurrentQuestion: !!currentQuestion,
+    currentQuestionId: currentQuestion?.id,
+    sectionQuestionsLength: sectionQuestions.length,
+    currentQuestionIndex,
+    currentSection,
+    allQuestionsLength: allQuestions.length,
+    selectedQuestionsLength: selectedQuestions.length
+  });
+
   return (
     <MathJaxProvider>
     <div className="flex flex-col h-screen bg-gray-50">
@@ -5604,6 +5695,13 @@ export default function TakeTestPage() {
       </div>
 
       {/* Question Content */}
+      {console.log('🖼️ [RENDER] Rendering question content area:', {
+        hasCurrentQuestion: !!currentQuestion,
+        currentQuestionId: currentQuestion?.id,
+        hasQuestionData: !!currentQuestion?.question_data,
+        diType: currentQuestion?.question_data?.di_type,
+        hasPassageText: !!currentQuestion?.question_data?.passage_text
+      })}
       <div className={`flex-1 overflow-y-auto ${currentQuestion?.question_data?.passage_text || undefined ? 'p-4' : 'p-6'}`}>
         <div className={`${currentQuestion?.question_data?.passage_text || undefined ? 'w-full max-w-full' : 'max-w-4xl'} mx-auto bg-white rounded-2xl shadow-lg ${currentQuestion?.question_data?.passage_text || undefined ? 'p-6' : 'p-8'}`}>
           {/* Question Text */}
