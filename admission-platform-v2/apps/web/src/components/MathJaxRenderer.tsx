@@ -89,7 +89,7 @@ const parseMarkdownTable = (tableLines: string[]): React.ReactNode => {
         <tr className="bg-gray-100">
           {headerCells.map((cell, i) => (
             <th key={i} className="border border-gray-300 px-4 py-2 text-left font-semibold">
-              <MathJax inline>{cell}</MathJax>
+              <MathJax dynamic inline>{cell}</MathJax>
             </th>
           ))}
         </tr>
@@ -99,7 +99,7 @@ const parseMarkdownTable = (tableLines: string[]): React.ReactNode => {
           <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
             {row.map((cell, cellIndex) => (
               <td key={cellIndex} className="border border-gray-300 px-4 py-2">
-                <MathJax inline>{cell}</MathJax>
+                <MathJax dynamic inline>{cell}</MathJax>
               </td>
             ))}
           </tr>
@@ -182,8 +182,9 @@ const restoreDisplayMathInLine = (line: string, blocks: string[]): string => {
 };
 
 // Memoized MathJax wrapper to prevent unnecessary re-renders
+// The `dynamic` prop is essential - it tells MathJax to re-typeset when content changes
 const MemoizedMathJax = memo(({ content, inline = false }: { content: string; inline?: boolean }) => (
-  <MathJax inline={inline}>{content}</MathJax>
+  <MathJax dynamic inline={inline}>{content}</MathJax>
 ));
 MemoizedMathJax.displayName = 'MemoizedMathJax';
 
