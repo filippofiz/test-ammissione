@@ -257,17 +257,39 @@ export default function TestResultsPage() {
       const shouldShowAllQuestions = isNonAdaptive && hasNoMacroSections;
 
       if (shouldShowAllQuestions) {
-        // Load ALL questions directly from 2V_questions table using test_id
+        // Load ALL questions directly from 2V_questions table using test_id OR additional_test_ids
         const testId = assignmentData['2V_tests'].id;
-        const { data: allTestQuestions, error: allQuestionsError } = await supabase
+
+        // Query 1: Questions where test_id matches
+        const { data: primaryQuestions, error: primaryError } = await supabase
           .from('2V_questions')
-          .select('id')
-          .eq('test_id', testId)
-          .order('question_number');
+          .select('id, question_number')
+          .eq('test_id', testId);
 
-        if (allQuestionsError) throw allQuestionsError;
+        if (primaryError) throw primaryError;
 
-        questionIds = (allTestQuestions || []).map(q => q.id);
+        // Query 2: Questions where additional_test_ids contains this test_id
+        const { data: sharedQuestions, error: sharedError } = await supabase
+          .from('2V_questions')
+          .select('id, question_number, additional_test_ids')
+          .not('additional_test_ids', 'is', null);
+
+        if (sharedError) throw sharedError;
+
+        // Filter shared questions in JavaScript to find ones containing our testId
+        const filteredSharedQuestions = (sharedQuestions || []).filter(q =>
+          Array.isArray(q.additional_test_ids) && q.additional_test_ids.includes(testId)
+        );
+
+        // Combine both sets of questions
+        const allQuestions = [...(primaryQuestions || []), ...filteredSharedQuestions];
+
+        // Remove duplicates and sort by question_number
+        const uniqueQuestions = Array.from(
+          new Map(allQuestions.map(q => [q.id, q])).values()
+        ).sort((a, b) => (a.question_number || 0) - (b.question_number || 0));
+
+        questionIds = uniqueQuestions.map(q => q.id);
       } else if (answers.length > 0) {
         // Fallback: Use answers-based loading (only seen questions)
         const seenQuestionIds = new Set<string>();
