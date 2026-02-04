@@ -46,19 +46,13 @@ jobs:
           cd admission-platform-v2/apps/web
           npx vite build
 
-      - name: Prepare deployment folder
-        run: |
-          # The dist folder already contains italiano/inglese via vite-plugin-static-copy
-          # Just use dist as the deploy folder
-          mv dist deploy
-
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './deploy'
+          path: 'admission-platform-v2/apps/web/dist'
 
   deploy:
     environment:
