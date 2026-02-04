@@ -566,7 +566,7 @@ export async function getLegacyInitialAssessment(
 // New Assessment Results Functions (Phase 8)
 // ============================================
 
-export type GmatAssessmentType = 'placement' | 'topic_assessment' | 'section_assessment' | 'mock';
+export type GmatAssessmentType = 'placement' | 'topic_assessment' | 'section_assessment' | 'mock' | 'training';
 
 export interface GmatAssessmentResult {
   id: string;
@@ -592,6 +592,14 @@ export interface GmatAssessmentResult {
   question_ids: string[] | null;
   completed_at: string | null;
   created_at: string | null;
+  // Per-question answer data with timing
+  answers_data?: Record<string, {
+    answer: string | string[] | Record<string, string>;
+    time_spent_seconds: number;
+    is_correct: boolean;
+  }> | null;
+  // Bookmarked question IDs
+  bookmarked_question_ids?: string[] | null;
 }
 
 /**
@@ -1666,11 +1674,16 @@ export interface TrainingTemplate {
 }
 
 export interface TrainingCompletion {
+  id: string; // assessment result ID (most recent)
   template_id: string;
   completed_at: string;
   score_raw: number;
   score_total: number;
   score_percentage: number;
+  results_visible: boolean; // Whether student can see results (tutor controlled)
+  attempt_count: number; // Total number of attempts
+  best_score_percentage: number; // Best score across all attempts
+  time_spent_seconds?: number; // Time spent on most recent attempt
 }
 
 /**
@@ -1718,6 +1731,7 @@ export async function getTrainingTemplates(): Promise<TrainingTemplate[]> {
 /**
  * Get training completions for a student
  * Uses the 2V_gmat_assessment_results table with assessment_type='training'
+ * Groups by template and calculates attempt counts and best scores
  */
 export async function getTrainingCompletions(
   studentId: string
@@ -1735,18 +1749,35 @@ export async function getTrainingCompletions(
   }
 
   // Group by topic (which stores template_id for trainings)
-  const completions = new Map<string, TrainingCompletion>();
+  // Calculate attempt counts and best scores
+  const templateAttempts = new Map<string, any[]>();
   for (const row of data || []) {
-    // topic field stores the template_id for training results
-    if (row.topic && !completions.has(row.topic)) {
-      completions.set(row.topic, {
-        template_id: row.topic,
-        completed_at: row.completed_at || '',
-        score_raw: row.score_raw,
-        score_total: row.score_total,
-        score_percentage: row.score_percentage,
-      });
+    if (row.topic) {
+      const attempts = templateAttempts.get(row.topic) || [];
+      attempts.push(row);
+      templateAttempts.set(row.topic, attempts);
     }
+  }
+
+  const completions = new Map<string, TrainingCompletion>();
+  for (const [templateId, attempts] of templateAttempts) {
+    // Most recent attempt (first in the sorted array)
+    const mostRecent = attempts[0];
+    // Best score
+    const bestScore = Math.max(...attempts.map(a => a.score_percentage));
+
+    completions.set(templateId, {
+      id: mostRecent.id, // assessment result ID for viewing results
+      template_id: templateId,
+      completed_at: mostRecent.completed_at || '',
+      score_raw: mostRecent.score_raw,
+      score_total: mostRecent.score_total,
+      score_percentage: mostRecent.score_percentage,
+      results_visible: mostRecent.results_visible ?? false,
+      attempt_count: attempts.length,
+      best_score_percentage: bestScore,
+      time_spent_seconds: mostRecent.time_spent_seconds,
+    });
   }
 
   return completions;
@@ -1754,7 +1785,17 @@ export async function getTrainingCompletions(
 
 /**
  * Save a training result
+ * Uses RPC function to bypass RLS while still validating ownership
  */
+/**
+ * Per-question answer data for detailed analytics
+ */
+export interface QuestionAnswerData {
+  answer: string | string[] | Record<string, string>;
+  time_spent_seconds: number;
+  is_correct: boolean;
+}
+
 export async function saveTrainingResult(
   studentId: string,
   templateId: string,
@@ -1763,36 +1804,70 @@ export async function saveTrainingResult(
   scoreTotal: number,
   questionIds: string[],
   difficultyBreakdown?: GmatAssessmentResult['difficulty_breakdown'],
-  timeSpentSeconds?: number
+  timeSpentSeconds?: number,
+  answersData?: Record<string, QuestionAnswerData>,
+  bookmarkedQuestionIds?: string[]
 ): Promise<GmatAssessmentResult> {
   const scorePercentage = scoreTotal > 0 ? (scoreRaw / scoreTotal) * 100 : 0;
 
-  const { data, error } = await supabase
+  // Use RPC function to bypass RLS (function validates ownership internally)
+  const { data: resultId, error: rpcError } = await supabase.rpc('save_gmat_training_result', {
+    p_student_id: studentId,
+    p_section: section,
+    p_topic: templateId,
+    p_score_raw: scoreRaw,
+    p_score_total: scoreTotal,
+    p_score_percentage: scorePercentage,
+    p_difficulty_breakdown: difficultyBreakdown || null,
+    p_time_spent_seconds: timeSpentSeconds || null,
+    p_question_ids: questionIds,
+    p_answers_data: answersData || null,
+    p_bookmarked_question_ids: bookmarkedQuestionIds || null,
+  });
+
+  if (rpcError) {
+    console.error('Error saving training result via RPC:', rpcError);
+    throw new Error(`Failed to save training result: ${rpcError.message}`);
+  }
+
+  // Fetch the created result to return full data
+  const { data, error: fetchError } = await supabase
     .from('2V_gmat_assessment_results')
-    .insert({
+    .select('*')
+    .eq('id', resultId)
+    .single();
+
+  // Add questions to student's seen list (do this regardless of fetch success)
+  await addSeenQuestions(studentId, questionIds);
+
+  if (fetchError || !data) {
+    console.error('Error fetching saved training result:', fetchError);
+    // Return a minimal result object since the save was successful
+    return {
+      id: resultId,
       student_id: studentId,
-      assessment_type: 'training',
-      section: section,
-      topic: templateId, // Store template ID in topic field for reference
+      assessment_type: 'training' as GmatAssessmentType,
+      section,
+      topic: templateId,
       score_raw: scoreRaw,
       score_total: scoreTotal,
       score_percentage: scorePercentage,
       difficulty_breakdown: difficultyBreakdown || null,
       time_spent_seconds: timeSpentSeconds || null,
-      tutor_validated: true, // Trainings don't require validation
+      tutor_validated: true,
       question_ids: questionIds,
       completed_at: new Date().toISOString(),
-    })
-    .select()
-    .single();
-
-  if (error) {
-    console.error('Error saving training result:', error);
-    throw new Error(`Failed to save training result: ${error.message}`);
+      created_at: new Date().toISOString(),
+      suggested_cycle: null,
+      assigned_cycle: null,
+      validated_by: null,
+      validated_at: null,
+      tutor_notes: null,
+    };
   }
 
-  // Add questions to student's seen list
-  await addSeenQuestions(studentId, questionIds);
+  // Note: Auto-lock is handled by the RPC function (save_gmat_training_result)
+  // which has SECURITY DEFINER and can bypass RLS on the training_locks table
 
   return {
     ...data,
@@ -2226,4 +2301,57 @@ export async function unlockGMATTrainingTest(
   tutorId?: string
 ): Promise<void> {
   await upsertGMATTrainingLock(studentId, templateId, false, tutorId);
+}
+
+/**
+ * Toggle results visibility for a training result
+ * Only tutors/admins can change this
+ */
+export async function setTrainingResultsVisibility(
+  resultId: string,
+  visible: boolean
+): Promise<void> {
+  const { error } = await supabase
+    .from('2V_gmat_assessment_results')
+    .update({ results_visible: visible })
+    .eq('id', resultId);
+
+  if (error) {
+    console.error('Error updating results visibility:', error);
+    throw new Error(`Failed to update results visibility: ${error.message}`);
+  }
+}
+
+/**
+ * Get all training results for a student (for tutor view showing all attempts)
+ */
+export async function getAllTrainingResults(
+  studentId: string,
+  templateId?: string
+): Promise<GmatAssessmentResult[]> {
+  let query = supabase
+    .from('2V_gmat_assessment_results')
+    .select('*')
+    .eq('student_id', studentId)
+    .eq('assessment_type', 'training')
+    .order('completed_at', { ascending: false });
+
+  if (templateId) {
+    query = query.eq('topic', templateId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Error fetching training results:', error);
+    return [];
+  }
+
+  return (data || []).map(row => ({
+    ...row,
+    assessment_type: row.assessment_type as GmatAssessmentType,
+    suggested_cycle: row.suggested_cycle as GmatCycle | null,
+    assigned_cycle: row.assigned_cycle as GmatCycle | null,
+    difficulty_breakdown: row.difficulty_breakdown as GmatAssessmentResult['difficulty_breakdown'],
+  }));
 }
