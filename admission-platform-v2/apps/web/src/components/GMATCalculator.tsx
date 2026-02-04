@@ -285,6 +285,29 @@ export function GMATCalculator({ isOpen, onClose, draggable = true }: GMATCalcul
     setWaitingForOperand(true);
   }, [display, memory, hasError]);
 
+  const memorySubtract = useCallback(() => {
+    if (hasError) return;
+    const value = parseFloat(display);
+    setMemory(memory - value);
+    setHasMemory(true);
+    setWaitingForOperand(true);
+  }, [display, memory, hasError]);
+
+  // MRC: Memory Recall if memory exists, otherwise Memory Clear
+  const memoryRecallClear = useCallback(() => {
+    if (hasMemory) {
+      if (hasError) {
+        clearAll();
+      }
+      setDisplay(formatNumber(memory));
+      setWaitingForOperand(true);
+      setIsNegative(memory < 0);
+    } else {
+      setMemory(0);
+      setHasMemory(false);
+    }
+  }, [hasMemory, hasError, memory, clearAll]);
+
   // Format number for display
   const formatNumber = (num: number): string => {
     if (Number.isNaN(num) || !Number.isFinite(num)) {
@@ -348,7 +371,7 @@ export function GMATCalculator({ isOpen, onClose, draggable = true }: GMATCalcul
 
   if (!isOpen) return null;
 
-  const buttonClass = "w-10 h-10 rounded text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400";
+  const buttonClass = "w-12 h-10 rounded text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400";
   const numberClass = `${buttonClass} bg-gray-100 hover:bg-gray-200 text-gray-800`;
   const operatorClass = `${buttonClass} bg-blue-100 hover:bg-blue-200 text-blue-800`;
   const functionClass = `${buttonClass} bg-gray-200 hover:bg-gray-300 text-gray-700`;
@@ -393,51 +416,45 @@ export function GMATCalculator({ isOpen, onClose, draggable = true }: GMATCalcul
         </div>
       </div>
 
-      {/* Button grid */}
-      <div className="grid grid-cols-5 gap-1">
-        {/* Row 1: Memory functions */}
-        <button onClick={memoryClear} className={memoryClass}>MC</button>
-        <button onClick={memoryRecall} className={memoryClass}>MR</button>
-        <button onClick={memoryStore} className={memoryClass}>MS</button>
-        <button onClick={memoryAdd} className={memoryClass}>M+</button>
-        <button onClick={backspace} className={clearClass}>←</button>
-
-        {/* Row 2: Clear and special functions */}
-        <button onClick={clearEntry} className={clearClass}>CE</button>
-        <button onClick={clearAll} className={clearClass}>C</button>
-        <button onClick={toggleSign} className={functionClass}>±</button>
+      {/* Button grid - GMAT layout (4 columns) */}
+      <div className="grid grid-cols-4 gap-1">
+        {/* Row 1: +/-, √, %, ÷ */}
+        <button onClick={toggleSign} className={functionClass}>+/−</button>
         <button onClick={calculateSquareRoot} className={functionClass}>√</button>
+        <button onClick={calculatePercent} className={functionClass}>%</button>
         <button onClick={() => performOperation('÷')} className={operatorClass}>÷</button>
 
-        {/* Row 3: 7, 8, 9, 1/x, × */}
+        {/* Row 2: MRC, M-, M+, × */}
+        <button onClick={memoryRecallClear} className={memoryClass}>MRC</button>
+        <button onClick={memorySubtract} className={memoryClass}>M−</button>
+        <button onClick={memoryAdd} className={memoryClass}>M+</button>
+        <button onClick={() => performOperation('×')} className={operatorClass}>×</button>
+
+        {/* Row 3: 7, 8, 9, - */}
         <button onClick={() => inputDigit('7')} className={numberClass}>7</button>
         <button onClick={() => inputDigit('8')} className={numberClass}>8</button>
         <button onClick={() => inputDigit('9')} className={numberClass}>9</button>
-        <button onClick={calculateReciprocal} className={functionClass}>1/x</button>
-        <button onClick={() => performOperation('×')} className={operatorClass}>×</button>
+        <button onClick={() => performOperation('-')} className={operatorClass}>−</button>
 
-        {/* Row 4: 4, 5, 6, %, − */}
+        {/* Row 4: 4, 5, 6, + */}
         <button onClick={() => inputDigit('4')} className={numberClass}>4</button>
         <button onClick={() => inputDigit('5')} className={numberClass}>5</button>
         <button onClick={() => inputDigit('6')} className={numberClass}>6</button>
-        <button onClick={calculatePercent} className={functionClass}>%</button>
-        <button onClick={() => performOperation('-')} className={operatorClass}>−</button>
+        <button onClick={() => performOperation('+')} className={operatorClass}>+</button>
 
-        {/* Row 5: 1, 2, 3, =, + */}
+        {/* Row 5: 1, 2, 3, = (row-span-2) */}
         <button onClick={() => inputDigit('1')} className={numberClass}>1</button>
         <button onClick={() => inputDigit('2')} className={numberClass}>2</button>
         <button onClick={() => inputDigit('3')} className={numberClass}>3</button>
         <button
           onClick={calculateResult}
-          className={`${operatorClass} row-span-2 h-[84px]`}
+          className={`${operatorClass} row-span-2 h-[84px] w-12`}
         >=</button>
-        <button onClick={() => performOperation('+')} className={operatorClass}>+</button>
 
-        {/* Row 6: 0, ., empty */}
-        <button onClick={() => inputDigit('0')} className={`${numberClass} col-span-2`}>0</button>
+        {/* Row 6: ON/C, 0, . */}
+        <button onClick={clearAll} className={clearClass}>ON/C</button>
+        <button onClick={() => inputDigit('0')} className={numberClass}>0</button>
         <button onClick={inputDecimal} className={numberClass}>.</button>
-        {/* Empty space for = button spanning */}
-        <div></div>
       </div>
     </div>
   );

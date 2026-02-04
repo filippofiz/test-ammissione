@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, memo } from 'react';
 import { MathJax, MathJaxContext } from 'better-react-mathjax';
 
 // MathJax configuration with support for advanced LaTeX features including tables
@@ -89,7 +89,7 @@ const parseMarkdownTable = (tableLines: string[]): React.ReactNode => {
         <tr className="bg-gray-100">
           {headerCells.map((cell, i) => (
             <th key={i} className="border border-gray-300 px-4 py-2 text-left font-semibold">
-              <MathJax dynamic inline>{cell}</MathJax>
+              <MathJax inline>{cell}</MathJax>
             </th>
           ))}
         </tr>
@@ -99,7 +99,7 @@ const parseMarkdownTable = (tableLines: string[]): React.ReactNode => {
           <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
             {row.map((cell, cellIndex) => (
               <td key={cellIndex} className="border border-gray-300 px-4 py-2">
-                <MathJax dynamic inline>{cell}</MathJax>
+                <MathJax inline>{cell}</MathJax>
               </td>
             ))}
           </tr>
@@ -181,10 +181,15 @@ const restoreDisplayMathInLine = (line: string, blocks: string[]): string => {
   return restoredLine;
 };
 
-export const MathJaxRenderer: React.FC<MathJaxRendererProps> = ({ children, className = '' }) => {
-  // Handle both string content and React elements
-  // For string content, preserve newlines and render markdown tables and display math
-  const renderContent = () => {
+// Memoized MathJax wrapper to prevent unnecessary re-renders
+const MemoizedMathJax = memo(({ content, inline = false }: { content: string; inline?: boolean }) => (
+  <MathJax inline={inline}>{content}</MathJax>
+));
+MemoizedMathJax.displayName = 'MemoizedMathJax';
+
+export const MathJaxRenderer: React.FC<MathJaxRendererProps> = memo(({ children, className = '' }) => {
+  // Memoize the rendered content to prevent re-processing on every render
+  const renderedContent = useMemo(() => {
     if (typeof children !== 'string') {
       return children;
     }
@@ -192,13 +197,13 @@ export const MathJaxRenderer: React.FC<MathJaxRendererProps> = ({ children, clas
     // Preprocess: Normalize escaped dollars for MathJax
     // When stored in DB as JSON, \$ becomes \\$ - normalize to \$ for MathJax's processEscapes
     // Also handle malformed \9.00 or \\9.00 patterns (should be \$9.00 for MathJax)
-    let processedContent = children
+    const processedContent = children
       .replace(/\\\\\$/g, '\\$')  // \\$ → \$ (normalize double backslash from JSON)
       .replace(/\\\\([\d,]+(?:\.\d+)?)/g, '\\$$$1'); // \\9.00 → \$9.00
 
     const lines = processedContent.split('\n');
     if (lines.length === 1) {
-      return <MathJax dynamic>{processedContent}</MathJax>;
+      return <MemoizedMathJax content={processedContent} />;
     }
 
     // STEP 1: Extract display math blocks before line splitting
@@ -223,7 +228,7 @@ export const MathJaxRenderer: React.FC<MathJaxRendererProps> = ({ children, clas
         elements.push(
           <React.Fragment key={elements.length}>
             {elements.length > 0 && <br />}
-            <MathJax dynamic>{mathBlock}</MathJax>
+            <MemoizedMathJax content={mathBlock} />
           </React.Fragment>
         );
         i++;
@@ -247,7 +252,7 @@ export const MathJaxRenderer: React.FC<MathJaxRendererProps> = ({ children, clas
         elements.push(
           <React.Fragment key={elements.length}>
             {elements.length > 0 && <br />}
-            <MathJax dynamic inline>{restoredLine}</MathJax>
+            <MemoizedMathJax content={restoredLine} inline />
           </React.Fragment>
         );
         i++;
@@ -255,17 +260,18 @@ export const MathJaxRenderer: React.FC<MathJaxRendererProps> = ({ children, clas
     }
 
     return elements;
-  };
+  }, [children]);
 
   return (
     <div className={`mathjax-content ${className}`}>
-      {renderContent()}
+      {renderedContent}
     </div>
   );
-};
+});
+MathJaxRenderer.displayName = 'MathJaxRenderer';
 
 // Component specifically for rendering TikZ graphs
-export const TikZGraph: React.FC<{ latex: string; className?: string }> = ({ latex, className = '' }) => {
+export const TikZGraph: React.FC<{ latex: string; className?: string }> = memo(({ latex, className = '' }) => {
   // For now, we'll render a placeholder since full TikZ support requires additional libraries
   // In production, you'd want to either:
   // 1. Use a service to compile TikZ to SVG server-side
@@ -277,7 +283,7 @@ export const TikZGraph: React.FC<{ latex: string; className?: string }> = ({ lat
       <div className="text-center text-gray-600 mb-2">
         <strong>Graph (TikZ)</strong>
       </div>
-      <MathJax dynamic>
+      <MathJax>
         {/* Render the TikZ code as text for now, or a simplified version */}
         <pre className="text-xs overflow-x-auto bg-white p-2 rounded">
           {latex}
@@ -288,11 +294,13 @@ export const TikZGraph: React.FC<{ latex: string; className?: string }> = ({ lat
       </div>
     </div>
   );
-};
+});
+TikZGraph.displayName = 'TikZGraph';
 
 // Legacy compatibility wrapper for react-katex style usage
-export const LaTeXMathJax: React.FC<{ children: string; className?: string }> = ({ children, className }) => {
+export const LaTeXMathJax: React.FC<{ children: string; className?: string }> = memo(({ children, className }) => {
   return <MathJaxRenderer className={className}>{children}</MathJaxRenderer>;
-};
+});
+LaTeXMathJax.displayName = 'LaTeXMathJax';
 
 export default MathJaxRenderer;
