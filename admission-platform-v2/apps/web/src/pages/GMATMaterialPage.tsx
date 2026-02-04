@@ -26,12 +26,13 @@ import {
   faBook,
   faGraduationCap,
   faChartLine,
-  faTimes,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import { supabase } from '../lib/supabase';
 import { getCurrentProfile } from '../lib/auth';
 import type { Database } from '../../database.types';
+import { GMAT_STRUCTURE } from '../lib/gmat/questionAllocation';
+import { SecurePDFViewer } from '../components/SecurePDFViewer';
 
 type Profile = Database['public']['Tables']['2V_profiles']['Row'];
 type LessonMaterialRow = Database['public']['Tables']['2V_lesson_materials']['Row'];
@@ -78,6 +79,24 @@ const MATERIAL_TYPE_ORDER: Record<string, number> = {
   'reference': 1,
   'other': 99,
 };
+
+// Build topic order from GMAT_STRUCTURE for proper curriculum ordering
+function getTopicOrder(section: string, topic: string): number {
+  const sectionData = GMAT_STRUCTURE[section as keyof typeof GMAT_STRUCTURE];
+  if (!sectionData) return 99;
+
+  const topicIndex = sectionData.topics.findIndex(t => t.name === topic);
+  return topicIndex >= 0 ? topicIndex + 1 : 99;
+}
+
+// Get sorted topics for a section following curriculum order
+function getSortedTopics(section: string, topics: string[]): string[] {
+  return [...topics].sort((a, b) => {
+    const orderA = getTopicOrder(section, a);
+    const orderB = getTopicOrder(section, b);
+    return orderA - orderB;
+  });
+}
 
 // Color classes for sections
 const SECTION_COLORS: Record<string, { bg: string; border: string; text: string; iconBg: string }> = {
@@ -426,7 +445,8 @@ export default function GMATMaterialPage() {
           {sortedSections.map(section => {
             const sectionConfig = SECTION_CONFIG[section] || { order: 99, icon: faFileAlt, color: 'gray' };
             const colors = SECTION_COLORS[sectionConfig.color] || SECTION_COLORS.gray;
-            const topics = Object.keys(grouped[section]);
+            // Sort topics according to GMAT curriculum order
+            const topics = getSortedTopics(section, Object.keys(grouped[section]));
             const isExpanded = expandedSections.has(section);
 
             return (
@@ -573,35 +593,17 @@ export default function GMATMaterialPage() {
         </div>
       </div>
 
-      {/* PDF Viewer Modal */}
+      {/* Secure PDF Viewer */}
       {showPdfViewer && pdfUrl && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg w-full max-w-6xl h-[90vh] flex flex-col">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800">{pdfTitle}</h3>
-              <button
-                onClick={() => {
-                  setShowPdfViewer(false);
-                  setPdfUrl(null);
-                  setPdfTitle('');
-                }}
-                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <FontAwesomeIcon icon={faTimes} className="text-xl" />
-              </button>
-            </div>
-
-            {/* PDF Content */}
-            <div className="flex-1 p-4 bg-gray-100">
-              <iframe
-                src={pdfUrl}
-                className="w-full h-full rounded-lg border border-gray-200"
-                title={pdfTitle}
-              />
-            </div>
-          </div>
-        </div>
+        <SecurePDFViewer
+          url={pdfUrl}
+          title={pdfTitle}
+          onClose={() => {
+            setShowPdfViewer(false);
+            setPdfUrl(null);
+            setPdfTitle('');
+          }}
+        />
       )}
     </Layout>
   );

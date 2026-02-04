@@ -483,7 +483,7 @@ export default function GMATPreparationPage() {
       )}
 
       {/* Main Layout: Sidebar + Content */}
-      <div className="flex flex-col lg:flex-row h-[calc(100vh-140px)]">
+      <div className="flex flex-col lg:flex-row flex-1 min-h-0">
         {/* Sidebar - 1/3 width on desktop, full width on mobile */}
         <aside className="w-full lg:w-1/3 lg:max-w-md bg-white border-b lg:border-b-0 lg:border-r border-gray-200 overflow-y-auto">
           <GMATSidebar
@@ -919,14 +919,28 @@ export default function GMATPreparationPage() {
                                           </span>
                                         </div>
                                         {isLocked ? (
-                                          <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full text-xs font-medium flex items-center gap-1">
-                                            <FontAwesomeIcon icon={faLock} className="text-xs" />
-                                            Locked
-                                          </span>
-                                        ) : isCompleted ? (
+                                          <div className="flex items-center gap-1.5">
+                                            {isCompleted && completion && (
+                                              <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-1">
+                                                <FontAwesomeIcon icon={faCheckCircle} className="text-xs" />
+                                                {Math.round(completion.best_score_percentage)}%
+                                                {completion.attempt_count > 1 && (
+                                                  <span className="text-green-600">({completion.attempt_count}x)</span>
+                                                )}
+                                              </span>
+                                            )}
+                                            <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full text-xs font-medium flex items-center gap-1">
+                                              <FontAwesomeIcon icon={faLock} className="text-xs" />
+                                              Locked
+                                            </span>
+                                          </div>
+                                        ) : isCompleted && completion ? (
                                           <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-1">
                                             <FontAwesomeIcon icon={faCheckCircle} className="text-xs" />
-                                            {Math.round(completion.score_percentage)}%
+                                            {Math.round(completion.best_score_percentage)}%
+                                            {completion.attempt_count > 1 && (
+                                              <span className="text-green-600">({completion.attempt_count}x)</span>
+                                            )}
                                           </span>
                                         ) : !hasQuestionsForCycle ? (
                                           <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full text-xs">
@@ -964,9 +978,9 @@ export default function GMATPreparationPage() {
                                               Lock
                                             </button>
                                           )}
-                                          {isCompleted && (
+                                          {isCompleted && completion && (
                                             <button
-                                              onClick={() => navigate(`/student/gmat-results/${completion.template_id}`)}
+                                              onClick={() => navigate(`/tutor/gmat-results/${completion.id}`)}
                                               className="flex-1 px-2 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-200 transition-colors"
                                             >
                                               View Results
@@ -990,20 +1004,22 @@ export default function GMATPreparationPage() {
                                             Test is locked
                                           </div>
                                         ) : hasQuestionsForCycle ? (
-                                          isCompleted ? (
-                                            <div className="flex gap-2">
-                                              <button
-                                                onClick={() => navigate(`/student/gmat-results/${completion.template_id}`)}
-                                                className="flex-1 px-2 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-200 transition-colors"
-                                              >
-                                                View Results
-                                              </button>
-                                              <button
-                                                onClick={() => navigate(`/student/take-test/gmat-training/${template.id}`)}
-                                                className="flex-1 px-2 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-200 transition-colors"
-                                              >
-                                                Retake
-                                              </button>
+                                          isCompleted && completion ? (
+                                            <div className="flex flex-col gap-2">
+                                              {completion.results_visible ? (
+                                                <button
+                                                  onClick={() => navigate(`/student/gmat-results/${completion.id}`)}
+                                                  className="w-full px-2 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-200 transition-colors"
+                                                >
+                                                  View Results
+                                                </button>
+                                              ) : (
+                                                <div className="text-xs text-gray-400 text-center py-1">
+                                                  <FontAwesomeIcon icon={faLock} className="mr-1" />
+                                                  Results pending review
+                                                </div>
+                                              )}
+                                              {/* Retake button removed - test is auto-locked after completion */}
                                             </div>
                                           ) : (
                                             <button
@@ -1188,14 +1204,14 @@ export default function GMATPreparationPage() {
                             )}
                             {assessment && (
                               <button
-                                onClick={() => navigate(`/student/gmat-results/${assessment.id}`)}
+                                onClick={() => navigate(`/tutor/gmat-results/${assessment.id}`)}
                                 className="flex-1 px-2 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-200 transition-colors"
                               >
                                 View Results
                               </button>
                             )}
                             <button
-                              onClick={() => navigate(`/student/take-test/gmat-section-assessment/${section}?preview=true`)}
+                              onClick={() => navigate(`/tutor/take-test/gmat-section-assessment/${section}?preview=true`)}
                               className="px-2 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-200 transition-colors"
                               title="Preview assessment"
                             >
