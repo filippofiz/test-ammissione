@@ -52,7 +52,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'admission-platform-v2/apps/web/dist'
+          path: 'dist'
 
   deploy:
     environment:
