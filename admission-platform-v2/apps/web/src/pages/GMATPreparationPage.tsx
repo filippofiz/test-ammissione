@@ -900,7 +900,11 @@ export default function GMATPreparationPage() {
                                     <div
                                       key={template.id}
                                       className={`p-4 rounded-xl min-h-[120px] flex flex-col ${
-                                        isLocked
+                                        // For students: completed tests show green even if locked
+                                        // For tutors: show gray if locked regardless of completion
+                                        isCompleted && !isTutorView
+                                          ? 'bg-green-50'
+                                          : isLocked
                                           ? 'bg-gray-100'
                                           : isCompleted
                                           ? 'bg-green-50'
@@ -911,16 +915,51 @@ export default function GMATPreparationPage() {
                                     >
                                       <div className="flex items-center justify-between mb-2">
                                         <div className="flex items-center gap-1.5">
-                                          {isLocked && (
+                                          {/* Show lock icon only if locked AND not completed (for students) OR always for tutors */}
+                                          {isLocked && (isTutorView || !isCompleted) && (
                                             <FontAwesomeIcon icon={faLock} className="text-gray-400 text-xs" />
                                           )}
-                                          <span className={`text-sm font-medium ${isLocked ? 'text-gray-500' : 'text-gray-800'}`}>
+                                          <span className={`text-sm font-medium ${isLocked && !isCompleted ? 'text-gray-500' : 'text-gray-800'}`}>
                                             {MATERIAL_TYPE_LABELS[template.material_type as keyof typeof MATERIAL_TYPE_LABELS] || template.material_type}
                                           </span>
                                         </div>
-                                        {isLocked ? (
-                                          <div className="flex items-center gap-1.5">
-                                            {isCompleted && completion && (
+                                        {/* Status badges - different for tutors vs students */}
+                                        {isTutorView ? (
+                                          // TUTOR VIEW: Show scores and lock status
+                                          isLocked ? (
+                                            <div className="flex items-center gap-1.5">
+                                              {isCompleted && completion && (
+                                                <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-1">
+                                                  <FontAwesomeIcon icon={faCheckCircle} className="text-xs" />
+                                                  {Math.round(completion.best_score_percentage)}%
+                                                  {completion.attempt_count > 1 && (
+                                                    <span className="text-green-600">({completion.attempt_count}x)</span>
+                                                  )}
+                                                </span>
+                                              )}
+                                              <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full text-xs font-medium flex items-center gap-1">
+                                                <FontAwesomeIcon icon={faLock} className="text-xs" />
+                                                Locked
+                                              </span>
+                                            </div>
+                                          ) : isCompleted && completion ? (
+                                            <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-1">
+                                              <FontAwesomeIcon icon={faCheckCircle} className="text-xs" />
+                                              {Math.round(completion.best_score_percentage)}%
+                                              {completion.attempt_count > 1 && (
+                                                <span className="text-green-600">({completion.attempt_count}x)</span>
+                                              )}
+                                            </span>
+                                          ) : !hasQuestionsForCycle ? (
+                                            <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full text-xs">
+                                              N/A
+                                            </span>
+                                          ) : null
+                                        ) : (
+                                          // STUDENT VIEW: Show "Completed" for finished tests, scores only if results_visible
+                                          isCompleted && completion ? (
+                                            completion.results_visible ? (
+                                              // Results visible - show score
                                               <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-1">
                                                 <FontAwesomeIcon icon={faCheckCircle} className="text-xs" />
                                                 {Math.round(completion.best_score_percentage)}%
@@ -928,25 +967,25 @@ export default function GMATPreparationPage() {
                                                   <span className="text-green-600">({completion.attempt_count}x)</span>
                                                 )}
                                               </span>
-                                            )}
+                                            ) : (
+                                              // Results hidden - show "Completed" only
+                                              <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-1">
+                                                <FontAwesomeIcon icon={faCheckCircle} className="text-xs" />
+                                                Completed
+                                              </span>
+                                            )
+                                          ) : isLocked ? (
+                                            // Not completed but locked
                                             <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full text-xs font-medium flex items-center gap-1">
                                               <FontAwesomeIcon icon={faLock} className="text-xs" />
                                               Locked
                                             </span>
-                                          </div>
-                                        ) : isCompleted && completion ? (
-                                          <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-1">
-                                            <FontAwesomeIcon icon={faCheckCircle} className="text-xs" />
-                                            {Math.round(completion.best_score_percentage)}%
-                                            {completion.attempt_count > 1 && (
-                                              <span className="text-green-600">({completion.attempt_count}x)</span>
-                                            )}
-                                          </span>
-                                        ) : !hasQuestionsForCycle ? (
-                                          <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full text-xs">
-                                            N/A
-                                          </span>
-                                        ) : null}
+                                          ) : !hasQuestionsForCycle ? (
+                                            <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full text-xs">
+                                              N/A
+                                            </span>
+                                          ) : null
+                                        )}
                                       </div>
 
                                       {requirements && (
@@ -997,39 +1036,39 @@ export default function GMATPreparationPage() {
                                           )}
                                         </div>
                                       ) : (
-                                        // STUDENT VIEW: Start, View Results, Retake
-                                        isLocked ? (
+                                        // STUDENT VIEW: Start, View Results, or status message
+                                        isCompleted && completion ? (
+                                          // Test completed - show results or pending message
+                                          <div className="flex flex-col gap-2">
+                                            {completion.results_visible ? (
+                                              <button
+                                                onClick={() => navigate(`/student/gmat-results/${completion.id}`)}
+                                                className="w-full px-2 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-200 transition-colors"
+                                              >
+                                                View Results
+                                              </button>
+                                            ) : (
+                                              <div className="text-xs text-green-600 text-center py-1">
+                                                <FontAwesomeIcon icon={faCheckCircle} className="mr-1" />
+                                                Results pending review
+                                              </div>
+                                            )}
+                                          </div>
+                                        ) : isLocked ? (
+                                          // Not completed and locked
                                           <div className="text-xs text-gray-400 text-center py-1">
                                             <FontAwesomeIcon icon={faLock} className="mr-1" />
                                             Test is locked
                                           </div>
                                         ) : hasQuestionsForCycle ? (
-                                          isCompleted && completion ? (
-                                            <div className="flex flex-col gap-2">
-                                              {completion.results_visible ? (
-                                                <button
-                                                  onClick={() => navigate(`/student/gmat-results/${completion.id}`)}
-                                                  className="w-full px-2 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-200 transition-colors"
-                                                >
-                                                  View Results
-                                                </button>
-                                              ) : (
-                                                <div className="text-xs text-gray-400 text-center py-1">
-                                                  <FontAwesomeIcon icon={faLock} className="mr-1" />
-                                                  Results pending review
-                                                </div>
-                                              )}
-                                              {/* Retake button removed - test is auto-locked after completion */}
-                                            </div>
-                                          ) : (
-                                            <button
-                                              onClick={() => navigate(`/student/take-test/gmat-training/${template.id}`)}
-                                              className="w-full px-3 py-1.5 bg-brand-green text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
-                                            >
-                                              <FontAwesomeIcon icon={faRocket} />
-                                              Start
-                                            </button>
-                                          )
+                                          // Unlocked and not completed - can start
+                                          <button
+                                            onClick={() => navigate(`/student/take-test/gmat-training/${template.id}`)}
+                                            className="w-full px-3 py-1.5 bg-brand-green text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                                          >
+                                            <FontAwesomeIcon icon={faRocket} />
+                                            Start
+                                          </button>
                                         ) : (
                                           <div className="text-xs text-gray-400 text-center py-1">
                                             No questions for {gmatProgress.gmat_cycle} cycle

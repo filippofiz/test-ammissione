@@ -904,7 +904,51 @@ export default function GMATTrainingTestPage() {
   }
 
   // Test completed state - Enhanced results view matching GMATAssessmentResultsPage
+  // Students see only a submission confirmation; tutors (preview mode) see full results
   if (testCompleted && result) {
+    // For students (non-preview mode): Show simple submission confirmation
+    if (!isPreviewMode) {
+      return (
+        <Layout
+          pageTitle="Training Submitted"
+          pageSubtitle={template?.title || 'Complete'}
+        >
+          <div className="flex-1 p-4 md:p-8">
+            <div className="max-w-2xl mx-auto">
+              {/* Success Card */}
+              <div className="bg-white rounded-2xl shadow-lg border-2 border-green-200 p-8 text-center">
+                <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-green-100 flex items-center justify-center">
+                  <FontAwesomeIcon icon={faCheckCircle} className="text-4xl text-green-600" />
+                </div>
+                <h1 className="text-2xl font-bold text-gray-800 mb-2">
+                  Training Submitted Successfully!
+                </h1>
+                <p className="text-gray-600 mb-6">
+                  Your answers for <span className="font-semibold">{template?.title}</span> have been submitted.
+                </p>
+                <div className="bg-blue-50 rounded-xl p-4 mb-6">
+                  <div className="flex items-center justify-center gap-2 text-blue-700">
+                    <FontAwesomeIcon icon={faClock} className="text-lg" />
+                    <span className="font-medium">Results are pending tutor review</span>
+                  </div>
+                  <p className="text-sm text-blue-600 mt-2">
+                    Your tutor will review your submission and make the results available when ready.
+                  </p>
+                </div>
+                <button
+                  onClick={() => navigate('/student/gmat-preparation')}
+                  className="px-8 py-3 bg-brand-green text-white rounded-xl font-semibold hover:bg-green-700 transition-colors"
+                >
+                  Back to GMAT Preparation
+                </button>
+              </div>
+            </div>
+          </div>
+        </Layout>
+      );
+    }
+
+    // For tutors (preview mode): Show full results
     const percentage = result.score_percentage;
     const isPassed = percentage >= 60;
 
