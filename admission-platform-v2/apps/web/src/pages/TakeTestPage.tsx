@@ -18,6 +18,7 @@ import {
   faLock,
   faBookmark,
   faList,
+  faExclamationTriangle,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import { supabase } from '../lib/supabase';
@@ -388,6 +389,10 @@ export default function TakeTestPage() {
   // State
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false); // Submitting test state
+  const [lockFailed, setLockFailed] = useState(false); // Lock failed during submission
+  const [submissionSlow, setSubmissionSlow] = useState(false); // Submission taking longer than expected
+  const [showRestartConfirm, setShowRestartConfirm] = useState(false); // Show restart confirmation dialog
+  const [existingAnswersCount, setExistingAnswersCount] = useState(0); // Count of existing answers for restart warning
   const [isLocked, setIsLocked] = useState(false); // Test is locked/completed
   const [config, setConfig] = useState<TestConfig | null>(null);
   const [sections, setSections] = useState<string[]>([]);
@@ -2517,29 +2522,45 @@ export default function TakeTestPage() {
     // Tutor increments current_attempt when unlocking for retake (StudentTestsPage.tsx)
     // TakeTestPage just uses whatever value is in DB - no increment needed here
 
-    // Delete all existing answers for this attempt (clear previous attempt data when restarting)
-    const currentAttempt = assignment.current_attempt || 1;
+    const currentAttemptNum = assignment.current_attempt || 1;
     const tableSuffix = isTestMode ? '_test' : '';
 
-    // First count how many answers exist
+    // First count how many answers exist for this attempt
     const { count } = await supabase
       .from(`2V_student_answers${tableSuffix}`)
       .select('*', { count: 'exact', head: true })
       .eq('assignment_id', assignmentId!)
-      .eq('attempt_number', currentAttempt);
+      .eq('attempt_number', currentAttemptNum);
 
-    // Then delete them
+    // If answers exist, show confirmation dialog before deleting
+    if (count && count > 0) {
+      setExistingAnswersCount(count);
+      setShowRestartConfirm(true);
+      return;
+    }
+
+    // No existing answers, proceed directly
+    await proceedWithStartTest(assignment, currentAttemptNum, tableSuffix);
+  }
+
+  // Proceed with starting test after confirmation (or if no answers exist)
+  async function proceedWithStartTest(
+    assignment: { status: string; current_attempt: number | null; total_attempts: number | null },
+    currentAttemptNum: number,
+    tableSuffix: string
+  ) {
+    // Delete all existing answers for this attempt
     const { error: deleteError } = await supabase
-      .from(`2V_student_answers${tableSuffix}`)
+      .from(`2V_student_answers${tableSuffix}` as '2V_student_answers')
       .delete()
       .eq('assignment_id', assignmentId!)
-      .eq('attempt_number', currentAttempt);
+      .eq('attempt_number', currentAttemptNum);
 
     if (deleteError) {
       console.error('❌ Error deleting previous answers for attempt:', deleteError);
       // Don't return - non-critical error, continue with test
     } else {
-      console.log(`🗑️ Deleted ${count || 0} previous answers for attempt ${currentAttempt}`);
+      console.log(`🗑️ Deleted previous answers for attempt ${currentAttemptNum}`);
     }
 
     // Update start_time if not set (keep status as 'unlocked' during test)
@@ -2586,6 +2607,24 @@ export default function TakeTestPage() {
 
     // Start timer based on current section
     startSectionTimer();
+  }
+
+  // Handle restart confirmation
+  async function handleConfirmRestart() {
+    setShowRestartConfirm(false);
+
+    // Re-fetch assignment data
+    const { data: assignment } = await supabase
+      .from('2V_test_assignments')
+      .select('status, current_attempt, total_attempts')
+      .eq('id', assignmentId!)
+      .single() as { data: { status: string; current_attempt: number | null; total_attempts: number | null } | null; error: unknown };
+
+    if (assignment) {
+      const currentAttemptNum = assignment.current_attempt || 1;
+      const tableSuffix = isTestMode ? '_test' : '';
+      await proceedWithStartTest(assignment, currentAttemptNum, tableSuffix);
+    }
   }
 
   function beginTestWithSelectedSections() {
@@ -4383,6 +4422,38 @@ export default function TakeTestPage() {
     }
   }
 
+  // Lock test with automatic retry (exponential backoff)
+  async function lockTestWithRetry(maxRetries = 3): Promise<boolean> {
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        const { error } = await supabase
+          .from('2V_test_assignments')
+          .update({ status: 'locked' })
+          .eq('id', assignmentId!);
+
+        if (!error) {
+          console.log('✅ Test locked successfully on attempt', attempt + 1);
+          return true;
+        }
+
+        console.warn(`⚠️ Lock attempt ${attempt + 1} failed:`, error);
+
+        // Wait before retry (exponential backoff: 1s, 2s, 4s)
+        if (attempt < maxRetries - 1) {
+          await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
+        }
+      } catch (err) {
+        console.error(`❌ Lock attempt ${attempt + 1} error:`, err);
+
+        if (attempt < maxRetries - 1) {
+          await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
+        }
+      }
+    }
+    console.error('❌ All lock attempts failed');
+    return false;
+  }
+
   async function submitTest() {
     // PREVIEW MODE: Don't submit test
     if (isPreviewMode) {
@@ -4418,42 +4489,61 @@ export default function TakeTestPage() {
     });
 
     setSubmitting(true);
+    setLockFailed(false);
+    setSubmissionSlow(false);
 
     if (timerRef.current) clearInterval(timerRef.current);
 
-    // Save final answer if any (or save empty answer to track question order)
-    // Use ref values to avoid stale closures
-    if (actualCurrentQuestionId) {
-      console.log('📤 [SUBMIT] Saving current question before completion', {
-        questionId: actualCurrentQuestionId.substring(0, 8),
-        questionOrder: actualGlobalQuestionOrder + 1,
-        hasAnswer: !!actualAnswers[actualCurrentQuestionId],
-        answerValue: actualAnswers[actualCurrentQuestionId]?.answer || 'null'
-      });
-      await saveAnswer(
-        actualCurrentQuestionId,
-        actualAnswers[actualCurrentQuestionId] || {
-          questionId: actualCurrentQuestionId,
-          answer: null,
-          timeSpent: 0,
-          flagged: false
-        },
-        actualAnswers[actualCurrentQuestionId]?.flagged || false,
-        0,
-        actualGlobalQuestionOrder + 1
-      );
+    // STEP 1: LOCK TEST IMMEDIATELY (with auto-retry)
+    // This is the most critical step - if this succeeds, the test is safe
+    const lockSuccess = await lockTestWithRetry(3);
+
+    if (!lockSuccess) {
+      console.error('❌ Failed to lock test after all retries');
+      setSubmitting(false);
+      setLockFailed(true);
+      return;
     }
 
-    // Mark test as completed in database with completion_details
-    try {
-      // Save completion details
-      const success = await saveCompletionDetails('completed', 'submitted');
+    // TEST IS NOW SAFE - everything below is "nice to have"
+    // Even if the following operations fail, the test is locked and answers are preserved
 
-      if (!success) {
-        throw new Error('Failed to save completion details');
+    // Start slow submission timer (5 seconds)
+    const slowTimer = setTimeout(() => {
+      setSubmissionSlow(true);
+    }, 5000);
+
+    try {
+      // STEP 2: Save final answer if any (or save empty answer to track question order)
+      if (actualCurrentQuestionId) {
+        console.log('📤 [SUBMIT] Saving current question before completion', {
+          questionId: actualCurrentQuestionId.substring(0, 8),
+          questionOrder: actualGlobalQuestionOrder + 1,
+          hasAnswer: !!actualAnswers[actualCurrentQuestionId],
+          answerValue: actualAnswers[actualCurrentQuestionId]?.answer || 'null'
+        });
+        await saveAnswer(
+          actualCurrentQuestionId,
+          actualAnswers[actualCurrentQuestionId] || {
+            questionId: actualCurrentQuestionId,
+            answer: null,
+            timeSpent: 0,
+            flagged: false
+          },
+          actualAnswers[actualCurrentQuestionId]?.flagged || false,
+          0,
+          actualGlobalQuestionOrder + 1
+        );
       }
 
-      // For GMAT tests, track seen questions
+      // STEP 3: Save completion details (skip lock since already done)
+      const success = await saveCompletionDetails('completed', 'submitted', undefined, true);
+
+      if (!success) {
+        console.warn('⚠️ Failed to save completion details, but test is already locked');
+      }
+
+      // STEP 4: For GMAT tests, track seen questions
       if (config?.test_type === 'GMAT' && studentId && allQuestions.length > 0) {
         try {
           const questionIds = allQuestions.map(q => q.id);
@@ -4465,12 +4555,17 @@ export default function TakeTestPage() {
         }
       }
 
-      // Show completion screen
+      clearTimeout(slowTimer);
       setShowCompletionScreen(true);
       setSubmitting(false);
+      setSubmissionSlow(false);
     } catch (err) {
+      console.error('Error during submission (test is already locked):', err);
+      clearTimeout(slowTimer);
       setSubmitting(false);
-      alert('Error submitting test. Please contact your instructor.');
+      setSubmissionSlow(false);
+      // Test is already locked, so answers are safe - show completion anyway
+      setShowCompletionScreen(true);
     }
   }
 
@@ -4549,7 +4644,8 @@ export default function TakeTestPage() {
   async function saveCompletionDetails(
     status: 'completed' | 'incomplete' | 'annulled',
     reason: 'submitted' | 'time_expired' | 'fullscreen_exit' | 'multiple_screens' | 'browser_closed',
-    annulmentReason?: string
+    annulmentReason?: string,
+    skipLock?: boolean  // When true, don't update status (lock already done by submitTest)
   ) {
     try {
       // Get existing attempts history from database
@@ -4649,18 +4745,23 @@ export default function TakeTestPage() {
 
       // Auto-lock when completed (tutor must unlock to allow retake)
       // For 'incomplete'/'annulled', keep as 'unlocked' in main status field
+      // When skipLock is true, the lock was already done by submitTest()
       const finalStatus = status === 'completed' ? 'locked' : 'unlocked';
 
-      const updateData = {
-        status: finalStatus,
+      const updateData: Record<string, unknown> = {
         completion_status: completionStatusText,
         completed_at: new Date().toISOString(),
-        completion_details: { attempts } as any,
+        completion_details: { attempts } as unknown,
         total_attempts: newTotalAttempts,
         // IMPORTANT: Hide results when test is completed/annulled
         // Tutor must explicitly enable visibility after reviewing with student
         results_viewable_by_student: false
       };
+
+      // Only update status if not skipping lock (lock already done by submitTest)
+      if (!skipLock) {
+        updateData.status = finalStatus;
+      }
 
       const { data: _updateResult, error } = await supabase
         .from('2V_test_assignments')
@@ -4719,24 +4820,36 @@ export default function TakeTestPage() {
               }
 
               console.log('📊 [EXTERNAL SYNC] Calculating results for external platform');
-              const results = await calculateResultsForExternalSync(
-                assignmentId!,
-                currentAttempt,
-                totalQuestions
-              );
 
-              await syncTestResultsToExternal({
-                externalStudentId: profile.external_student_id,
-                testType: testType,
-                testName: testName,
-                completedAt: new Date().toISOString(),
-                attemptNumber: currentAttempt,
-                status: status,
-                correct: results.correct,
-                wrong: results.wrong,
-                blank: results.blank,
-                totalQuestions: results.totalQuestions
-              });
+              // Add timeout to prevent hanging (10 seconds for calculation + sync)
+              const syncWithTimeout = async () => {
+                const results = await Promise.race([
+                  calculateResultsForExternalSync(assignmentId!, currentAttempt, totalQuestions),
+                  new Promise<never>((_, reject) =>
+                    setTimeout(() => reject(new Error('Calculate results timeout')), 10000)
+                  )
+                ]);
+
+                await Promise.race([
+                  syncTestResultsToExternal({
+                    externalStudentId: profile.external_student_id!,
+                    testType: testType,
+                    testName: testName,
+                    completedAt: new Date().toISOString(),
+                    attemptNumber: currentAttempt,
+                    status: status,
+                    correct: results.correct,
+                    wrong: results.wrong,
+                    blank: results.blank,
+                    totalQuestions: results.totalQuestions
+                  }),
+                  new Promise<never>((_, reject) =>
+                    setTimeout(() => reject(new Error('External sync timeout')), 10000)
+                  )
+                ]);
+              };
+
+              await syncWithTimeout();
             }
           }
         } catch (syncError) {
@@ -4794,23 +4907,8 @@ export default function TakeTestPage() {
     annulTest();
   }
 
-  // Wait until all critical state is loaded to prevent race condition
-  // where sections is set to ['All Questions'] but config is not yet loaded,
-  // causing the filter to incorrectly return 0 questions
-  if (loading || !config || sections.length === 0) {
-    return (
-      <Layout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <div className="inline-block w-12 h-12 border-4 border-brand-green border-t-transparent rounded-full animate-spin mb-4" />
-            <p className="text-gray-600">{t('takeTest.loading')}</p>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
   // Test Locked Screen (completed tests are auto-locked)
+  // Check this BEFORE loading check because locked tests don't load config/sections
   if (isLocked) {
     return (
       <Layout>
@@ -4920,6 +5018,22 @@ export default function TakeTestPage() {
     );
   }
 
+  // Wait until all critical state is loaded to prevent race condition
+  // where sections is set to ['All Questions'] but config is not yet loaded,
+  // causing the filter to incorrectly return 0 questions
+  if (loading || !config || sections.length === 0) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <div className="inline-block w-12 h-12 border-4 border-brand-green border-t-transparent rounded-full animate-spin mb-4" />
+            <p className="text-gray-600">{t('takeTest.loading')}</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   // Start Screen
   if (showStartScreen && config) {
     return (
@@ -4958,6 +5072,39 @@ export default function TakeTestPage() {
             </div>
           </div>
         </div>
+
+        {/* Restart Confirmation Modal - shown when existing answers found */}
+        {showRestartConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md mx-4 text-center">
+              <FontAwesomeIcon icon={faExclamationTriangle} className="text-6xl text-amber-500 mb-4" />
+              <h3 className="text-xl font-bold text-brand-dark mb-4">
+                {t('takeTest.answersFound') || 'Existing answers found'}
+              </h3>
+              <p className="text-gray-600 mb-2">
+                {t('takeTest.foundXAnswers', { count: existingAnswersCount }) ||
+                  `Found ${existingAnswersCount} answers for this attempt.`}
+              </p>
+              <p className="text-red-600 font-semibold mb-6">
+                {t('takeTest.restartWarning') || 'Are you sure you want to restart? You will lose all saved answers.'}
+              </p>
+              <div className="flex gap-4 justify-center">
+                <button
+                  onClick={() => setShowRestartConfirm(false)}
+                  className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300 transition-all"
+                >
+                  {t('common.cancel') || 'Cancel'}
+                </button>
+                <button
+                  onClick={handleConfirmRestart}
+                  className="px-6 py-3 bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600 transition-all"
+                >
+                  {t('takeTest.restartTest') || 'Restart'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </Layout>
     );
   }
@@ -6293,8 +6440,74 @@ export default function TakeTestPage() {
               {t('takeTest.submittingTest') || 'Submitting Test...'}
             </h3>
             <p className="text-gray-600">
-              {t('takeTest.pleaseWait') || 'Please wait while we save your answers...'}
+              {submissionSlow
+                ? (t('takeTest.takingLonger') || 'This is taking longer than expected. Do not close this page.')
+                : (t('takeTest.pleaseWait') || 'Please wait while we save your answers...')
+              }
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Lock Failed Modal - shown when test could not be locked */}
+      {lockFailed && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md mx-4 text-center">
+            <FontAwesomeIcon icon={faExclamationTriangle} className="text-6xl text-red-500 mb-4" />
+            <h3 className="text-xl font-bold text-brand-dark mb-4">
+              {t('takeTest.submissionFailed') || 'Could not complete test submission'}
+            </h3>
+            <p className="text-gray-600 mb-2">
+              {t('takeTest.answersAreSaved') || 'Your answers are saved, but the test was not closed properly.'}
+            </p>
+            <p className="text-red-600 font-semibold mb-4">
+              {t('takeTest.doNotRestart') || 'DO NOT restart the test or you will lose all your answers.'}
+            </p>
+            <p className="text-gray-500 text-sm mb-6">
+              {t('takeTest.contactTutorIfPersists') || 'Contact your tutor if the problem persists.'}
+            </p>
+            <button
+              onClick={() => {
+                setLockFailed(false);
+                submitTest();
+              }}
+              className="px-8 py-3 bg-brand-green text-white rounded-xl font-semibold hover:bg-green-600 transition-all"
+            >
+              {t('takeTest.retry') || 'Retry'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Restart Confirmation Modal - shown when existing answers found */}
+      {showRestartConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md mx-4 text-center">
+            <FontAwesomeIcon icon={faExclamationTriangle} className="text-6xl text-amber-500 mb-4" />
+            <h3 className="text-xl font-bold text-brand-dark mb-4">
+              {t('takeTest.answersFound') || 'Existing answers found'}
+            </h3>
+            <p className="text-gray-600 mb-2">
+              {t('takeTest.foundXAnswers', { count: existingAnswersCount }) ||
+                `Found ${existingAnswersCount} answers for this attempt.`}
+            </p>
+            <p className="text-red-600 font-semibold mb-6">
+              {t('takeTest.restartWarning') || 'Are you sure you want to restart? You will lose all saved answers.'}
+            </p>
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={() => setShowRestartConfirm(false)}
+                className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300 transition-all"
+              >
+                {t('common.cancel') || 'Cancel'}
+              </button>
+              <button
+                onClick={handleConfirmRestart}
+                className="px-6 py-3 bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600 transition-all"
+              >
+                {t('takeTest.restartTest') || 'Restart'}
+              </button>
+            </div>
           </div>
         </div>
       )}

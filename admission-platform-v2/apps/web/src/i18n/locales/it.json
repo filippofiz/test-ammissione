@@ -359,7 +359,17 @@
     "testLockedMessage": "Questo test è stato completato ed è ora bloccato. Contatta il tuo tutor per sbloccarlo se hai bisogno di ripeterlo.",
     "backToHome": "Torna alla Home",
     "submittingTest": "Invio Test in Corso...",
-    "pleaseWait": "Attendere mentre salviamo le tue risposte..."
+    "pleaseWait": "Attendere mentre salviamo le tue risposte...",
+    "takingLonger": "L'operazione sta richiedendo più tempo del previsto. Non chiudere questa pagina.",
+    "submissionFailed": "Impossibile completare l'invio del test",
+    "answersAreSaved": "Le tue risposte sono salvate, ma il test non è stato chiuso correttamente.",
+    "doNotRestart": "NON ricominciare il test o perderai tutte le risposte.",
+    "contactTutorIfPersists": "Contatta il tuo tutor se il problema persiste.",
+    "retry": "Riprova",
+    "answersFound": "Risposte esistenti trovate",
+    "foundXAnswers": "Rilevate {{count}} risposte per questo tentativo.",
+    "restartWarning": "Sei sicuro di voler ricominciare? Facendolo perderai tutte le risposte salvate.",
+    "restartTest": "Ricomincia"
   },
   "common": {
     "loading": "Caricamento...",
