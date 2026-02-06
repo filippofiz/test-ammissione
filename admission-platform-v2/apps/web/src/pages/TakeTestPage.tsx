@@ -50,7 +50,7 @@ import { PreTestDiagnostics } from '../components/PreTestDiagnostics';
 interface TestConfig {
   test_type: string;
   track_type: string;
-  section_order_mode: 'mandatory' | 'user_choice' | 'no_sections' | 'mandatory_macro_sections' | 'user_choice_macro_sections' | string;
+  section_order_mode: 'mandatory' | 'user_choice' | 'no_sections' | 'mandatory_macro_sections' | 'user_choice_macro_sections' | string | null;
   section_order: string[] | null;
   time_per_section: Record<string, number> | null;
   total_time_minutes: number | null;
@@ -252,6 +252,9 @@ interface TestInfo {
   test_type: string;
   exercise_type: string;
   format: string;
+  section: string;
+  test_number: number;
+  materia: string | null;
 }
 
 // Algorithm configuration from database
@@ -273,27 +276,20 @@ interface AlgorithmConfig {
 interface TestAssignment {
   id: string;
   student_id: string;
-  status: 'unlocked' | 'in_progress' | 'completed' | 'locked' | 'incomplete' | 'annulled';
+  status: string; // Database uses string type - common values: 'locked', 'unlocked', 'completed', 'in_progress'
   start_time: string | null;
   current_attempt: number;
   total_attempts: number;
   completion_details: {
     attempts: AttemptData[];
+    [key: string]: unknown;
   } | null;
   '2V_tests'?: TestInfo;
   '2V_tests_test'?: TestInfo;
   [key: string]: unknown; // Allow additional properties
 }
 
-// Student answer from database
-interface DbStudentAnswer {
-  question_id: string;
-  answer: JsonbAnswer;
-  is_flagged: boolean;
-  time_spent_seconds: number;
-  question_order: number;
-  attempt_number: number;
-}
+// Student answer from database (removed - not used)
 
 /**
  * Filters sections based on section adaptivity configuration.
@@ -1332,13 +1328,6 @@ export default function TakeTestPage() {
       const originalPositions = new Map<string, number>();
       questions.forEach((q, idx) => originalPositions.set(q.id, idx));
 
-      // Sort groups by the position of their first member in original array
-      const groupEntries = Array.from(grouped.entries()).sort((a, b) => {
-        const posA = Math.min(...a[1].map(q => originalPositions.get(q.id) || 0));
-        const posB = Math.min(...b[1].map(q => originalPositions.get(q.id) || 0));
-        return posA - posB;
-      });
-
       // Process in original order, inserting groups when we hit their first member
       questions.forEach(q => {
         const groupKey = getSourceGroupKey(q);
@@ -1883,7 +1872,7 @@ export default function TakeTestPage() {
         return;
       }
 
-      setConfig(configData);
+      setConfig(configData as unknown as TestConfig);
 
       // Check if this is GMAT Assessment Iniziale test 1 - if so, pull from general question pool
       const isGMATAssessmentInitial1 =
@@ -1987,6 +1976,11 @@ export default function TakeTestPage() {
     try {
       setLoading(true);
 
+      // Guard: Check if assignmentId exists
+      if (!assignmentId) {
+        throw new Error('Assignment ID is required');
+      }
+
       // Load assignment details (uses test tables in test mode)
       const tableSuffix = isTestMode ? '_test' : '';
       const { data: assignment, error: assignmentError } = await db
@@ -2040,9 +2034,9 @@ export default function TakeTestPage() {
 
           const currentAttemptNum = assignment.current_attempt || 1;
 
-          // Localhost: Mark as annulled (for easier testing of retake flow)
-          // Production: Mark as incomplete (normal behavior - student can resume/restart)
-          const newStatus = isLocalhost ? 'annulled' : 'incomplete';
+          // Keep status as unlocked (don't use 'annulled'/'incomplete' in main status field)
+          // Detailed status ('annulled'/'incomplete') saved only in completion_details
+          const newStatus = 'unlocked';
           const reason = 'browser_closed';
           const annulmentReason = isLocalhost ? 'page_refresh_localhost' : 'session_ended';
 
@@ -2086,7 +2080,7 @@ export default function TakeTestPage() {
           const updateData = {
             status: newStatus,
             total_attempts: currentAttemptNum,
-            completion_details: { attempts }
+            completion_details: { attempts } as any
           };
 
           const { error: statusError } = await db
@@ -2325,7 +2319,7 @@ export default function TakeTestPage() {
           const orderA = idOrderMap.get(a.id) ?? 999;
           const orderB = idOrderMap.get(b.id) ?? 999;
           return orderA - orderB;
-        }) as Question[];
+        }) as unknown as Question[];
 
         console.log('✅ Fetched allocated GMAT questions:', questions.length);
       } else {
@@ -2490,79 +2484,8 @@ export default function TakeTestPage() {
         setTimeRemaining(totalTimeSeconds);
       }
 
-      // Load existing answers if test is in progress (for current attempt only)
-      if (assignment.status === 'in_progress' || assignment.status === 'completed') {
-        const currentAttemptNumber = assignment.current_attempt || 1;
-        const { data: existingAnswers, error: answersError} = await db
-          .from(`2V_student_answers${tableSuffix}`)
-          .select('*')
-          .eq('assignment_id', assignmentId)
-          .eq('attempt_number', currentAttemptNumber) as { data: DbStudentAnswer[] | null; error: unknown };
-
-        if (!answersError && existingAnswers) {
-
-          // Transform loaded answers back to local state format
-          const loadedAnswers: Record<string, StudentAnswer> = {};
-
-          existingAnswers.forEach((dbAnswer) => {
-            const questionId = dbAnswer.question_id;
-            const jsonbAnswer = dbAnswer.answer;
-
-            // Transform JSONB back to local format
-            let localAnswer: Partial<StudentAnswer> = {
-              questionId: questionId,
-              flagged: dbAnswer.is_flagged || false,
-              timeSpent: dbAnswer.time_spent_seconds || 0
-            };
-
-            // Detect format and transform using type guards
-            if ('answer' in jsonbAnswer) {
-              // Simple answer
-              localAnswer.answer = jsonbAnswer.answer;
-            } else if ('answers' in jsonbAnswer) {
-              if (Array.isArray(jsonbAnswer.answers)) {
-                // MSR question (array)
-                localAnswer.msrAnswers = jsonbAnswer.answers;
-                localAnswer.answer = jsonbAnswer.answers.join(',');
-              } else {
-                // Check if it's GI/TPA format (part1, part2) or TA format (row keys)
-                // Type guard: GI/TPA format has 'part1' or 'part2' as keys (not numeric)
-                const answerKeys = Object.keys(jsonbAnswer.answers);
-                const isGIOrTPAFormat = answerKeys.includes('part1') || answerKeys.includes('part2');
-
-                if (isGIOrTPAFormat) {
-                  // GI or TPA format
-                  const giTpaAnswer = jsonbAnswer.answers as { part1: string | null; part2: string | null };
-                  localAnswer.blank1 = giTpaAnswer.part1 ?? undefined;
-                  localAnswer.blank2 = giTpaAnswer.part2 ?? undefined;
-                  localAnswer.column1 = giTpaAnswer.part1 ?? undefined; // For TPA
-                  localAnswer.column2 = giTpaAnswer.part2 ?? undefined;
-                  localAnswer.answer = `${giTpaAnswer.part1 || ''}|${giTpaAnswer.part2 || ''}`;
-                } else {
-                  // TA format
-                  localAnswer.taAnswers = jsonbAnswer.answers as Record<number, 'true' | 'false'>;
-                  localAnswer.answer = Object.values(jsonbAnswer.answers).join(',');
-                }
-              }
-            }
-
-            loadedAnswers[questionId] = localAnswer as StudentAnswer;
-          });
-
-          setAnswers(loadedAnswers);
-
-          // Initialize globalQuestionOrder based on the highest question_order in existing answers
-          const maxQuestionOrder = existingAnswers.reduce((max, answer) => {
-            return Math.max(max, answer.question_order || 0);
-          }, 0);
-          console.log('🔢 [INIT] Initializing globalQuestionOrder from existing answers', {
-            existingAnswersCount: existingAnswers.length,
-            maxQuestionOrder: maxQuestionOrder,
-            allQuestionOrders: existingAnswers.map(a => a.question_order).sort((a, b) => a - b)
-          });
-          setGlobalQuestionOrder(maxQuestionOrder);
-        }
-      }
+      // Don't load existing answers - each page load is a fresh start
+      // Answers are saved via upsert and will overwrite previous answers for same question_id + attempt_number
 
     } catch (err) {
       alert('Failed to load test. Please try again.');
@@ -2591,56 +2514,51 @@ export default function TakeTestPage() {
       return;
     }
 
-    // If restarting from annulled/incomplete, increment attempt
-    if (assignment.status === 'annulled' || assignment.status === 'incomplete') {
-      const newAttempt = (assignment.current_attempt || 1) + 1;
-      const newTotalAttempts = assignment.total_attempts || (assignment.current_attempt || 1);
+    // Tutor increments current_attempt when unlocking for retake (StudentTestsPage.tsx)
+    // TakeTestPage just uses whatever value is in DB - no increment needed here
 
+    // Delete all existing answers for this attempt (clear previous attempt data when restarting)
+    const currentAttempt = assignment.current_attempt || 1;
+    const tableSuffix = isTestMode ? '_test' : '';
 
-      const updateData1: {
-        current_attempt: number;
-        total_attempts: number;
-        status: string;
-        completion_status: string;
+    // First count how many answers exist
+    const { count } = await supabase
+      .from(`2V_student_answers${tableSuffix}`)
+      .select('*', { count: 'exact', head: true })
+      .eq('assignment_id', assignmentId!)
+      .eq('attempt_number', currentAttempt);
+
+    // Then delete them
+    const { error: deleteError } = await supabase
+      .from(`2V_student_answers${tableSuffix}`)
+      .delete()
+      .eq('assignment_id', assignmentId!)
+      .eq('attempt_number', currentAttempt);
+
+    if (deleteError) {
+      console.error('❌ Error deleting previous answers for attempt:', deleteError);
+      // Don't return - non-critical error, continue with test
+    } else {
+      console.log(`🗑️ Deleted ${count || 0} previous answers for attempt ${currentAttempt}`);
+    }
+
+    // Update start_time if not set (keep status as 'unlocked' during test)
+    if (assignment.status === 'unlocked') {
+      const updateData: {
         start_time: string;
       } = {
-        current_attempt: newAttempt,
-        total_attempts: newTotalAttempts,
-        status: 'in_progress',
-        completion_status: 'in_progress',
         start_time: new Date().toISOString()
       };
       const { error: updateError } = await supabase
         .from('2V_test_assignments')
-        .update(updateData1)
-        .eq('id', assignmentId!);
+        .update(updateData)
+        .eq('id', assignmentId!)
+        .is('start_time', null); // Only if start_time not already set
 
       if (updateError) {
-        return;
+        console.error('Error setting start_time:', updateError);
+        // Don't return - non-critical error
       }
-
-      setCurrentAttempt(newAttempt);
-    } else if (assignment.status === 'unlocked') {
-      // First time starting this test
-
-      const updateData2: {
-        status: string;
-        completion_status: string;
-        start_time: string;
-      } = {
-        status: 'in_progress',
-        completion_status: 'in_progress',
-        start_time: new Date().toISOString()
-      };
-      const { error: updateError } = await supabase
-        .from('2V_test_assignments')
-        .update(updateData2)
-        .eq('id', assignmentId!);
-
-      if (updateError) {
-        return;
-      }
-
     }
 
 
@@ -3366,23 +3284,8 @@ export default function TakeTestPage() {
         throw error;
       }
 
-      // Update assignment status to 'in_progress' on first answer (if still unlocked)
-      // Note: annulled/incomplete transitions are now handled in loadTestData
-      // Add 5-second timeout to detect network issues quickly
-      const statusTimeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Network timeout')), 5000)
-      );
-
-      const statusQueryPromise = db
-        .from(`2V_test_assignments${tableSuffix}`)
-        .update({
-          status: 'in_progress',
-          start_time: new Date().toISOString()
-        })
-        .eq('id', assignmentId)
-        .eq('status', 'unlocked');
-
-      const { error: _statusError } = await Promise.race([statusQueryPromise, statusTimeoutPromise]) as any;
+      // Status stays 'unlocked' during test - no need to update to 'in_progress'
+      // start_time is set in startTest()
 
       // Clear the start time to prevent reusing stale timestamps
       setQuestionStartTimes(prev => {
@@ -3407,6 +3310,17 @@ export default function TakeTestPage() {
         if (isNetworkError) {
           setSaveError('⚠️ No internet connection. Cannot proceed until connection is restored.');
           return false;
+        }
+
+        // Check for 409 conflict - likely concurrent save, retry once with short delay
+        const errorCode = error?.code;
+        const errorStatus = error?.status;
+        const is409Conflict = errorCode === '23505' || errorStatus === 409 || errorMessage.includes('duplicate') || errorMessage.includes('conflict');
+
+        if (is409Conflict && retryCount === 0) {
+          console.log('⚠️ [SAVE] 409 conflict detected - waiting 200ms for concurrent save to complete, then retrying');
+          await new Promise(resolve => setTimeout(resolve, 200));
+          return saveAnswer(questionId, answerData, isFlagged, retryCount + 1, questionOrder);
         }
 
         // Retry logic with exponential backoff for other errors
@@ -3775,7 +3689,7 @@ export default function TakeTestPage() {
           if (underrepresentedTypes.length > 0) {
             // Filter available questions to prioritize underrepresented types
             const priorityQuestions = availableQuestions.filter(q =>
-              underrepresentedTypes.includes(q.question_data?.di_type)
+              q.question_data?.di_type && underrepresentedTypes.includes(q.question_data.di_type)
             );
 
             if (priorityQuestions.length > 0) {
@@ -3828,10 +3742,10 @@ export default function TakeTestPage() {
           if (adaptiveAlgorithm) {
             // Use adaptive algorithm to select next question
             const selected = await adaptiveAlgorithm.selectNextQuestion(
-              availableQuestions,
+              availableQuestions as any,
               currentSection
             );
-            nextQuestion = selected ?? undefined;
+            nextQuestion = (selected ?? undefined) as Question | undefined;
             console.log('🔍 [NAVIGATION] Algorithm returned:', {
               hasQuestion: !!nextQuestion,
               questionId: nextQuestion?.id?.substring(0, 8)
@@ -4114,7 +4028,7 @@ export default function TakeTestPage() {
           pause_events: [pauseEvent],
           pauses_used: action === 'pause_taken' ? 1 : 0,
           pauses_available: config?.max_pauses || 0
-        });
+        } as any);
         console.log('✅ [PAUSE] Created new attempt with pause event', {
           attemptNumber: currentAttempt,
           pausesUsed: action === 'pause_taken' ? 1 : 0,
@@ -4123,8 +4037,8 @@ export default function TakeTestPage() {
       }
 
       // Save to database
-      const updatePayload: { completion_details: { attempts: AttemptData[] } } = {
-        completion_details: { attempts }
+      const updatePayload = {
+        completion_details: { attempts } as any
       };
       const { error: updateError } = await supabase
         .from('2V_test_assignments')
@@ -4734,20 +4648,14 @@ export default function TakeTestPage() {
       const completionStatusText = `${status} ${dateStr} at ${timeStr}`;
 
       // Auto-lock when completed (tutor must unlock to allow retake)
-      const finalStatus = status === 'completed' ? 'locked' : status;
+      // For 'incomplete'/'annulled', keep as 'unlocked' in main status field
+      const finalStatus = status === 'completed' ? 'locked' : 'unlocked';
 
-      const updateData: {
-        status: string;
-        completion_status: string;
-        completed_at: string;
-        completion_details: { attempts: AttemptData[] };
-        total_attempts: number;
-        results_viewable_by_student: boolean;
-      } = {
+      const updateData = {
         status: finalStatus,
         completion_status: completionStatusText,
         completed_at: new Date().toISOString(),
-        completion_details: { attempts },
+        completion_details: { attempts } as any,
         total_attempts: newTotalAttempts,
         // IMPORTANT: Hide results when test is completed/annulled
         // Tutor must explicitly enable visibility after reviewing with student
@@ -5453,7 +5361,7 @@ export default function TakeTestPage() {
           <PDFTestView
             questions={sectionQuestions.filter((q): q is Question & { question_data: { pdf_url: string; page_number: number } & Question['question_data'] } =>
               typeof q.question_data.pdf_url === 'string' && typeof q.question_data.page_number === 'number'
-            )}
+            ) as any}
             currentPageGroup={currentPageGroup}
             answers={answers}
             showCorrectAnswers={isGuidedMode && showCorrectAnswers}
@@ -5695,13 +5603,6 @@ export default function TakeTestPage() {
       </div>
 
       {/* Question Content */}
-      {console.log('🖼️ [RENDER] Rendering question content area:', {
-        hasCurrentQuestion: !!currentQuestion,
-        currentQuestionId: currentQuestion?.id,
-        hasQuestionData: !!currentQuestion?.question_data,
-        diType: currentQuestion?.question_data?.di_type,
-        hasPassageText: !!currentQuestion?.question_data?.passage_text
-      })}
       <div className={`flex-1 overflow-y-auto ${currentQuestion?.question_data?.passage_text || undefined ? 'p-4' : 'p-6'}`}>
         <div className={`${currentQuestion?.question_data?.passage_text || undefined ? 'w-full max-w-full' : 'max-w-4xl'} mx-auto bg-white rounded-2xl shadow-lg ${currentQuestion?.question_data?.passage_text || undefined ? 'p-6' : 'p-8'}`}>
           {/* Question Text */}
@@ -5747,7 +5648,7 @@ export default function TakeTestPage() {
                   problem={currentQuestion.question_data.problem || ''}
                   statement1={currentQuestion.question_data.statement1 || ''}
                   statement2={currentQuestion.question_data.statement2 || ''}
-                  selectedAnswer={answers[currentQuestion.id]?.answer}
+                  selectedAnswer={answers[currentQuestion.id]?.answer ?? undefined}
                   onAnswerChange={handleAnswerSelect}
                   correctAnswer={correctDSAnswer}
                   showResults={(isGuidedMode && showCorrectAnswers) || isPreviewMode}
@@ -5966,7 +5867,7 @@ export default function TakeTestPage() {
                 imageUrl={getLocalizedImage(currentQuestion.question_data)}
                 options={getLocalizedOptions(currentQuestion.question_data)}
                 imageOptions={getLocalizedImageOptions(currentQuestion.question_data)}
-                selectedAnswer={answers[currentQuestion.id]?.answer}
+                selectedAnswer={answers[currentQuestion.id]?.answer ?? undefined}
                 onAnswerChange={handleAnswerSelect}
                 showResults={(isGuidedMode && showCorrectAnswers) || isPreviewMode}
                 correctAnswer={correctAnswer}

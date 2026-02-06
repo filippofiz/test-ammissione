@@ -37,6 +37,7 @@ import RechartsRenderer from '../components/RechartsRenderer';
 import { FlaggedQuestionEditor } from '../components/FlaggedQuestionEditor';
 import { DataInsightsPreview } from '../components/questions/DataInsightsPreview';
 import { DataInsightsEditor } from '../components/questions/DataInsightsEditor';
+import { ImageWithFallback } from '../components/ImageWithFallback';
 import { supabase } from '../lib/supabase';
 import { normalizeWhitespace } from '../lib/textUtils';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -2980,7 +2981,7 @@ export default function ReviewQuestionsPage() {
                                 {(question.question_data?.image_url || question.question_data?.image_url_eng) && (
                                   <div className="mt-2">
                                     <span className="text-xs text-gray-500">Original image:</span>
-                                    <img
+                                    <ImageWithFallback
                                       src={
                                         getQuestionLanguage(question.id) === 'en' && question.question_data.image_url_eng
                                           ? question.question_data.image_url_eng
@@ -3030,7 +3031,7 @@ export default function ReviewQuestionsPage() {
                                 {(question.question_data?.image_url || question.question_data?.image_url_eng) && (
                                   <div className="mt-2">
                                     <span className="text-xs text-gray-500">Original extracted image:</span>
-                                    <img
+                                    <ImageWithFallback
                                       src={
                                         getQuestionLanguage(question.id) === 'en' && question.question_data.image_url_eng
                                           ? question.question_data.image_url_eng
@@ -3047,7 +3048,7 @@ export default function ReviewQuestionsPage() {
                             {/* Image if present (only show if no graph recreation and no recharts) */}
                             {(question.question_data?.image_url || question.question_data?.image_url_eng) && !question.question_data?.recreate_graph && !question.question_data?.recharts_code && (
                               <div className="mt-3 relative group">
-                                <img
+                                <ImageWithFallback
                                   src={
                                     getQuestionLanguage(question.id) === 'en' && question.question_data.image_url_eng
                                       ? question.question_data.image_url_eng
@@ -3130,7 +3131,7 @@ export default function ReviewQuestionsPage() {
                                   <div className="flex-1 relative">
                                     {(question.question_data?.image_options?.[key] || question.question_data?.image_options_eng?.[key]) ? (
                                       <div className="relative group">
-                                        <img
+                                        <ImageWithFallback
                                           src={
                                             getQuestionLanguage(question.id) === 'en' && question.question_data.image_options_eng?.[key]
                                               ? question.question_data.image_options_eng[key]
@@ -3455,7 +3456,7 @@ export default function ReviewQuestionsPage() {
                         <div>
                           <span className="text-xs text-gray-500 block mb-1">Original image:</span>
                           {(question.question_data?.image_url || question.question_data?.image_url_eng) ? (
-                            <img
+                            <ImageWithFallback
                               src={
                                 getQuestionLanguage(question.id) === 'en' && question.question_data.image_url_eng
                                   ? question.question_data.image_url_eng
@@ -4101,7 +4102,7 @@ export default function ReviewQuestionsPage() {
                             disabled={uploadingImage}
                             className="border-2 border-gray-300 rounded-lg overflow-hidden hover:border-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            <img
+                            <ImageWithFallback
                               src={img.url}
                               alt={`Extracted ${idx + 1}`}
                               className="w-full"

@@ -2,7 +2,7 @@
  * Student Tests Page
  * Shows all tests of a specific type for a student
  * Allows tutor to:
- * - View test status (locked, unlocked, in_progress, completed)
+ * - View test status (locked, unlocked, completed)
  * - Unlock tests
  * - View results
  * - Assign new tests
@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faArrowLeft,
+  faArrowRight,
   faLock,
   faLockOpen,
   faSpinner,
@@ -172,7 +173,7 @@ const lockAnimationStyles = `
 interface TestAssignment {
   id: string;
   test_id: string;
-  status: 'locked' | 'unlocked' | 'in_progress' | 'completed' | 'incomplete' | 'annulled';
+  status: 'locked' | 'unlocked' | 'completed';
   completion_status: string | null;
   assigned_at: string | null;
   start_time: string | null;
@@ -182,6 +183,7 @@ interface TestAssignment {
   bocconi_score: number | null;
   correct_count: number | null;  // Number of correct answers
   total_questions: number | null;  // Total questions in test
+  score_attempt: number | null;  // Which attempt the score is from
   current_attempt: number;
   total_attempts: number;
   test_name: string;
@@ -405,11 +407,13 @@ export default function StudentTestsPage() {
       // Fetch student info
       const { data: studentData, error: studentError } = await supabase
         .from('2V_profiles')
-        .select('id, name, email')
+        .select('id, name, email, esigenze_speciali')
         .eq('id', studentId)
         .single();
 
       if (studentError) throw studentError;
+
+      const hasSpecialNeeds = studentData.esigenze_speciali || false;
 
       setStudent({
         id: studentData.id,
@@ -506,6 +510,7 @@ export default function StudentTestsPage() {
           total_attempts,
           completion_details,
           2V_tests!inner (
+            id,
             test_type,
             section,
             materia,
@@ -523,13 +528,36 @@ export default function StudentTestsPage() {
       const assignmentWithFormat = await Promise.all(
         (assignmentData || []).map(async (assignment: any) => {
           // Count question types for this test (check test_id OR additional_test_ids)
-          const { data: questions } = await supabase
+          // Use same approach as TestResultsPage - two queries then combine
+          const testId = assignment['2V_tests'].id;
+
+          // Query 1: Questions where test_id matches
+          const { data: primaryQuestions } = await supabase
             .from('2V_questions')
             .select('id, question_type')
-            .or(`test_id.eq.${assignment.test_id},additional_test_ids.cs.["${assignment.test_id}"]`);
+            .eq('test_id', testId);
+
+          // Query 2: Questions where additional_test_ids contains this test_id
+          const { data: sharedQuestions } = await supabase
+            .from('2V_questions')
+            .select('id, question_type, additional_test_ids')
+            .not('additional_test_ids', 'is', null);
+
+          // Filter shared questions in JavaScript
+          const filteredSharedQuestions = (sharedQuestions || []).filter(q =>
+            Array.isArray(q.additional_test_ids) && q.additional_test_ids.includes(testId)
+          );
+
+          // Combine and deduplicate
+          const allQuestions = [...(primaryQuestions || []), ...filteredSharedQuestions];
+          const questions = Array.from(
+            new Map(allQuestions.map(q => [q.id, q])).values()
+          );
 
           // Get ACTUAL total questions from test definition (ground truth)
           const actualTotalQuestions = questions?.length || 0;
+
+          console.log(`🔍 Test ${assignment['2V_tests'].section} - ${assignment['2V_tests'].exercise_type} ${assignment['2V_tests'].test_number}: Found ${actualTotalQuestions} questions (testId: ${testId})`);
 
           // Determine format based on question types
           let format: 'pdf' | 'interactive' | 'mixed' = 'pdf';
@@ -546,19 +574,27 @@ export default function StudentTestsPage() {
             }
           }
 
-          // Calculate both percentage and Bocconi score ONLY if test has been taken
+          // Calculate both percentage and Bocconi score if questions exist
           let percentageScore: number | null = null;
           let bocconiScore: number | null = null;
 
-          // Only calculate scores if completed_at is set (test has been finished)
-          if (assignment.completed_at && questions && questions.length > 0) {
+          // Calculate scores if questions exist (don't check completed_at - show results if answers exist regardless of status)
+          if (questions && questions.length > 0) {
+            console.log(`🔎 Checking for answers in assignment ${assignment.id} (${assignment['2V_tests'].section} - ${assignment['2V_tests'].exercise_type} ${assignment['2V_tests'].test_number})`);
             // Find the most recent attempt that has answers (same logic as TestResultsPage)
-            const { data: allAnswers } = await supabase
+            const { data: allAnswers, error: allAnswersError } = await supabase
               .from('2V_student_answers')
               .select('attempt_number')
               .eq('assignment_id', assignment.id);
 
+            if (allAnswersError) {
+              console.error(`❌ Error fetching answers for assignment ${assignment.id}:`, allAnswersError);
+            }
+
+            // Show results if at least one answer is submitted
             if (allAnswers && allAnswers.length > 0) {
+              console.log(`✅ Found ${allAnswers.length} answers for assignment ${assignment.id}, checking attempts...`);
+
               // Determine which attempts have answers
               const attemptsSet = new Set(allAnswers.map(a => a.attempt_number));
 
@@ -579,7 +615,11 @@ export default function StudentTestsPage() {
                   .eq('assignment_id', assignment.id)
                   .eq('attempt_number', attemptToLoad);
 
-                // Only calculate if there are answers
+                if (_answersError) {
+                  console.error(`❌ Error fetching detailed answers for assignment ${assignment.id}, attempt ${attemptToLoad}:`, _answersError);
+                }
+
+                // Only calculate if there are answers (at least one answer submitted)
                 if (studentAnswers && studentAnswers.length > 0) {
                   console.log(`📊 Calculating scores for assignment ${assignment.id}, attempt ${attemptToLoad}, found ${studentAnswers.length} answers`);
 
@@ -780,18 +820,22 @@ export default function StudentTestsPage() {
                     console.log(`📊 Scores - Percentage: ${percentageScore}% (${correctCount}/${totalTestQuestions}), Bocconi: ${bocconiScore}/50`);
 
                     // Store correct count and total for display
+                    console.log(`✅ Setting score_attempt=${attemptToLoad} for assignment ${assignment.id}`);
                     return {
                       ...assignment,
                       question_format: format,
                       percentage_score: percentageScore,
                       bocconi_score: bocconiScore,
                       correct_count: correctCount,
-                      total_questions: totalTestQuestions
+                      total_questions: totalTestQuestions,
+                      score_attempt: attemptToLoad  // Track which attempt this score is from
                     };
                   }
                 }
               }
             }
+          } else {
+            console.warn(`⚠️ No questions found for assignment ${assignment.id} (${assignment['2V_tests'].section} - ${assignment['2V_tests'].exercise_type} ${assignment['2V_tests'].test_number}, testId: ${testId}) - skipping answer check`);
           }
 
           console.log(`📊 Final scores for assignment ${assignment.id}:`, {
@@ -807,10 +851,45 @@ export default function StudentTestsPage() {
             percentage_score: percentageScore,
             bocconi_score: bocconiScore,
             correct_count: null,
-            total_questions: null
+            total_questions: null,
+            score_attempt: null  // No scores calculated yet
           };
         })
       );
+
+      // Fetch test track configs to get duration information
+      const { data: trackConfigs } = await supabase
+        .from('2V_test_track_config')
+        .select('track_type, time_per_section, total_time_minutes')
+        .eq('test_type', testType);
+
+      // Create a map of exercise_type (track_type) to duration in minutes
+      const durationMap: Record<string, number> = {};
+      if (trackConfigs) {
+        trackConfigs.forEach(config => {
+          const normalize = (str: string) => str.toLowerCase().replace(/[\s_]+/g, '_');
+          const normalizedTrackType = normalize(config.track_type);
+
+          let duration = 0;
+          if (config.time_per_section) {
+            // Sum all section times
+            duration = Object.values(config.time_per_section).reduce((sum: number, time: any) => sum + (Number(time) || 0), 0);
+          } else if (config.total_time_minutes) {
+            duration = config.total_time_minutes;
+          }
+
+          // Apply 30% extra time for students with special needs (same as TakeTestPage)
+          if (hasSpecialNeeds && duration > 0) {
+            duration = Math.round(duration * 1.3);
+          }
+
+          // Store both normalized and original versions
+          durationMap[normalizedTrackType] = duration;
+          durationMap[config.track_type] = duration;
+        });
+      }
+
+      console.log('🕐 Duration map:', durationMap, hasSpecialNeeds ? '(with 30% extra time for special needs)' : '');
 
       // Transform assignments
       const transformedAssignments = assignmentWithFormat.map((row: any) => {
@@ -829,6 +908,13 @@ export default function StudentTestsPage() {
           ? `${exerciseType} ${testNumber}`
           : `${section} - ${exerciseType} ${testNumber}`;
 
+        // Get duration from config map (try both normalized and original exercise_type)
+        const normalize = (str: string) => str.toLowerCase().replace(/[\s_]+/g, '_');
+        const normalizedExerciseType = normalize(exerciseType);
+        const duration = durationMap[normalizedExerciseType] || durationMap[exerciseType] || row['2V_tests'].default_duration_mins;
+
+        console.log('DEBUG duration_minutes:', duration, 'for test:', testName, '(exercise_type:', exerciseType, ')');
+
         return {
           id: row.id,
           test_id: row.test_id,
@@ -842,6 +928,7 @@ export default function StudentTestsPage() {
           bocconi_score: row.bocconi_score,
           correct_count: row.correct_count,
           total_questions: row.total_questions,
+          score_attempt: row.score_attempt ?? null,  // Preserve the score_attempt from calculation
           current_attempt: row.current_attempt || 1,
           total_attempts: row.total_attempts || 0,
           test_name: testName,
@@ -851,7 +938,7 @@ export default function StudentTestsPage() {
           exercise_type: exerciseType,
           question_format: row.question_format,
           test_number: testNumber,
-          duration_minutes: row['2V_tests'].default_duration_mins,
+          duration_minutes: duration,
         };
       });
 
@@ -951,18 +1038,25 @@ export default function StudentTestsPage() {
         status: 'unlocked',
         // IMPORTANT: Reset results visibility when unlocking for retake
         // This prevents students from seeing previous attempt results during new attempt
-        results_viewable_by_student: false
+        results_viewable_by_student: false,
+        // Clear dates so they're empty until the new attempt starts/completes
+        start_time: null,
+        completed_at: null
       };
 
       // Only increment current_attempt when unlocking for a RETAKE
       // - completed: student finished the test, now getting another attempt
       // - locked with total_attempts > 0: test was completed and then locked again
       // Do NOT increment for first-time unlock (locked with total_attempts === 0)
+      // Do NOT increment if current_attempt > total_attempts (current attempt was never completed)
       // Backward compatible: check completion_status first, then fall back to status
       const isRetake = assignment?.completion_status?.startsWith('completed') || assignment?.status === 'completed' ||
                        (assignment?.status === 'locked' && (assignment?.total_attempts || 0) > 0);
 
-      if (isRetake && assignment) {
+      // Only increment if the current attempt was actually completed
+      const shouldIncrement = isRetake && assignment && (assignment.current_attempt || 1) <= (assignment.total_attempts || 0);
+
+      if (shouldIncrement && assignment) {
         updateData.current_attempt = (assignment.current_attempt || 1) + 1;
 
         // Ensure total_attempts is at least current_attempt - 1 to satisfy constraint
@@ -974,6 +1068,8 @@ export default function StudentTestsPage() {
         }
 
         console.log(`📝 Unlocking for retake | New attempt: ${updateData.current_attempt} | Hiding previous results`);
+      } else if (isRetake && assignment) {
+        console.log(`📝 Re-unlocking incomplete attempt ${assignment.current_attempt} - not incrementing`);
       } else {
         console.log(`📝 First-time unlock - keeping attempt at ${assignment?.current_attempt || 1}`);
       }
@@ -1068,7 +1164,7 @@ export default function StudentTestsPage() {
       const { error } = await supabase
         .from('2V_test_assignments')
         .update({
-          status: 'annulled',
+          status: 'unlocked',
           // Reset results visibility when annulling
           results_viewable_by_student: false
         })
@@ -1076,7 +1172,7 @@ export default function StudentTestsPage() {
 
       if (error) throw error;
 
-      console.log('✅ Test annulled:', assignmentId);
+      console.log('✅ Test reset to unlocked:', assignmentId);
       await loadData();
     } catch (err) {
       console.error('Error annulling test:', err);
@@ -1111,58 +1207,11 @@ export default function StudentTestsPage() {
     navigate(url);
   }
 
-  function getStatusStyles(status: string, completionStatus: string | null) {
-    // Backward compatible: use completion_status if available, otherwise fall back to status
-    const displayStatus = completionStatus || status;
+  function getStatusStyles(status: string, completionStatus: string | null, currentAttempt: number = 1) {
+    // IMPORTANT: Priority order - status field takes precedence over completion_status
+    // This ensures that when a test is unlocked for retake, it shows "Unlocked" not "Completed"
 
-    // Check if completed (new format with timestamp or old 'completed' status)
-    if (displayStatus.startsWith('completed') || displayStatus === 'completed') {
-      return {
-        bg: 'bg-gradient-to-r from-green-50 to-emerald-50',
-        border: 'border-green-200',
-        text: 'text-green-700',
-        icon: faCheckCircle,
-        iconColor: 'text-green-600',
-        label: displayStatus, // Show full completion_status with timestamp
-      };
-    }
-
-    if (displayStatus === 'in_progress') {
-      return {
-        bg: 'bg-gradient-to-r from-blue-50 to-cyan-50',
-        border: 'border-blue-200',
-        text: 'text-blue-700',
-        icon: faSpinner,
-        iconColor: 'text-blue-600',
-        label: t('studentTests.statusLabels.inProgress'),
-      };
-    }
-
-    // Check if incomplete (new format with timestamp or old 'incomplete' status)
-    if (displayStatus.startsWith('incomplete') || displayStatus === 'incomplete') {
-      return {
-        bg: 'bg-gradient-to-r from-orange-50 to-orange-100',
-        border: 'border-orange-300',
-        text: 'text-orange-700',
-        icon: faLockOpen,
-        iconColor: 'text-green-600', // Always green when unlocked
-        label: displayStatus, // Show full completion_status with timestamp
-      };
-    }
-
-    // Check if annulled (new format with timestamp or old 'annulled' status)
-    if (displayStatus.startsWith('annulled') || displayStatus === 'annulled') {
-      return {
-        bg: 'bg-gradient-to-r from-red-50 to-red-100',
-        border: 'border-red-300',
-        text: 'text-red-700',
-        icon: faLockOpen,
-        iconColor: 'text-green-600', // Always green when unlocked
-        label: displayStatus, // Show full completion_status with timestamp
-      };
-    }
-
-    // Check status field for unlocked/locked
+    // Check status field first for unlocked/locked
     if (status === 'unlocked') {
       return {
         bg: 'bg-gradient-to-r from-yellow-50 to-amber-50',
@@ -1170,7 +1219,30 @@ export default function StudentTestsPage() {
         text: 'text-yellow-700',
         icon: faLockOpen,
         iconColor: 'text-green-600', // Always green when unlocked
-        label: t('studentTests.statusLabels.unlocked'),
+        label: `${t('studentTests.statusLabels.unlocked')} per tentativo ${currentAttempt}`,
+      };
+    }
+
+    if (status === 'locked') {
+      return {
+        bg: 'bg-gradient-to-r from-gray-50 to-slate-50',
+        border: 'border-gray-200',
+        text: 'text-gray-700',
+        icon: faLock,
+        iconColor: 'text-red-600', // Always red when locked
+        label: t('studentTests.statusLabels.locked'),
+      };
+    }
+
+    // Only show completed if status is actually 'completed' (not unlocked for retake)
+    if (status === 'completed' || (completionStatus && completionStatus.startsWith('completed'))) {
+      return {
+        bg: 'bg-gradient-to-r from-green-50 to-emerald-50',
+        border: 'border-green-200',
+        text: 'text-green-700',
+        icon: faCheckCircle,
+        iconColor: 'text-green-600',
+        label: t('studentTests.statusLabels.completed'),
       };
     }
 
@@ -1180,7 +1252,7 @@ export default function StudentTestsPage() {
       border: 'border-gray-200',
       text: 'text-gray-700',
       icon: faLock,
-      iconColor: 'text-red-600', // Always red when locked
+      iconColor: 'text-red-600',
       label: t('studentTests.statusLabels.locked'),
     };
   }
@@ -1375,8 +1447,8 @@ export default function StudentTestsPage() {
                 return sortedSections.map((section, sectionIndex) => {
                   const sectionTests = grouped[section];
                   const isExpanded = expandedSections.has(section);
-                  // Count tests with results (regardless of status)
-                  const sectionCompleted = sectionTests.filter(t => t.correct_count !== null && t.total_questions !== null).length;
+                  // Count tests with results (only when total_attempts > 0)
+                  const sectionCompleted = sectionTests.filter(t => t.total_attempts > 0).length;
                   const sectionProgress = sectionTests.length > 0
                     ? Math.round((sectionCompleted / sectionTests.length) * 100)
                     : 0;
@@ -1421,7 +1493,7 @@ export default function StudentTestsPage() {
                           {/* Show percentage badges for each completed test */}
                           {(() => {
                             const completedTests = sectionTests
-                              .filter(t => t.correct_count !== null && t.total_questions !== null)
+                              .filter(t => t.total_attempts > 0)
                               .sort((a, b) => {
                                 // Sort: Training first, then Assessments, both by test_number
                                 const aIsTraining = a.exercise_type.toLowerCase().includes('training');
@@ -1520,7 +1592,7 @@ export default function StudentTestsPage() {
                               return a.test_number - b.test_number;
                             })
                             .map((assignment) => {
-                            const statusStyle = getStatusStyles(assignment.status, assignment.completion_status);
+                            const statusStyle = getStatusStyles(assignment.status, assignment.completion_status, assignment.current_attempt);
                             const isUnlocking = unlocking === assignment.id;
                             const isLocking = locking === assignment.id;
 
@@ -1548,21 +1620,15 @@ export default function StudentTestsPage() {
                                               {assignment.materia}
                                             </span>
                                           )}
-                                          {/* PDF/Interactive Badge */}
-                                          <span
-                                            className={`px-2 py-1 rounded text-xs font-bold ${
-                                              assignment.question_format === 'interactive'
-                                                ? 'bg-green-100 text-green-700 border border-green-300'
-                                                : assignment.question_format === 'mixed'
-                                                ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                                                : 'bg-gray-100 text-gray-700 border border-gray-300'
-                                            }`}
-                                          >
-                                            {assignment.question_format === 'interactive'
-                                              ? '🎮 Interactive'
-                                              : assignment.question_format === 'mixed'
-                                              ? '🔄 Mixed'
-                                              : '📄 PDF'}
+                                          {/* PDF Badge - only show for PDF format */}
+                                          {assignment.question_format === 'pdf' && (
+                                            <span className="px-2 py-1 rounded text-xs font-bold bg-gray-100 text-gray-700 border border-gray-300">
+                                              📄 PDF
+                                            </span>
+                                          )}
+                                          {/* Duration Badge */}
+                                          <span className="px-2 py-1 rounded text-xs font-bold bg-orange-100 text-orange-700 border border-orange-300">
+                                            ⏰ {assignment.duration_minutes} {t('studentTests.mins')}
                                           </span>
                                         </div>
                                         <span className={`text-sm font-semibold ${statusStyle.text}`}>
@@ -1571,63 +1637,87 @@ export default function StudentTestsPage() {
                                       </div>
                                     </div>
 
-                                    {/* Test Details */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-600">
-                                      <div className="flex items-center gap-2">
-                                        <FontAwesomeIcon icon={faClock} className="text-gray-400" />
-                                        <span>{t('studentTests.duration')}: {assignment.duration_minutes} {t('studentTests.min')}</span>
-                                      </div>
-                                      {assignment.assigned_at && (
-                                        <div className="flex items-center gap-2">
-                                          <FontAwesomeIcon icon={faCalendar} className="text-gray-400" />
-                                          <span>{t('studentTests.assignedAt')}: {formatDate(assignment.assigned_at)}</span>
-                                        </div>
-                                      )}
-                                      {assignment.start_time && (
-                                        <div className="flex items-center gap-2">
-                                          <FontAwesomeIcon icon={faCalendar} className="text-gray-400" />
-                                          <span>{t('studentTests.started')}: {formatDate(assignment.start_time)}</span>
-                                        </div>
-                                      )}
-                                      {assignment.completed_at && (
-                                        <div className="flex items-center gap-2">
-                                          <FontAwesomeIcon icon={faCalendar} className="text-gray-400" />
-                                          <span>{t('studentTests.completedAt')}: {formatDate(assignment.completed_at)}</span>
-                                        </div>
-                                      )}
-                                      {/* Show correct/total for all completed tests */}
-                                      {assignment.correct_count !== null && assignment.total_questions !== null && (
-                                        <div className="flex items-center gap-2">
-                                          <div className="font-bold text-brand-dark">
-                                            {t('studentTests.score')}: {assignment.correct_count}/{assignment.total_questions} ({Math.round((assignment.correct_count / assignment.total_questions) * 100)}%)
+                                    {/* Test Details - Improved Attempt Info Design */}
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                                      {/* Current Attempt Info (dates) */}
+                                      {(assignment.start_time || assignment.completed_at) && (
+                                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+                                          {/* Current Attempt Header */}
+                                          <div className="mb-3">
+                                            <h4 className="font-semibold text-gray-700 text-base">
+                                              Tentativo Corrente {assignment.current_attempt || 1}
+                                            </h4>
                                           </div>
-                                          {(() => {
-                                            const percentage = Math.round((assignment.correct_count / assignment.total_questions) * 100);
-                                            const isPassing = percentage >= 75;
-                                            return (
-                                              <span className={`text-xs font-semibold px-2 py-1 rounded ${
-                                                isPassing
-                                                ? 'bg-green-100 text-green-700'
-                                                : 'bg-red-100 text-red-700'
-                                              }`}>
-                                                {isPassing ? '✓ PASS' : '✗ FAIL'}
+
+                                          {/* Dates Row */}
+                                          <div className="space-y-2 text-sm">
+                                            {assignment.start_time && (
+                                              <div className="flex items-center gap-2 text-gray-600">
+                                                <FontAwesomeIcon icon={faPlay} className="text-green-500 text-xs" />
+                                                <span className="font-medium">{t('studentTests.started')}:</span>
+                                                <span className="text-gray-700">{formatDate(assignment.start_time)}</span>
+                                              </div>
+                                            )}
+                                            {assignment.completed_at && (
+                                              <div className="flex items-center gap-2 text-gray-600">
+                                                <FontAwesomeIcon icon={faCheckCircle} className="text-blue-500 text-xs" />
+                                                <span className="font-medium">{t('studentTests.completedAt')}:</span>
+                                                <span className="text-gray-700">{formatDate(assignment.completed_at)}</span>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {/* Score Info (from specific attempt) */}
+                                      {(() => {
+                                        if (assignment.test_name.includes('Logaritmi Ed Esponenziali - Training 1')) {
+                                          console.log(`🐛 DEBUG Logaritmi Training 1:`, {
+                                            correct_count: assignment.correct_count,
+                                            total_questions: assignment.total_questions,
+                                            score_attempt: assignment.score_attempt,
+                                            willShow: assignment.correct_count !== null && assignment.total_questions !== null && assignment.score_attempt !== null
+                                          });
+                                        }
+                                        return null;
+                                      })()}
+                                      {assignment.correct_count !== null && assignment.total_questions !== null && assignment.score_attempt !== null && (
+                                        <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-200">
+                                          {/* Score Attempt Header */}
+                                          <div className="mb-3">
+                                            <h4 className="font-semibold text-gray-700 text-base">
+                                              Risultato Tentativo {assignment.score_attempt}
+                                            </h4>
+                                          </div>
+
+                                          {/* Score Details */}
+                                          <div className="flex flex-wrap items-center gap-3">
+                                            <div className="flex items-center gap-2">
+                                              <FontAwesomeIcon icon={faClipboardList} className="text-purple-500 text-sm" />
+                                              <span className="font-bold text-gray-800 text-base">
+                                                {assignment.correct_count}/{assignment.total_questions}
                                               </span>
-                                            );
-                                          })()}
-                                        </div>
-                                      )}
-                                      {assignment.test_type.toUpperCase() !== 'BOCCONI' && assignment.test_type.toUpperCase() !== 'BOCCONI LAW' && assignment.score !== null && (
-                                        <div className="flex items-center gap-2 font-bold text-brand-green">
-                                          <FontAwesomeIcon icon={faPercent} />
-                                          <span>{t('studentTests.score')}: {assignment.score}%</span>
-                                        </div>
-                                      )}
-                                      {assignment.status !== 'locked' && (
-                                        <div className="flex items-center gap-2 font-semibold text-blue-600">
-                                          <span>
-                                            📝 {t('studentTests.attempt')} {assignment.current_attempt}
-                                            {assignment.total_attempts > 0 && ` ${t('studentTests.of')} ${assignment.total_attempts + 1}`}
-                                          </span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                              <FontAwesomeIcon icon={faPercent} className="text-purple-500 text-sm" />
+                                              <span className="font-bold text-gray-800 text-base">
+                                                {Math.round((assignment.correct_count / assignment.total_questions) * 100)}%
+                                              </span>
+                                            </div>
+                                            {(() => {
+                                              const percentage = Math.round((assignment.correct_count / assignment.total_questions) * 100);
+                                              const isPassing = percentage >= 75;
+                                              return (
+                                                <span className={`text-xs font-bold px-3 py-1 rounded-full ${
+                                                  isPassing
+                                                  ? 'bg-green-500 text-white shadow-sm'
+                                                  : 'bg-red-500 text-white shadow-sm'
+                                                }`}>
+                                                  {isPassing ? '✓ PASS' : '✗ FAIL'}
+                                                </span>
+                                              );
+                                            })()}
+                                          </div>
                                         </div>
                                       )}
                                     </div>
