@@ -357,7 +357,17 @@
     "testLockedMessage": "This test has been completed and is now locked. Contact your tutor to unlock it if you need to retake the test.",
     "backToHome": "Back to Home",
     "submittingTest": "Submitting Test...",
-    "pleaseWait": "Please wait while we save your answers..."
+    "pleaseWait": "Please wait while we save your answers...",
+    "takingLonger": "This is taking longer than expected. Do not close this page.",
+    "submissionFailed": "Could not complete test submission",
+    "answersAreSaved": "Your answers are saved, but the test was not closed properly.",
+    "doNotRestart": "DO NOT restart the test or you will lose all your answers.",
+    "contactTutorIfPersists": "Contact your tutor if the problem persists.",
+    "retry": "Retry",
+    "answersFound": "Existing answers found",
+    "foundXAnswers": "Found {{count}} answers for this attempt.",
+    "restartWarning": "Are you sure you want to restart? You will lose all saved answers.",
+    "restartTest": "Restart"
   },
   "common": {
     "loading": "Loading...",
