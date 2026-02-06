@@ -4,7 +4,7 @@
  * - If multiple test types: shows selection screen
  * - If single test type: shows test track directly
  * - Test track displays tests grouped by section and exercise type
- * - Shows status: locked, unlocked, in_progress, completed
+ * - Shows status: locked, unlocked, completed
  */
 
 import { useState, useEffect } from 'react';
@@ -46,7 +46,7 @@ interface TestType {
 interface TestAssignment {
   assignment_id: string;
   test_id: string;
-  status: 'locked' | 'unlocked' | 'in_progress' | 'completed' | 'incomplete' | 'annulled';
+  status: 'locked' | 'unlocked' | 'completed';
   completion_status: string | null;
   assigned_at: string | null;
   start_time: string | null;
@@ -257,7 +257,7 @@ export default function StudentHomePage() {
         stats.total_count++;
         // Backward compatible: check completion_status first, then fall back to status
         if (assignment.completion_status?.startsWith('completed') || assignment.status === 'completed') stats.completed_count++;
-        if (assignment.status === 'unlocked' || assignment.status === 'in_progress' || assignment.status === 'incomplete' || assignment.status === 'annulled') stats.unlocked_count++;
+        if (assignment.status === 'unlocked') stats.unlocked_count++;
       });
 
       const types = Array.from(typeMap.values());
@@ -530,41 +530,7 @@ export default function StudentHomePage() {
       };
     }
 
-    // Check if in progress
-    if (displayStatus === 'in_progress') {
-      return {
-        bg: 'bg-gradient-to-r from-blue-500 to-blue-600',
-        text: 'text-white',
-        border: 'border-blue-700',
-        icon: faSpinner,
-        hover: 'hover:shadow-lg',
-        cursor: 'cursor-pointer',
-      };
-    }
-
-    // Check if incomplete (new format with timestamp or old 'incomplete' status)
-    if (displayStatus.startsWith('incomplete') || displayStatus === 'incomplete') {
-      return {
-        bg: 'bg-gradient-to-r from-orange-400 to-orange-500',
-        text: 'text-white',
-        border: 'border-orange-600',
-        icon: faLockOpen,
-        hover: 'hover:shadow-lg',
-        cursor: 'cursor-pointer',
-      };
-    }
-
-    // Check if annulled (new format with timestamp or old 'annulled' status)
-    if (displayStatus.startsWith('annulled') || displayStatus === 'annulled') {
-      return {
-        bg: 'bg-gradient-to-r from-orange-400 to-orange-500',
-        text: 'text-white',
-        border: 'border-orange-600',
-        icon: faLockOpen,
-        hover: 'hover:shadow-lg',
-        cursor: 'cursor-pointer',
-      };
-    }
+    // Removed in_progress, incomplete and annulled statuses - tests stay unlocked
 
     // Check if unlocked (always from status field)
     if (status === 'unlocked') {
@@ -721,7 +687,7 @@ export default function StudentHomePage() {
   const progress = calculateProgress();
   // Backward compatible: check completion_status first, then fall back to status
   const completedCount = tests.filter(t => t.completion_status?.startsWith('completed') || t.status === 'completed').length;
-  const unlockedCount = tests.filter(t => t.status === 'unlocked' || t.status === 'in_progress' || t.status === 'incomplete' || t.status === 'annulled').length;
+  const unlockedCount = tests.filter(t => t.status === 'unlocked').length;
 
   return (
     <Layout pageTitle={selectedType} pageSubtitle={t('testSelection.subtitle')}>
@@ -880,7 +846,7 @@ export default function StudentHomePage() {
                                       title={
                                         test.status === 'locked'
                                           ? (test.results_viewable_by_student ? 'View results' : 'Results locked - ask your tutor')
-                                          : `Click to ${test.status === 'in_progress' ? 'continue' : 'start'} test`
+                                          : 'Click to start test'
                                       }
                                     >
                                       <div className="flex flex-col items-center gap-1">
@@ -1045,10 +1011,7 @@ export default function StudentHomePage() {
                 <span className="text-sm font-medium text-gray-600">{t('studentHome.status')}:</span>
                 <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
                   (selectedTestForDetails.completion_status?.startsWith('completed') || selectedTestForDetails.status === 'completed') ? 'bg-green-100 text-green-700' :
-                  (selectedTestForDetails.completion_status === 'in_progress' || selectedTestForDetails.status === 'in_progress') ? 'bg-blue-100 text-blue-700' :
                   selectedTestForDetails.status === 'unlocked' ? 'bg-yellow-100 text-yellow-700' :
-                  (selectedTestForDetails.completion_status?.startsWith('annulled') || selectedTestForDetails.status === 'annulled') ? 'bg-red-100 text-red-700' :
-                  (selectedTestForDetails.completion_status?.startsWith('incomplete') || selectedTestForDetails.status === 'incomplete') ? 'bg-orange-100 text-orange-700' :
                   'bg-gray-100 text-gray-700'
                 }`}>
                   {selectedTestForDetails.completion_status || selectedTestForDetails.status.replace('_', ' ').toUpperCase()}
@@ -1289,8 +1252,7 @@ export default function StudentHomePage() {
                   className="w-full py-3 bg-gradient-to-r from-brand-green to-green-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all"
                   disabled={selectedTestForDetails.status === 'locked'}
                 >
-                  {(selectedTestForDetails.completion_status === 'in_progress' || selectedTestForDetails.status === 'in_progress') ? t('studentHome.continueTest') :
-                   (selectedTestForDetails.completion_status?.startsWith('completed') || selectedTestForDetails.status === 'completed') ? t('studentHome.viewResults') :
+                  {(selectedTestForDetails.completion_status?.startsWith('completed') || selectedTestForDetails.status === 'completed') ? t('studentHome.viewResults') :
                    selectedTestForDetails.status === 'locked' ? t('studentHome.testLocked') :
                    t('studentHome.startTest')}
                 </button>
