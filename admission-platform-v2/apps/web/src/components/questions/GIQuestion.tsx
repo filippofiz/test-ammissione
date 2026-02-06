@@ -9,6 +9,7 @@ import { MathJaxRenderer } from '../MathJaxRenderer';
 import { Chart } from '../Chart';
 import { normalizeWhitespace, normalizeOptionText } from '../../lib/textUtils';
 import { ExplanationDisplay } from './ExplanationDisplay';
+import { ImageWithFallback } from '../ImageWithFallback';
 
 interface GIQuestionProps {
   chartConfig: any; // Chart.js config or image URL
@@ -74,7 +75,7 @@ export function GIQuestion({
         {imageUrl ? (
           // Display chart as image
           <div className="flex justify-center">
-            <img
+            <ImageWithFallback
               src={imageUrl}
               alt="Graph"
               className="max-w-full h-auto rounded-lg"

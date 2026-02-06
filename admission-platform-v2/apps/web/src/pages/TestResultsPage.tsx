@@ -37,6 +37,7 @@ import { TAQuestion } from '../components/questions/TAQuestion';
 import { TPAQuestion } from '../components/questions/TPAQuestion';
 import { MultipleChoiceQuestion } from '../components/questions/MultipleChoiceQuestion';
 import { LaTeX } from '../components/LaTeX';
+import { ImageWithFallback } from '../components/ImageWithFallback';
 
 interface Question {
   id: string;
@@ -139,6 +140,25 @@ export default function TestResultsPage() {
       setLoading(true);
       setError(null);
 
+      // DEBUG: Check current user profile and role
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log('[DEBUG] Current auth user:', user);
+
+      if (user) {
+        const { data: profileData, error: profileError } = await supabase
+          .from('2V_profiles')
+          .select('id, email, roles, tutor_id')
+          .eq('auth_uid', user.id)
+          .single();
+
+        console.log('[DEBUG] Current user profile:', {
+          profile: profileData,
+          error: profileError,
+          isStudentView,
+          assignmentId
+        });
+      }
+
       // Load assignment details
       const { data: assignmentData, error: assignmentError } = await supabase
         .from('2V_test_assignments')
@@ -203,6 +223,9 @@ export default function TestResultsPage() {
       setResultsViewable(assignmentData.results_viewable_by_student || false);
 
       // Load ALL answers to determine which attempts have data
+      console.log('[DEBUG] Fetching student answers for assignment:', assignmentId);
+      console.log('[DEBUG] Current user session:', (await supabase.auth.getSession()).data.session?.user);
+
       const { data: allAnswers, error: answersError } = await supabase
         .from('2V_student_answers')
         .select('question_id, created_at, updated_at, attempt_number, question_order')
@@ -210,9 +233,20 @@ export default function TestResultsPage() {
         .order('question_order', { ascending: true, nullsFirst: false })
         .order('created_at', { ascending: true, nullsFirst: false });
 
-      if (answersError) throw answersError;
+      console.log('[DEBUG] Student answers query result:', {
+        success: !answersError,
+        error: answersError,
+        count: allAnswers?.length || 0,
+        data: allAnswers
+      });
+
+      if (answersError) {
+        console.error('[DEBUG] Error fetching student answers:', answersError);
+        throw answersError;
+      }
 
       if (!allAnswers || allAnswers.length === 0) {
+        console.warn('[DEBUG] No answers found for assignment:', assignmentId);
         throw new Error(t('testResults.noAnswersFoundForAssignment'));
       }
 
@@ -377,15 +411,28 @@ export default function TestResultsPage() {
       }
 
       // Load full student answers for this attempt (with all fields)
+      console.log('[DEBUG] Fetching full student answers for attempt:', attemptToLoad);
+
       const { data: allFullAnswers, error: fullAnswersError } = await supabase
         .from('2V_student_answers')
         .select('*')
         .eq('assignment_id', assignmentId);
 
-      if (fullAnswersError) throw fullAnswersError;
+      console.log('[DEBUG] Full answers query result:', {
+        success: !fullAnswersError,
+        error: fullAnswersError,
+        count: allFullAnswers?.length || 0,
+        attemptToLoad
+      });
+
+      if (fullAnswersError) {
+        console.error('[DEBUG] Error fetching full answers:', fullAnswersError);
+        throw fullAnswersError;
+      }
 
       // Filter by attempt number in JavaScript
       const fullAnswers = allFullAnswers?.filter(a => a.attempt_number === attemptToLoad) || [];
+      console.log('[DEBUG] Filtered answers for attempt', attemptToLoad, ':', fullAnswers.length);
 
       // Create answer lookup
       const answerMap = new Map(fullAnswers.map(a => [a.question_id, a]));
@@ -666,17 +713,9 @@ export default function TestResultsPage() {
           if (studentAnswer) sectionStats[question.section].time += studentAnswer.time_spent_seconds || 0;
         });
 
-        // Calculate total time from completion_details start/end times
-        const attemptRecord = completionDetails.attempts?.find((a: any) => a.attempt_number === attemptNum);
-        let totalTime = 0;
-        if (attemptRecord?.started_at && attemptRecord?.completed_at) {
-          const startTime = new Date(attemptRecord.started_at).getTime();
-          const endTime = new Date(attemptRecord.completed_at).getTime();
-          totalTime = Math.floor((endTime - startTime) / 1000); // Convert to seconds
-        } else {
-          // Fallback: sum individual answer times if completion_details not available
-          totalTime = answers.reduce((sum, a) => sum + (a.time_spent_seconds || 0), 0);
-        }
+        // Calculate total time from actual time spent on each question
+        // Sum of time_spent_seconds gives accurate time (not including pauses/breaks)
+        const totalTime = answers.reduce((sum, a) => sum + (a.time_spent_seconds || 0), 0);
 
         attempts.push({
           attemptNumber: attemptNum,
@@ -989,7 +1028,7 @@ export default function TestResultsPage() {
                 </div>
               )}
               {question.image_url && (
-                <img src={question.image_url} alt="Question" className="mt-4 max-w-full rounded" />
+                <ImageWithFallback src={question.image_url} alt="Question" className="mt-4 max-w-full rounded" />
               )}
             </div>
 
@@ -1267,14 +1306,10 @@ export default function TestResultsPage() {
     return true;
   };
 
-  // Calculate total time from assignment start_time and completed_at
+  // Calculate total time from sum of time spent on each question
+  // This gives accurate time per attempt (results are already filtered by attempt)
   const calculateTotalTime = (): number => {
-    if (!assignment?.start_time || !assignment?.completed_at) {
-      return 0;
-    }
-    const startTime = new Date(assignment.start_time).getTime();
-    const completedTime = new Date(assignment.completed_at).getTime();
-    return Math.floor((completedTime - startTime) / 1000); // Convert to seconds
+    return results.reduce((sum, r) => sum + (r.studentAnswer?.time_spent_seconds || 0), 0);
   };
 
   // Calculate statistics
