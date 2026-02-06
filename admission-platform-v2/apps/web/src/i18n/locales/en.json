@@ -180,8 +180,11 @@
     "cancel": "Cancel",
     "yesLockIt": "Yes, Lock It",
     "min": "min",
+    "mins": "mins",
     "attempt": "Attempt",
     "of": "of",
+    "lastAttemptStarted": "Last attempt started",
+    "lastAttemptCompleted": "Last attempt completed",
     "scoringInfo": {
       "title": "How Scores Are Calculated",
       "scoreDefinition": "Score: Number of correct answers / Total questions in test",

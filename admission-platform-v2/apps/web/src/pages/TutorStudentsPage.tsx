@@ -447,13 +447,6 @@ export default function TutorStudentsPage() {
           text: 'text-green-700',
           icon: faCheckCircle,
         };
-      case 'in_progress':
-        return {
-          bg: 'bg-gradient-to-r from-blue-50 to-cyan-50',
-          border: 'border-blue-200',
-          text: 'text-blue-700',
-          icon: faSpinner,
-        };
       case 'unlocked':
         return {
           bg: 'bg-gradient-to-r from-yellow-50 to-amber-50',

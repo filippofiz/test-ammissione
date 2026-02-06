@@ -180,8 +180,11 @@
     "cancel": "Annulla",
     "yesLockIt": "Sì, Bloccalo",
     "min": "min",
+    "mins": "mins",
     "attempt": "Tentativo",
     "of": "di",
+    "lastAttemptStarted": "Ultimo tentativo iniziato",
+    "lastAttemptCompleted": "Ultimo tentativo completato",
     "scoringInfo": {
       "title": "Come Vengono Calcolati i Punteggi",
       "scoreDefinition": "Punteggio: Numero di risposte corrette / Totale domande nel test",

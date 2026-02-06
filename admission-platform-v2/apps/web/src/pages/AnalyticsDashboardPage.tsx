@@ -33,7 +33,6 @@ interface StudentAnalytics {
   test_stats: {
     total: number;
     completed: number;
-    in_progress: number;
     unlocked: number;
     locked: number;
   };
@@ -95,7 +94,6 @@ export default function AnalyticsDashboardPage() {
         const test_stats = {
           total: studentAssignments.length,
           completed: studentAssignments.filter(a => a.status === 'completed').length,
-          in_progress: studentAssignments.filter(a => a.status === 'in_progress').length,
           unlocked: studentAssignments.filter(a => a.status === 'unlocked').length,
           locked: studentAssignments.filter(a => a.status === 'locked').length,
         };
