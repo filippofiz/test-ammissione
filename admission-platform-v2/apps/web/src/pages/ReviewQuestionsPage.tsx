@@ -2768,15 +2768,40 @@ export default function ReviewQuestionsPage() {
                               </div>
                             </div>
                             <div className="flex items-center gap-1">
-                              <span className={`text-xs px-2 py-1 rounded ${
-                                question.question_type === 'multiple_choice'
-                                  ? 'bg-green-100 text-green-700'
-                                  : question.question_type === 'open_ended'
-                                  ? 'bg-purple-100 text-purple-700'
-                                  : question.question_type === 'data_insights'
-                                  ? 'bg-blue-100 text-blue-700'
-                                  : 'bg-gray-100 text-gray-700'
-                              }`}>
+                              <span
+                                className={`text-xs px-2 py-1 rounded cursor-pointer hover:opacity-80 ${
+                                  question.question_type === 'multiple_choice'
+                                    ? 'bg-green-100 text-green-700'
+                                    : question.question_type === 'open_ended'
+                                    ? 'bg-purple-100 text-purple-700'
+                                    : question.question_type === 'data_insights'
+                                    ? 'bg-blue-100 text-blue-700'
+                                    : 'bg-gray-100 text-gray-700'
+                                }`}
+                                title="Click to change question type"
+                                onClick={async () => {
+                                  const types = ['multiple_choice', 'open_ended'] as const;
+                                  const currentIdx = types.indexOf(question.question_type as any);
+                                  const newType = currentIdx >= 0 ? types[(currentIdx + 1) % types.length] : types[0];
+
+                                  if (!confirm(`Change question type from "${question.question_type.replace('_', ' ')}" to "${newType.replace('_', ' ')}"?`)) return;
+
+                                  try {
+                                    const { error } = await supabase
+                                      .from('2V_questions')
+                                      .update({ question_type: newType })
+                                      .eq('id', question.id);
+                                    if (error) throw error;
+
+                                    setQuestions(prev => prev.map(q =>
+                                      q.id === question.id ? { ...q, question_type: newType } : q
+                                    ));
+                                  } catch (err) {
+                                    console.error('Error changing question type:', err);
+                                    alert('Failed to change question type');
+                                  }
+                                }}
+                              >
                                 {question.question_type === 'multiple_choice' ? 'Multiple Choice'
                                 : question.question_type === 'open_ended' ? 'Open Ended'
                                 : question.question_type === 'data_insights' ? 'Data Insights'

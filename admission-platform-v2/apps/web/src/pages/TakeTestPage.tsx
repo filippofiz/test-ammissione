@@ -740,9 +740,9 @@ export default function TakeTestPage() {
       return sections.length; // No adaptivity, use actual length
     }
 
-    const useMacroSectionAdaptivity = config?.section_order_mode?.includes('macro_sections');
-    if (!useMacroSectionAdaptivity) {
-      return sections.length; // Not macro_section mode, use actual length
+    const hasSectionAdaptivity = config?.section_adaptivity_config && Object.keys(config.section_adaptivity_config).length > 0;
+    if (!hasSectionAdaptivity) {
+      return sections.length; // No section adaptivity, use actual length
     }
 
     // Count base sections (each will get 1 adaptive section added)
@@ -2421,9 +2421,8 @@ export default function TakeTestPage() {
 
       // Apply section adaptivity filtering if configured
       if (configData.section_adaptivity_config && Object.keys(configData.section_adaptivity_config).length > 0) {
-        // For macro_section mode, use performance-based selection (initially only base sections)
-        const useMacroSectionAdaptivity = configData.section_order_mode?.includes('macro_sections');
-        sectionsToUse = filterSectionsWithAdaptivity(sectionsToUse, configData.section_adaptivity_config, useMacroSectionAdaptivity);
+        // Always use performance-based selection: initially only base sections, adaptive added later based on 65% threshold
+        sectionsToUse = filterSectionsWithAdaptivity(sectionsToUse, configData.section_adaptivity_config, true);
       }
 
       console.log('📑 [SECTIONS] Sections configured:', {
@@ -4222,12 +4221,11 @@ export default function TakeTestPage() {
     // Use override if provided (to avoid stale closure issues), otherwise use state
     const currentIndex = sectionIndexOverride !== undefined ? sectionIndexOverride : currentSectionIndex;
 
-    // MACRO SECTION ADAPTIVITY: Check if we just finished a base section and need to add adaptive section
-    const useMacroSectionAdaptivity = config?.section_order_mode?.includes('macro_sections') &&
-                                       config?.section_adaptivity_config &&
-                                       Object.keys(config.section_adaptivity_config).length > 0;
+    // SECTION ADAPTIVITY: Check if we just finished a base section and need to add adaptive section
+    const hasSectionAdaptivity = config?.section_adaptivity_config &&
+                                   Object.keys(config.section_adaptivity_config).length > 0;
 
-    if (useMacroSectionAdaptivity) {
+    if (hasSectionAdaptivity) {
       const currentSection = sections[currentIndex];
       const sectionConfig = config!.section_adaptivity_config![currentSection];
 
@@ -5202,13 +5200,12 @@ export default function TakeTestPage() {
     const nextSectionIndex = currentSectionIndex + 1;
     let nextSection = sections[nextSectionIndex];
 
-    // MACRO SECTION ADAPTIVITY: If current section is a base section,
+    // SECTION ADAPTIVITY: If current section is a base section,
     // predict which adaptive section will be added (based on current performance)
-    const useMacroSectionAdaptivity = config?.section_order_mode?.includes('macro_sections') &&
-                                       config?.section_adaptivity_config &&
-                                       Object.keys(config.section_adaptivity_config).length > 0;
+    const hasSectionAdaptivity = config?.section_adaptivity_config &&
+                                   Object.keys(config.section_adaptivity_config).length > 0;
 
-    if (useMacroSectionAdaptivity && config?.section_adaptivity_config?.[currentSection]?.type === 'base') {
+    if (hasSectionAdaptivity && config?.section_adaptivity_config?.[currentSection]?.type === 'base') {
       // Calculate performance to predict Easy vs Hard
       const currentSectionQuestions = selectedQuestions.filter(q => {
         const qSection = config?.section_order_mode?.includes('macro_sections') && q.macro_section
