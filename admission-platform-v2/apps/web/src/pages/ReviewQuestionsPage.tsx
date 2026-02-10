@@ -378,15 +378,33 @@ export default function ReviewQuestionsPage() {
     setLoadingQuestions(true);
     try {
       // Fetch questions where test_id matches OR additional_test_ids contains the test_id
-      const { data, error } = await supabase
-        .from('2V_questions')
-        .select('*')
-        .or(`test_id.eq.${testId},additional_test_ids.cs.["${testId}"]`)
-        .order('question_number');
+      // Use pagination to fetch all questions (Supabase default limit is 1000)
+      const PAGE_SIZE = 1000;
+      let allQuestions: any[] = [];
+      let page = 0;
+      let hasMore = true;
 
-      if (error) throw error;
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('2V_questions')
+          .select('*')
+          .or(`test_id.eq.${testId},additional_test_ids.cs.["${testId}"]`)
+          .order('question_number')
+          .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
-      const loadedQuestions = data || [];
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          allQuestions = [...allQuestions, ...data];
+          page++;
+          // If we got less than PAGE_SIZE, we've reached the end
+          hasMore = data.length === PAGE_SIZE;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      const loadedQuestions = allQuestions;
       setQuestions(loadedQuestions);
 
       // Extract passages from question data

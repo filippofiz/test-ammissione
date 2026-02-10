@@ -10,7 +10,8 @@ import TutorStudentsPage from './pages/TutorStudentsPage';
 import StudentProfilePage from './pages/StudentProfilePage';
 import AnalyticsDashboardPage from './pages/AnalyticsDashboardPage';
 import StudentTestsPage from './pages/StudentTestsPage';
-import TestResultsPage from './pages/TestResultsPage';
+// TestResultsPage and GMATAssessmentResultsPage replaced by UnifiedResultsPage
+import UnifiedResultsPage from './pages/UnifiedResultsPage';
 import TestManagementPage from './pages/TestManagementPage';
 import TestStructurePage from './pages/TestStructurePage';
 import ManageSectionOrderPage from './pages/ManageSectionOrderPage';
@@ -31,8 +32,9 @@ import GMATMaterialsManagementPage from './pages/GMATMaterialsManagementPage';
 import GMATMaterialPage from './pages/GMATMaterialPage';
 import GMATQuestionAllocationPage from './pages/GMATQuestionAllocationPage';
 import GMATConfigPage from './pages/GMATConfigPage';
-import GMATAssessmentResultsPage from './pages/GMATAssessmentResultsPage';
+// GMATAssessmentResultsPage: kept for rollback, replaced by UnifiedResultsPage
 import GMATTrainingTestPage from './pages/GMATTrainingTestPage';
+import GMATSectionAssessmentPage from './pages/GMATSectionAssessmentPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 function App() {
@@ -84,7 +86,7 @@ function App() {
           path="/student/test-results/:assignmentId"
           element={
             <ProtectedRoute requiredRoles={['STUDENT']}>
-              <TestResultsPage />
+              <UnifiedResultsPage />
             </ProtectedRoute>
           }
         />
@@ -105,10 +107,18 @@ function App() {
           }
         />
         <Route
+          path="/student/take-test/gmat-section-assessment/:section"
+          element={
+            <ProtectedRoute requiredRoles={['STUDENT']}>
+              <GMATSectionAssessmentPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/student/gmat-results/:assessmentId"
           element={
             <ProtectedRoute requiredRoles={['STUDENT']}>
-              <GMATAssessmentResultsPage />
+              <UnifiedResultsPage />
             </ProtectedRoute>
           }
         />
@@ -190,7 +200,15 @@ function App() {
           path="/tutor/test-results/:assignmentId"
           element={
             <ProtectedRoute requiredRoles={['TUTOR', 'ADMIN']}>
-              <TestResultsPage />
+              <UnifiedResultsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tutor/take-test/gmat-section-assessment/:section"
+          element={
+            <ProtectedRoute requiredRoles={['TUTOR', 'ADMIN']}>
+              <GMATSectionAssessmentPage />
             </ProtectedRoute>
           }
         />
@@ -198,7 +216,7 @@ function App() {
           path="/tutor/gmat-results/:assessmentId"
           element={
             <ProtectedRoute requiredRoles={['TUTOR', 'ADMIN']}>
-              <GMATAssessmentResultsPage />
+              <UnifiedResultsPage />
             </ProtectedRoute>
           }
         />
