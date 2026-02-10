@@ -33,6 +33,9 @@ import {
   faRobot,
   faMagic,
   faDollarSign,
+  faTrash,
+  faFlag,
+  faCopy,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import { supabase } from '../lib/supabase';
@@ -276,6 +279,32 @@ export default function GMATQuestionAllocationPage() {
   const [rejectedCount, setRejectedCount] = useState(0);
   const [questionPoolTestId, setQuestionPoolTestId] = useState<string | null>(null);
   const [exampleQuestionsUsed, setExampleQuestionsUsed] = useState<Array<{ question_data: any; difficulty: string }>>([]);
+
+  // Manual Question Inserter State
+  const [showManualInsertModal, setShowManualInsertModal] = useState(false);
+  const [manualQuestionSection, setManualQuestionSection] = useState<SectionName>('Quantitative Reasoning');
+  const [manualQuestionType, setManualQuestionType] = useState<'multiple_choice' | 'data_insights'>('multiple_choice');
+  const [manualQuestionDifficulty, setManualQuestionDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+  const [manualQuestionDIType, setManualQuestionDIType] = useState<DIType>('DS');
+  const [manualQuestionJsonMode, setManualQuestionJsonMode] = useState(false);
+  const [manualQuestionJson, setManualQuestionJson] = useState('');
+  const [manualQuestionText, setManualQuestionText] = useState('');
+  const [manualQuestionOptions, setManualQuestionOptions] = useState<Record<string, string>>({ a: '', b: '', c: '', d: '', e: '' });
+  const [manualQuestionCorrectAnswer, setManualQuestionCorrectAnswer] = useState('a');
+  const [savingManualQuestion, setSavingManualQuestion] = useState(false);
+  const [similarQuestions, setSimilarQuestions] = useState<Array<{ question: Question; similarity: number }>>([]);
+  const [checkingSimilarity, setCheckingSimilarity] = useState(false);
+  // Verbal Reasoning specific fields
+  const [manualQuestionVRType, setManualQuestionVRType] = useState<'critical_reasoning' | 'reading_comprehension'>('critical_reasoning');
+  const [manualQuestionPassage, setManualQuestionPassage] = useState('');
+
+  // Question Checker State
+  const [showQuestionChecker, setShowQuestionChecker] = useState(false);
+  const [checkerRunning, setCheckerRunning] = useState(false);
+  const [checkerProgress, setCheckerProgress] = useState(0);
+  const [duplicateGroups, setDuplicateGroups] = useState<Array<{ questions: Question[]; similarity: number }>>([]);
+  const [deletingQuestionId, setDeletingQuestionId] = useState<string | null>(null);
+  const [markingForReviewId, setMarkingForReviewId] = useState<string | null>(null);
 
   // Compute matching questions for generation preview (shows how many questions will be used as examples)
   const generationMatchingQuestions = useMemo(() => {
@@ -957,6 +986,563 @@ export default function GMATQuestionAllocationPage() {
       // All questions processed
       setShowValidationModal(false);
       setGeneratedQuestions([]);
+    }
+  }
+
+  // ============================================
+  // SIMILARITY & DUPLICATE DETECTION FUNCTIONS
+  // ============================================
+
+  // Calculate text similarity - handles LaTeX math expressions properly
+  function calculateSimilarity(text1: string, text2: string): number {
+    if (!text1 || !text2) return 0;
+
+    // Normalize LaTeX - extract meaningful content from math expressions
+    const normalizeLatex = (t: string) => {
+      let result = t;
+
+      // Replace display math $$...$$ and inline $...$, keeping content
+      result = result.replace(/\$\$([^$]+)\$\$/g, ' $1 ');
+      result = result.replace(/\$([^$]+)\$/g, ' $1 ');
+
+      // Extract fractions: \frac{1}{2} -> FRAC_1_2
+      result = result.replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, (_, n, d) => ` FRAC_${n}_${d} `);
+
+      // Extract exponents: ^{-3} -> EXP_-3, ^2 -> EXP_2
+      result = result.replace(/\^\{([^}]*)\}/g, (_, exp) => ` EXP_${exp} `);
+      result = result.replace(/\^(-?\d+)/g, (_, exp) => ` EXP_${exp} `);
+
+      // Extract subscripts: _{n} -> SUB_n
+      result = result.replace(/_\{([^}]*)\}/g, (_, sub) => ` SUB_${sub} `);
+      result = result.replace(/_(\d+)/g, (_, sub) => ` SUB_${sub} `);
+
+      // Extract square roots: \sqrt{x} -> SQRT_x
+      result = result.replace(/\\sqrt\{([^}]*)\}/g, (_, content) => ` SQRT_${content} `);
+
+      // Preserve operators as tokens
+      result = result.replace(/\\times/g, ' TIMES ');
+      result = result.replace(/\\div/g, ' DIV ');
+      result = result.replace(/\\pm/g, ' PLUSMINUS ');
+      result = result.replace(/\\cdot/g, ' DOT ');
+      result = result.replace(/\\leq/g, ' LEQ ');
+      result = result.replace(/\\geq/g, ' GEQ ');
+      result = result.replace(/\\neq/g, ' NEQ ');
+
+      // Keep displaystyle marker as it indicates math context
+      result = result.replace(/\\displaystyle/g, ' ');
+
+      // Remove formatting commands but keep important ones
+      result = result.replace(/\\left|\\right/g, '');
+      result = result.replace(/\\text\{([^}]*)\}/g, ' $1 ');
+      result = result.replace(/\\[a-zA-Z]+/g, ' ');
+
+      // Keep operators as meaningful tokens
+      result = result.replace(/\+/g, ' PLUS ');
+      result = result.replace(/-/g, ' MINUS ');
+      result = result.replace(/\*/g, ' MULT ');
+      result = result.replace(/\//g, ' DIVIDE ');
+      result = result.replace(/=/g, ' EQUALS ');
+
+      // Normalize brackets and braces
+      result = result.replace(/[{}]/g, '');
+      result = result.replace(/\(/g, ' LPAREN ');
+      result = result.replace(/\)/g, ' RPAREN ');
+      result = result.replace(/\[/g, ' LBRACKET ');
+      result = result.replace(/\]/g, ' RBRACKET ');
+
+      result = result.replace(/\s+/g, ' ').trim().toLowerCase();
+
+      return result;
+    };
+
+    const a = normalizeLatex(text1);
+    const b = normalizeLatex(text2);
+
+    // Exact match after normalization
+    if (a === b) return 1;
+    if (a.length === 0 || b.length === 0) return 0;
+
+    // Quick length check - very different lengths = likely not similar
+    const lenRatio = Math.min(a.length, b.length) / Math.max(a.length, b.length);
+    if (lenRatio < 0.3) return lenRatio * 0.2;
+
+    // Token-based comparison - split on whitespace only (operators are now tokenized)
+    const getTokens = (str: string): string[] => {
+      // Split on whitespace and punctuation that wasn't converted to tokens
+      const tokens = str.split(/[\s,;:.]+/).filter(t => t.length > 0);
+      return tokens;
+    };
+
+    const tokens1 = getTokens(a);
+    const tokens2 = getTokens(b);
+
+    if (tokens1.length === 0 || tokens2.length === 0) return 0;
+
+    // LCS (Longest Common Subsequence) - captures structural similarity
+    const lcs = (arr1: string[], arr2: string[]): number => {
+      const m = arr1.length;
+      const n = arr2.length;
+      const dp: number[][] = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+
+      for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+          if (arr1[i - 1] === arr2[j - 1]) {
+            dp[i][j] = dp[i - 1][j - 1] + 1;
+          } else {
+            dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+          }
+        }
+      }
+      return dp[m][n];
+    };
+
+    const lcsLength = lcs(tokens1, tokens2);
+    const lcsRatio = (2 * lcsLength) / (tokens1.length + tokens2.length);
+
+    // Jaccard similarity for unordered comparison
+    const set1 = new Set(tokens1);
+    const set2 = new Set(tokens2);
+    let intersection = 0;
+    set1.forEach(t => { if (set2.has(t)) intersection++; });
+    const union = set1.size + set2.size - intersection;
+    const jaccardRatio = union > 0 ? intersection / union : 0;
+
+    // Combine: LCS for structure (60%) + Jaccard for content overlap (40%)
+    return (lcsRatio * 0.6) + (jaccardRatio * 0.4);
+  }
+
+  // Extract comparable text from question - ONLY the core question text, not options
+  // This prevents false positives from standard answer choices
+  function getComparableText(question: Question): string {
+    const data = question.question_data || {};
+    let text = '';
+
+    // Primary question text fields (in order of priority)
+    if (data.question_text) text += data.question_text + ' ';
+    if (data.problem) text += data.problem + ' '; // DS questions
+    if (data.scenario) text += data.scenario + ' '; // TPA questions
+
+    // For DS questions, include statements as they are unique identifiers
+    if (data.di_type === 'DS') {
+      if (data.statement1) text += data.statement1 + ' ';
+      if (data.statement2) text += data.statement2 + ' ';
+    }
+
+    // For GI questions, include statement text
+    if (data.di_type === 'GI' && data.statement_text) {
+      text += data.statement_text + ' ';
+    }
+
+    // For Verbal questions with passages - use a truncated version to match structure
+    if (data.passage_text) {
+      // Only use first 200 chars of passage to identify similar passages
+      text += data.passage_text.substring(0, 200) + ' ';
+    }
+
+    return text;
+  }
+
+  // Get options text for secondary comparison
+  function getOptionsText(question: Question): string {
+    const data = question.question_data || {};
+    let text = '';
+
+    if (data.options && typeof data.options === 'object') {
+      Object.values(data.options).forEach(opt => {
+        if (typeof opt === 'string') text += opt + ' ';
+      });
+    }
+
+    return text;
+  }
+
+  // Check similarity of a new question against existing questions
+  async function checkQuestionSimilarity(questionText: string, options?: Record<string, string>) {
+    setCheckingSimilarity(true);
+    setSimilarQuestions([]);
+
+    try {
+      let newText = questionText;
+      if (options) {
+        Object.values(options).forEach(opt => {
+          if (opt) newText += ' ' + opt;
+        });
+      }
+
+      const similar: Array<{ question: Question; similarity: number }> = [];
+
+      for (const q of poolQuestions) {
+        const existingText = getComparableText(q);
+        const similarity = calculateSimilarity(newText, existingText);
+
+        if (similarity >= 0.5) { // 50% threshold
+          similar.push({ question: q, similarity });
+        }
+      }
+
+      // Sort by similarity descending
+      similar.sort((a, b) => b.similarity - a.similarity);
+      setSimilarQuestions(similar.slice(0, 10)); // Top 10 matches
+    } finally {
+      setCheckingSimilarity(false);
+    }
+  }
+
+  // Run full duplicate check on all questions - improved algorithm
+  async function runDuplicateCheck() {
+    setCheckerRunning(true);
+    setCheckerProgress(0);
+    setDuplicateGroups([]);
+
+    try {
+      // Group questions by section and type first to reduce false positives
+      const groupedQuestions: Record<string, Array<{ question: Question; text: string; optionsText: string }>> = {};
+
+      for (const q of poolQuestions) {
+        const key = `${q.section}_${q.question_type}_${q.question_data?.di_type || ''}`;
+        if (!groupedQuestions[key]) groupedQuestions[key] = [];
+        groupedQuestions[key].push({
+          question: q,
+          text: getComparableText(q),
+          optionsText: getOptionsText(q)
+        });
+      }
+
+      const allDuplicates: Array<{ questions: Question[]; similarity: number }> = [];
+      const processed = new Set<string>();
+      let totalProcessed = 0;
+      const totalQuestions = poolQuestions.length;
+
+      // Compare within each group
+      for (const [groupKey, questions] of Object.entries(groupedQuestions)) {
+        for (let i = 0; i < questions.length; i++) {
+          const q1 = questions[i];
+          if (processed.has(q1.question.id)) continue;
+
+          for (let j = i + 1; j < questions.length; j++) {
+            const q2 = questions[j];
+            if (processed.has(q2.question.id)) continue;
+
+            // Skip if texts are too different in length
+            const lenRatio = Math.min(q1.text.length, q2.text.length) / Math.max(q1.text.length, q2.text.length);
+            if (lenRatio < 0.5) continue;
+
+            // Calculate text similarity
+            const textSimilarity = calculateSimilarity(q1.text, q2.text);
+
+            // Only check options if text is very similar (80%+)
+            if (textSimilarity >= 0.8) {
+              const optionsSimilarity = q1.optionsText && q2.optionsText
+                ? calculateSimilarity(q1.optionsText, q2.optionsText)
+                : 0;
+
+              // Weighted combined score: 70% text + 30% options
+              const combinedScore = (textSimilarity * 0.7) + (optionsSimilarity * 0.3);
+
+              // Only flag as duplicate if combined score >= 75%
+              if (combinedScore >= 0.75) {
+                allDuplicates.push({
+                  questions: [q1.question, q2.question],
+                  similarity: combinedScore
+                });
+                processed.add(q2.question.id);
+              }
+            }
+          }
+
+          totalProcessed++;
+          if (totalProcessed % 50 === 0) {
+            setCheckerProgress(Math.round((totalProcessed / totalQuestions) * 100));
+            await new Promise(resolve => setTimeout(resolve, 0));
+          }
+        }
+      }
+
+      // Sort by similarity descending
+      allDuplicates.sort((a, b) => b.similarity - a.similarity);
+      setDuplicateGroups(allDuplicates);
+      setCheckerProgress(100);
+    } finally {
+      setCheckerRunning(false);
+    }
+  }
+
+  // Mark question for review
+  async function markQuestionForReview(questionId: string) {
+    setMarkingForReviewId(questionId);
+    try {
+      const { error } = await supabase
+        .from('2V_questions')
+        .update({
+          Questions_toReview: {
+            flagged_at: new Date().toISOString(),
+            reason: 'Potential duplicate - needs review',
+            flagged_by: 'duplicate_checker'
+          }
+        })
+        .eq('id', questionId);
+
+      if (error) throw error;
+
+      // Update local state
+      setPoolQuestions(prev => prev.map(q =>
+        q.id === questionId
+          ? { ...q, Questions_toReview: { flagged_at: new Date().toISOString(), reason: 'Potential duplicate' } }
+          : q
+      ));
+    } catch (err) {
+      console.error('Error marking question for review:', err);
+      setError('Failed to mark question for review');
+    } finally {
+      setMarkingForReviewId(null);
+    }
+  }
+
+  // Delete question
+  async function deleteQuestion(questionId: string) {
+    // Check if question is allocated anywhere
+    const allocations = usedQuestionIds.get(questionId);
+    const isAllocated = allocations && allocations.length > 0;
+
+    let confirmMessage = 'Are you sure you want to delete this question? This action cannot be undone.';
+    if (isAllocated) {
+      const allocationDetails = allocations.map(a => `• ${a.templateTitle} (${a.cycle})`).join('\n');
+      confirmMessage = `⚠️ WARNING: This question is currently allocated in:\n\n${allocationDetails}\n\nDeleting it will remove it from all allocations. Continue?`;
+    }
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    setDeletingQuestionId(questionId);
+    try {
+      // If question is allocated, remove it from all templates
+      if (isAllocated) {
+        // Group allocations by template
+        const templateUpdates = new Map<string, { template: LessonMaterial; cyclesToUpdate: GmatCycle[] }>();
+
+        for (const alloc of allocations) {
+          const template = templates.find(t => t.id === alloc.templateId);
+          if (template) {
+            if (!templateUpdates.has(alloc.templateId)) {
+              templateUpdates.set(alloc.templateId, { template, cyclesToUpdate: [] });
+            }
+            templateUpdates.get(alloc.templateId)!.cyclesToUpdate.push(alloc.cycle);
+          }
+        }
+
+        // Update each affected template
+        for (const [templateId, { template, cyclesToUpdate }] of templateUpdates) {
+          const currentAllocation = template.question_allocation as QuestionAllocation | null;
+          if (currentAllocation?.by_cycle) {
+            const updatedAllocation: QuestionAllocation = {
+              by_cycle: { ...currentAllocation.by_cycle }
+            };
+
+            // Remove question from each affected cycle
+            for (const cycle of cyclesToUpdate) {
+              const cycleAlloc = updatedAllocation.by_cycle[cycle];
+              if (cycleAlloc) {
+                updatedAllocation.by_cycle[cycle] = {
+                  ...cycleAlloc,
+                  allocated_questions: cycleAlloc.allocated_questions.filter(id => id !== questionId)
+                };
+              }
+            }
+
+            // Save to database
+            const { error: updateError } = await supabase
+              .from('2V_lesson_materials')
+              .update({ question_allocation: updatedAllocation as any })
+              .eq('id', templateId);
+
+            if (updateError) {
+              console.error(`Failed to update template ${templateId}:`, updateError);
+            }
+          }
+        }
+
+        // Update local templates state
+        setTemplates(prev => prev.map(t => {
+          const update = templateUpdates.get(t.id);
+          if (!update) return t;
+
+          const currentAllocation = t.question_allocation as QuestionAllocation | null;
+          if (!currentAllocation?.by_cycle) return t;
+
+          const updatedAllocation: QuestionAllocation = {
+            by_cycle: { ...currentAllocation.by_cycle }
+          };
+
+          for (const cycle of update.cyclesToUpdate) {
+            const cycleAlloc = updatedAllocation.by_cycle[cycle];
+            if (cycleAlloc) {
+              updatedAllocation.by_cycle[cycle] = {
+                ...cycleAlloc,
+                allocated_questions: cycleAlloc.allocated_questions.filter(id => id !== questionId)
+              };
+            }
+          }
+
+          return { ...t, question_allocation: updatedAllocation };
+        }));
+
+        // Update cycle allocations for current template
+        setCycleAllocations(prev => ({
+          Foundation: new Set([...prev.Foundation].filter(id => id !== questionId)),
+          Development: new Set([...prev.Development].filter(id => id !== questionId)),
+          Excellence: new Set([...prev.Excellence].filter(id => id !== questionId)),
+        }));
+
+        // Update usedQuestionIds
+        setUsedQuestionIds(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(questionId);
+          return newMap;
+        });
+      }
+
+      // Delete the question from database
+      const { error } = await supabase
+        .from('2V_questions')
+        .delete()
+        .eq('id', questionId);
+
+      if (error) throw error;
+
+      // Update local state
+      setPoolQuestions(prev => prev.filter(q => q.id !== questionId));
+
+      // Remove from duplicate groups
+      setDuplicateGroups(prev => prev.map(group => ({
+        ...group,
+        questions: group.questions.filter(q => q.id !== questionId)
+      })).filter(group => group.questions.length > 1));
+
+    } catch (err) {
+      console.error('Error deleting question:', err);
+      setError('Failed to delete question');
+    } finally {
+      setDeletingQuestionId(null);
+    }
+  }
+
+  // Save manually inserted question
+  async function saveManualQuestion() {
+    if (!questionPoolTestId) {
+      setError('Question pool not found. Cannot save question.');
+      return;
+    }
+
+    setSavingManualQuestion(true);
+    try {
+      let questionData: any;
+      let answers: any;
+
+      if (manualQuestionJsonMode) {
+        // Parse JSON mode
+        const parsed = JSON.parse(manualQuestionJson);
+        questionData = parsed.question_data || parsed;
+        answers = parsed.answers || { correct_answer: manualQuestionCorrectAnswer };
+      } else {
+        // Form mode - handle all question types
+        if (manualQuestionType === 'multiple_choice') {
+          // Build question data based on section
+          if (manualQuestionSection === 'Verbal Reasoning') {
+            // Verbal Reasoning questions have passage or argument
+            const categories = manualQuestionVRType === 'critical_reasoning'
+              ? ['Critical Reasoning']
+              : ['Reading Comprehension'];
+
+            questionData = {
+              question_text: manualQuestionText,
+              options: manualQuestionOptions,
+              categories,
+              questionSubtype: manualQuestionVRType === 'critical_reasoning' ? 'critical-reasoning' : 'reading-comprehension',
+            };
+
+            // Add passage for RC or argument for CR
+            if (manualQuestionVRType === 'reading_comprehension' && manualQuestionPassage) {
+              questionData.passage_text = manualQuestionPassage;
+              questionData.passage_id = `RC-MANUAL-${Date.now()}`;
+            } else if (manualQuestionVRType === 'critical_reasoning' && manualQuestionPassage) {
+              questionData.passage_text = manualQuestionPassage;
+              questionData.passage_id = `CR-STIMULUS-MANUAL-${Date.now()}`;
+            }
+          } else {
+            // Quantitative Reasoning - standard multiple choice
+            questionData = {
+              question_text: manualQuestionText,
+              options: manualQuestionOptions,
+              categories: [],
+            };
+          }
+          answers = {
+            correct_answer: manualQuestionCorrectAnswer,
+            wrong_answers: ['a', 'b', 'c', 'd', 'e'].filter(x => x !== manualQuestionCorrectAnswer)
+          };
+        } else {
+          // Data Insights - use JSON mode for complex types
+          setError('Please use JSON mode for Data Insights questions. The structure varies by DI type.');
+          setSavingManualQuestion(false);
+          return;
+        }
+      }
+
+      // Get next question number
+      const maxQuestionNumber = poolQuestions.reduce((max, q) => Math.max(max, q.question_number), 0);
+      const nextQuestionNumber = maxQuestionNumber + 1;
+
+      // Determine section name
+      let sectionName = manualQuestionSection;
+      if (manualQuestionType === 'data_insights') {
+        sectionName = 'Data Insights';
+      }
+
+      // Generate question ID
+      const prefix = sectionName === 'Quantitative Reasoning' ? 'QR' :
+                     sectionName === 'Verbal Reasoning' ? 'VR' : 'DI';
+      questionData.gmat_question_id = `${prefix}-MANUAL-${Date.now()}`;
+
+      // Insert question
+      const { data, error } = await supabase
+        .from('2V_questions')
+        .insert({
+          test_id: questionPoolTestId,
+          question_number: nextQuestionNumber,
+          question_type: manualQuestionType,
+          section: sectionName,
+          difficulty: manualQuestionDifficulty,
+          question_data: questionData,
+          answers: answers,
+          is_active: true,
+          test_type: 'GMAT',
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Add to local state
+      if (data) {
+        setPoolQuestions(prev => [...prev, data as Question]);
+      }
+
+      // Reset form
+      setShowManualInsertModal(false);
+      setManualQuestionText('');
+      setManualQuestionPassage('');
+      setManualQuestionOptions({ a: '', b: '', c: '', d: '', e: '' });
+      setManualQuestionCorrectAnswer('a');
+      setManualQuestionJson('');
+      setSimilarQuestions([]);
+
+      alert('Question saved successfully!');
+    } catch (err) {
+      console.error('Error saving manual question:', err);
+      setError(`Failed to save question: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setSavingManualQuestion(false);
     }
   }
 
@@ -1885,6 +2471,24 @@ export default function GMATQuestionAllocationPage() {
                       Generate with AI
                     </button>
                   )}
+
+                  {/* Manual Insert Button */}
+                  <button
+                    onClick={() => setShowManualInsertModal(true)}
+                    className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2"
+                  >
+                    <FontAwesomeIcon icon={faPlus} />
+                    Manual Insert
+                  </button>
+
+                  {/* Question Checker Button */}
+                  <button
+                    onClick={() => setShowQuestionChecker(true)}
+                    className="px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2"
+                  >
+                    <FontAwesomeIcon icon={faCopy} />
+                    Duplicate Checker
+                  </button>
                 </div>
 
                 {/* Filters */}
@@ -3063,6 +3667,667 @@ export default function GMATQuestionAllocationPage() {
               >
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Question Insert Modal */}
+      {showManualInsertModal && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => !savingManualQuestion && setShowManualInsertModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[95vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="p-4 border-b bg-gradient-to-r from-green-500 to-emerald-600 rounded-t-2xl flex-shrink-0">
+              <div className="flex items-center justify-between text-white">
+                <div className="flex items-center gap-3">
+                  <FontAwesomeIcon icon={faPlus} className="text-2xl" />
+                  <div>
+                    <h3 className="font-bold text-xl">Manual Question Insert</h3>
+                    <p className="text-green-100 text-sm">Add a new question to the GMAT pool</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowManualInsertModal(false)}
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <FontAwesomeIcon icon={faTimes} />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="grid grid-cols-2 gap-6">
+                {/* Left Column - Form Fields */}
+                <div className="space-y-4">
+                  {/* Section Selector */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Section</label>
+                    <div className="flex gap-2">
+                      {(Object.keys(GMAT_STRUCTURE) as SectionName[]).map(section => (
+                        <button
+                          key={section}
+                          onClick={() => {
+                            setManualQuestionSection(section);
+                            if (section === 'Data Insights') {
+                              setManualQuestionType('data_insights');
+                            } else {
+                              setManualQuestionType('multiple_choice');
+                            }
+                          }}
+                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                            manualQuestionSection === section
+                              ? 'bg-brand-dark text-white'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                        >
+                          {GMAT_STRUCTURE[section].code}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Question Type */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Question Type</label>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setManualQuestionType('multiple_choice')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                          manualQuestionType === 'multiple_choice'
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        Multiple Choice
+                      </button>
+                      <button
+                        onClick={() => setManualQuestionType('data_insights')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                          manualQuestionType === 'data_insights'
+                            ? 'bg-purple-500 text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        Data Insights
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* DI Type (only for Data Insights) */}
+                  {manualQuestionType === 'data_insights' && (
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">DI Type</label>
+                      <div className="flex flex-wrap gap-2">
+                        {(['DS', 'GI', 'TA', 'TPA', 'MSR'] as DIType[]).map(diType => (
+                          <button
+                            key={diType}
+                            onClick={() => setManualQuestionDIType(diType)}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                              manualQuestionDIType === diType
+                                ? 'bg-purple-500 text-white'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                          >
+                            {diType}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Note: Use JSON mode for Data Insights questions - structures vary by type.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* VR Type (only for Verbal Reasoning) */}
+                  {manualQuestionSection === 'Verbal Reasoning' && manualQuestionType === 'multiple_choice' && (
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Verbal Type</label>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setManualQuestionVRType('critical_reasoning')}
+                          className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                            manualQuestionVRType === 'critical_reasoning'
+                              ? 'bg-green-500 text-white'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                        >
+                          Critical Reasoning
+                        </button>
+                        <button
+                          onClick={() => setManualQuestionVRType('reading_comprehension')}
+                          className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                            manualQuestionVRType === 'reading_comprehension'
+                              ? 'bg-green-500 text-white'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                        >
+                          Reading Comprehension
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Difficulty */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Difficulty</label>
+                    <div className="flex gap-2">
+                      {(['easy', 'medium', 'hard'] as const).map(diff => (
+                        <button
+                          key={diff}
+                          onClick={() => setManualQuestionDifficulty(diff)}
+                          className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
+                            manualQuestionDifficulty === diff
+                              ? diff === 'easy'
+                                ? 'bg-green-500 text-white'
+                                : diff === 'medium'
+                                ? 'bg-yellow-500 text-white'
+                                : 'bg-red-500 text-white'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          {diff.charAt(0).toUpperCase() + diff.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* JSON Mode Toggle */}
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <span className="text-sm font-medium text-gray-700">JSON Mode</span>
+                    <button
+                      onClick={() => setManualQuestionJsonMode(!manualQuestionJsonMode)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        manualQuestionJsonMode ? 'bg-green-500' : 'bg-gray-300'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          manualQuestionJsonMode ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Form Fields or JSON Editor */}
+                  {manualQuestionJsonMode ? (
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Question Data JSON
+                      </label>
+                      <textarea
+                        value={manualQuestionJson}
+                        onChange={(e) => setManualQuestionJson(e.target.value)}
+                        placeholder={manualQuestionType === 'data_insights' && manualQuestionDIType === 'DS' ? `{
+  "di_type": "DS",
+  "problem": "Your problem statement here...",
+  "statement1": "Statement (1)...",
+  "statement2": "Statement (2)...",
+  "categories": ["Data Sufficiency"],
+  "answer_choices": {
+    "A": "Statement (1) ALONE is sufficient...",
+    "B": "Statement (2) ALONE is sufficient...",
+    "C": "BOTH statements TOGETHER are sufficient...",
+    "D": "EACH statement ALONE is sufficient.",
+    "E": "Statements (1) and (2) TOGETHER are NOT sufficient."
+  },
+  "correct_answer": "A",
+  "answers": { "correct_answer": ["A"] }
+}` : `{
+  "question_text": "Your question here...",
+  "options": {
+    "a": "Option A",
+    "b": "Option B",
+    "c": "Option C",
+    "d": "Option D",
+    "e": "Option E"
+  },
+  "answers": { "correct_answer": "a" }
+}`}
+                        className="w-full h-64 font-mono text-sm p-4 border rounded-lg bg-gray-50"
+                        spellCheck={false}
+                      />
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Passage/Argument for Verbal Reasoning */}
+                      {manualQuestionSection === 'Verbal Reasoning' && (
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            {manualQuestionVRType === 'critical_reasoning' ? 'Argument/Stimulus' : 'Passage'}
+                            <span className="text-gray-400 font-normal ml-1">(optional)</span>
+                          </label>
+                          <textarea
+                            value={manualQuestionPassage}
+                            onChange={(e) => setManualQuestionPassage(e.target.value)}
+                            placeholder={manualQuestionVRType === 'critical_reasoning'
+                              ? "Enter the argument or stimulus that the question refers to..."
+                              : "Enter the reading passage that the question refers to..."}
+                            className="w-full h-32 p-3 border rounded-lg text-sm"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            {manualQuestionVRType === 'critical_reasoning'
+                              ? "The argument or scenario that the question asks about."
+                              : "The reading passage that contains the information for answering the question."}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Question Text */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Question Text
+                        </label>
+                        <textarea
+                          value={manualQuestionText}
+                          onChange={(e) => setManualQuestionText(e.target.value)}
+                          placeholder={manualQuestionSection === 'Verbal Reasoning'
+                            ? "Enter the question (e.g., 'Which of the following most weakens the argument above?')"
+                            : "Enter the question text... (supports LaTeX with $...$)"}
+                          className="w-full h-24 p-3 border rounded-lg text-sm"
+                        />
+                      </div>
+
+                      {/* Options */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Answer Options
+                        </label>
+                        <div className="space-y-2">
+                          {['a', 'b', 'c', 'd', 'e'].map(opt => (
+                            <div key={opt} className="flex items-center gap-2">
+                              <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                                manualQuestionCorrectAnswer === opt
+                                  ? 'bg-green-500 text-white'
+                                  : 'bg-gray-200 text-gray-600'
+                              }`}>
+                                {opt.toUpperCase()}
+                              </span>
+                              <input
+                                type="text"
+                                value={manualQuestionOptions[opt] || ''}
+                                onChange={(e) => setManualQuestionOptions(prev => ({
+                                  ...prev,
+                                  [opt]: e.target.value
+                                }))}
+                                placeholder={`Option ${opt.toUpperCase()}`}
+                                className="flex-1 px-3 py-2 border rounded-lg text-sm"
+                              />
+                              <button
+                                onClick={() => setManualQuestionCorrectAnswer(opt)}
+                                className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                                  manualQuestionCorrectAnswer === opt
+                                    ? 'bg-green-500 text-white'
+                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                }`}
+                              >
+                                {manualQuestionCorrectAnswer === opt ? 'Correct' : 'Set Correct'}
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Right Column - Similarity Check */}
+                <div className="space-y-4">
+                  <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
+                    <h4 className="font-semibold text-orange-800 flex items-center gap-2 mb-3">
+                      <FontAwesomeIcon icon={faCopy} />
+                      Similarity Check
+                    </h4>
+                    <p className="text-sm text-orange-700 mb-3">
+                      Check if similar questions already exist in the pool before saving.
+                    </p>
+                    <button
+                      onClick={async () => {
+                        setCheckingSimilarity(true);
+                        setSimilarQuestions([]);
+
+                        const textToCheck = manualQuestionJsonMode
+                          ? (() => {
+                              try {
+                                const parsed = JSON.parse(manualQuestionJson);
+                                return parsed.question_text || parsed.problem || '';
+                              } catch {
+                                return '';
+                              }
+                            })()
+                          : manualQuestionText;
+
+                        if (!textToCheck.trim()) {
+                          setCheckingSimilarity(false);
+                          return;
+                        }
+
+                        // Check against all pool questions
+                        const similar: Array<{ question: Question; similarity: number }> = [];
+                        for (const q of poolQuestions) {
+                          const existingText = q.question_data?.question_text ||
+                                               q.question_data?.problem ||
+                                               '';
+                          if (!existingText) continue;
+
+                          const similarity = calculateSimilarity(textToCheck, existingText);
+                          if (similarity >= 0.5) {
+                            similar.push({ question: q, similarity });
+                          }
+                        }
+
+                        // Sort by similarity descending
+                        similar.sort((a, b) => b.similarity - a.similarity);
+                        setSimilarQuestions(similar.slice(0, 10)); // Show top 10
+                        setCheckingSimilarity(false);
+                      }}
+                      disabled={checkingSimilarity}
+                      className="w-full py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {checkingSimilarity ? (
+                        <>
+                          <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+                          Checking...
+                        </>
+                      ) : (
+                        <>
+                          <FontAwesomeIcon icon={faSearch} />
+                          Check for Similar Questions
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Similar Questions Results */}
+                  {similarQuestions.length > 0 && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                      <h4 className="font-semibold text-yellow-800 mb-3 flex items-center gap-2">
+                        <FontAwesomeIcon icon={faExclamationTriangle} />
+                        {similarQuestions.length} Similar Question{similarQuestions.length > 1 ? 's' : ''} Found
+                      </h4>
+                      <div className="space-y-3 max-h-80 overflow-y-auto">
+                        {similarQuestions.map((item, idx) => (
+                          <div key={item.question.id} className="bg-white p-3 rounded-lg border border-yellow-200">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium text-gray-600">
+                                Q{item.question.question_number}
+                              </span>
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                                item.similarity >= 0.8 ? 'bg-red-100 text-red-700' :
+                                item.similarity >= 0.6 ? 'bg-orange-100 text-orange-700' :
+                                'bg-yellow-100 text-yellow-700'
+                              }`}>
+                                {Math.round(item.similarity * 100)}% similar
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-700 line-clamp-3">
+                              {item.question.question_data?.question_text ||
+                               item.question.question_data?.problem ||
+                               'No text available'}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {similarQuestions.length === 0 && !checkingSimilarity && (
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-center">
+                      <FontAwesomeIcon icon={faCheckCircle} className="text-3xl text-gray-300 mb-2" />
+                      <p className="text-sm text-gray-500">
+                        Run similarity check to find potential duplicates
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t flex items-center justify-between flex-shrink-0">
+              <button
+                onClick={() => {
+                  setShowManualInsertModal(false);
+                  setManualQuestionText('');
+                  setManualQuestionPassage('');
+                  setManualQuestionJson('');
+                  setManualQuestionOptions({ a: '', b: '', c: '', d: '', e: '' });
+                  setSimilarQuestions([]);
+                }}
+                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveManualQuestion}
+                disabled={savingManualQuestion}
+                className="px-6 py-2 bg-brand-green text-white rounded-lg font-semibold hover:bg-green-600 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {savingManualQuestion ? (
+                  <>
+                    <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <FontAwesomeIcon icon={faSave} />
+                    Save Question
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Duplicate Question Checker Modal */}
+      {showQuestionChecker && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => !checkerRunning && setShowQuestionChecker(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[95vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="p-4 border-b bg-gradient-to-r from-orange-500 to-red-500 rounded-t-2xl flex-shrink-0">
+              <div className="flex items-center justify-between text-white">
+                <div className="flex items-center gap-3">
+                  <FontAwesomeIcon icon={faCopy} className="text-2xl" />
+                  <div>
+                    <h3 className="font-bold text-xl">Duplicate Question Checker</h3>
+                    <p className="text-orange-100 text-sm">Scan all questions for potential duplicates</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowQuestionChecker(false)}
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <FontAwesomeIcon icon={faTimes} />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {/* Run Check Panel */}
+              {!checkerRunning && duplicateGroups.length === 0 && (
+                <div className="text-center py-12">
+                  <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <FontAwesomeIcon icon={faCopy} className="text-4xl text-orange-500" />
+                  </div>
+                  <h3 className="text-xl font-bold text-brand-dark mb-2">
+                    Ready to Scan for Duplicates
+                  </h3>
+                  <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                    This will compare all {poolQuestions.length} questions in the pool to find potential duplicates
+                    (50%+ similarity in question text and options).
+                  </p>
+                  <button
+                    onClick={runDuplicateCheck}
+                    className="px-8 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all flex items-center gap-2 mx-auto"
+                  >
+                    <FontAwesomeIcon icon={faSearch} />
+                    Start Duplicate Scan
+                  </button>
+                </div>
+              )}
+
+              {/* Progress */}
+              {checkerRunning && (
+                <div className="text-center py-12">
+                  <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <FontAwesomeIcon icon={faSpinner} className="text-4xl text-orange-500 animate-spin" />
+                  </div>
+                  <h3 className="text-xl font-bold text-brand-dark mb-4">
+                    Scanning Questions...
+                  </h3>
+                  <div className="w-64 mx-auto">
+                    <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-orange-500 to-red-500 transition-all"
+                        style={{ width: `${checkerProgress}%` }}
+                      />
+                    </div>
+                    <p className="text-sm text-gray-600 mt-2">{checkerProgress}% complete</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Results */}
+              {!checkerRunning && duplicateGroups.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-brand-dark">
+                      Found {duplicateGroups.length} Potential Duplicate Pair{duplicateGroups.length > 1 ? 's' : ''}
+                    </h3>
+                    <button
+                      onClick={() => {
+                        setDuplicateGroups([]);
+                        setCheckerProgress(0);
+                      }}
+                      className="text-sm text-gray-500 hover:text-gray-700"
+                    >
+                      Clear Results
+                    </button>
+                  </div>
+
+                  {duplicateGroups.map((group, groupIdx) => (
+                    <div key={groupIdx} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-bold">
+                          {Math.round(group.similarity * 100)}% Similar
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          {group.questions.length} questions
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        {group.questions.map((question) => {
+                          const questionAllocations = usedQuestionIds.get(question.id);
+                          const isAllocated = questionAllocations && questionAllocations.length > 0;
+                          return (
+                          <div key={question.id} className={`bg-white p-4 rounded-lg border ${isAllocated ? 'border-green-300 ring-1 ring-green-200' : ''}`}>
+                            {/* Question Header */}
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-bold text-brand-dark">Q{question.question_number}</span>
+                                {isAllocated && (
+                                  <span
+                                    className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium cursor-help"
+                                    title={`Allocated in: ${questionAllocations.map(a => `${a.templateTitle} (${a.cycle})`).join(', ')}`}
+                                  >
+                                    <FontAwesomeIcon icon={faCheckCircle} className="mr-1" />
+                                    Allocated ({questionAllocations.length})
+                                  </span>
+                                )}
+                                {question.difficulty && (
+                                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${DIFFICULTY_COLORS[question.difficulty]?.bg} ${DIFFICULTY_COLORS[question.difficulty]?.text}`}>
+                                    {question.difficulty}
+                                  </span>
+                                )}
+                                {question.question_data?.di_type && (
+                                  <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                                    {question.question_data.di_type}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-xs text-gray-400">{question.section}</span>
+                            </div>
+
+                            {/* Question Content with MathJax */}
+                            <div className="text-sm text-gray-700 mb-3 max-h-32 overflow-y-auto prose prose-sm">
+                              <MathJaxRenderer>
+                                {question.question_data?.question_text ||
+                                 question.question_data?.problem ||
+                                 question.question_data?.scenario ||
+                                 'No text available'}
+                              </MathJaxRenderer>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex items-center gap-2 pt-3 border-t">
+                              <button
+                                onClick={() => setPreviewingQuestion(question)}
+                                className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-200 transition-colors flex items-center gap-1"
+                              >
+                                <FontAwesomeIcon icon={faEye} />
+                                Preview
+                              </button>
+                              <button
+                                onClick={() => markQuestionForReview(question.id)}
+                                disabled={markingForReviewId === question.id}
+                                className="px-3 py-1.5 bg-yellow-100 text-yellow-700 rounded-lg text-sm font-medium hover:bg-yellow-200 transition-colors disabled:opacity-50 flex items-center gap-1"
+                              >
+                                {markingForReviewId === question.id ? (
+                                  <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+                                ) : (
+                                  <FontAwesomeIcon icon={faFlag} />
+                                )}
+                                Review
+                              </button>
+                              <button
+                                onClick={() => deleteQuestion(question.id)}
+                                disabled={deletingQuestionId === question.id}
+                                className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 transition-colors disabled:opacity-50 flex items-center gap-1"
+                              >
+                                {deletingQuestionId === question.id ? (
+                                  <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+                                ) : (
+                                  <FontAwesomeIcon icon={faTrash} />
+                                )}
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        );})}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* No Duplicates Found */}
+              {!checkerRunning && duplicateGroups.length === 0 && checkerProgress > 0 && (
+                <div className="text-center py-12">
+                  <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <FontAwesomeIcon icon={faCheckCircle} className="text-4xl text-green-500" />
+                  </div>
+                  <h3 className="text-xl font-bold text-brand-dark mb-2">
+                    No Duplicates Found
+                  </h3>
+                  <p className="text-gray-600">
+                    All questions in the pool appear to be unique.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

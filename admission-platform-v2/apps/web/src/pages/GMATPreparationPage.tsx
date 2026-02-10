@@ -484,8 +484,8 @@ export default function GMATPreparationPage() {
 
       {/* Main Layout: Sidebar + Content */}
       <div className="flex flex-col lg:flex-row flex-1 min-h-0">
-        {/* Sidebar - 1/3 width on desktop, full width on mobile */}
-        <aside className="w-full lg:w-1/3 lg:max-w-md bg-white border-b lg:border-b-0 lg:border-r border-gray-200 overflow-y-auto">
+        {/* Sidebar - narrower on laptop screens, slightly wider on large screens */}
+        <aside className="w-full lg:w-72 xl:w-80 2xl:w-96 flex-shrink-0 bg-white border-b lg:border-b-0 lg:border-r border-gray-200 overflow-y-auto">
           <GMATSidebar
             studentId={studentId}
             studentInfo={studentInfo}
