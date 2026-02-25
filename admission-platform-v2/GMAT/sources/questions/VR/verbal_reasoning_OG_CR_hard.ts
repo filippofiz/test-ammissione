@@ -114,11 +114,11 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "Which of the following, if true, most seriously weakens the argument?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "Increasing the cost of disposing of an appliance properly increases the incentive to dispose of it improperly.",
+        b: "The fee provides manufacturers with no incentive to produce appliances that are more durable.",
+        c: "For people who have bought new appliances recently, the salvage fee would not need to be paid for a number of years.",
+        d: "People who sell their used, working appliances to others would not need to pay the salvage fee.",
+        e: "Many nonfunctioning appliances that are currently discarded could be repaired at relatively little expense."
       },
       image_url: null,
       image_options: null,
@@ -139,11 +139,11 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "Which of the following, if true, provides the government with the strongest grounds to doubt that if followed, the politicians' recommendation will achieve its aim?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "Several of the politicians now recommending the pundra be allowed to become weak made that same recommendation before each of the last two periods of currency weakness.",
+        b: "After several decades of operating well below peak capacity, Changir's manufacturing sector is now operating at near-peak levels.",
+        c: "The economy of a country experiencing a rise in exports will become healthier only if the country's currency is strong or the rise in exports is significant.",
+        d: "Those countries with manufactured products competing with Changir's on the world market all currently have stable currencies.",
+        e: "A sharp improvement in the efficiency of Changir's manufacturing plants would make Changir's products a bargain in world markets even without any weakening of the pundra relative to other currencies."
       },
       image_url: null,
       image_options: null,
@@ -164,11 +164,11 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "Which of the following, if true, most seriously weakens the argument?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "At the two incinerators at which leaks were reported, staff had had only cursory training on the proper procedures for incinerating chemical waste.",
+        b: "Other means of disposing of chemical waste, such as chemical neutralization processes, have not been proven safer than incineration.",
+        c: "The capacity of existing incinerators is sufficient to allow for increased incineration of chemical waste without any need for new incinerators.",
+        d: "The frequency of reports of unexpected releases of chemical agents at newly built incinerators is about the same as the frequency at older incinerators.",
+        e: "In only three of the reported incidents of unexpected chemical leaks did the releases extend outside the property on which the incinerators were located."
       },
       image_url: null,
       image_options: null,
@@ -189,11 +189,11 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "The two sections in boldface play which of the following roles in the public health expert's argument?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "The first is a conclusion for which support is provided, but it is not the argument's main conclusion; the second is an unsupported premise supporting the argument's main conclusion.",
+        b: "The first is a premise supporting the only explicit conclusion; so is the second.",
+        c: "The first is the argument's main conclusion; the second supports that conclusion and is itself a conclusion for which support is provided.",
+        d: "The first is a premise supporting the argument's only conclusion; the second is that conclusion.",
+        e: "The first is the argument's only explicit conclusion; the second is a premise supporting that conclusion."
       },
       image_url: null,
       image_options: null,
@@ -214,11 +214,11 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "Which of the following most logically completes the argument?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "with the closer spacing of the rows, the growing corn plants will quickly form a dense canopy of leaves, which by shading the ground will minimize the need for costly weed control and irrigation",
+        b: "with the closer spacing of the rows, corn plants will be forced to grow taller because of increased competition for sunlight from neighboring corn plants",
+        c: "with the larger number of plants growing per acre, more fertilizer will be required",
+        d: "with the spacing between rows cut by half, the number of plants grown per acre will almost double",
+        e: "with the closer spacing of the rows, the acreage on which corn is planted will be utilized much more intensively than it was before, requiring more frequent fallow years in which corn fields are left unplanted"
       },
       image_url: null,
       image_options: null,
@@ -239,18 +239,18 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "Which of the following, if true, most seriously undermines the explanation described above?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "During the 1980s a growing percentage of college graduates, unable to find jobs requiring a college degree, took unskilled jobs.",
+        b: "The average age of all employees increased slightly during the 1980s.",
+        c: "The unemployment rate changed very little throughout most of the 1980s.",
+        d: "From 1980 to 1990, the difference in average income between employees with advanced degrees and those with bachelor's degrees also increased.",
+        e: "During the 1980s there were some employees with no college degree who earned incomes comparable to the top incomes earned by employees with a college degree."
       },
       image_url: null,
       image_options: null,
       passage_id: "CR-STIMULUS-00748",
       passage_text: "The difference in average annual income in favor of employees who have college degrees, compared with those who do not have such degrees, doubled between 1980 and 1990. Some analysts have hypothesized that increased competition between employers for employees with college degrees drove up income for such employees.",
     } as VRQuestionData,
-    answers: generateMCAnswers("a"),
+    answers: generateMCAnswers("d"),
     explanation: "Which of the following, if true, most seriously undermines the explanation described above?\n\nA. During the 1980s a growing percentage of college graduates, unable to find jobs requiring a college degree, took unskilled jobs.\n\nB. The average age of all employees increased slightly during the 1980s.\n\nC. The unemployment rate changed very little throughout most of the 1980s.\n\nD. From 1980 to 1990, the difference in average income between employees with advanced degrees and those with bachelor's degrees also increased.\n\nE. During the 1980s there were some employees with no college degree who earned incomes comparable to the top incomes earned by employees with a college degree.\n\nArgument Evaluation\n\nSituation: The amount by which average annual income for employees with college degrees exceeds that for employees without such degrees doubled between 1980 and 1990.\n\nReasoning: What evidence would most strongly suggest that increased competition among employers for employees with college degrees does not explain the relative increase in those employees' incomes? Such increased competition could not explain the relative increase in income for employees with college degrees if the competition did not actually increase, or if such competition occurred but did not result in employers paying higher wages or salaries, or if the increase in competition to hire employees without college degrees was even greater. So, evidence that any of those conditions existed would undermine the analysts' explanation.\n\nA. Correct. This suggests that the supply of college graduates grew relative to employers' demand for them, and hence that employers' competition for college-educated employees did not actually increase.\n\nB. The average age might have increased equally for employees with college degrees and for those without them, so the increase is not clearly relevant to explaining why the difference between these two groups' average incomes grew.\n\nC. Even if the overall unemployment rate did not change, competition for college-educated employees could have increased while competition for other employees decreased.\n\nD. This statement gives information comparing income trends among two groups of those with college degrees and is irrelevant to the comparison of income trends for those with college degrees and those without college degrees.\n\nE. Even if there was strong competition and high pay for certain unusual types of employees without college degrees, increasing competition for employees with college degrees might have explained the overall growing difference in average pay between employees with college degrees and those without.\n\nThe correct answer is A.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -264,18 +264,18 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "Which of the following most logically completes the passage?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "some voters in Whippleton do not believe that pollution needs to be reduced",
+        b: "every candidate who was defeated had a strong antipollution record",
+        c: "there were no issues other than crime, unemployment, and pollution on which the candidates had significant differences of opinion",
+        d: "all the candidates who were elected were perceived as being stronger against both crime and unemployment than the candidates who were defeated",
+        e: "many of the people who voted in the election refused to participate in the poll"
       },
       image_url: null,
       image_options: null,
       passage_id: "CR-STIMULUS-00749",
       passage_text: "According to the last pre-election poll in Whippleton, most voters believe that the three problems government needs to address, in order of importance, are pollution, crime, and unemployment. Yet in the election, candidates from parties perceived as strongly against pollution were defeated, while those elected were all from parties with a history of opposing legislation designed to reduce pollution. These results should not be taken to indicate that the poll was inaccurate, however, since __________.",
     } as VRQuestionData,
-    answers: generateMCAnswers("d"),
+    answers: generateMCAnswers("e"),
     explanation: "What would most help explain how the poll might have been accurate despite the election results? Since the poll indicated that voters were most concerned about pollution, it suggested that candidates from antipollution parties would be more likely to be elected, other things being equal—and yet those candidates were not elected. There are many possible explanations for this outcome that are compatible with the poll having been accurate. For example, voters might have been swayed by the candidates' personalities, qualifications, or advertising more than by their positions on the issues. Or some candidates might have convinced voters that their personal positions on the issues were different from those of their parties. Or voters might have chosen candidates based on their positions on crime and unemployment, considering those issues together more important than pollution alone. Any statement suggesting that any such factors explained the election results would logically complete the passage by providing a reason to believe that the poll could have been accurate despite those results.\n\nA. If the number of voters who did not believe that pollution needed to be reduced was large enough to explain the election results, then the poll was probably inaccurate. So, this does not explain how the poll might have been accurate despite the election results.\n\nB. This eliminates the possibility that candidates were defeated for having weak antipollution records conflicting with their parties' antipollution stances, so it eliminates one explanation of how the poll might have been accurate despite the election results. Thus, it slightly weakens the conclusion of the argument instead of providing a premise to support it.\n\nC. This eliminates the possibility that differences of opinion among the candidates on these other issues might explain the election results, but it does not explain how the poll could have been accurate despite the election results.\n\nD. Correct. The poll indicated that voters believed that the government needs to address crime and unemployment as well as pollution. So, if the poll was accurate, the election outcome might have resulted from voters considering candidates' positions on crime and unemployment to be jointly more important than their positions on pollution alone.\n\nE. If anything, this provides a reason to doubt that the poll accurately reflected voters' opinions. It does not explain how the poll might have accurately reflected those opinions despite the election results.\n\nThe correct answer is D.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -289,18 +289,18 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "Which of the following, if true, casts the most serious doubt on the adequacy of the Arundian politicians' justification for the proposed legislation?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "The Arundian government originally welcomed the fall in the value of the Arundian currency because the fall made Arundian exports more competitive on international markets.",
+        b: "Foreign investors who acquired Arundian manufacturing plants generally did so with no intention of keeping and running those plants over the long term.",
+        c: "Without the recent fall in the value of the Arundian currency, many of the Arundian assets bought by foreign investors would have been beyond the financial reach of those investors.",
+        d: "In Concordia, a country broadly similar to Arundia, the share of manufacturing assets that is foreign-controlled is 60 percent higher than it is in Arundia.",
+        e: "The true value of an investment is determined by the value of the profits from it, and the low value of the Arundian currency has depressed the value of any profits earned by foreign investors from Arundian assets."
       },
       image_url: null,
       image_options: null,
       passage_id: "CR-STIMULUS-00750",
       passage_text: "Manufacturing plants in Arundia have recently been acquired in substantial numbers by investors from abroad. Arundian politicians are proposing legislative action to stop such investment, justifying the proposal by arguing that foreign investors, opportunistically exploiting a recent fall in the value of the Arundian currency, were able to buy Arundian assets at less than their true value.",
     } as VRQuestionData,
-    answers: generateMCAnswers("e"),
+    answers: generateMCAnswers("d"),
     explanation: "Which of the following, if true, casts the most serious doubt on the adequacy of the Arundian politicians' justification for the proposed legislation?\n\nA. The Arundian government originally welcomed the fall in the value of the Arundian currency because the fall made Arundian exports more competitive on international markets.\n\nB. Foreign investors who acquired Arundian manufacturing plants generally did so with no intention of keeping and running those plants over the long term.\n\nC. Without the recent fall in the value of the Arundian currency, many of the Arundian assets bought by foreign investors would have been beyond the financial reach of those investors.\n\nD. In Concordia, a country broadly similar to Arundia, the share of manufacturing assets that is foreign-controlled is 60 percent higher than it is in Arundia.\n\nE. The true value of an investment is determined by the value of the profits from it, and the low value of the Arundian currency has depressed the value of any profits earned by foreign investors from Arundian assets.\n\nArgument Evaluation\n\nSituation: After a recent fall in the value of Arundian currency, foreign investors have been acquiring many Arundian manufacturing plants. Arundian politicians are proposing legislation to stop such investment.\n\nReasoning: What would most undermine the Arundian politicians' justification for the proposed legislation? The politicians are justifying their proposal by claiming that foreign investors have been exploiting the fall in the currency's value by buying Arundian assets at less than their true value (whatever that means). Any evidence that their claim is false or meaningless would undermine their justification for the proposal, as would any evidence that the claim, even if true, does not provide a good reason to stop the foreign investments.\n\nA. This suggests that the foreign investors got a good deal on the manufacturing plants, since it provides evidence that those plants will now be more competitive and profitable. So, if anything, it supports the politicians' justification for their proposal rather than undermining it.\n\nB. This suggests that the foreign investors generally believe the manufacturing plants are undervalued and intend to sell them at a profit as soon as the currency rises enough. So, it supports the politicians' justification for their proposal rather than undermining it.\n\nC. This suggests that the recent fall in the currency's value made Arundian assets cost less than usual for foreign investors, thus allowing the investors to buy the assets at less than their true value. So, if anything, it supports the politicians' justification for their proposal rather than undermining it.\n\nD. The Arundian politicians might consider the example of Concordia to be a warning of the disaster that could befall Arundia unless the legislation is enacted. So, the situation in Concordia might be cited as support for the politicians' justification of their proposal.\n\nE. Correct. This implies that the fall in the Arundian currency's value has reduced the true value of Arundian manufacturing plants and any profits they may make, so it undermines the politicians' claim that the foreign investors exploited the fall in the currency's value to acquire the plants for less than their true value.\n\nThe correct answer is E.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -314,18 +314,18 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "Which of the following, if true, most adequately counters the objection made to the proposal?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "Every time a human being or other mammal exhales, there is some carbon dioxide released into the air.",
+        b: "The conversion of methane to electricity would occur at a considerable distance from the landfills.",
+        c: "The methane that is used to generate electricity would generally be used as a substitute for a fuel that does not produce any greenhouse gases when burned.",
+        d: "Methane in the atmosphere is more effective in blocking the escape of heat from the Earth than is carbon dioxide.",
+        e: "The amount of methane emitted from the landfills could be reduced if the materials whose decomposition produces methane were not discarded but recycled."
       },
       image_url: null,
       image_options: null,
       passage_id: "CR-STIMULUS-00751",
       passage_text: "Proposal: Carbon dioxide and methane in the atmosphere block the escape of heat into space. So emission of these \"greenhouse\" gases contributes to global warming. In order to reduce global warming, emission of greenhouse gases needs to be reduced. Therefore, the methane now emitted from open landfills should instead be burned to produce electricity.\n\nObjection: The burning of methane generates carbon dioxide that is released into the atmosphere.",
     } as VRQuestionData,
-    answers: generateMCAnswers("d"),
+    answers: generateMCAnswers("e"),
     explanation: "Argument Evaluation\n\nSituation: A proposal suggests that methane from open landfills should be burned to produce electricity rather than being emitted into the atmosphere. This would help reduce global warming because both carbon dioxide and methane are greenhouse gases. An objection is raised that burning methane generates carbon dioxide, which is released into the atmosphere.\n\nReasoning: Which of the following, if true, most adequately counters the objection made to the proposal? The objection points out that burning methane produces carbon dioxide. To counter this objection, we need to show that despite this fact, the proposal would still help reduce global warming.\n\nA. The fact that humans and other mammals release carbon dioxide when they exhale is irrelevant to evaluating whether burning methane from landfills would help reduce global warming.\n\nB. The distance at which the conversion occurs from the landfills is irrelevant to whether the proposal would reduce global warming.\n\nC. This would actually weaken the proposal by suggesting that burning methane wouldn't provide an environmental advantage over existing alternatives.\n\nD. Correct. If methane is more effective than carbon dioxide at blocking the escape of heat from Earth, then converting methane to carbon dioxide would still result in a net reduction in the greenhouse effect.\n\nE. This suggests an alternative method of reducing methane emissions but does not counter the objection about carbon dioxide emissions from burning methane.\n\nThe correct answer is D.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -339,18 +339,18 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "The argument depends on assuming which of the following?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "There are no periods of the day during which the interval between flights taking off from the airport is significantly greater than the currently allowed minimum.",
+        b: "Few, if any, of the tourists who use Beach City airport do so when their main destination is a neighboring community and not Beach City itself.",
+        c: "If the proposed safety rules are adopted, the reduction in tourist numbers will not result mainly from a reduction in the number of tourists who spend relatively little in Beach City.",
+        d: "Increasing the minimum time between takeoffs is the only way to achieve necessary safety improvements without a large expenditure by the city government on airport enhancements.",
+        e: "The response to the adoption of the new safety rules would not include a large increase in the number of passengers per flight."
       },
       image_url: null,
       image_options: null,
       passage_id: "CR-STIMULUS-00752",
       passage_text: "Proposed new safety rules for Beach City airport would lengthen considerably the minimum time between takeoffs from the airport. In consequence, the airport would be able to accommodate 10 percent fewer flights than currently use the airport daily. The city's operating budget depends heavily on taxes generated by tourist spending, and most of the tourists come by plane. Therefore, the proposed new safety rules, if adopted, will reduce the revenue available for the operating budget.",
     } as VRQuestionData,
-    answers: generateMCAnswers("e"),
+    answers: generateMCAnswers("b"),
     explanation: "Argument Construction\n\nSituation: Proposed new safety rules for Beach City airport would lengthen considerably the minimum time between takeoffs from the airport. In consequence, the airport would be able to accommodate 10 percent fewer flights than currently use the airport daily. The city's operating budget depends heavily on taxes generated by tourist spending, and most of the tourists come by plane. Therefore, the proposed new safety rules, if adopted, will reduce the revenue available for the operating budget.\n\nReasoning: The argument depends on assuming which of the following? The argument concludes that the safety rules will reduce revenue because they will reduce the number of flights. This reasoning assumes that the reduction in flights will lead to a reduction in the number of tourists visiting Beach City.\n\nA. Even if there are periods when the interval between flights is greater than the current minimum, the new rules could still force a reduction in the total number of daily flights.\n\nB. This is irrelevant because the argument is about the total number of tourists coming to Beach City.\n\nC. This does not affect the basic argument, which is about the total number of tourists.\n\nD. This is not necessary for the argument.\n\nE. Correct. If airlines responded to the new rules by using larger planes with more passengers per flight, they could transport about the same number of tourists despite having fewer flights.\n\nThe correct answer is E.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -364,11 +364,11 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "Which of the following, if true, casts most doubt on the conclusion of the argument?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "Many drugs undergoing clinical trials are intended for the treatment of conditions for which there is currently no effective treatment.",
+        b: "Patients do not share the physician's professional concern for public health, but everyone has a moral obligation to alleviate suffering when able to do so.",
+        c: "Usually, half the patients in a clinical trial serve as a control group and receive a nonactive drug in place of the drug being tested.",
+        d: "An experimental drug cannot legally be made available to patients unless those patients are subjects in clinical trials of the drug.",
+        e: "Physicians have an overriding moral and legal duty to care for the health and safety of their current patients."
       },
       image_url: null,
       image_options: null,
@@ -389,18 +389,18 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "Which of the following, if true, most helps to explain the exception noted above?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "Buildings constructed of bamboo are less likely to suffer earthquake damage than are steel and concrete buildings.",
+        b: "Bamboo is unsuitable as a building material for multistory buildings.",
+        c: "In order to protect it from being damaged by termites and beetles, bamboo must be soaked, at some expense, in a preservative.",
+        d: "In some tropical areas, bamboo is used to make the scaffolding that is used during large construction projects.",
+        e: "Bamboo growing in an area where land values are increasing is often cleared to make way for construction."
       },
       image_url: null,
       image_options: null,
       passage_id: "CR-STIMULUS-00754",
       passage_text: "As a construction material, bamboo is as strong as steel and sturdier than concrete. Moreover, in tropical areas, bamboo is a much less expensive construction material than either steel or concrete and is always readily available. In tropical areas, therefore, building with bamboo makes better economic sense than building with steel or concrete, except where land values are high.",
     } as VRQuestionData,
-    answers: generateMCAnswers("b"),
+    answers: generateMCAnswers("e"),
     explanation: "Argument Construction\n\nSituation: Bamboo is as strong as steel and sturdier than concrete when used as a construction material. In tropical areas, bamboo is much less expensive and is always readily available.\n\nReasoning: What explains the exception specified in the conclusion? The argument's conclusion is that in tropical areas, bamboo is a more economical building material than steel or concrete, except where land values are high. The information in the passage makes clear why bamboo might be a more economical building material in tropical areas than are concrete or steel. So the question is: Why must an exception be made for areas where land values are high? Multistory buildings are particularly desirable in areas where land values are high, but bamboo may not be suitable for such buildings.\n\nA. This explains why bamboo would be preferable to steel or concrete in tropical areas especially prone to earthquakes. However, there is no clear connection to be made between areas where land values are high and areas especially prone to earthquakes.\n\nB. Correct. Multistory buildings provide a greater area of floor space for a given site area, and in that sense are more economical. A single-story building with the same floor space will occupy a much bigger site, so the higher the land values, the more likely it is that a multistory building will be built on that land. Thus, given this information, bamboo is less suitable for areas where land values are high.\n\nC. This undermines, to some extent, the claim that bamboo is an economical building material. But it does nothing to explain why it would be less economical specifically in areas where land values are high.\n\nD. This is irrelevant. Bamboo is used to build scaffolding for construction projects and as a building material for permanent structures. There is no way to infer from this that bamboo is less economical specifically in areas where land values are high.\n\nE. The fact that bamboo is cleared from an area to make room for construction in no way implies that bamboo would not be a suitable and economical building material for the area once it has been cleared.\n\nThe correct answer is B.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -414,11 +414,11 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "Which of the following is most strongly supported by the information given?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "Some land in Virodia that is currently used for grain production will soon be turned into pastureland for grazing cattle for meat.",
+        b: "In the future, per capita income in Virodia is unlikely to increase as rapidly as it has in the past.",
+        c: "In Virodia, the amount of grain it takes to produce one pound of meat is likely to increase in coming years.",
+        d: "Grain is soon likely to make up a larger proportion of the average Virodian's diet than ever before.",
+        e: "Virodia is likely to become an importer of grain or meat or both."
       },
       image_url: null,
       image_options: null,
@@ -439,18 +439,18 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "Which of the following, if true, most strengthens the argument?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "The reporter who writes a story is usually better placed than the reporter's editor to judge what the story's most newsworthy features are.",
+        b: "To write a headline that is clever, a person must have sufficient understanding of the story that the headline accompanies.",
+        c: "Most reporters rarely bother to find out how other reporters have written stories and headlines about the same events that they themselves have covered.",
+        d: "For virtually any story that a reporter writes, there are at least a few people who know more about the story's subject matter than does the reporter.",
+        e: "The kind of headlines that newspaper editors want are those that anyone who has read a reporter's story in its entirety will recognize as clever."
       },
       image_url: null,
       image_options: null,
       passage_id: "CR-STIMULUS-00756",
       passage_text: "Newspaper editors should not allow reporters to write the headlines for their own stories. The reason for this is that, while the headlines that reporters themselves write are often clever, what typically makes them clever is that they allude to little-known information that is familiar to the reporter but that never appears explicitly in the story itself.",
     } as VRQuestionData,
-    answers: generateMCAnswers("e"),
+    answers: generateMCAnswers("b"),
     explanation: "Argument Evaluation\n\nSituation: The headlines newspaper reporters write for their own stories are often clever only because they allude to little-known information that never appears explicitly in the stories themselves.\n\nReasoning: What would most help the argument support the conclusion that newspaper editors should not allow reporters to write headlines for their own stories? The argument's only explicit premise is that the headlines newspaper reporters write for their own stories are often clever only because they allude to little-known information that never appears explicitly in the stories themselves. In order for this premise to support the conclusion that newspaper editors should not allow reporters to write their own headlines, it would be helpful to be given a reason why editors should avoid headlines alluding to such little-known information.\n\nA. This suggests that reporters are likely to write better headlines for their stories than editors are, so it weakens the argument that editors should not allow reporters to write their own headlines.\n\nB. Since a reporter who wrote a story is likely to understand that story well, this does not provide a reason why editors should not allow reporters to write their own headlines.\n\nC. If most reporters did what is suggested, they could perhaps hone their headline-writing skills—unless almost all reporters are weak at such skills, as suggested in the argument. The fact that they do not do so may help explain why reporters' headline-writing skills are weak. An explanation of why this is so does not provide additional support for the argument's conclusion.\n\nD. The people who know more about a story's subject matter than the reporter writing the story might be just as likely as the reporter to write headlines that allude to little-known information as the reporters are. So, to the extent that this is relevant at all, it slightly weakens the conclusion of the argument instead of providing a premise to support it.\n\nE. Correct. The argument's explicit premise suggests that typically a reporter's headline for his or her own story cannot be recognized as clever by a reader who has read the accompanying stories would recognize as clever, they have a reason not to let reporters write the headlines.\n\nThe correct answer is E.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -464,18 +464,18 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "Which of the following would, if true, most weaken the advertisement's reasoning?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "Some less-expensive computers actually have greater computing power than more expensive ones.",
+        b: "Salespeople who have a financial incentive to make sales generally provide more attentive service than do other salespeople.",
+        c: "Extended warranties purchased for less-expensive computers can cost nearly as much as the purchase price of the computer.",
+        d: "Comput-o-Mart is open only limited hours, which makes it more difficult for many shoppers to buy computers there than at other retail stores.",
+        e: "Comput-o-Mart does not sell any computers that support only basic computing."
       },
       image_url: null,
       image_options: null,
       passage_id: "CR-STIMULUS-00757",
       passage_text: "Advertisement: Our competitors' computer salespeople are paid according to the value of the products they sell, so they have a financial incentive to convince you to buy the most expensive units—whether you need them or not. But here at Comput-o-Mart, our salespeople are paid a salary that is not dependent on the value of their sales, so they won't try to tell you what to buy. That means when you buy a computer at Comput-o-Mart, you can be sure you're not paying for computing capabilities you don't need.",
     } as VRQuestionData,
-    answers: generateMCAnswers("e"),
+    answers: generateMCAnswers("d"),
     explanation: "Argument Evaluation\n\nSituation: An advertisement states that other computer stores pay salespeople on commission. Since these salespeople receive a percentage of total sales, they have a motive to sell the most expensive computers possible to customers who might require only cheaper, and presumably less powerful, computers. Because Comput-o-Mart pays salaries rather than commissions, their salespeople are not motivated to sell unnecessarily expensive machines. Therefore, Comput-o-Mart shoppers can feel confident they are buying a machine targeted to their needs rather than a pointlessly powerful and more expensive model.\n\nReasoning: What would undermine the argument that customers at Comput-o-Mart will not pay for needless computing power? The advertisement relies on the suggestion that Comput-o-Mart will sell inexpensive, basic computers to those customers whose needs are basic. That argument is therefore weakened if Comput-o-Mart does not offer such basic, low-cost computers for sale.\n\nA. The fact that price does not always correlate with computing power would not affect the argument that Comput-o-Mart will not sell needlessly expensive machines to its customers.\n\nB. The fact that salaried salespeople might be less attentive has no bearing on the argument that such employees will not attempt to sell unnecessarily expensive computers.\n\nC. The cost of warranties is not relevant to the argument that Comput-o-Mart will not upsell.\n\nD. The relative business hours of different stores have no bearing on the question of whether Comput-o-Mart will sell basic machines to customers who require nothing more powerful.\n\nE. Correct. The advertisement relies on the suggestion that Comput-o-Mart will sell a basic machine to a customer with basic needs rather than trying to induce them to buy a fancier, more expensive model; that argument is undermined if Comput-o-Mart has no such basic computers available for purchase.\n\nThe correct answer is E.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -489,18 +489,18 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "The information given, if true, most strongly supports which of the following?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "The market for luxury boats would have collapsed even if the new tax on luxury boats had been lower.",
+        b: "The new tax would produce a net gain in tax revenue for the government only if the yearly total revenue that it generates exceeds the total of any yearly tax-revenue decrease resulting from the workers' loss of jobs.",
+        c: "Because many people never buy luxury items, imposing a sales tax on luxury items is the kind of legislative action that does not cost incumbent legislators much popular support.",
+        d: "Before the tax was instituted, luxury boats were largely bought by people who were not wealthy.",
+        e: "Taxes can be equitable only if their burden is evenly distributed over the entire population."
       },
       image_url: null,
       image_options: null,
       passage_id: "CR-STIMULUS-00758",
       passage_text: "Proponents of the recently introduced tax on sales of new luxury boats had argued that a tax of this sort would be an equitable way to increase government revenue because the admittedly heavy tax burden would fall only on wealthy people, and neither they nor anyone else would suffer any economic hardship. In fact, however, 20 percent of the workers employed by manufacturers of luxury boats have lost their jobs as a direct result of this tax.",
     } as VRQuestionData,
-    answers: generateMCAnswers("b"),
+    answers: generateMCAnswers("c"),
     explanation: "Argument Construction\n\nSituation: Proponents of a recently introduced tax on sales of new luxury boats argued that it would be an equitable way to increase government revenue because the tax would fall only on the wealthy and cause no one any economic hardship. But because of the tax, 20 percent of luxury-boat manufacturing workers have lost their jobs.\n\nReasoning: What conclusion do the statements about the proponents' argument and the tax's effects support? Since the tax caused many workers to lose their jobs, it might have made the government lose revenue from payroll taxes that the laid-off workers would have paid if they had kept their jobs. So, if the yearly total revenue generated directly and indirectly by the tax were less than the yearly payroll taxes and any other tax revenue that were lost as a result of the tax, the tax would have caused a net loss in tax revenue.\n\nA. The passage indicates that the tax directly caused a significant decrease (though not necessarily a collapse) in the market for luxury boats. The passage contains no evidence about whether such a decrease might not have occurred if the new tax had been somewhat lower.\n\nB. Correct. Since the tax caused the workers to lose their jobs, it might have made the government lose revenue from payroll taxes that the laid-off workers would have paid if they had kept their jobs. So, if the yearly total revenue generated directly and indirectly by the tax were less than the tax were less than those yearly payroll taxes and any other tax revenue that were lost as a result of the tax, the tax would have caused a net loss in tax revenue.\n\nC. The passage contains no information about what types of legislative actions cost, or do not cost, incumbent legislators popular support.\n\nD. Although the passage suggests that some of the tax proponents' assumptions were wrong, it contains no information suggesting that those proponents were wrong in thinking that luxury boats are purchased mainly by wealthy people.\n\nE. The passage does not provide any basis for determining what makes a tax equitable or about whether the luxury boat tax is equitable. The tax's proponents evidently felt that a tax whose burden falls only on the wealthy rather than evenly on the entire population can be equitable.\n\nThe correct answer is B.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -514,11 +514,11 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "Which of the following is an assumption on which the argument depends?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "Drivers 65 and older do not, on average, drive very many fewer miles per year than drivers 24 and younger.",
+        b: "Drivers 65 and older do not constitute a significantly larger percentage of licensed drivers in Wareland than drivers ages 18–24 do.",
+        c: "Drivers 65 and older are less likely than are drivers 24 and younger to drive during weather conditions that greatly increase the risk of accidents.",
+        d: "The difference between the accident rate of drivers under 21 and of those ages 21–24 is attributable to the greater driving experience of those in the older group.",
+        e: "There is no age bracket for which the accident rate is lower than it is for licensed drivers 65 and older."
       },
       image_url: null,
       image_options: null,
@@ -539,18 +539,18 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "Which of the following would it be most useful to establish in evaluating the argument?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "When, if ever, will production of oil in Malvernia outstrip production of natural gas?",
+        b: "Is Malvernia among the countries that rely most on imported oil?",
+        c: "What proportion of Malvernia's total energy needs is met by hydroelectric, solar, and nuclear power?",
+        d: "Is the amount of oil used each year in Malvernia for generating electricity and fuel for transportation increasing?",
+        e: "Have any existing oil-burning heating systems in Malvernia already been converted to natural-gas-burning heating systems?"
       },
       image_url: null,
       image_options: null,
       passage_id: "CR-STIMULUS-00760",
       passage_text: "In the past, the country of Malvernia has relied heavily on imported oil. Malvernia recently implemented a program to convert heating systems from oil to natural gas. Malvernia currently produces more natural gas each year than it uses, and oil production in Malvernian oil fields is increasing at a steady pace. If these trends in fuel production and usage continue, therefore, Malvernian reliance on foreign sources for fuel is likely to decline soon.",
     } as VRQuestionData,
-    answers: generateMCAnswers("d"),
+    answers: generateMCAnswers("b"),
     explanation: "Argument Evaluation\n\nSituation: Malvernia has relied heavily on imported oil but recently began a program to convert heating systems from oil to gas. Malvernia produces more natural gas than it uses. Furthermore, Malvernia's oil production is expanding. Therefore, Malvernia will probably reduce its reliance on imported oils if these trends continue.\n\nReasoning: Which option provides the information that it would be most useful to know in evaluating the argument? In other words, we are looking for the option which—depending on whether it was answered yes or no—would either most weaken or most strengthen the argument. The argument's conclusion is that since the rules would reduce the number of flights that can be accommodated, they would thereby reduce the number of tourists arriving by plane, which in turn would reduce the tax revenue that tourist spending generates for the operating budget. This assumes that the actual number of daily flights would fall along with the number of flights that the airport can accommodate; that fewer daily flights would mean fewer people flying into the airport; that fewer people flying into the airport would mean fewer tourists flying into the airport; that fewer tourists flying into the airport would mean fewer tourists visiting the city; and that less taxable spending by tourists would mean less revenue overall for the operating budget.\n\nA. Even if flights depart the airport less frequently during some periods of the day, increasing the minimum time between flights at busy times of day could reduce the total number of daily flights from the airport.\n\nB. Even if half the tourists flying into the airport were bound for other nearby towns, the other half could still spend enough in town to generate lots of revenue for the operating budget.\n\nC. It is possible that most tourists spend relatively little in the city, but a few spend a lot. In that case, even if a reduction in tourist numbers resulted mainly from a declining number of tourists who spend relatively little, it could also greatly reduce the already small number of tourists who spend a lot.\n\nD. This suggests that the proposed rules might be financially better for the city than any alternative way to improve safety, whereas the argument's conclusion is that the proposed rules are financially disadvantageous.\n\nE. Correct. If adopting the proposed rules would result in a large increase in the number of passengers per flight, fewer daily flights would not necessarily mean fewer passengers or fewer tourists overall.\n\nThe correct answer is E.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -564,18 +564,18 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "Which of the following is an assumption on which the argument depends?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "The number of school nurses employed by Renston's elementary schools has not decreased over the past ten years.",
+        b: "Children who are allergic to the chemicals are no more likely than other children to have allergies to other substances.",
+        c: "Children who have allergic reactions to the chemicals are not more likely to be sent to a school nurse now than they were ten years ago.",
+        d: "The chemicals are not commonly used as cleaners or pesticides in houses and apartment buildings in Renston.",
+        e: "Children attending elementary school do not make up a larger proportion of Renston's population now than they did ten years ago."
       },
       image_url: null,
       image_options: null,
       passage_id: "CR-STIMULUS-00761",
       passage_text: "Exposure to certain chemicals commonly used in elementary schools as cleaners or pesticides causes allergic reactions in some children. Elementary school nurses in Renston report that the proportion of schoolchildren sent to them for treatment of allergic reactions to those chemicals has increased significantly over the past ten years. Therefore, either Renston's schoolchildren have been exposed to greater quantities of the chemicals or they are more sensitive to them than schoolchildren were ten years ago.",
     } as VRQuestionData,
-    answers: generateMCAnswers("c"),
+    answers: generateMCAnswers("d"),
     explanation: "Evaluation of a Plan\n\nSituation: Gill nets, used by Lockeport's commercial fishing boats, kill some fish of endangered species. The fishing commission has proposed requiring the use of tent nets, which do not kill fish. This would allow the fish of endangered species to be thrown back. It is argued that the proposed requirement will not harm commercial fishing boat operators, since commercial fishing boats in other similar places are using tent nets and are profitable.\n\nReasoning: What new piece of information would weaken the argument for the proposed requirement? The crucial support given for the argument is that in other similar places, commercial fishing boats that use tent nets and gill nets are profitable. But if, in places where only tent nets are now used, the numbers of commercial fishing boats diminished, it would be reasonable to suspect that switching entirely to tent nets may have driven some of the fishing operations out of business or caused them to move to other areas in which there was no expectation that they would use only tent nets.\n\nA. Correct. This is new information. As explained above, it would justify doubt about the argument made in favor of the proposal.\n\nB. This suggests that implementation of the proposed requirement could, over time, lower a certain type of operational costs for commercial fishing boats using tent nets. This would provide a new reason in support of the proposed requirement, not a reason to doubt the argument for it.\n\nC. This suggests that perhaps recreational fishing in Lockeport needs to be regulated more strictly, but that is a separate issue from the one addressed in the argument for the proposed tent-net requirement.\n\nD. This information casts no doubt on the relevance of the stated information that using gill nets contributes to undermining populations of at least some of the endangered fish species in Lockeport. If the species are currently endangered, they may need protection regardless of how they became endangered.\n\nE. This information suggests that fish of the endangered species in Lockeport cannot profitably be sold. It does not cast doubt on the argument made in favor of the proposed requirement. Neither does it cast doubt on the practicality or the desirability of the proposed requirement.\n\nThe correct answer is A.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -589,18 +589,18 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "Which of the following, if true, casts the most serious doubt on the argument made for the proposal?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "In places where the use of tent nets has been mandated, there are typically fewer commercial fishing boats in operation than there were before tent nets came into use.",
+        b: "Even when used properly, gill nets require many more repairs than do tent nets.",
+        c: "Recreational anglers in Lockeport catch more fish of endangered species than do commercial fishing boats.",
+        d: "The endangered species of fish in Lockeport's commercial fishing area did not become endangered as a result of the use of gill nets by fishing fleets.",
+        e: "The endangered species of fish caught by Lockeport's commercial fishing fleet are of no commercial value."
       },
       image_url: null,
       image_options: null,
       passage_id: "CR-STIMULUS-00762",
       passage_text: "Lockeport's commercial fishing boats use gill nets, which kill many of the netted fish, including some fish of endangered species. The fishing commission has proposed requiring the use of tent nets, which do not kill fish; boat crews would then throw back fish of endangered species. Profitable commercial fishing boats in similar areas have already switched over to tent nets. The proposal can therefore be implemented without economic harm to Lockeport's commercial fishing boat operators.",
     } as VRQuestionData,
-    answers: generateMCAnswers("a"),
+    answers: generateMCAnswers("d"),
     explanation: "Argument Evaluation\n\nSituation: Normally, a person's sleep-wake cycle is governed by the pineal gland secreting melatonin in response to the daily cycle of light and darkness as detected by the eye. Yet many people who are totally blind due to lesions of the visual cortex easily maintain a 24-hour sleep-wake cycle.\n\nReasoning: What additional information would be most helpful in evaluating the argument? The argument's conclusion is that the neural pathway by which the pineal gland receives information probably does not pass through the visual cortex. This is suggested by the fact that people without a well-functioning visual cortex (e.g., people with a certain type of blindness) nonetheless maintain a 24-hour sleep-wake cycle. Is it by the pineal gland's secretion of melatonin that they do so? The argument tells us that normally (i.e., in sighted people), this is the mechanism for sleep regulation. But the argument depends on assuming that a similar mechanism is operating in people who are blind but have well-regulated sleep cycles. The best choice will be the one that helps us decide whether that assumption is correct.\n\nA. This question would not give us an answer that would help in evaluating the argument. A \"no\" answer would not clarify whether the pineal gland-melatonin mechanism operates in people who are blind. A \"yes\" answer would do no better. The question refers only to people with sleep dysfunctions (which the argument does not address).\n\nB. Correct. Answering this question would provide the most useful information for evaluating the argument. A \"yes\" answer would help confirm a key assumption of the argument: that blind people rely on the pineal gland-melatonin mechanism for sleep regulation. A \"no\" answer would help disconfirm that assumption.\n\nC. Whether or not there are other substances secreted by the pineal gland makes no difference to the reasoning. The argument relies on the premise that the pineal gland governs the sleep cycle by secreting melatonin. For example, if the pineal gland sometimes secreted adrenaline, that would still have no bearing on the argument.\n\nD. The consistency or inconsistency of the duration of some people's sleep patterns has no relevance to the reasoning. Their sleep patterns could be due to any of a number of factors.\n\nE. This does not help, for there could be sighted people whose melatonin levels respond abnormally simply because of a pineal-gland abnormality.\n\nThe correct answer is B.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -614,18 +614,18 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "For purposes of evaluating the argument, it would be most useful to establish which of the following?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "Whether melatonin supplements help people who have difficulty maintaining a 24-hour sleep cycle to establish such a pattern",
+        b: "Whether the melatonin levels of most totally blind people who successfully maintain a 24-hour sleep-wake cycle change in response to changes in exposure to light and darkness",
+        c: "Whether melatonin is the only substance secreted by the pineal gland",
+        d: "Whether most people who do not have a 24-hour sleep-wake cycle nevertheless have a cycle of consistent duration",
+        e: "Whether there are any people with normal vision whose melatonin levels respond abnormally to periods of light and darkness"
       },
       image_url: null,
       image_options: null,
       passage_id: "CR-STIMULUS-00763",
       passage_text: "Normally, the pineal gland governs a person's sleep-wake cycle by secreting melatonin in response to the daily cycle of light and darkness as detected by the eye. Nonetheless, many people who are totally blind due to lesions in the visual cortex of the brain easily maintain a 24-hour sleep-wake cycle. So the neural pathway by which the pineal gland receives information from the eye probably does not pass through the visual cortex.",
     } as VRQuestionData,
-    answers: generateMCAnswers("b"),
+    answers: generateMCAnswers("a"),
     explanation: "Argument Evaluation\n\nSituation: Reported whiplash injuries are twice as common in countries where car insurance companies pay compensation for such injuries as they are in countries where such insurance companies do not. Although there is no objective test for whiplash, this does not mean, as some suggest, that half of the reports of such injuries are fake. It could simply be that where insurance will not pay for such injuries, people are less inclined to report them.\n\nReasoning: What roles do the two boldfaced portions play in the argument? The first portion tells us about the correlation between reported cases of whiplash in countries and the willingness of insurance companies in those countries to compensate for whiplash injuries. The argument next states that whiplash is difficult to verify objectively. The argument then asserts that although this last fact, taken together with the first boldfaced portion, has led some to infer that over half of the reported cases in countries with the highest whiplash rates are spurious, that inference is unwarranted. The second boldfaced portion then helps to explain, by offering an alternative explanation, why such an inference is not necessarily warranted.\n\nA. The claim made in the first boldfaced portion is never disputed in the argument. The second is not the argument's conclusion.\n\nB. Perhaps the argument uses the first portion to support its conclusion, but there is no indication that it has been used elsewhere to do so. Regardless, the second boldfaced portion is not the argument's conclusion.\n\nC. The first portion has been used to support a conclusion that the argument rejects; the second portion is not the argument's conclusion.\n\nD. Correct. This answer choice correctly identifies the roles played in the argument by the boldfaced portions. As explained in the Reasoning section above, the first boldfaced portion tells us about the correlation between reported cases of whiplash in countries and the willingness of insurance companies in those countries to compensate for whiplash injuries. This is presented as a fact whose implications are at issue in the ensuing portions of the passage. The argument then reports that this fact, considered together with the difficulty of proving whiplash injury, has led some to infer that half of the reported cases in countries with the highest whiplash rates are spurious. The conclusion of the argument is that this inference is unwarranted. The second boldfaced portion expresses the basis for the argument's conclusion: there is a reasonable alternative explanation for the differences in frequency of whiplash injury reports between the two types of countries.\n\nE. The accuracy of the first boldfaced portion is never questioned in the argument, nor is the second intended to somehow help show that the first is accurate. Rather, the argument assumes that the first portion is accurate.\n\nThe correct answer is D.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -639,18 +639,18 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "In the argument given, the two boldfaced portions play which of the following roles?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "The first is a claim that the argument disputes; the second is a conclusion that has been based on that claim.",
+        b: "The first is a claim that has been used to support a conclusion that the argument accepts; the second is that conclusion.",
+        c: "The first is evidence that has been used to support a conclusion for which the argument provides further evidence; the second is the main conclusion of the argument.",
+        d: "The first is a finding whose implications are at issue in the argument; the second is a claim presented in order to argue against deriving certain implications from that finding.",
+        e: "The first is a finding whose accuracy is evaluated in the argument; the second is evidence presented to establish that the finding is accurate."
       },
       image_url: null,
       image_options: null,
       passage_id: "CR-STIMULUS-00764",
       passage_text: "In countries where automobile insurance includes compensation for whiplash injuries sustained in automobile accidents, reports of having suffered such injuries are twice as frequent as they are in countries where whiplash is not covered. Presently, no objective test for whiplash exists, so it is true that spurious reports of whiplash injuries cannot be readily identified. Nevertheless, these facts do not warrant the conclusion drawn by some commentators that in the countries with higher rates of reported whiplash injuries, half of the reported cases are spurious. Clearly, in countries where automobile insurance does not include compensation for whiplash, people often have little incentive to report whiplash injuries that they actually have suffered.",
     } as VRQuestionData,
-    answers: generateMCAnswers("d"),
+    answers: generateMCAnswers("c"),
     explanation: "Argument Construction\n\nSituation: Last year Comfort Airlines had twice as many delayed flights as it did the year before but three times as many passenger complaints about delayed flights. The airline made a special effort to improve other aspects of its service last year.\n\nReasoning: What could explain why the number of complaints about delayed flights increased disproportionately to the number of delayed flights last year? In other words, why did the average number of passenger complaints per delayed flight go up last year? One obvious possibility is that the average number of passengers per delayed flight was greater last year than it had been the year before. Another is that the flight delays tended to cause worse problems for passengers last year than they had the year before, so that on average each delay was more upsetting for the passengers.\n\nA. This helps explain why the airline had more delayed flights last year, but not why the increase in complaints about delayed flights was disproportionate to the increase in delayed flights.\n\nB. This helps explain why the airline had more delayed flights last year. But, if anything, the situation should have reduced the number of passenger complaints about delayed flight, since many passengers should have realized that the unusually bad weather was not the airline's fault.\n\nC. If any of the improvements concerned handling of flight delays, for example, and passengers were aware that government regulations addressed this, then passengers might have complained more than previously. But the information we are given here is too general and too vague to explain the disproportionate increase in complaints.\n\nD. Correct. Longer flight delays would have more severely inconvenienced passengers and thus would probably have generated more passenger complaints per delay.\n\nE. This rules out the possibility that an increased number of passengers per delayed flight could have caused the disproportionate increase in the number of complaints about delayed flights. But no alternative explanation is offered.\n\nThe correct answer is D.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -664,18 +664,18 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "Which of the following, if true, most helps to explain the disproportionate increase in customer complaints?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "Comfort Airlines had more flights last year than the year before.",
+        b: "Last year a single period of unusually bad weather caused a large number of flights to be delayed.",
+        c: "Some of the improvements that Comfort Airlines made in its service were required by new government regulations.",
+        d: "The average length of a flight delay was greater last year than it was the year before.",
+        e: "The average number of passengers per flight was no higher last year than the year before."
       },
       image_url: null,
       image_options: null,
       passage_id: "CR-STIMULUS-00765",
       passage_text: "Last year Comfort Airlines had twice as many delayed flights as the year before, but the number of complaints from passengers about delayed flights went up three times. It is unlikely that this disproportionate increase in complaints was rooted in an increase in overall dissatisfaction with the service Comfort Airlines provides, since the airline made a special effort to improve other aspects of its service last year.",
     } as VRQuestionData,
-    answers: generateMCAnswers("d"),
+    answers: generateMCAnswers("b"),
     explanation: "Argument Construction\n\nSituation: A weather disturbance last year disrupted harvests worldwide but did not reduce production of soybeans, a protein source for both people and livestock. Soybean prices increased nonetheless, likely a result of the weather.\n\nReasoning: What evidence would suggest that the weather disturbance caused the increase in soybean prices even though it did not reduce soybean production? Prices tend to increase when the supply of a product falls relative to the demand for the product. But the production of soybeans did not fall. Evidence that the weather disturbance either hindered the global distribution of soybeans or increased global demand for soybeans could support the claim that the weather disturbance caused the increase in soybean prices.\n\nA. Correct. If the weather disturbance reduced the anchovy harvest, and anchovies provide protein for livestock just as soybeans do, then more soybeans for livestock feed would be needed to compensate for the lack of anchovies. The resulting increase in demand for soybeans could thus have increased global soybean prices.\n\nB. This is not surprising, given that the weather disturbance did not severely affect the soybean-producing countries, but it does not explain how the weather disturbance could have caused soybean prices to increase.\n\nC. The rise in soybean prices after the earlier weather disturbance could easily have been a coincidence. Or, unlike last year's disturbance, the earlier disturbance could have reduced soybean production.\n\nD. This suggests that demand for soybeans should have fallen as a result of the weather disturbance, so it does not explain why soybean prices rose.\n\nE. If soybean prices were unusually low for some temporary reason when the weather disturbance occurred, they might have been likely to rise back to normal levels even without the weather disturbance.\n\nThe correct answer is A.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -700,7 +700,7 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
       passage_id: "CR-STIMULUS-00766",
       passage_text: "Last year a global disturbance of weather patterns disrupted harvests in many of the world's important agricultural areas. Worldwide production of soybeans, an important source of protein for people and livestock alike, was adversely affected, however. Indeed, last year's soybean crop was actually slightly larger than average. Nevertheless, the weather phenomenon is probably responsible for a recent increase in the world price of soybeans.",
     } as VRQuestionData,
-    answers: generateMCAnswers("a"),
+    answers: generateMCAnswers("e"),
     explanation: "Argument Evaluation\n\nSituation: Hermit thrushes are songbirds that usually eat insects but switch to eating berries when migrating. The thrushes need lots of calories to migrate, but berries contain fewer calories than insects do. Perhaps the berries contain nutrients that insects do not provide.\n\nReasoning: What would cast doubt on the claim that the thrushes switch to berries because berries contain nutrients that insects lack and that the thrushes need for their migration? Evidence that berries do not contain such nutrients or that thrushes do not decrease their net calorie consumption by eating berries would cast doubt on the proposed explanation. So would any evidence that supported an alternative explanation for the diet change during migration—for example, seasonal or regional differences in the amount or quality of berries or insects available for the thrushes to consume.\n\nA. Even if thrushes need to be well-nourished to finish migrating before winter, extra nutrients found in berries but not insects might help provide the nourishment they need.\n\nB. Even if insects contain certain nutrients not found in wild berries, those specific nutrients may not be the ones the thrushes need for their migration.\n\nC. Correct. This suggests that the thrushes might gain more net calories from eating berries than from eating insects, which could explain why they switch to eating berries even if the berries contain no extra nutrients.\n\nD. By ruling out a lack of insects to eat while migrating as an alternative explanation for why the thrushes switch to eating berries, this would support the proposed explanation.\n\nE. The calorie-rich species of berries the thrushes do not eat might be poisonous or indigestible for them, even if some species of berries the thrushes do eat contain nutrients they need to migrate.\n\nThe correct answer is C.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -725,7 +725,7 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
       passage_id: "CR-STIMULUS-00767",
       passage_text: "Most of the year, the hermit thrush, a North American songbird, eats a diet consisting mainly of insects, but in autumn, as the thrushes migrate to their Central and South American wintering grounds, they feed almost exclusively on wild berries. Wild berries, however, are not as rich in calories as insects, yet thrushes need to consume plenty of calories in order to complete their migration. One possible explanation is that berries contain other nutrients that thrushes need for migration and that insects lack.",
     } as VRQuestionData,
-    answers: generateMCAnswers("c"),
+    answers: generateMCAnswers("d"),
     explanation: "Evaluation of a Plan\n\nSituation: Hand and wrist injuries from using computers while maintaining poor posture are common among schoolchildren in Harmville. Teachers plan to greatly reduce the number of such injuries by monitoring their students' posture while the students use computers in the classroom.\n\nReasoning: What would be most helpful to know to determine the likelihood that the teachers' plan will succeed? The primary concern is the posture students adopt while using computers. To succeed, the teachers' plan must reduce the time students spend with poor posture while using computers and reduce it enough to greatly reduce the number of injuries. To know how likely this is, it would help to know how effectively the teachers will be able to monitor and improve their students' posture inside the classroom. But how many of the students use computers outside of school while maintaining poor posture, and how often do they do so? If many students do so quite often, they may develop hand and wrist injuries regardless of what happens in school.\n\nA. The teachers do not plan to reduce any injuries other than hand and wrist injuries, so whether computer use with poor posture causes any such other injuries is irrelevant to the likelihood that their plan will produce its intended effect.\n\nB. The plan being discussed concerns only the reduction of hand and wrist injuries caused specifically by computer use with poor posture, so the frequency of hand and wrist injuries from other causes is irrelevant to the likelihood that the plan will produce its intended effect.\n\nC. Correct. If the students' school use of computers is a large part of their overall computer use, any retraining that accompanies the monitoring might have some effect on their posture and related injury rates overall. However, the greater the proportion of children with hand and wrist injuries who use computers extensively outside the classroom, the more resistant are likely to be the injuries regardless of any monitoring at school, so the less effective the teachers' plan involving only computer use at school is likely to be.\n\nD. Knowing whether this is the case might help in developing a potential alternative to the teachers' plan, but if it did, this would not help significantly toward assessing the likelihood that the actual plan will succeed. The teachers' actual plan involves monitoring computer use in school without reducing such use. Other possible means of achieving the plan's goal are not part of the plan and are therefore irrelevant to the likelihood that the teachers' actual plan will succeed.\n\nE. The passage indicates that the proportion of the schoolchildren maintaining poor posture while using computers is high enough for many to develop hand and wrist injuries as a result. Whatever the exact proportion is, the teachers' plan may or may not succeed in reducing it.\n\nThe correct answer is C.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -750,7 +750,7 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
       passage_id: "CR-STIMULUS-00768",
       passage_text: "The kinds of hand and wrist injuries that result from extended use of a computer while maintaining an incorrect posture are common among schoolchildren in Harnville. Computers are important to the school curriculum there, so instead of reducing the amount their students use computers, teachers plan to bring about a sharp reduction in the number of these injuries by carefully monitoring their students' posture when using computers in the classroom.",
     } as VRQuestionData,
-    answers: generateMCAnswers("c"),
+    answers: generateMCAnswers("a"),
     explanation: "Argument Evaluation\n\nSituation: A certain herb and closely related species thrive in soil full of metals toxic to most plants. The herb produces much histidine, which makes those metals chemically inert. Histidine production, therefore, is largely what accounts for the herb's thriving in metal-rich soils.\n\nReasoning: What evidence would help determine whether the herb's histidine production is what enables it to thrive in metal-rich soils? The argument is that since the herb's histidine chemically neutralizes the metals that are toxic to most plants, it must explain why the herb can thrive in metal-rich soils. To evaluate this argument, it would be helpful to know about the relationship between other closely related plant species' histidine production and the ability to thrive in metal-rich soils. It would also be helpful to know about any other factors that might plausibly explain why the herb can thrive in those soils.\n\nA. Whether or not the herb thrives in metal-free soils, histidine production could enable it to thrive in soils that contain toxic metals.\n\nB. Correct. If the closely related plants do not produce much histidine, whatever other factor allows them to thrive in metal-rich soils would likely account for why the herb thrives in those soils as well.\n\nC. The given information suggests no particular reason to suppose that a low level of some unspecified amino acid would enable the herb to thrive in metal-rich soils.\n\nD. The herb might absorb metals from any metal-rich soil it grows in, regardless of why it thrives in that soil.\n\nE. Whether or not histidine concentrations in the herb decline as it approaches maturity, there could still be enough histidine in the growing herb to neutralize the metals and explain why it can grow in metal-rich soil.\n\nThe correct answer is B.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -775,7 +775,7 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
       passage_id: "CR-STIMULUS-00769",
       passage_text: "A certain cultivated herb is one of a group of closely related plants that thrive in soil with high concentrations of metals that are toxic to most other plants. Agronomists studying the growth of this herb have discovered that it produces large amounts of histidine, an amino acid that, in test-tube solutions, renders these metals chemically inert. Hence, the herb's high histidine production must be the key feature that allows it to grow in metal-rich soils.",
     } as VRQuestionData,
-    answers: generateMCAnswers("b"),
+    answers: generateMCAnswers("a"),
     explanation: "Argument Construction\n\nSituation: People who are allergic to certain sulfites can avoid risking an allergic reaction by drinking wine from one of the several producers that does not add sulfites.\n\nReasoning: On what assumption does the argument depend? Drinking wine to which no sulfites have been added will not prevent exposure to sulfites if, for instance, sulfites occur naturally in wines. In particular, if the wines that do not have sulfites added have sulfites present naturally in quantities sufficient to produce an allergic reaction, drinking these wines will not result in an allergic reaction. The argument therefore depends on assuming that this is not the case.\n\nA. The argument does not require this because the conclusion does not address allergic reactions to substances other than sulfites.\n\nB. The argument specifically refers to \"certain sulfites\" producing allergic reactions. It is entirely compatible with certain other forms of sulfites not producing allergic reactions in anyone.\n\nC. This is irrelevant. The argument does not claim that one can avoid having an allergic reaction to sulfites from any source just by restricting one's wine consumption to those varieties to which no sulfites have been added.\n\nD. Once again, the argument's conclusion does not address allergic reactions to substances other than sulfites in wine.\n\nE. Correct. As explained in the Reasoning section above, the argument relies on the assumption that sulfites are not naturally present, in quantities sufficient to cause allergic reactions, in the wines to which no sulfites are added. If this assumption is not made, then the fact that no sulfites are added to certain wines is not a good reason to believe that people with sulfite allergies who consume the wines will not have an allergic reaction; if there are enough sulfites that naturally occur in the wine, people who consume the wine may well have an allergic reaction despite the fact that no sulfites have been added.\n\nThe correct answer is E.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -800,7 +800,7 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
       passage_id: "CR-STIMULUS-00770",
       passage_text: "Many people suffer an allergic reaction to certain sulfites, including those that are commonly added to wine as preservatives. However, since there are several winemakers who add sulfites to none of the wines they produce, people who would like to drink wine but are allergic to sulfites can drink wines produced by these winemakers without risking an allergic reaction to sulfites.",
     } as VRQuestionData,
-    answers: generateMCAnswers("e"),
+    answers: generateMCAnswers("c"),
     explanation: "Argument Evaluation\n\nSituation: A shortage of human subjects for clinical trials needed to show that new drugs are safe and effective often prevents those drugs from being introduced into the market. The lives and health of future generations may depend on treatments that are now experimental.\n\nReasoning: What would cast doubt on the judgment that doctors are morally obligated to encourage their patients to volunteer for clinical trials? Note that the argument's conclusion, unlike its premises, is a moral judgment. This judgment could be cast into doubt by a moral principle suggesting that it is sometimes morally unacceptable for doctors to encourage their patients to volunteer for clinical trials would also suggest that they are not morally obligated to encourage their patients to volunteer for clinical trials, since anything morally obligatory must also be morally acceptable.\n\nA. If anything, this highlights how important it is to ensure that these drugs undergo clinical trials to benefit future generations, so it supports rather than casts doubt on the argument's conclusion.\n\nB. This suggests that patients are morally obligated to volunteer for clinical trials to help prevent suffering in future generations. If anything, this supports the claim that doctors are morally obligated to encourage their patients to volunteer.\n\nC. The clinical trial will probably not harm any patients in the control group, yet their participation will benefit future generations. So, if anything, this supports the claim that doctors should encourage their patients to volunteer.\n\nD. This legal barrier makes it even more essential for the drugs to undergo clinical trials in order to benefit patients, so it supports rather than casts doubt on the argument's conclusion.\n\nE. Correct. Since the experimental drugs' safety is being tested during the trials, the drugs may prove unsafe for subjects in the trials. If doctors have an overriding moral duty to keep their current patients safe, then it may be morally unacceptable for them to encourage those patients to volunteer for the trials.\n\nThe correct answer is E.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -825,7 +825,7 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
       passage_id: "CR-STIMULUS-00771",
       passage_text: "A new law gives ownership of patents—documents providing exclusive right to make and sell an invention—to universities, not the government, when those patents result from government-sponsored university research. Administrators at Logos University plan to sell any patents they acquire to corporations in order to fund programs to improve undergraduate teaching.",
     } as VRQuestionData,
-    answers: generateMCAnswers("d"),
+    answers: generateMCAnswers("b"),
     explanation: "Argument Construction\n\nSituation: Bamboo is as strong as steel and sturdier than concrete when used as a construction material. In tropical areas, bamboo is much less expensive and is always readily available.\n\nReasoning: What explains the exception specified in the conclusion? The argument's conclusion is that in tropical areas, bamboo is a more economical building material than steel or concrete, except where land values are high. The information in the passage makes clear why bamboo is a more economical building material in tropical areas than are concrete or steel. So the question is: Why must an exception be made for areas where land values are high? Multistory buildings are particularly desirable in areas where land values are high, but bamboo may not be suitable for such buildings.\n\nA. This explains why bamboo would be preferable to steel or concrete in tropical areas especially prone to earthquakes. However, there is no clear connection to be made between areas where land values are high and areas especially prone to earthquakes.\n\nB. Correct. Multistory buildings provide a greater area of floor space for a given site area, and in that sense are more economical. A single-story building with the same floor space will occupy a much bigger site, so the higher the land values, the more likely it is that a multistory building will be built on that land. Thus, given this information, bamboo is less suitable for areas where land values are high.\n\nC. This undermines, to some extent, the claim that bamboo is an economical building material. But it does nothing to explain why it would be less economical specifically in areas where land values are high.\n\nD. This is irrelevant. Bamboo is used to build scaffolding for construction projects and as a building material for permanent structures. There is no way to infer from this that bamboo is less economical specifically in areas where land values are high.\n\nE. The fact that bamboo is cleared from an area to make room for construction in no way implies that bamboo would not be a suitable and economical building material for the area once it has been cleared.\n\nThe correct answer is B.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -875,7 +875,7 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
       passage_id: "CR-STIMULUS-00773",
       passage_text: "Between 1980 and 2000, the sea otter population of the Aleutian Islands declined precipitously. There were no signs of disease or malnutrition, so there was probably an increase in the number of otters being eaten by predators. Orcas will eat otters when seals, their normal prey, are unavailable, and the Aleutian Islands seal population declined dramatically in the 1980s. Therefore, orcas were most likely the immediate cause of the otter population decline.",
     } as VRQuestionData,
-    answers: generateMCAnswers("c"),
+    answers: generateMCAnswers("b"),
     explanation: "Argument Evaluation\n\nSituation: The headlines newspaper reporters write for their own stories are often clever only because they allude to little-known information that never appears explicitly in the stories themselves.\n\nReasoning: What would most help the argument support the conclusion that newspaper editors should not allow reporters to write headlines for their own stories? The argument's only explicit premise is that the headlines newspaper reporters write for their own stories are often clever only because they allude to little-known information that never appears explicitly in the stories themselves. In order for this premise to support the conclusion that newspaper editors should not allow reporters to write their own headlines, it would be helpful to be given a reason why editors should avoid headlines alluding to such little-known information.\n\nA. This suggests that reporters are likely to write better headlines for their stories than editors are, so it weakens the argument that editors should not allow reporters to write their own headlines.\n\nB. Since a reporter who wrote a story is likely to understand that story well, this does not provide a reason why editors should not allow reporters to write their own headlines.\n\nC. If most reporters did what is suggested, they could perhaps hone their headline-writing skills—unless almost all reporters are weak in such skills, as suggested in the given information. The fact that they do not do so may help explain why reporters' headline-writing skills are weak. An explanation of why this is so does not provide additional support for the argument's conclusion.\n\nD. The people who know more about a story's subject matter than the reporter writing the story might be just as likely to write the cleverness of allusions to little-known information as the reporters are. So, to the extent that this is relevant at all, it slightly weakens the argument by suggesting that obscurely clever headlines sometimes function as intended.\n\nE. Correct. The argument's explicit premise suggests that typically a reporter's headline for his or her own story cannot be recognized as clever by a reader who has read the accompanying stories would recognize as clever, they have a reason not to let reporters write the headlines.\n\nThe correct answer is E.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -900,7 +900,7 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
       passage_id: "CR-STIMULUS-00774",
       passage_text: "Political strategist: The domestic policies of our opponents in Party X are contrary to the priorities of many middle-class voters. Yet some of these same voters are supporters of Party X and its candidates due to the party's appeals about foreign policy. In order to win these voters back, we in Party Y must prove to middle-class voters that Party X does not represent their priorities with respect to domestic policy.",
     } as VRQuestionData,
-    answers: generateMCAnswers("a"),
+    answers: generateMCAnswers("b"),
     explanation: "Argument Evaluation\n\nSituation: An advertisement states that other computer stores pay salespeople on commission. Since these salespeople receive a percentage of total sales, they have a motive to sell the most expensive computers possible to customers who might require only cheaper, and presumably less powerful, computers. Because Comput-o-Mart pays salaries rather than commissions, their salespeople are not motivated to sell unnecessarily expensive machines. Therefore, Comput-o-Mart shoppers can feel confident they are buying a machine targeted to their needs rather than a pointlessly powerful and more expensive model.\n\nReasoning: What would undermine the argument that customers at Comput-o-Mart will not pay for needless computing power? The advertisement relies on the suggestion that Comput-o-Mart will sell inexpensive, basic computers to those customers whose needs are basic. That argument is therefore weakened if Comput-o-Mart does not offer such basic, low-cost computers for sale.\n\nA. The fact that price does not always correlate with computing power would not affect the argument that Comput-o-Mart will not sell needlessly expensive machines to its customers.\n\nB. The fact that salaried salespeople might be less attentive has no bearing on the argument that such employees will not attempt to sell unnecessarily expensive computers.\n\nC. The cost of warranties is not relevant to the argument that Comput-o-Mart will not upsell.\n\nD. The relative business hours of different stores have no bearing on the question of whether Comput-o-Mart will sell basic machines to customers who require nothing more powerful.\n\nE. Correct. The advertisement relies on the suggestion that Comput-o-Mart will sell a basic machine to a customer with basic needs rather than trying to induce them to buy a fancier, more expensive model; that argument is undermined if Comput-o-Mart has no such basic computers available for purchase.\n\nThe correct answer is E.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -939,18 +939,18 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "In the argument above, the two portions in boldface play which of the following roles?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "The first is an objection that has been raised against the position taken by the argument; the second is the position taken by the argument.",
+        b: "The first is the position taken by the argument; the second is the position that the argument calls into question.",
+        c: "The first is a judgment that has been offered in support of the position that the argument calls into question; the second is a circumstance on which that judgment is, in part, based.",
+        d: "The first is a judgment that has been offered in support of the position that the argument calls into question; the second is that position.",
+        e: "The first is a claim that the argument calls into question; the second is the position taken by the argument."
       },
       image_url: null,
       image_options: null,
       passage_id: "CR-STIMULUS-00776",
       passage_text: "Museums that house Renaissance oil paintings typically store them in environments that are carefully kept within narrow margins of temperature and humidity to inhibit any deterioration. Laboratory tests have shown that the kind of oil paint used in these paintings actually adjusts to climatic changes quite well. If, as some museum directors believe, paint is the most sensitive substance in these works, then by relaxing the standards for temperature and humidity control, museums can reduce energy costs without risking damage to these paintings. Museums would be rash to relax those standards, however, since results of preliminary tests indicate that gesso, a compound routinely used by Renaissance artists to help paint adhere to the canvas, is unable to withstand significant variations in humidity.",
     } as VRQuestionData,
-    answers: generateMCAnswers("a"),
+    answers: generateMCAnswers("d"),
     explanation: "Argument Evaluation\n\nSituation: Last year in Wareland, a much higher percentage of drivers 24 and under than of drivers 65 and older were in serious accidents.\n\nReasoning: What must be true for the observation about the accident rates to support the conclusion that the greater experience and caution of drivers 65 and older make them safer behind the wheel than the younger drivers? Several factors other than greater experience and caution could explain the lower accident rate among the older drivers. For example, the older drivers might simply drive much less than the younger ones but still get in just as many accidents per mile driven. Or perhaps because the older drivers are more often retired, their schedules less often lead them to drive at times of day when accident rates are greater for everyone. Or they might be more likely to live in rural areas with less traffic and lower accident rates. The argument depends on assuming that none of these factors fully explains the difference in accident rates.\n\nA. Correct. Although we are given no information about the possible extent of any difference in average miles driven, the (somewhat vague) information that drivers 65 and older drive very many fewer miles per year, on average, than drivers 24 and younger would cast serious doubt on the statistical argument given. The argument assumes that the difference in miles driven is not substantially substantial to undermine the argument.\n\nB. The argument is only about the discrepancy between the percentages of the drivers in two specific age groups who were in serious accidents last year. The percentages of licensed drivers who fall in these age groups are irrelevant.\n\nC. Even if drivers 65 and older are just as likely as younger drivers to drive in inclement weather, they may do so far more carefully than the younger drivers, so the older drivers' greater experience and caution could still explain their lower accident rates.\n\nD. Even if greater experience does not explain the difference between the accident rates of the two younger groups of drivers, it might still explain the differences between the accident rate of those two younger groups taken together and that of drivers aged 65 and older.\n\nE. The accident rate could be lower for drivers in late middle age than for those 65 and older because drivers in late middle age are also cautious and experienced, but their reflexes and vision tend to be less impaired. Even if that were true, the experience and caution of the drivers 65 and older might still make them safer than drivers 24 and under.\n\nThe correct answer is A.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -964,18 +964,18 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "In the argument given, the two boldfaced portions play which of the following roles?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "The first describes a practice that the argument seeks to justify; the second states a judgment that is used in support of a justification for that practice.",
+        b: "The first describes a practice that the argument seeks to explain; the second presents part of the argument's explanation of that practice.",
+        c: "The first introduces a practice that the argument seeks to evaluate; the second provides grounds for holding that the practice cannot achieve its objective.",
+        d: "The first introduces a policy that the argument seeks to evaluate; the second provides grounds for holding that the policy is not needed.",
+        e: "The first introduces a consideration supporting a policy that the argument seeks to evaluate; the second provides evidence for concluding that the policy should be abandoned."
       },
       image_url: null,
       image_options: null,
       passage_id: "CR-STIMULUS-00777",
       passage_text: "As a large corporation in a small country, Hachnut wants its managers to have international experience, so each year it sponsors management education abroad for its management trainees. Hachnut has found, however, that the attrition rate of graduates from this program is very high, with many of them leaving Hachnut to join competing firms soon after completing the program. Hachnut does use performance during the program as a criterion in deciding among candidates for management positions, but both this function and the goal of providing international experience could be achieved in other ways. Therefore, if the attrition problem cannot be successfully addressed, Hachnut should discontinue the sponsorship program.",
     } as VRQuestionData,
-    answers: generateMCAnswers("b"),
+    answers: generateMCAnswers("d"),
     explanation: "Argument Evaluation\n\nSituation: Malvernia has relied heavily on imported oil but recently began a program to convert heating systems from oil to natural gas. Malvernia currently produces more natural gas each year than it uses, and oil production in Malvernian oil fields is increasing at a steady pace. If these trends in fuel production and usage continue, therefore, Malvernian reliance on foreign sources for fuel is likely to decline soon.\n\nReasoning: Which option provides the information that it would be most useful to know in evaluating the argument? In other words, we are looking for the option which—depending on whether it was answered yes or no—would either most weaken or most strengthen the argument. The argument indicates that Malvernia will be using less oil for heating and will be producing more oil domestically. But the conclusion that Malvernia's reliance on foreign oil will decline, assuming the current trends mentioned continue, would be undermined if there was something in the works that could offset these trends—for instance, if it turned out that the country's need for oil was going to rise in the coming years.\n\nA. Since both domestic oil production and domestic natural gas production counteract the need for imported oil, it makes little difference to the argument whether domestic oil production exceeds domestic natural gas.\n\nB. Whether there are many countries that rely more on foreign oil than Malvernia would have little impact on whether Malvernia's need for foreign oil can be expected to decline.\n\nC. Since there is no information in the argument about whether Malvernia can expect an increase or decrease from these other energy sources, it does not matter how much they provide.\n\nD. Correct. This option provides the information that it would be most useful to know in evaluating the argument. As explained in the Reasoning section above, if Malvernia's need for oil rises in the coming years, the conclusion that Malvernia's reliance on foreign oil will decline is undermined.\n\nE. The argument tells us that a program has begun recently to convert heating systems from oil to gas. So, even if no such conversions have been completed, the argument still indicates that they can be expected to occur.\n\nThe correct answer is D.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -989,18 +989,18 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "In the argument given, the two boldfaced portions play which of the following roles?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "The first presents an explanatory hypothesis; the second states the main conclusion of the argument.",
+        b: "The first presents an explanatory hypothesis; the second presents evidence tending to support this hypothesis.",
+        c: "The first presents an explanatory hypothesis; the second presents evidence to support an alternative explanation.",
+        d: "The first describes a position that the argument opposes; the second presents evidence to undermine the support for the position being opposed.",
+        e: "The first describes a position that the argument opposes; the second states the main conclusion of the argument."
       },
       image_url: null,
       image_options: null,
       passage_id: "CR-STIMULUS-00778",
       passage_text: "Boreal owls range over a much larger area than do other owls of similar size. Scientists have hypothesized that it is scarcity of prey that leads the owls to range so widely. This hypothesis would be hard to confirm directly, since it is not possible to produce a sufficiently accurate count of the populations of small mammals inhabiting the forests where boreal owls live. Careful study of owl behavior has, however, shown that boreal owls do range over larger areas when they live in regions where food of the sort eaten by small mammals is comparatively sparse. This indicates that the scientists' hypothesis is not sheer speculation.",
     } as VRQuestionData,
-    answers: generateMCAnswers("b"),
+    answers: generateMCAnswers("c"),
     explanation: "Argument Construction\n\nSituation: Some children have allergic reactions to some of the chemicals commonly used in elementary schools as cleaners and pesticides. The number of children sent to elementary school nurses in Renston for allergic reactions to such chemicals has risen significantly over the past ten years.\n\nReasoning: What must the argument assume? The argument's conclusion presents just two alternatives: either the children are exposed to more of the chemicals than children in earlier years or they are more sensitive. But there is a third possible explanation for the significant increase in school-nurse visits that the school nurses have reported: that children are just more willing to go to the school nurse when they experience an allergic reaction than were children several years ago. For the conclusion to follow from its premises, the argument must assume that this is not the correct explanation.\n\nA. If the number of school nurses in Renston elementary schools had decreased over the past ten years, that would in no way explain the rise in the proportion of children reporting to school nurses for allergic reactions.\n\nB. Only school-nurse visits for allergic reactions to the cleaners and pesticides used in elementary schools are in question in the argument. Of course there could be school-nurse visits for allergic reactions to other things, but that issue does not arise in the argument.\n\nC. Correct. This can be seen by considering whether the argument would work if we assume that this were false, i.e., that a school-nurse visit is more likely in such cases. As noted above, this provides an alternative to the two explanations that the conclusion claims are the sole possibilities.\n\nD. This does not need to be assumed by the argument. The argument's conclusion suggests that children may in recent years have had greater exposure to the chemicals, not that this exposure has occurred exclusively in the schools. The argument does not rely on this latter assumption.\n\nE. The argument does not need to make this assumption. The argument is framed in terms of proportions of children having school-nurse visits for certain allergic reactions. How many children there are or what proportion such children are of Renston's total population is not directly relevant to the argument.\n\nThe correct answer is C.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -1014,18 +1014,18 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "The cognitive scientist makes which of the following assumptions in the argument above?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "Gallup's work has established that the great apes have a capacity for MSR unique among nonhuman species.",
+        b: "If an animal does not have the capacity for MSR, it does not have the capacity for self-awareness.",
+        c: "If a researcher exposes an animal to a mirror and that animal exhibits social behavior, that animal is incapable of being self-aware.",
+        d: "When exposed to a mirror, all animals display either social behavior or self-directed behavior.",
+        e: "Animals that do not exhibit MSR may demonstrate a capacity for self-awareness in other ways."
       },
       image_url: null,
       image_options: null,
       passage_id: "CR-STIMULUS-00779",
       passage_text: "Cognitive scientist: Using the pioneering work of comparative psychologist Gordon Gallup as a model, several studies have investigated animals' capacity for mirror self-recognition (MSR). Most animals exposed to a mirror respond only with social behavior, such as aggression. However, in the case of the great apes, repeated exposure to mirrors leads to self-directed behaviors, such as exploring the inside of the mouth, suggesting that these animals recognize the reflection as an image of self. The implication of these studies is that the great apes have a capacity for self-awareness unique among nonhuman species.",
     } as VRQuestionData,
-    answers: generateMCAnswers("b"),
+    answers: generateMCAnswers("c"),
     explanation: "Evaluation of a Plan\n\nSituation: Gill nets, used by Lockeport's commercial fishing boats, kill some fish of endangered species. The fishing commission has proposed requiring the use of tent nets, which do not kill fish. This would allow the fish of endangered species to be thrown back. It is argued that the proposed requirement will not harm commercial fishing boat operators, since commercial fishing boats in other similar places are using tent nets and are profitable.\n\nReasoning: What new piece of information would weaken the argument for the proposed requirement? The crucial support given for the argument is that in other similar places, commercial fishing boats that use tent nets and gill nets are profitable. But if, in places where only tent nets are now used, the numbers of commercial fishing boats diminished, it would be reasonable to suspect that switching entirely to tent nets may have driven some of the fishing operations out of business or caused them to move to other areas in which there was no expectation that they would use only tent nets.\n\nA. Correct. This is new information. As explained above, it would justify doubt about the argument made in favor of the proposal.\n\nB. This suggests that implementation of the proposed requirement could, over time, lower a certain type of operational costs for commercial fishing boats using tent nets. This would provide a new reason in support of the proposed requirement, not a reason to doubt the argument for it.\n\nC. This suggests that perhaps recreational fishing in Lockeport needs to be regulated more strictly, but that is a separate issue from the one addressed in the argument for the proposed tent-net requirement.\n\nD. This information casts no doubt on the relevance of the stated information that using gill nets contributes to undermining populations of at least some of the endangered fish species in Lockeport. If the species are currently endangered, they may need protection regardless of how they became endangered.\n\nE. This information suggests that fish of the endangered species in Lockeport cannot profitably be sold. It does not cast doubt on the argument made in favor of the proposed requirement. Neither does it cast doubt on the practicality or the desirability of the proposed requirement.\n\nThe correct answer is A.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -1064,11 +1064,11 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "In the argument given, the two boldfaced portions play which of the following roles?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "The first describes evidence that has been taken as supporting a conclusion; the second gives a reason for questioning that support.",
+        b: "The first describes evidence that has been taken as supporting a conclusion; the second states a contrary conclusion that is the main conclusion of the argument.",
+        c: "The first provides evidence in support of the main conclusion of the argument; the second states that conclusion.",
+        d: "The first describes the circumstance that the argument as a whole seeks to explain; the second gives the explanation that the argument seeks to establish.",
+        e: "The first describes the circumstance that the argument as a whole seeks to explain; the second provides evidence in support of the explanation that the argument seeks to establish."
       },
       image_url: null,
       image_options: null,
@@ -1089,18 +1089,18 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "Which of the following, if true, most strengthens the argument?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "The population of sea urchins, the main food of sea otters, has increased since the sea otter population declined.",
+        b: "Seals do not eat sea otters, nor do they compete with sea otters for food.",
+        c: "Most of the surviving sea otters live in a bay that is inaccessible to orcas.",
+        d: "The population of orcas in the Aleutian Islands has declined since the 1980s.",
+        e: "An increase in commercial fishing near the Aleutian Islands in the 1980s caused a slight decline in the population of the fish that seals use for food."
       },
       image_url: null,
       image_options: null,
       passage_id: "CR-STIMULUS-00782",
       passage_text: "Between 1980 and 2000, the sea otter population of the Aleutian Islands declined precipitously. There were no signs of disease or malnutrition, so there was probably an increase in the number of otters being eaten by predators. Orcas will eat otters when seals, their normal prey, are unavailable, and the Aleutian Islands seal population declined dramatically in the 1980s. Therefore, orcas were most likely the immediate cause of the otter population decline.",
     } as VRQuestionData,
-    answers: generateMCAnswers("d"),
+    answers: generateMCAnswers("e"),
     explanation: "Argument Evaluation\n\nSituation: Top executives at a bank that has been rumored to be in financial trouble have been buying shares in the bank. Bank depositors see this as a good sign, because they believe that it indicates that the executives have faith in the bank. However, corporate executives sometimes do this just to dispel rumors about a company's health.\n\nReasoning: What is the role that the two boldfaced portions play in the argument? The first boldfaced portion states that bank executives are buying bank shares, which the passage indicates is taken by bank depositors to be evidence of the executives' faith in the bank; in other words, the bank depositors take the fact that the executives are buying shares in the bank as supporting the conclusion that the executives have faith in the bank and thus that the rumors about the bank facing financial collapse are wrong. The passage then tells us what some have inferred from this (namely, that worrisome rumors about the bank's impending financial collapse are false). Finally, the passage offers in the second boldfaced portion evidence that undermines this inference: corporate executives have sometimes bought shares in their own companies just to dispel negative rumors, presumably whether the rumors are true or not.\n\nA. Correct. This option correctly identifies the roles played by the boldfaced portions. As discussed in the Reasoning section above, the bank depositors have drawn the conclusion from the first boldfaced portion that the bank's finances are sound, but the second boldfaced portion is presented to call their conclusion into question.\n\nB. This correctly describes the first portion's role, but the second portion is not offered as a conclusion—no evidence is given for it; rather, it is evidence for something else.\n\nC. The second portion is not offered as a conclusion; no evidence is given for it.\n\nD. The second portion is not itself offered as an explanation of why these bank executives are investing in the bank; if it were, that would mean that the bank executives are doing so because corporate executives are known to do such things in a calculated effort to dispel worries. Furthermore, the argument does not conclude that this other explanation (which the boldfaced portion points to) is correct, only that the one inferred by depositors may not be.\n\nE. The argument is not so much seeking to establish an explanation of its own as it is trying to undermine that inferred by the depositors.\n\nThe correct answer is A.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -1114,18 +1114,18 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "Which of the following would, if true, most strongly suggest that the political strategist's plan is unlikely to succeed?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "Many in the middle class who support Party X for its foreign policies also support its domestic policies and are fully aware of the implications of those policies.",
+        b: "Most middle-class supporters of Party X care about foreign policy and know very little about its domestic policies.",
+        c: "Long-term domestic policy sometimes conflicts with short-term domestic policy.",
+        d: "There are topics on which Party X and Party Y have significant agreement.",
+        e: "Some middle-class voters are concerned about both domestic and foreign policy."
       },
       image_url: null,
       image_options: null,
       passage_id: "CR-STIMULUS-00783",
       passage_text: "Political strategist: The domestic policies of our opponents in Party X are contrary to the priorities of many middle-class voters. Yet some of these same voters are supporters of Party X and its candidates due to the party's appeals about foreign policy. In order to win these voters back, we in Party Y must prove to middle-class voters that Party X does not represent their priorities with respect to domestic policy.",
     } as VRQuestionData,
-    answers: generateMCAnswers("c"),
+    answers: generateMCAnswers("d"),
     explanation: "Argument Evaluation\n\nSituation: A sea otter population declined even though there were no signs of disease or malnutrition. The local seal population also declined. Orcas eat otters when seals are unavailable, and thus are probably the cause of the decline in the otter population.\n\nReasoning: What would be evidence that predation by orcas reduced the sea otter population? Disease and malnutrition are ruled out as alternative explanations of the decline in the sea otter population. The argument could be further strengthened by casting doubt on other possible explanations, such as predation by other animals, or by presenting observations that predation of otters by orcas would help to explain.\n\nA. Regardless of whether or not orcas ate the sea otters, the sea urchin population would most likely have increased when the population of sea otters preying on them decreased.\n\nB. Because the seal population declined during the initial years of the otter population decline, predation by and competition with seals were already implausible explanations of the otter population decline.\n\nC. Correct. Orcas eating most of the accessible otters could plausibly explain this observation, which therefore provides additional evidence that orca predation reduced the sea otter population.\n\nD. If the orca population declined at the same time as the sea otter population, it would be less likely that increasing predation by orcas was causing the otter population.\n\nE. Since the sea otters showed no signs of malnutrition, they were probably getting enough fish. But if they were not, commercial fishing rather than orcas might have caused the otter population decline.\n\nThe correct answer is C.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -1139,18 +1139,18 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "Which of the following, if true, most strongly supports the psychologists' interpretation of the studies?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "The effect noted in the studies is not limited to patrons who have credit cards.",
+        b: "Patrons who are under financial pressure from their credit-card obligations tend to tip less when presented with a restaurant bill on a tray with a credit-card logo than when the tray has no logo.",
+        c: "In virtually all of the cases in the studies, the patrons who paid bills in cash did not possess credit cards.",
+        d: "In general, restaurant patrons who pay their bills in cash leave larger tips than do those who pay by credit card.",
+        e: "The percentage of restaurant bills paid with a given brand of credit card increases when that credit card's logo is displayed on the tray with which the bill is presented."
       },
       image_url: null,
       image_options: null,
       passage_id: "CR-STIMULUS-00784",
       passage_text: "Studies in restaurants show that the tips left by customers who pay their bill in cash tend to be larger when the bill is presented on a tray that bears a credit-card logo. Consumer psychologists hypothesize that simply seeing a credit-card logo makes many credit-card holders willing to spend more because it reminds them that their spending power exceeds the cash they have immediately available.",
     } as VRQuestionData,
-    answers: generateMCAnswers("c"),
+    answers: generateMCAnswers("d"),
     explanation: "Evaluation of a Plan\n\nSituation: A political strategist for Party Y notes that the domestic policies of Party X are contrary to the priorities of middle-class voters. Many middle-class voters nonetheless support Party X because of its foreign policy. The strategist argues that to win these voters back, Party Y should prove to middle-class voters that Party X's domestic policies do not represent their priorities.\n\nReasoning: What claim would most strongly suggest that the strategist's plan will not succeed? Suppose that a large number of the middle-class voters who support Party X's foreign policies also support its domestic policies, despite the fact that the domestic policies are contrary to their priorities. If that were true, then Party Y might well be unable to win back these voters by following the strategist's plan.\n\nA. Correct. As noted above, if many middle-class voters who support Party X's foreign policies also support its domestic policies, the strategy of attempting to show these voters that there is a conflict between their priorities and Party X's domestic policies may well fail to get them to vote for Party Y. Presumably, these voters are aware of the conflict and support Party X nonetheless—perhaps because Party Y's domestic policies conflict with their priorities even more.\n\nB. If most middle-class supporters of Party X know little about its domestic policies, Party Y may well be able to win them back simply by showing them the inconsistencies between those policies and their own priorities.\n\nC. A conflict between long-term domestic policy and short-term domestic policy tells us nothing about whether educating middle-class voters about conflicts between their priorities and Party X's domestic policies would help win them back to Party Y.\n\nD. The fact that the two parties have significant agreement on certain topics does not suggest the strategist's plan will not succeed. In fact, if the parties agreed on very little, the strategy of pointing only to issues related to domestic policy might be less likely to work. Therefore, this answer choice helps rule out a reason for thinking that the plan might not work.\n\nE. If anything, this would help support the claim that the strategist's plan will succeed.\n\nThe correct answer is A.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -1164,11 +1164,11 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "Which of the following is an assumption required by this argument?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "At least some volunteers who said they had acted fairly in choosing the easy task would have said that it was unfair for someone else to do so.",
+        b: "The most moral choice for the volunteers would have been to have the computer assign the two tasks randomly.",
+        c: "There were at least some volunteers who were assigned to do the hard task and felt that the assignment was unfair.",
+        d: "On average, the volunteers to whom the scenario was described were more accurate in their moral judgments than the other volunteers were.",
+        e: "At least some volunteers given the choice between assigning the tasks themselves and having the computer assign them felt that they had made the only fair choice available to them."
       },
       image_url: null,
       image_options: null,
@@ -1250,7 +1250,7 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
       passage_id: "CR-STIMULUS-00788",
       passage_text: "Archaeological evidence indicates some of the oldest stone implements found at Colha were used to cut away vegetation after controlled burning of trees to open areas of swampland for cultivation.\n\nSuccessor cultures at a given site often adopt the style of agricultural implements used by earlier inhabitants of the same site.\n\nMany religions and social institutions of the Mayan people who inhabited Colha 3,000 years ago relied on a highly developed system of agricultural symbols.",
     } as VRQuestionData,
-    answers: generateMCAnswers("d"),
+    answers: generateMCAnswers("a"),
     explanation: "Argument Evaluation\n\nSituation: Delta switched from technologies using fossil fuels to ones using electricity. It has been asked whether this results in less fossil fuel used per level of output. The answer is that it does.\n\nReasoning: What roles do the two boldfaced portions play in the argument? The first boldfaced statement is simply asserted by the passage; no premise, or reason, is given to support it. But the second boldfaced statement, when it is first introduced, is not asserted to be true, but rather is identified as something that might be inferred from the first statement. By the end of the passage, the argument concludes that the second statement is true.\n\nA. This option simply reverses the roles that the statements play in the argument.\n\nB. Correct. This option identifies the roles the boldfaced portions play: The second statement is not, on its own, the conclusion, because the argument initially merely asks whether it can be concluded on the basis of the first statement—that is, it asks whether the first boldfaced statement provides support for it. The conclusion of the argument is in the statement The answer, clearly, is yes. In other words it can be concluded that for a given level of output, Delta's operation now causes less fossil fuel to be consumed than it did formerly. The boldfaced portion tells us what can be concluded, and thus it can accurately be described as the content of the conclusion.\n\nC. Nothing in the passage is intended to support the first statement, and the second statement is not supposed to call the first into question.\n\nD. This correctly identifies the role of the first statement, but the second boldfaced portion does not call the argument's conclusion into question—it is part of a sentence that refers to the question whether that conclusion can be drawn from the first statement.\n\nE. Again, this is only half right. The second boldfaced portion is not offered as support for the conclusion; if it were offered as such support, the argument would be guilty of circular reasoning, since the second boldfaced portion states exactly what the argument concludes.\n\nThe correct answer is B.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -1275,7 +1275,7 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
       passage_id: "CR-STIMULUS-00789",
       passage_text: "Twelve years ago and again five years ago, there were extended periods when the Changir Republic's currency, the pundra, was weak: its value was unusually low relative to the world's most stable currencies. Both times, a weak pundra made Changir's manufactured products a bargain on world markets, and Changir's exports were up substantially. Now some politicians are saying in order to cause another similarly sized increase in exports, the government should allow the pundra to become weak again.",
     } as VRQuestionData,
-    answers: generateMCAnswers("d"),
+    answers: generateMCAnswers("b"),
     explanation: "Argument Evaluation\n\nSituation: Companies generally charge the greatest price the market will bear when they have a product that represents a technological advance. This is because they want to make large profits while they can. But making large profits inspires competition. As a result, profits can be maximized by charging less than the greatest price possible.\n\nReasoning: What logical roles do the two portions in boldface play in the argument? The first sentence of the passage introduces a connection between technological advances and price. The second sentence discusses a pricing strategy related to such advances and offers certain considerations that help explain that strategy. The first boldfaced portion of the passage, which is contained in the second sentence, presents one of these considerations. The third sentence begins with the word But, which suggests that what follows—the second boldfaced section—presents a consideration that may be at least superficially at odds with the strategy just described. The final sentence of the argument presents an alternative strategy that is supported by the preceding discussion.\n\nA. The course of action endorsed by the argument is described in the passage's fourth and final sentence, not in the second boldfaced portion, which is found in the passage's third sentence.\n\nB. Correct. The first boldfaced portion is part of an explanation of why many companies follow the strategy of charging as much as the market will bear when they have a product representing a technological advance. The second boldfaced portion gives a reason not to follow that strategy.\n\nC. The second boldfaced portion does not cast doubt on an assumption used to justify a strategy, but rather casts doubt on the strategy itself.\n\nD. The first boldfaced portion is raised in support of a strategy that the argument calls into question, not a strategy that the argument endorses.\n\nE. The first boldfaced portion helps explain the appeal of adopting a certain strategy; it does not show that the strategy is likely to fail. The second boldfaced portion does not explain the appeal of the strategy, but rather calls the strategy into question.\n\nThe correct answer is B.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -1300,7 +1300,7 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
       passage_id: "CR-STIMULUS-00790",
       passage_text: "Increased use of incineration is sometimes advocated as a safe way to dispose of chemical waste. But opponents of incineration point to the 40 incidents involving unexpected releases of dangerous chemical agents that were reported just last year at two existing incinerators commissioned to destroy a quantity of chemical waste material. Since designs for proposed new incinerators include no additional means of preventing such releases, leaks will only become more prevalent if use of incineration increases.",
     } as VRQuestionData,
-    answers: generateMCAnswers("a"),
+    answers: generateMCAnswers("c"),
     explanation: "Argument Evaluation\n\nSituation: Opponents of incineration point to 40 incidents of unexpected chemical releases at two existing incinerators last year. They argue that since new incinerator designs include no additional safety measures, leaks will become more prevalent if incineration use increases.\n\nReasoning: Which option would most seriously weaken this argument? The argument assumes that the incidents at the two existing incinerators are representative of what would happen at new incinerators. If there was something specific about those two incinerators that made them more prone to leaks—something that would not apply to new incinerators—then the argument would be weakened.\n\nA. Correct. If the staff at the two incinerators where leaks occurred had only cursory training, this suggests that the leaks may have been due to inadequate training rather than inherent problems with incineration technology. New incinerators could presumably have better-trained staff, making the comparison to these two incinerators less relevant.\n\nB. This does not weaken the argument. Even if other disposal methods haven't been proven safer, that doesn't make the concerns about incineration leaks any less valid.\n\nC. This doesn't address whether leaks will become more prevalent; it only suggests that existing capacity might be sufficient.\n\nD. If the frequency of leaks is about the same at new and old incinerators, this would actually support rather than weaken the argument that leaks will remain a problem.\n\nE. The fact that most leaks didn't extend beyond the property doesn't address whether leaks will become more prevalent with increased use.\n\nThe correct answer is A.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -1350,7 +1350,7 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
       passage_id: "CR-STIMULUS-00792",
       passage_text: "Asthma, a chronic breathing disorder, is significantly more common today among adult competitive swimmers than it is among competitive athletes who specialize in other sports. Although chlorine is now known to be a lung irritant and swimming pool water is generally chlorinated, it would be rash to assume that frequent exposure to chlorine is the explanation of the high incidence of asthma among these swimmers, since",
     } as VRQuestionData,
-    answers: generateMCAnswers("d"),
+    answers: generateMCAnswers("c"),
     explanation: "Argument Construction\n\nSituation: Asthma is more common among competitive swimmers than among other competitive athletes. Chlorine is a lung irritant generally present in swimming pool water.\n\nReasoning: What would cast doubt on the hypothesis that exposure to chlorine in swimming pools accounts for the high incidence of asthma among adult competitive swimmers? Evidence of any other factor that would provide an alternative explanation of why asthma is more common among adult competitive swimmers than among other competitive athletes would make it rash to assume that frequent exposure to chlorine explains the high incidence of asthma among these swimmers, so a statement providing such evidence would logically fill in the blank at the end of the passage to complete the argument.\n\nA. This might help explain why competitive athletes in general are not especially likely to have asthma, but it does not explain why adult competitive swimmers are more likely to have asthma than other competitive athletes are.\n\nB. This provides additional evidence that exposure to chlorine explains why adult competitive swimmers are more likely to have asthma than other competitive athletes are, so it does not cast doubt on that hypothesis.\n\nC. A lower incidence of asthma among competitive athletes than among nonathletes does not help explain the higher incidence of asthma among adult competitive swimmers than among other competitive athletes.\n\nD. Correct. Routinely encouraging children with asthma to take up competitive swimming would likely have made the proportion of adult competitive swimmers with asthma exceed the proportion of other competitive athletes with asthma, even if chlorine in swimming pool water never causes asthma in swimmers.\n\nE. This might help explain why people with asthma are just as likely as other people to become competitive athletes, but it does not help explain why adult competitive swimmers are more likely to have asthma than other competitive athletes are.\n\nThe correct answer is D.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -1400,7 +1400,7 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
       passage_id: "CR-STIMULUS-00794",
       passage_text: "Vargonia has just introduced a legal requirement that student-teacher ratios in government-funded schools not exceed a certain limit. All Vargonian children are entitled to education, free of charge, in these schools. When a recession occurs and average incomes fall, the number of children enrolled in government-funded schools tends to increase. Therefore, though most employment opportunities contract in economic recessions, getting a teaching job in Vargonia's government-funded schools will not be made more difficult by a recession.",
     } as VRQuestionData,
-    answers: generateMCAnswers("b"),
+    answers: generateMCAnswers("e"),
     explanation: "Argument Evaluation\n\nSituation: During a recession, the number of children in government-funded schools in Vargonia tends to increase. Vargonian children are entitled to a free education in these schools. A new law requires student-teacher ratios in these schools to remain below a certain limit.\n\nReasoning: Which of the five questions would provide us with the best information for evaluating the argument? The argument's conclusion is that recessions do not make teaching jobs in Vargonia's government-funded schools harder to get. During recessions, the reasoning goes, more students will enroll in Vargonia's government-funded schools than in nonrecession times. Implicit in the argument is the thought that, because the new law sets an upper limit on the average number of students per teacher, schools that get an influx of new students would have to hire more teachers. During a recession, however, there might be much more competition in the labor market for teachers because many more qualified people are applying for teaching jobs.\n\nA. This information is not significant in the context of the argument, which does not need to assume that only government-funded schools provide free education.\n\nB. Correct. Getting an answer to this question would provide us with specific information useful in evaluating the argument. A \"yes\" answer to this question would suggest that competition for teaching jobs in Vargonian government-funded schools would be keener during recessions. A \"no\" answer would suggest that the level of competition would decrease during recessions.\n\nC. Discovering the current student-teacher ratio in Vargonia's schools would be of no value, by itself, in evaluating the argument. We do not know what the new upper limit on the student-teacher ratio is, and we do not know whether Vargonia is currently in a recession.\n\nD. Finding out whether the proportion this refers to is 1 percent, for example, or 4 percent, would tell us nothing about whether getting teaching jobs at government-funded schools in Vargonia becomes more difficult during a recession. Among other things, we do not know whether Vargonia is currently in a recession, and we do not know what proportion of Vargonia's workers would be qualified candidates for teaching jobs.\n\nE. This is of no relevance in evaluating the argument because, presumably, the new limit on student-teacher ratios will be complied with. Thus, even if student-teacher ratios in the past would have exceeded the new limit, the argument concerns whether, in the future, getting a teaching job in Vargonia's government-funded schools will be made more difficult by a recession.\n\nThe correct answer is B.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -1425,7 +1425,7 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
       passage_id: "CR-STIMULUS-00795",
       passage_text: "In Colorado subalpine meadows, nonnative dandelions co-occur with a native flower, the larkspur. Bumblebees visit both species, creating the potential for interactions between the two species with respect to pollination. In a recent study, researchers selected 16 plots containing both species; all dandelions were removed from eight plots; the remaining eight control plots were left undisturbed. The control plots yielded significantly more larkspur seeds than the dandelion-free plots, leading the researchers to conclude that the presence of dandelions facilitates pollination (and hence seed production) in the native species by attracting more pollinators to the mixed plots.",
     } as VRQuestionData,
-    answers: generateMCAnswers("e"),
+    answers: generateMCAnswers("d"),
     explanation: "Argument Evaluation\n\nSituation: Bumblebees visit both larkspur and dandelions in certain meadows. A study found that more larkspur seeds were produced in meadow plots in which both larkspur and dandelions grew than in similar plots from which all dandelions had been removed. The researchers inferred that dandelions facilitate larkspur pollination.\n\nReasoning: What evidence would cast the most doubt on the inference from the study's findings to the conclusion that dandelions facilitate larkspur pollination by attracting more pollinators? The argument assumes that the only relevant difference between the two types of plots was whether dandelions were present. Evidence that the plots differed in some other way that could provide a plausible alternative explanation of why more larkspur seeds were produced in the plots with dandelions would weaken the argument.\n\nA. This would suggest that the larkspur pollination should have been lower in the plots with dandelions, so it does not provide a plausible alternative explanation for the study's findings.\n\nB. This is fully compatible with the claim that the dandelions attracted more pollinators to the mixed plots, and it would also help to support the argument's conclusion that dandelions facilitated larkspur pollination in those plots.\n\nC. Although this suggests that the mixed plots won't remain mixed for long, it does not provide a plausible alternative explanation for the study's finding that larkspur seed production was higher in the mixed plots.\n\nD. The argument is not about how fit larkspurs are as a species but about why they produced different numbers of seeds in the different plots.\n\nE. Correct. This provides a plausible alternative explanation for why larkspur seed production was lower in the plots from which dandelions had been removed, since digging them out would have disturbed the soil.\n\nThe correct answer is E.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -1439,18 +1439,18 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "In the argument above, the two portions in boldface play which of the following roles?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "The first is an objection that has been raised against the position taken by the argument; the second is the position taken by the argument.",
+        b: "The first is the position taken by the argument; the second is the position that the argument calls into question.",
+        c: "The first is a judgment that has been offered in support of the position that the argument calls into question; the second is a circumstance on which that judgment is, in part, based.",
+        d: "The first is a judgment that has been offered in support of the position that the argument calls into question; the second is that position.",
+        e: "The first is a claim that the argument calls into question; the second is the position taken by the argument."
       },
       image_url: null,
       image_options: null,
       passage_id: "CR-STIMULUS-00796",
       passage_text: "Museums that house Renaissance oil paintings typically store them in environments that are carefully kept within narrow margins of temperature and humidity to inhibit any deterioration. Laboratory tests have shown that the kind of oil paint used in these paintings actually adjusts to climatic changes quite well. If, as some museum directors believe, paint is the most sensitive substance in these works, then by relaxing the standards for temperature and humidity control, museums can reduce energy costs without risking damage to these paintings. Museums would be rash to relax those standards, however, since results of preliminary tests indicate that gesso, a compound routinely used by Renaissance artists to help paint adhere to the canvas, is unable to withstand significant variations in humidity.",
     } as VRQuestionData,
-    answers: generateMCAnswers("d"),
+    answers: generateMCAnswers("e"),
     explanation: "Argument Evaluation\n\nSituation: Museums house Renaissance paintings under strictly controlled climatic conditions to prevent deterioration. This is costly. But the paint in these works actually adjusts well to climate changes. On the other hand, another compound routinely used in these paintings, gesso, does not react well to changes in humidity.\n\nReasoning: What roles do the two boldfaced statements play in the argument? The first statement is not asserted by the author of the argument, but rather attributed as a belief to some museum directors. What the argument itself asserts is that IF this belief is true, THEN the second boldfaced statement is true. But the argument then goes on to offer evidence that the first statement is false and so concludes that museum directors would be ill-advised to assume that the second statement was true.\n\nA. This option mistakenly claims that the argument adopts the second statement as its position, when in fact the argument calls this position into question.\n\nB. Rather than adopting the first statement, the argument offers evidence that calls it into question.\n\nC. This option contends that the first statement is a judgment that is based on the second; in fact, the opposite is true.\n\nD. Correct. This option properly identifies the roles the two portions in boldface play in the argument.\n\nE. While the argument does call the first statement into question, it also calls the second statement into question as well.\n\nThe correct answer is D.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -1464,18 +1464,18 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "Which of the following, if true, most strongly supports the hypothesis that Codex Berinensis was produced in 1148?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "Other than Codex Berinensis, there are no known samples of the handwriting of the first three copyists.",
+        b: "According to the account by the fourth copyist, the plague went on for 10 months.",
+        c: "A scribe would be able to copy a page of text the size and style of Codex Berinensis in a day.",
+        d: "There was only one outbreak of plague in Florence in the 1100s.",
+        e: "The number of pages of Codex Berinensis produced by a single scribe becomes smaller with each successive change of copyist."
       },
       image_url: null,
       image_options: null,
       passage_id: "CR-STIMULUS-00797",
       passage_text: "Codex Berinensis, a Florentine copy of an ancient Roman medical treatise, is undated but contains clues to when it was produced. Its first 80 pages are by a single copyist, but the remaining 20 pages are by three different copyists, which indicates some significant disruption. Since a letter in handwriting, identified as that of the fourth copyist, mentions a plague that killed many people in Florence in 1148, Codex Berinensis was probably produced in that year.",
     } as VRQuestionData,
-    answers: generateMCAnswers("d"),
+    answers: generateMCAnswers("e"),
     explanation: "Argument Evaluation\n\nSituation: The Florentine copy of an ancient Roman work is undated but provides clues as to the time it was produced. The first 80 pages of Codex Berinensis are the work of one copyist. The fact that the last 20 pages are the work of a succession of three different copyists is an indication of serious turmoil at the time the copying was done. Since a letter in the fourth copyist's handwriting reveals that a plague killed many people there in 1148, Codex Berinensis was probably produced in that year.\n\nReasoning: Which information supports the hypothesis dating the Codex to 1148? Consider the basis of the hypothesis: the succession of copyists indicating the work was significantly disrupted, and the fourth copyist's letter indicating the plague of 1148 caused serious loss of life. From this, it is argued that the plague of 1148 was the reason for the multiple copyists and that the work can thus be dated to that year. What if there were multiple plagues?\n\nIn that case, Codex Berinensis could have been produced at another time. If, instead, only one plague occurred in the 1100s, the elimination of that possibility supports the hypothesis that the work was done in 1148.\n\nA. Examples of the copyists' handwriting might help date Codex Berinensis; the absence of handwriting samples does not help support 1148 as the date.\n\nB. The length of the plague, while it may account for the succession of copyists, does not help support the particular year the work was done.\n\nC. The amount of work a copyist could achieve each day does not provide any information about the year the work appeared.\n\nD. Correct. This statement properly identifies a circumstance that supports the hypothesis.\n\nE. The productivity or tenure of the various copyists is irrelevant to establishing the date.\n\nThe correct answer is D.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -1489,11 +1489,11 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "Which of the following is an assumption on which the argument depends?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "The Sepphoris mosaics are not composed exclusively of types of stones found naturally in the Sepphoris area.",
+        b: "There is no single region to which all the species depicted in the Sepphoris mosaics are native.",
+        c: "No motifs appear in the Sepphoris mosaics that do not also appear in the mosaics of some other Roman city.",
+        d: "All of the animal figures in the Sepphoris mosaics are readily identifiable as representations of known species.",
+        e: "There was not a common repertory of mosaic designs with which artisans who lived in various parts of the Roman Empire were familiar."
       },
       image_url: null,
       image_options: null,
@@ -1514,18 +1514,18 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "In the argument given, the two boldfaced portions play which of the following roles?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "The first describes a practice that the argument seeks to justify; the second states a judgment that is used in support of a justification for that practice.",
+        b: "The first describes a practice that the argument seeks to explain; the second presents part of the argument's explanation of that practice.",
+        c: "The first introduces a practice that the argument seeks to evaluate; the second provides grounds for holding that the practice cannot achieve its objective.",
+        d: "The first introduces a policy that the argument seeks to evaluate; the second provides grounds for holding that the policy is not needed.",
+        e: "The first introduces a consideration supporting a policy that the argument seeks to evaluate; the second provides evidence for concluding that the policy should be abandoned."
       },
       image_url: null,
       image_options: null,
       passage_id: "CR-STIMULUS-00799",
       passage_text: "As a large corporation in a small country, Hachnut wants its managers to have international experience, so each year it sponsors management education abroad for its management trainees. Hachnut has found, however, that the attrition rate of graduates from this program is very high, with many of them leaving Hachnut to join competing firms soon after completing the program. Hachnut does use performance during the program as a criterion in deciding among candidates for management positions, but both this function and the goal of providing international experience could be achieved in other ways. Therefore, if the attrition problem cannot be successfully addressed, Hachnut should discontinue the sponsorship program.",
     } as VRQuestionData,
-    answers: generateMCAnswers("d"),
+    answers: generateMCAnswers("e"),
     explanation: "Argument Construction\n\nSituation: One of Hachnut's goals is for its managers to have international experience, so it sponsors education abroad for management trainees. Graduates of this program, however, frequently leave the company soon after the training to work for competitors. Even though Hachnut uses trainees' performance in the program to make placement decisions, it should discontinue the sponsorship program, because both achievement of international experience and assistance in making placement decisions can be achieved in other ways.\n\nReasoning: What role do the two portions in boldface play in the argument? The first boldfaced portion introduces the policy of sponsorship of management training abroad. The argument goes on to evaluate this policy in light of the second boldfaced portion—which states that there are alternative ways of accomplishing what the sponsorship is intended to do—and concludes that the program should be discontinued.\n\nA. The argument does not seek to justify the practice described in the first boldfaced portion, and the second portion argues against the practice, not for it.\n\nB. The argument does not seek to explain the practice, but rather to evaluate whether it should be retained.\n\nC. Although the first boldfaced portion does introduce a practice that the argument seeks to evaluate, the second does not provide grounds for holding that the practice cannot achieve its objective, but rather states that there are other means of achieving that objective.\n\nD. Correct. The first boldfaced portion introduces a policy the argument seeks to evaluate. The second states that there are alternative ways to achieve the goal, which provides grounds for holding that the policy is not needed.\n\nE. Although the second boldfaced portion does provide a reason to abandon the policy the argument evaluates, the first does not introduce a consideration supporting that policy, but rather introduces the policy itself.\n\nThe correct answer is D.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",
@@ -1539,11 +1539,11 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "Which of the following would, if true, indicate a serious potential weakness of the suggested plan of action?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "Desalination equipment would allow water from the delta to be used for drinking even if it became saltier.",
+        b: "Water level is only one factor that affects salinity in the delta.",
+        c: "The upstream tributaries' water levels are controlled by systems of dams and reservoirs.",
+        d: "Neighboring areas have grown in population since the water was first diverted from upstream tributaries.",
+        e: "Much of the recent drop in the delta's water level can be attributed to a prolonged drought that has recently ended."
       },
       image_url: null,
       image_options: null,
@@ -1564,11 +1564,11 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "Which of the following, if true, most strongly supports the hypothesis?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "Bone flutes were probably the only musical instrument made by Neanderthals.",
+        b: "No musical instrument that is known to have used a diatonic scale is of an earlier date than the flute found at the Neanderthal campsite.",
+        c: "The flute was made from a cave-bear bone, and the campsite at which the flute fragment was excavated was in a cave that also contained skeletal remains of cave bears.",
+        d: "Flutes are the simplest wind instrument that can be constructed to allow playing a diatonic scale.",
+        e: "The cave-bear leg bone used to make the Neanderthal flute would have been long enough to make a flute capable of playing a complete diatonic scale."
       },
       image_url: null,
       image_options: null,
@@ -1589,18 +1589,18 @@ export const verbalReasoningQuestionsOG_CR_Hard: VerbalReasoningQuestion[] = [
     questionData: {
       question_text: "Which of the following most logically completes the passage?",
       options: {
-        a: "",
-        b: "",
-        c: "",
-        d: "",
-        e: ""
+        a: "several twentieth-century artists have consciously adopted from El Greco's paintings the systematic elongation of the human form",
+        b: "some people do have elongated bodies somewhat like those depicted in El Greco's portraits",
+        c: "if El Greco had an astigmatism, then, relative to how people looked to him, the elongated figures in his paintings would have appeared to him to be distorted",
+        d: "even if El Greco had an astigmatism, there would have been no correction for it available in the period in which he lived",
+        e: "there were non-European artists, even in El Greco's time, who included in their works human figures that were intentionally distorted"
       },
       image_url: null,
       image_options: null,
       passage_id: "CR-STIMULUS-00802",
       passage_text: "The figures in portraits by the Spanish painter El Greco (1541–1614) are systematically elongated. In El Greco's time, the intentional distortion of human figures was unprecedented in European painting. Consequently, some critics have suggested that El Greco had an astigmatism, a type of visual impairment, that resulted in people appearing to him in the distorted way that is characteristic of his paintings. However, this suggestion cannot be the explanation, because __________.",
     } as VRQuestionData,
-    answers: generateMCAnswers("c"),
+    answers: generateMCAnswers("e"),
     explanation: "Argument Evaluation\n\nSituation: Figures in portraits by the Spanish painter El Greco are elongated. Some critics infer that this was because El Greco suffered from an astigmatism that made people appear elongated to him. But this explanation cannot be correct.\n\nReasoning: Which option would most logically complete the argument? We need something that provides the best reason for thinking that the explanation suggested by critics—astigmatism—cannot be right. The critics' explanation might seem to work because ordinarily an artist would try to paint an image of a person so that the image would have the same proportions as the perceived person. So, if people seemed to El Greco to have longer arms and legs than they actually had, the arms and legs of the painted figures should appear to others to be longer than people's arms and legs normally are. This is how the explanation seems to make sense. But if astigmatism were the explanation, then the elongated images in his pictures should have appeared to El Greco to be too long, relative to his perception of the people themselves. This means that even if El Greco did have astigmatism, that factor would not provide an answer to the question, \"Why did El Greco paint images that he knew were distorted?\" So, astigmatism cannot be a sufficient explanation for the elongated figures in his paintings.\n\nA. Even if subsequent artists intentionally depicted human forms as more elongated than human figures actually are, and they did so to mimic El Greco's painted figures, that does not mean that El Greco's figures were intentionally elongated.\n\nB. Although this option provides another possible explanation for El Greco's elongated figures, it provides no evidence that the people El Greco painted had such elongated figures.\n\nC. Correct. El Greco would have perceived the images of people in his paintings as too long, relative to his perception of the people themselves. This means that even if El Greco did have astigmatism, that factor would not provide an answer to the question, \"Why did El Greco paint images that he knew were distorted?\"\n\nD. The absence of an ability to correct astigmatism in El Greco's day does not undermine the hypothesis that it was astigmatism that caused El Greco to paint elongated figures.\n\nE. Again, this suggests another possible explanation for the distortion—namely, that El Greco did it deliberately—but it does not provide any reason to think that this is the correct explanation (and that the critics' explanation is actually incorrect).\n\nThe correct answer is C.",
     categories: ["Critical Reasoning"],
     questionSubtype: "critical-reasoning",

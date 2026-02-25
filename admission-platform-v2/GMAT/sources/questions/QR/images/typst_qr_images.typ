@@ -1,43 +1,26 @@
-#import "@preview/cetz:0.4.2": canvas, draw
-#import calc: *
+#import "@preview/cetz:0.3.2"
 
-#canvas({
-  import draw: *
+#align(center)[
+  #cetz.canvas(length: 0.6cm, {
+    import cetz.draw: *
 
-  let center = (4, 3)
-  let outer-radius = 2.5
-  let inner-radius = 1.8
-  let circle-radius = 0.35
+    // Number line from -9 to 9
+    line((-10, 0), (10, 0), mark: (start: "<", end: ">"), stroke: 1pt)
 
-  // Draw the outer circle
-  circle(center, radius: outer-radius, stroke: 1.5pt)
+    // Tick marks and labels
+    for i in range(-9, 10) {
+      line((i, -0.15), (i, 0.15), stroke: 0.5pt)
+      content((i, -0.5), text(size: 8pt)[$#i$])
+    }
 
-  // Draw arrow pointing to position 1 (top)
-  line((4, 7), (4, 5.6), mark: (end: ">"), stroke: 1pt)
+    // x label
+    content((10.5, 0), text(size: 10pt)[$x$])
 
-  // Calculate positions for 8 circles around the perimeter
-  // Starting from top (1) and going clockwise
-  let positions = (
-    (0, 1),    // 1 - top
-    (45, 2),   // 2 - top-right
-    (90, 3),   // 3 - right
-    (135, 4),  // 4 - bottom-right
-    (180, 5),  // 5 - bottom
-    (225, 6),  // 6 - bottom-left
-    (270, 7),  // 7 - left
-    (315, 8),  // 8 - top-left
-  )
+    // Solution region (line from -8 to 4)
+    line((-8, 0), (4, 0), stroke: 2.5pt)
 
-  for (angle, num) in positions {
-    // Convert angle to radians and calculate position
-    let rad = angle * calc.pi / 180
-    let x = center.at(0) + inner-radius * calc.sin(rad)
-    let y = center.at(1) + inner-radius * calc.cos(rad)
-
-    // Draw small circle
-    circle((x, y), radius: circle-radius, stroke: 1pt)
-
-    // Draw number inside circle
-    content((x, y), [#num])
-  }
-})
+    // Filled circles at -8 and 4 (included endpoints)
+    circle((-8, 0), radius: 0.12, fill: black, stroke: 1.5pt)
+    circle((4, 0), radius: 0.12, fill: black, stroke: 1.5pt)
+  })
+]
