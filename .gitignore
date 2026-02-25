@@ -13,8 +13,9 @@ yarn-error.log*
 npm-debug.log*
 debug.log*
 
-# Environment files
+# Environment files — never commit secrets
 .env
+**/.env
 
 # Python
 __pycache__/
