@@ -22,6 +22,7 @@ interface GenerateRequest {
     answers: any;
     difficulty: string;
   }[];
+  crossDifficultyReferences?: boolean; // true when examples are from other difficulty levels
 }
 
 interface GeneratedQuestion {
@@ -249,7 +250,7 @@ serve(async (req) => {
     }
 
     // Parse request
-    const { section, diType, difficulty, count, categories, exampleQuestions }: GenerateRequest = await req.json();
+    const { section, diType, difficulty, count, categories, exampleQuestions, crossDifficultyReferences }: GenerateRequest = await req.json();
 
     // Validate request
     if (!section || !difficulty || !count || count < 1 || count > 10) {
@@ -301,7 +302,8 @@ serve(async (req) => {
       categories,
       exampleQuestions,
       questionSchema,
-      answerSchema
+      answerSchema,
+      crossDifficultyReferences ?? false
     );
 
     console.log(`Generating ${count} ${difficulty} ${questionType} questions`);
@@ -914,7 +916,8 @@ function buildPrompt(
   categories: string[],
   exampleQuestions: any[],
   questionSchema: string,
-  answerSchema: string
+  answerSchema: string,
+  crossDifficultyReferences: boolean = false
 ): string {
   // Get GMAT-specific difficulty calibration
   const difficultyCalibration = GMAT_DIFFICULTY_CALIBRATION[questionType]?.[difficulty] ||
@@ -1025,7 +1028,21 @@ ${existingTopics}
 
 Your questions must use COMPLETELY DIFFERENT scenarios, contexts, and problem setups.
 
+${crossDifficultyReferences ? `═══════════════════════════════════════════════════════════════════
+⚠️ CROSS-DIFFICULTY REFERENCE NOTE — READ CAREFULLY
 ═══════════════════════════════════════════════════════════════════
+The format examples below come from questions of DIFFERENT difficulty levels (not ${difficulty.toUpperCase()}).
+This is because no ${difficulty.toUpperCase()} questions exist yet for this category/type — you are creating the FIRST ones.
+
+Use these examples ONLY for:
+- JSON structure and field names
+- The types of mathematical concepts covered in this category
+
+DO NOT replicate their difficulty level. The questions you generate MUST strictly follow
+the ${difficulty.toUpperCase()} difficulty calibration defined above — not the difficulty of the examples.
+═══════════════════════════════════════════════════════════════════
+
+` : ''}═══════════════════════════════════════════════════════════════════
 JSON FORMAT REFERENCE (follow this structure exactly)
 ═══════════════════════════════════════════════════════════════════
 ${formatExamplesText}
@@ -1041,7 +1058,7 @@ Before outputting, verify each question:
 ✓ Uses a FRESH scenario not in the existing list above
 ✓ Has ONE definitively correct answer
 ✓ Wrong answers represent plausible student errors
-✓ Matches ${difficulty} difficulty calibration
+✓ Matches ${difficulty.toUpperCase()} difficulty calibration${crossDifficultyReferences ? ` — NOT the difficulty of the reference examples` : ''}
 ✓ Solvable in appropriate time (easy: <1.5min, medium: ~2min, hard: 2-3min)
 ✓ Requires no external knowledge beyond GMAT math curriculum
 ✓ ${getTypeSpecificChecklist(questionType)}

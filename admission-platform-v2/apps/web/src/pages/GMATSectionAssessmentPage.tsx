@@ -30,6 +30,7 @@ import {
   faChartLine,
 } from '@fortawesome/free-solid-svg-icons';
 import { supabase } from '../lib/supabase';
+import { checkAnswerCorrectness } from '../lib/gmat/answerChecking';
 import { getCurrentProfile } from '../lib/auth';
 import { MathJaxProvider } from '../components/MathJaxRenderer';
 import { Layout } from '../components/Layout';
@@ -369,16 +370,25 @@ export default function GMATSectionAssessmentPage() {
   }
 
   function goToQuestion(index: number) {
+    // Save time for current question (even if unanswered — important for review phase)
     const currentQ = questions[currentIndex];
     let updatedAnswers = answers;
 
     if (currentQ) {
+      const additionalTime = Math.round((Date.now() - questionStartTime) / 1000);
       const existingAnswer = answers.get(currentQ.id);
       if (existingAnswer) {
-        const additionalTime = Math.round((Date.now() - questionStartTime) / 1000);
         updatedAnswers = new Map(answers).set(currentQ.id, {
           ...existingAnswer,
           timeSpent: existingAnswer.timeSpent + additionalTime,
+        });
+        setAnswers(updatedAnswers);
+      } else if (additionalTime > 0) {
+        // Track time even for unanswered questions (e.g., during review navigation)
+        updatedAnswers = new Map(answers).set(currentQ.id, {
+          questionId: currentQ.id,
+          answer: '__UNANSWERED__',
+          timeSpent: additionalTime,
         });
         setAnswers(updatedAnswers);
       }
@@ -448,6 +458,7 @@ export default function GMATSectionAssessmentPage() {
         difficulty: string;
         questionType?: string;
         diSubtype?: string | null;
+        questionId: string;
       }> = [];
 
       for (const question of questions) {
@@ -476,15 +487,12 @@ export default function GMATSectionAssessmentPage() {
           : question.answers;
         const correctAnswer = answersData?.correct_answer;
 
-        // Check if answer is correct
-        let isCorrect = false;
-        if (typeof correctAnswer === 'string' && typeof userAnswer.answer === 'string') {
-          isCorrect = userAnswer.answer.toLowerCase() === correctAnswer.toLowerCase();
-        } else if (Array.isArray(correctAnswer) && Array.isArray(userAnswer.answer)) {
-          isCorrect = JSON.stringify(userAnswer.answer.sort()) === JSON.stringify(correctAnswer.sort());
-        } else if (typeof correctAnswer === 'object' && typeof userAnswer.answer === 'object') {
-          isCorrect = JSON.stringify(userAnswer.answer) === JSON.stringify(correctAnswer);
-        }
+        // Get DI subtype for proper answer comparison and guessing parameter
+        const questionData = typeof question.question_data === 'string'
+          ? JSON.parse(question.question_data)
+          : question.question_data;
+
+        const isCorrect = checkAnswerCorrectness(userAnswer.answer, correctAnswer, questionData?.di_type);
 
         if (isCorrect) {
           correctCount++;
@@ -493,25 +501,27 @@ export default function GMATSectionAssessmentPage() {
           }
         }
 
-        // Get DI subtype for guessing parameter
-        const questionData = typeof question.question_data === 'string'
-          ? JSON.parse(question.question_data)
-          : question.question_data;
-
         responsePattern.push({
           isCorrect,
           difficulty,
           questionType: question.question_type,
           diSubtype: questionData?.di_type || null,
+          questionId: question.id,
         });
       }
 
       // --- GMAT Section Scoring via IRT ---
-      const { theta } = estimateThetaFromResponses(responsePattern);
+      const { theta, se, perItemDetails } = estimateThetaFromResponses(responsePattern);
       const adjustedTheta = applyUnansweredPenalty(theta, unansweredCount);
       const sectionScore = thetaToSectionScore(adjustedTheta);
       const sectionFullName = SECTION_CODE_TO_FULL[section];
       const percentile = getSectionPercentile(sectionFullName, sectionScore);
+
+      // Merge per-item IRT details with question IDs (responsePattern and perItemDetails are both ordered by answered questions)
+      const responsePatternDetails = perItemDetails.map((item) => ({
+        ...item,
+        questionId: responsePattern[item.responseIndex]?.questionId,
+      }));
 
       setGmatSectionScore(sectionScore);
       setGmatPercentile(percentile);
@@ -539,14 +549,11 @@ export default function GMATSectionAssessmentPage() {
           : question.answers;
         const correctAnswer = answersDataForQ?.correct_answer;
 
-        let isCorrect = false;
-        if (typeof correctAnswer === 'string' && typeof userAnswer.answer === 'string') {
-          isCorrect = userAnswer.answer.toLowerCase() === correctAnswer.toLowerCase();
-        } else if (Array.isArray(correctAnswer) && Array.isArray(userAnswer.answer)) {
-          isCorrect = JSON.stringify(userAnswer.answer.sort()) === JSON.stringify(correctAnswer.sort());
-        } else if (typeof correctAnswer === 'object' && typeof userAnswer.answer === 'object') {
-          isCorrect = JSON.stringify(userAnswer.answer) === JSON.stringify(correctAnswer);
-        }
+        const questionDataForQ = typeof question.question_data === 'string'
+          ? JSON.parse(question.question_data)
+          : question.question_data;
+
+        const isCorrect = checkAnswerCorrectness(userAnswer.answer, correctAnswer, questionDataForQ?.di_type);
 
         perQuestionAnswersData[question.id] = {
           answer: userAnswer.answer as string | string[] | Record<string, string>,
@@ -584,6 +591,17 @@ export default function GMATSectionAssessmentPage() {
           bookmarked_question_ids: bookmarkedIds,
           unanswered_count: unansweredCount,
           unanswered_question_ids: unansweredQuestionIds,
+          metadata: {
+            gmat_section_score: sectionScore,
+            theta,
+            adjusted_theta: adjustedTheta,
+            se,
+            unanswered_count: unansweredCount,
+            percentile,
+            cycle: studentCycle,
+            algorithm_version: '1.1.0',
+            response_pattern_details: responsePatternDetails,
+          },
         };
         setResult(previewResult);
         setTestCompleted(true);
@@ -602,7 +620,13 @@ export default function GMATSectionAssessmentPage() {
         perQuestionAnswersData,
         bookmarkedIds,
         sectionScore,
-        theta
+        theta,
+        adjustedTheta,
+        se,
+        unansweredCount,
+        percentile,
+        studentCycle ?? undefined,
+        responsePatternDetails
       );
 
       setResult(savedResult);
@@ -713,6 +737,12 @@ export default function GMATSectionAssessmentPage() {
   const isCurrentBookmarked = currentQuestion && bookmarkedQuestions.has(currentQuestion.id);
   const allQuestionsAnswered = questions.length > 0 && answers.size === questions.length;
   const bookmarkedCount = bookmarkedQuestions.size;
+
+  // Detect passage-based questions to widen the container for split-panel layout
+  const currentQuestionData = currentQuestion?.question_data
+    ? (typeof currentQuestion.question_data === 'string' ? JSON.parse(currentQuestion.question_data) : currentQuestion.question_data)
+    : null;
+  const hasPassage = !!currentQuestionData?.passage_text;
 
   // Determine back URL based on path
   const backUrl = window.location.pathname.startsWith('/tutor')
@@ -829,21 +859,12 @@ export default function GMATSectionAssessmentPage() {
     // Build question results with timing data
     const questionResults = questions.map((q, index) => {
       const answerData = answers.get(q.id);
-      const correctAnswer = q.answers?.correct_answer;
-      let isCorrect = false;
-
-      if (answerData && answerData.answer !== '__UNANSWERED__' && correctAnswer) {
-        const studentAns = answerData.answer;
-        if (Array.isArray(correctAnswer)) {
-          isCorrect = Array.isArray(studentAns)
-            ? JSON.stringify(studentAns.sort()) === JSON.stringify([...correctAnswer].sort())
-            : correctAnswer.includes(studentAns as string);
-        } else if (typeof correctAnswer === 'object') {
-          isCorrect = JSON.stringify(studentAns) === JSON.stringify(correctAnswer);
-        } else {
-          isCorrect = studentAns === correctAnswer;
-        }
-      }
+      const answersObj = typeof q.answers === 'string' ? JSON.parse(q.answers) : q.answers;
+      const correctAnswer = answersObj?.correct_answer;
+      const qData = typeof q.question_data === 'string' ? JSON.parse(q.question_data) : q.question_data;
+      const isCorrect = answerData && answerData.answer !== '__UNANSWERED__' && correctAnswer
+        ? checkAnswerCorrectness(answerData.answer, correctAnswer, qData?.di_type)
+        : false;
 
       return {
         question: q,
@@ -1479,7 +1500,7 @@ export default function GMATSectionAssessmentPage() {
 
           {/* Review Content */}
           <div className="flex-1 overflow-auto p-4">
-            <div className="max-w-4xl mx-auto">
+            <div className={`${hasPassage ? 'max-w-7xl' : 'max-w-4xl'} mx-auto`}>
               {/* Compact Header */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg">
@@ -1677,7 +1698,7 @@ export default function GMATSectionAssessmentPage() {
 
         {/* Question Content */}
         <div className="flex-1 overflow-auto p-4">
-          <div className="max-w-4xl mx-auto">
+          <div className={`${hasPassage ? 'max-w-7xl' : 'max-w-4xl'} mx-auto`}>
             {currentQuestion && (() => {
               const questionData = typeof currentQuestion.question_data === 'string'
                 ? JSON.parse(currentQuestion.question_data)

@@ -40,6 +40,7 @@ import {
 import { Layout } from '../components/Layout';
 import { supabase } from '../lib/supabase';
 import { MathJaxProvider, MathJaxRenderer } from '../components/MathJaxRenderer';
+import { DataInsightsPreview } from '../components/questions/DataInsightsPreview';
 import {
   generateGMATQuestions,
   saveGeneratedQuestion,
@@ -308,46 +309,51 @@ export default function GMATQuestionAllocationPage() {
 
   // Compute matching questions for generation preview (shows how many questions will be used as examples)
   const generationMatchingQuestions = useMemo(() => {
-    // Start from ALL pool questions and filter by section/topic
-    let matching = [...poolQuestions];
-
-    // Filter by section
+    // Build the section+topic filtered base
     const sectionConfig = GMAT_STRUCTURE[selectedSection];
-    matching = matching.filter(q => {
+    const sectionTopicFiltered = poolQuestions.filter(q => {
       const qSection = q.section.toLowerCase();
-      return qSection.includes(selectedSection.toLowerCase()) ||
-             qSection.includes(sectionConfig.code.toLowerCase());
+      if (!qSection.includes(selectedSection.toLowerCase()) &&
+          !qSection.includes(sectionConfig.code.toLowerCase())) {
+        return false;
+      }
+      if (selectedSection === 'Data Insights') {
+        const topic = sectionConfig.topics.find(t => t.id === selectedTopicId);
+        if (topic && 'diType' in topic) {
+          return q.question_data?.di_type === topic.diType;
+        }
+      }
+      return true;
     });
 
-    // Filter by topic/DI type for Data Insights
-    if (selectedSection === 'Data Insights') {
-      const topic = sectionConfig.topics.find(t => t.id === selectedTopicId);
-      if (topic && 'diType' in topic) {
-        matching = matching.filter(q => {
-          return q.question_data?.di_type === topic.diType;
-        });
-      }
-    }
+    const sectionTopicCount = sectionTopicFiltered.length;
 
-    // Store section/topic filtered count for fallback info
-    const sectionTopicCount = matching.length;
-
-    // Filter by the modal's difficulty selection
-    matching = matching.filter(q => q.difficulty === generateDifficulty);
-
-    // Filter by the modal's category selections (AND condition - must have ALL selected categories)
+    // Stage 1: exact match — difficulty + categories
+    let exactMatches = sectionTopicFiltered.filter(q => q.difficulty === generateDifficulty);
     if (generateCategories.length > 0) {
-      matching = matching.filter(q => {
+      exactMatches = exactMatches.filter(q => {
         const qCategories = q.question_data?.categories as string[] || [];
         return generateCategories.every(cat => qCategories.includes(cat));
       });
     }
 
-    return {
-      exactMatch: matching.length,
-      sectionTopicTotal: sectionTopicCount,
-      questions: matching,
-    };
+    if (exactMatches.length > 0) {
+      return { exactMatch: exactMatches.length, crossDifficultyMatch: 0, sectionTopicTotal: sectionTopicCount };
+    }
+
+    // Stage 2: cross-difficulty — same category, any difficulty
+    if (generateCategories.length > 0) {
+      const crossDifficultyMatches = sectionTopicFiltered.filter(q => {
+        const qCategories = q.question_data?.categories as string[] || [];
+        return generateCategories.every(cat => qCategories.includes(cat));
+      });
+      if (crossDifficultyMatches.length > 0) {
+        return { exactMatch: 0, crossDifficultyMatch: crossDifficultyMatches.length, sectionTopicTotal: sectionTopicCount };
+      }
+    }
+
+    // Stage 3: section/topic only
+    return { exactMatch: 0, crossDifficultyMatch: 0, sectionTopicTotal: sectionTopicCount };
   }, [poolQuestions, selectedSection, selectedTopicId, generateDifficulty, generateCategories]);
 
   useEffect(() => {
@@ -628,8 +634,13 @@ export default function GMATQuestionAllocationPage() {
     // Filter by usage status
     if (usageFilter !== 'all') {
       filtered = filtered.filter(q => {
-        const isUsed = usedQuestionIds.has(q.id);
-        return usageFilter === 'used' ? isUsed : !isUsed;
+        if (usageFilter === 'used') {
+          // Show only questions allocated in the CURRENT section-topic-material_type-cycle slot
+          return allocatedQuestionIds.has(q.id);
+        } else {
+          // "unused": exclude questions allocated anywhere (globally)
+          return !usedQuestionIds.has(q.id);
+        }
       });
     }
 
@@ -783,32 +794,28 @@ export default function GMATQuestionAllocationPage() {
     try {
       // Start from ALL pool questions and filter by section/topic (context-based)
       // This removes the need to manually pre-filter the question pool UI
-      let matchingQuestions = [...poolQuestions];
-
-      // Filter by section
       const sectionConfig = GMAT_STRUCTURE[selectedSection];
-      matchingQuestions = matchingQuestions.filter(q => {
+
+      // Build the section+topic filtered base (reused across fallback stages)
+      const sectionTopicFiltered = poolQuestions.filter(q => {
         const qSection = q.section.toLowerCase();
-        return qSection.includes(selectedSection.toLowerCase()) ||
-               qSection.includes(sectionConfig.code.toLowerCase());
+        if (!qSection.includes(selectedSection.toLowerCase()) &&
+            !qSection.includes(sectionConfig.code.toLowerCase())) {
+          return false;
+        }
+        if (selectedSection === 'Data Insights') {
+          const topic = sectionConfig.topics.find(t => t.id === selectedTopicId);
+          if (topic && 'diType' in topic) {
+            return q.question_data?.di_type === topic.diType;
+          }
+        }
+        return true;
       });
 
-      // Filter by topic/DI type for Data Insights
-      if (selectedSection === 'Data Insights') {
-        const topic = sectionConfig.topics.find(t => t.id === selectedTopicId);
-        if (topic && 'diType' in topic) {
-          matchingQuestions = matchingQuestions.filter(q => {
-            return q.question_data?.di_type === topic.diType;
-          });
-        }
-      }
-
-      // Filter by the modal's difficulty selection
-      matchingQuestions = matchingQuestions.filter(q =>
+      // Stage 1: exact match — section + topic + difficulty + categories
+      let matchingQuestions = sectionTopicFiltered.filter(q =>
         q.difficulty === generateDifficulty
       );
-
-      // Filter by the modal's category selections (AND condition - must have ALL selected categories)
       if (generateCategories.length > 0) {
         matchingQuestions = matchingQuestions.filter(q => {
           const qCategories = q.question_data?.categories as string[] || [];
@@ -816,22 +823,25 @@ export default function GMATQuestionAllocationPage() {
         });
       }
 
-      // If no questions match the exact criteria, fall back to section/topic questions only
+      // Track whether we fell back to cross-difficulty references
+      let crossDifficultyReferences = false;
+
       if (matchingQuestions.length === 0) {
-        // Reset to section/topic filtered questions
-        matchingQuestions = [...poolQuestions];
-        matchingQuestions = matchingQuestions.filter(q => {
-          const qSection = q.section.toLowerCase();
-          return qSection.includes(selectedSection.toLowerCase()) ||
-                 qSection.includes(sectionConfig.code.toLowerCase());
-        });
-        if (selectedSection === 'Data Insights') {
-          const topic = sectionConfig.topics.find(t => t.id === selectedTopicId);
-          if (topic && 'diType' in topic) {
-            matchingQuestions = matchingQuestions.filter(q => {
-              return q.question_data?.di_type === topic.diType;
-            });
-          }
+        // Stage 2: cross-difficulty — same category, any difficulty
+        // Use these as structural references, but flag the mismatch for the prompt
+        const crossDifficultyMatches = generateCategories.length > 0
+          ? sectionTopicFiltered.filter(q => {
+              const qCategories = q.question_data?.categories as string[] || [];
+              return generateCategories.every(cat => qCategories.includes(cat));
+            })
+          : sectionTopicFiltered;
+
+        if (crossDifficultyMatches.length > 0) {
+          matchingQuestions = crossDifficultyMatches;
+          crossDifficultyReferences = true;
+        } else {
+          // Stage 3: last resort — section/topic only (no difficulty or category filter)
+          matchingQuestions = sectionTopicFiltered;
         }
       }
 
@@ -860,6 +870,7 @@ export default function GMATQuestionAllocationPage() {
         count: generateCount,
         categories: generateCategories,
         exampleQuestions,
+        crossDifficultyReferences,
       });
 
       if (!response.success || response.questions.length === 0) {
@@ -2018,7 +2029,13 @@ export default function GMATQuestionAllocationPage() {
     const data = question.question_data;
 
     if (question.question_type === 'data_insights') {
-      return renderDataInsightsQuestion(question);
+      return (
+        <DataInsightsPreview
+          questionData={question.question_data}
+          answers={question.answers}
+          showCorrectAnswer={true}
+        />
+      );
     }
 
     if (question.question_type === 'multiple_choice') {
@@ -3341,12 +3358,20 @@ export default function GMATQuestionAllocationPage() {
                   <div className={`rounded-lg p-4 ${
                     generationMatchingQuestions.exactMatch > 0
                       ? 'bg-blue-50 border border-blue-200'
-                      : 'bg-amber-50 border border-amber-200'
+                      : generationMatchingQuestions.crossDifficultyMatch > 0
+                        ? 'bg-orange-50 border border-orange-200'
+                        : 'bg-amber-50 border border-amber-200'
                   }`}>
                     <div className="flex items-center gap-2 mb-2">
                       <FontAwesomeIcon
                         icon={faFilter}
-                        className={generationMatchingQuestions.exactMatch > 0 ? 'text-blue-500' : 'text-amber-500'}
+                        className={
+                          generationMatchingQuestions.exactMatch > 0
+                            ? 'text-blue-500'
+                            : generationMatchingQuestions.crossDifficultyMatch > 0
+                              ? 'text-orange-500'
+                              : 'text-amber-500'
+                        }
                       />
                       <span className="font-semibold text-gray-700">Example Questions for AI:</span>
                     </div>
@@ -3361,6 +3386,18 @@ export default function GMATQuestionAllocationPage() {
                             <p>Difficulty: <span className="font-medium">{generateDifficulty}</span></p>
                             <p>Categories: <span className="font-medium">{generateCategories.length > 0 ? generateCategories.join(', ') : 'Any'}</span></p>
                           </div>
+                        </div>
+                      ) : generationMatchingQuestions.crossDifficultyMatch > 0 ? (
+                        <div className="text-orange-700">
+                          <p>
+                            No <span className="font-medium">{generateDifficulty}</span> questions yet. Will use <span className="font-bold">{generationMatchingQuestions.crossDifficultyMatch}</span> cross-difficulty reference{generationMatchingQuestions.crossDifficultyMatch !== 1 ? 's' : ''} from this category.
+                          </p>
+                          <div className="text-xs text-orange-600 mt-2 space-y-1">
+                            <p>Section: <span className="font-medium">{selectedSection}</span> ({generationMatchingQuestions.sectionTopicTotal} total)</p>
+                            <p>Difficulty: <span className="font-medium">{generateDifficulty}</span> (target — AI will follow this)</p>
+                            <p>Categories: <span className="font-medium">{generateCategories.join(', ')}</span></p>
+                          </div>
+                          <p className="mt-2 text-xs">AI will be instructed to match <span className="font-medium">{generateDifficulty}</span> difficulty, not the examples.</p>
                         </div>
                       ) : (
                         <div className="text-amber-700">

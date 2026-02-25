@@ -605,6 +605,12 @@ export interface GmatAssessmentResult {
   // Unanswered questions tracking
   unanswered_count?: number;
   unanswered_question_ids?: string[];
+  // IRT scoring metadata (section assessments & simulations)
+  metadata?: {
+    gmat_section_score?: number;
+    theta?: number;
+    [key: string]: unknown;
+  } | null;
 }
 
 /**
@@ -857,7 +863,9 @@ export async function savePlacementAssessmentResult(
   scoreTotal: number,
   difficultyBreakdown: GmatAssessmentResult['difficulty_breakdown'],
   questionIds: string[],
-  timeSpentSeconds?: number
+  timeSpentSeconds?: number,
+  answersData?: Record<string, any>,
+  bookmarkedQuestionIds?: string[]
 ): Promise<GmatAssessmentResult> {
   const scorePercentage = (scoreRaw / scoreTotal) * 100;
   const suggestedCycle = calculateSuggestedCycle(scoreRaw, scoreTotal);
@@ -877,6 +885,8 @@ export async function savePlacementAssessmentResult(
       tutor_validated: false,
       question_ids: questionIds,
       completed_at: new Date().toISOString(),
+      ...(answersData ? { answers_data: answersData } : {}),
+      ...(bookmarkedQuestionIds ? { bookmarked_question_ids: bookmarkedQuestionIds } : {}),
     })
     .select()
     .single();
@@ -1145,9 +1155,29 @@ export async function saveSectionAssessmentResult(
   answersData?: Record<string, any>,
   bookmarkedQuestionIds?: string[],
   sectionScore?: number,
-  theta?: number
+  theta?: number,
+  adjustedTheta?: number,
+  se?: number,
+  unansweredCount?: number,
+  percentile?: number,
+  cycle?: string,
+  responsePatternDetails?: Array<Record<string, any>>
 ): Promise<GmatAssessmentResult> {
   const scorePercentage = (scoreRaw / scoreTotal) * 100;
+
+  const hasMetadata = sectionScore != null || theta != null;
+  const metadata = hasMetadata ? {
+    gmat_section_score: sectionScore,
+    theta,                          // raw theta before unanswered penalty
+    adjusted_theta: adjustedTheta,  // theta after penalty (used for scoring)
+    se,                             // standard error of theta estimate
+    unanswered_count: unansweredCount,
+    percentile,
+    cycle,
+    algorithm_version: '1.1.0',
+    // Per-item IRT parameters at the final converged theta (for analytics and auditing)
+    response_pattern_details: responsePatternDetails ?? null,
+  } : null;
 
   const { data, error } = await supabase
     .from('2V_gmat_assessment_results')
@@ -1165,10 +1195,7 @@ export async function saveSectionAssessmentResult(
       completed_at: new Date().toISOString(),
       answers_data: answersData || null,
       bookmarked_question_ids: bookmarkedQuestionIds || null,
-      metadata: sectionScore != null || theta != null ? {
-        gmat_section_score: sectionScore,
-        theta,
-      } : null,
+      metadata,
     })
     .select()
     .single();
@@ -1344,28 +1371,31 @@ export const MOCK_DIFFICULTY_BY_CYCLE: Record<GmatCycle, Record<GmatSection, { e
  * Excludes questions the student has already seen
  */
 export async function getMockSimulationQuestions(
-  studentId: string
+  studentId: string,
+  skipReadinessCheck: boolean = false
 ): Promise<{
   questions: Array<{ id: string; section: GmatSection; difficulty: string }>;
   questionsBySection: Record<GmatSection, Array<{ id: string; section: GmatSection; difficulty: string }>>;
   error?: string;
 }> {
-  // Check if student is ready for mock simulation
-  const readiness = await isReadyForMockSimulation(studentId);
-  if (!readiness.ready) {
-    const missingSections = Object.entries(readiness.sections)
-      .filter(([, data]) => !data.passed)
-      .map(([section]) => section);
-    return {
-      questions: [],
-      questionsBySection: { QR: [], DI: [], VR: [] },
-      error: `Complete section assessments first. Missing: ${missingSections.join(', ')}`,
-    };
+  // Check if student is ready for mock simulation (skip in preview mode)
+  if (!skipReadinessCheck) {
+    const readiness = await isReadyForMockSimulation(studentId);
+    if (!readiness.ready) {
+      const missingSections = Object.entries(readiness.sections)
+        .filter(([, data]) => !data.passed)
+        .map(([section]) => section);
+      return {
+        questions: [],
+        questionsBySection: { QR: [], DI: [], VR: [] },
+        error: `Complete section assessments first. Missing: ${missingSections.join(', ')}`,
+      };
+    }
   }
 
   // Get student's progress to determine cycle
   const progress = await getStudentGMATProgress(studentId);
-  if (!progress) {
+  if (!progress && !skipReadinessCheck) {
     return {
       questions: [],
       questionsBySection: { QR: [], DI: [], VR: [] },
@@ -1373,8 +1403,8 @@ export async function getMockSimulationQuestions(
     };
   }
 
-  const cycle = progress.gmat_cycle;
-  const seenIds = new Set(progress.seen_question_ids || []);
+  const cycle: GmatCycle = progress?.gmat_cycle || 'Development';
+  const seenIds = new Set(progress?.seen_question_ids || []);
 
   // Fetch questions from the GMAT question pool
   const { data: poolTest, error: poolError } = await supabase
@@ -1523,7 +1553,9 @@ export async function saveMockSimulationResult(
   scoreTotal: number,
   sectionScores: MockSimulationResult['section_scores'],
   questionIds: string[],
-  timeSpentSeconds?: number
+  timeSpentSeconds?: number,
+  answersData?: Record<string, { answer: string | string[] | Record<string, string>; time_spent_seconds: number; is_correct: boolean; is_unanswered?: boolean }>,
+  bookmarkedQuestionIds?: string[]
 ): Promise<GmatAssessmentResult> {
   const scorePercentage = (scoreRaw / scoreTotal) * 100;
 
@@ -1562,6 +1594,8 @@ export async function saveMockSimulationResult(
       time_spent_seconds: timeSpentSeconds || null,
       tutor_validated: true, // Mock simulations don't require validation
       question_ids: questionIds,
+      answers_data: answersData || null,
+      bookmarked_question_ids: bookmarkedQuestionIds || null,
       completed_at: new Date().toISOString(),
     })
     .select()
@@ -2068,6 +2102,7 @@ export interface GenerateQuestionsRequest {
     answers: Record<string, unknown>;
     difficulty: string;
   }[];
+  crossDifficultyReferences?: boolean; // true when examples are from other difficulty levels
 }
 
 export interface GenerateQuestionsResponse {
@@ -2403,4 +2438,79 @@ export async function getAllTrainingResults(
     assigned_cycle: row.assigned_cycle as GmatCycle | null,
     difficulty_breakdown: row.difficulty_breakdown as GmatAssessmentResult['difficulty_breakdown'],
   }));
+}
+
+// ============================================
+// GMAT Analytics Data
+// ============================================
+
+export interface QuestionMetadata {
+  id: string;
+  section: string;
+  difficulty: string;
+  question_type: string;
+  question_data: { di_type?: string; categories?: string[] };
+}
+
+export interface GmatAnalyticsData {
+  /** All assessment results (training + section + mock) with answers_data */
+  allResults: GmatAssessmentResult[];
+  /** Question metadata keyed by question ID */
+  questionMetadata: Map<string, QuestionMetadata>;
+}
+
+/**
+ * Fetch comprehensive analytics data for a student.
+ * Returns all assessment results with answers_data and question metadata
+ * for category/time analysis.
+ */
+export async function getAnalyticsData(studentId: string): Promise<GmatAnalyticsData> {
+  // Fetch all assessment results
+  const allResults = await getStudentAssessmentResults(studentId);
+
+  // Collect all unique question IDs from results
+  const questionIdSet = new Set<string>();
+  for (const result of allResults) {
+    if (result.question_ids) {
+      for (const qid of result.question_ids) {
+        questionIdSet.add(qid);
+      }
+    }
+  }
+
+  const questionIds = Array.from(questionIdSet);
+  const questionMetadata = new Map<string, QuestionMetadata>();
+
+  // Fetch question metadata in batches (Supabase .in() has a limit)
+  const BATCH_SIZE = 200;
+  for (let i = 0; i < questionIds.length; i += BATCH_SIZE) {
+    const batch = questionIds.slice(i, i + BATCH_SIZE);
+    const { data, error } = await supabase
+      .from('2V_questions')
+      .select('id, section, difficulty, question_type, question_data')
+      .in('id', batch);
+
+    if (error) {
+      console.error('Error fetching question metadata for analytics:', error);
+      continue;
+    }
+
+    for (const q of data || []) {
+      const qData = typeof q.question_data === 'string'
+        ? JSON.parse(q.question_data)
+        : q.question_data;
+      questionMetadata.set(q.id, {
+        id: q.id,
+        section: q.section || '',
+        difficulty: (q.difficulty || 'medium').toLowerCase(),
+        question_type: q.question_type || 'multiple_choice',
+        question_data: {
+          di_type: qData?.di_type,
+          categories: qData?.categories,
+        },
+      });
+    }
+  }
+
+  return { allResults, questionMetadata };
 }

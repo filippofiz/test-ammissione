@@ -35,6 +35,8 @@ import GMATConfigPage from './pages/GMATConfigPage';
 // GMATAssessmentResultsPage: kept for rollback, replaced by UnifiedResultsPage
 import GMATTrainingTestPage from './pages/GMATTrainingTestPage';
 import GMATSectionAssessmentPage from './pages/GMATSectionAssessmentPage';
+import GMATSimulationPage from './pages/GMATSimulationPage';
+import GMATPlacementAssessmentPage from './pages/GMATPlacementAssessmentPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 function App() {
@@ -111,6 +113,22 @@ function App() {
           element={
             <ProtectedRoute requiredRoles={['STUDENT']}>
               <GMATSectionAssessmentPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/student/take-test/gmat-simulation"
+          element={
+            <ProtectedRoute requiredRoles={['STUDENT']}>
+              <GMATSimulationPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/student/take-test/gmat-placement-assessment"
+          element={
+            <ProtectedRoute requiredRoles={['STUDENT']}>
+              <GMATPlacementAssessmentPage />
             </ProtectedRoute>
           }
         />
@@ -209,6 +227,22 @@ function App() {
           element={
             <ProtectedRoute requiredRoles={['TUTOR', 'ADMIN']}>
               <GMATSectionAssessmentPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tutor/take-test/gmat-simulation"
+          element={
+            <ProtectedRoute requiredRoles={['TUTOR', 'ADMIN']}>
+              <GMATSimulationPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tutor/take-test/gmat-placement-assessment"
+          element={
+            <ProtectedRoute requiredRoles={['TUTOR', 'ADMIN']}>
+              <GMATPlacementAssessmentPage />
             </ProtectedRoute>
           }
         />
