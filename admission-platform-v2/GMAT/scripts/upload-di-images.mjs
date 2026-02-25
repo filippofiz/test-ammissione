@@ -17,9 +17,17 @@ const require = createRequire(import.meta.url);
 
 const { createClient } = require('../../apps/web/node_modules/@supabase/supabase-js/dist/main/index.js');
 
-const SUPABASE_URL = 'https://elrwpaezjnemmiegkyin.supabase.co';
-const SERVICE_ROLE_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVscndwYWV6am5lbW1pZWdreWluIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczODA3MDIwNSwiZXhwIjoyMDUzNjQ2MjA1fQ._O1v1zCm7O6GMrdfNOg8F8Is4h-JjDOo4vP0gq7GkhI';
+// Load from environment — create a .env file in this directory (never commit it):
+//   SUPABASE_URL=https://elrwpaezjnemmiegkyin.supabase.co
+//   SERVICE_ROLE_KEY=<your-service-role-key>
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SERVICE_ROLE_KEY = process.env.SERVICE_ROLE_KEY;
+
+if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+  console.error('Missing SUPABASE_URL or SERVICE_ROLE_KEY environment variables.');
+  console.error('Create admission-platform-v2/GMAT/scripts/.env and set both values.');
+  process.exit(1);
+}
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
