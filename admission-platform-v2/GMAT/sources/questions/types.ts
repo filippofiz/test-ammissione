@@ -123,6 +123,11 @@ export interface VRQuestionData {
   // Optional: for Reading Comprehension questions that share a passage
   passage_id?: string;
   passage_text?: string;
+  // Optional: character offsets where each printed line starts in passage_text.
+  // Key is the 1-based line number (as a string for JSON compatibility),
+  // value is the 0-based character index into passage_text.
+  // Populated from extract_rc_line_offsets.py output after manual verification.
+  passage_line_offsets?: Record<string, number>;
 }
 
 // Full VR question for use in code (parsed)
@@ -300,9 +305,11 @@ export function toDBRow(question: GMATQuestion): Omit<BaseQuestionRow, "id" | "c
     explanation = (question.questionData as { explanation?: string }).explanation ?? null;
   }
 
-  // Include explanation inside question_data JSONB
+  // Include explanation and categories inside question_data JSONB
+  const categories = "categories" in question ? question.categories : undefined;
   const questionDataWithExplanation = {
     ...question.questionData,
+    categories: categories ?? null,
     explanation: explanation,
   };
 

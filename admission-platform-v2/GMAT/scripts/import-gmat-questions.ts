@@ -68,10 +68,10 @@ if (!supabaseUrl || !supabaseServiceKey) {
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // Valid question ID pattern: Section-GMAT-Source-Number
-// Examples: QR-GMAT-OG__-00001, DI-GMAT-OG-00273, VR-GMAT-PT1_-00001, QR-GMAT-PQ_-00001
-// Sources: OG (Official Guide), SK (Study Kit), SI (Special Items), PT1 (Practice Test 1), PQ (Practice Questions)
+// Examples: QR-GMAT-OG__-00001, DI-GMAT-OG-00273, VR-GMAT-PT1_-00001, QR-GMAT-PQ_-00001, QR-GMAT-PQO_-00001, DI-GMAT-OQBK-00001
+// Sources: OG (Official Guide), SK (Study Kit), SI (Special Items), PT1 (Practice Test 1), PQ (Practice Questions), PQO (Practice Questions Online), OQBK (Online Question Bank)
 // Allow 1 or 2 underscores, optional hyphen before number
-const VALID_ID_PATTERN = /^(QR|VR|DI)-GMAT-(OG_?_?|SK_?_?|SI_?_?|PT1_?|PQ_?_?)-?\d{5}$/;
+const VALID_ID_PATTERN = /^(QR|VR|DI)-GMAT-(OG_?_?|SK_?_?|SI_?_?|PT1_?|PQ_?_?|PQO_?|OQBK)-?\d{5}$/;
 
 // Question file mapping - based on actual export names from grep
 const QUESTION_FILES: Record<string, { section: string; path: string; exportName: string }> = {
@@ -198,6 +198,48 @@ const QUESTION_FILES: Record<string, { section: string; path: string; exportName
     path: '../sources/questions/DI/data_insights_PT1',
     exportName: 'dataInsightsQuestionsPT1'
   },
+  // PQO files (GMAT Practice Questions Online)
+  'quantitative_reasoning_PQO': {
+    section: 'QR',
+    path: '../sources/questions/QR/quantitative_reasoning_PQO',
+    exportName: 'quantitativeReasoningQuestionsPQO'
+  },
+  'data_insights_PQO_DS': {
+    section: 'DI',
+    path: '../sources/questions/DI/data_insights_PQO_DS',
+    exportName: 'dataInsightsPQO_DS'
+  },
+  'data_insights_PQO_TPA': {
+    section: 'DI',
+    path: '../sources/questions/DI/data_insights_PQO_TPA',
+    exportName: 'dataInsightsPQO_TPA'
+  },
+  'data_insights_PQO_GI': {
+    section: 'DI',
+    path: '../sources/questions/DI/data_insights_PQO_GI',
+    exportName: 'dataInsightsPQO_GI'
+  },
+  'data_insights_PQO_TA': {
+    section: 'DI',
+    path: '../sources/questions/DI/data_insights_PQO_TA',
+    exportName: 'dataInsightsPQO_TA'
+  },
+  'data_insights_PQO_MSR': {
+    section: 'DI',
+    path: '../sources/questions/DI/data_insights_PQO_MSR',
+    exportName: 'dataInsightsPQO_MSR'
+  },
+  // OQBK files (GMAT Online Question Bank)
+  'data_insights_OQBK_GI': {
+    section: 'DI',
+    path: '../sources/questions/DI/data_insights_OQBK_GI',
+    exportName: 'dataInsightsOQBK_GI'
+  },
+  'data_insights_OQBK_TA': {
+    section: 'DI',
+    path: '../sources/questions/DI/data_insights_OQBK_TA',
+    exportName: 'dataInsightsOQBK_TA'
+  },
 };
 
 interface ImportStats {
@@ -275,9 +317,13 @@ async function importQuestions(
     // ID format: QR-GMAT-OG__-00001 -> extract last 5 digits as number
     // Add source offset to prevent collisions:
     // OG: 0-99999, PQ: 100000-199999, SK: 200000-299999, PT1: 300000-399999, SI: 400000-499999
+    // PQO-QR: 500000-509999, PQO-DI: 510000-519999, OQBK-DI: 520000-529999
     const numPart = parseInt(question.id.slice(-5), 10);
     let sourceOffset = 0;
-    if (question.id.includes('-PQ')) sourceOffset = 100000;
+    if (question.id.startsWith('QR') && question.id.includes('-PQO')) sourceOffset = 500000;
+    else if (question.id.startsWith('DI') && question.id.includes('-PQO')) sourceOffset = 510000;
+    else if (question.id.includes('-OQBK')) sourceOffset = 520000;
+    else if (question.id.includes('-PQ')) sourceOffset = 100000;
     else if (question.id.includes('-SK')) sourceOffset = 200000;
     else if (question.id.includes('-PT1')) sourceOffset = 300000;
     else if (question.id.includes('-SI')) sourceOffset = 400000;

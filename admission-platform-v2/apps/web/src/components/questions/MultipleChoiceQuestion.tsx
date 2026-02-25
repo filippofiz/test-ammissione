@@ -9,12 +9,15 @@ import { useTranslation } from 'react-i18next';
 import { MathJaxRenderer } from '../MathJaxRenderer';
 import { normalizeWhitespace, normalizeOptionText } from '../../lib/textUtils';
 import { ExplanationDisplay } from './ExplanationDisplay';
-import { ImageWithFallback } from '../ImageWithFallback';
 
 interface MultipleChoiceQuestionProps {
   questionText: string;
   passageText?: string; // Optional passage text for reading comprehension
   passageTitle?: string; // Optional passage title
+  // Character offsets where each printed line starts in passageText.
+  // Key = 1-based line number (string), value = 0-based char offset.
+  // When provided, the passage is rendered with line numbers in the margin.
+  passageLineOffsets?: Record<string, number>;
   imageUrl?: string;
   options: Record<string, string>; // { "a": "option text", "b": "option text", ... }
   imageOptions?: Record<string, string>; // { "a": "image_url", "b": "image_url", ... } - Optional images for answer options
@@ -30,6 +33,7 @@ export function MultipleChoiceQuestion({
   questionText,
   passageText,
   passageTitle,
+  passageLineOffsets,
   imageUrl,
   options,
   imageOptions,
@@ -42,24 +46,168 @@ export function MultipleChoiceQuestion({
 }: MultipleChoiceQuestionProps) {
   const { t } = useTranslation();
 
-  // If there's passage text, use a side-by-side layout with full width container
+  /**
+   * Render passage text with line numbers in the left margin.
+   * `lineOffsets` maps 1-based line number → char offset in `text`.
+   * Segments between consecutive offsets are each one printed line.
+   */
+  const renderPassageWithLineNumbers = (text: string, lineOffsets: Record<string, number>) => {
+    // Sort entries by line number
+    const entries = Object.entries(lineOffsets)
+      .map(([k, v]) => ({ lineNum: parseInt(k, 10), offset: v }))
+      .sort((a, b) => a.lineNum - b.lineNum);
+
+    if (entries.length === 0) {
+      return (
+        <div className="text-gray-700 whitespace-pre-wrap">
+          <MathJaxRenderer>{normalizeWhitespace(text)}</MathJaxRenderer>
+        </div>
+      );
+    }
+
+    // Build segments: each segment is the text for one printed line
+    const segments: { lineNum: number; content: string }[] = [];
+    for (let i = 0; i < entries.length; i++) {
+      const start = entries[i].offset;
+      const end = i + 1 < entries.length ? entries[i + 1].offset : text.length;
+      segments.push({
+        lineNum: entries[i].lineNum,
+        content: text.slice(start, end).replace(/\n$/, ''), // trim trailing newline
+      });
+    }
+
+    return (
+      <div className="text-gray-700 text-sm leading-relaxed">
+        {segments.map(({ lineNum, content }) => (
+          <div key={lineNum} className="flex items-start gap-0">
+            {/* Line number column */}
+            <span
+              className="flex-shrink-0 w-7 text-right text-gray-400 font-mono text-xs select-none pr-2 pt-px"
+              aria-hidden="true"
+            >
+              {lineNum}
+            </span>
+            {/* Line content */}
+            <span className="flex-1 whitespace-pre-wrap break-words">
+              <MathJaxRenderer>{content}</MathJaxRenderer>
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // Helper to render answer options (shared between passage and non-passage layouts)
+  const renderOptions = () => (
+    <div className="space-y-3">
+      {Object.entries(options).map(([key, text]) => {
+        const isSelected = selectedAnswer === key;
+        const isCorrectOption = showResults && correctAnswer === key;
+        const isWrongSelection = showResults && isSelected && correctAnswer !== key;
+
+        let borderClass = 'border-gray-200';
+        let bgClass = 'bg-white';
+        let borderStyle = 'border-2';
+
+        if (isSelected && isCorrectOption) {
+          borderClass = 'border-green-600';
+          bgClass = 'bg-green-50';
+        } else if (isWrongSelection) {
+          borderClass = 'border-red-600';
+          bgClass = 'bg-red-50';
+        } else if (isCorrectOption) {
+          borderClass = 'border-green-600';
+          bgClass = 'bg-green-50/70';
+          borderStyle = 'border-2 border-dashed';
+        } else if (isSelected && !showResults) {
+          borderClass = 'border-brand-green';
+          bgClass = 'bg-green-50';
+        }
+
+        return (
+          <button
+            key={key}
+            onClick={() => !readOnly && onAnswerChange(key)}
+            className={`w-full text-left p-4 rounded-xl ${borderStyle} transition-all ${borderClass} ${bgClass} ${
+              readOnly ? 'cursor-default pointer-events-none' : 'cursor-pointer hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-start gap-4">
+              <div
+                className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold ${
+                  isWrongSelection
+                    ? 'bg-red-600 text-white'
+                    : isCorrectOption
+                      ? 'bg-green-600 text-white'
+                      : isSelected
+                        ? 'bg-brand-green text-white'
+                        : 'bg-gray-200 text-gray-700'
+                }`}
+              >
+                {key.toUpperCase()}
+              </div>
+              <div className="flex-1">
+                {imageOptions?.[key] ? (
+                  <img
+                    src={imageOptions[key]}
+                    alt={`Option ${key.toUpperCase()}`}
+                    className="max-w-full h-auto rounded"
+                  />
+                ) : (
+                  text && <MathJaxRenderer>{normalizeOptionText(text)}</MathJaxRenderer>
+                )}
+                {showResults && isSelected && isCorrectOption && (
+                  <div className="text-xs text-green-700 font-semibold mt-1">{t('testResults.yourAnswerCorrect')}</div>
+                )}
+                {isWrongSelection && (
+                  <div className="text-xs text-red-700 font-semibold mt-1">{t('testResults.yourAnswerLabel')}</div>
+                )}
+                {isCorrectOption && !isSelected && (
+                  <div className="text-xs text-green-700 font-semibold mt-1">{t('testResults.correctAnswerLabel')}</div>
+                )}
+              </div>
+              {isWrongSelection && (
+                <FontAwesomeIcon icon={faTimesCircle} className="text-red-600 text-xl" />
+              )}
+              {isCorrectOption && (
+                <FontAwesomeIcon icon={faCheckCircle} className="text-green-600 text-xl" />
+              )}
+              {isSelected && !showResults && (
+                <FontAwesomeIcon icon={faCheckCircle} className="text-brand-green text-xl" />
+              )}
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  // If there's passage text, use a split-panel layout
+  // The passage sticks on the left while the outer page container scrolls.
+  // The right panel (question + answers) drives the page scroll — always visible.
+  // No internal scrollbars on either panel.
   if (passageText) {
     return (
-      <div className="flex gap-8 w-full">
-        {/* Passage Text - Display on the left */}
-        <div className="flex-1 min-w-[45%] border-2 border-blue-200 rounded-xl p-6 bg-blue-50 h-fit sticky top-4">
+      <div className="flex items-start gap-6 w-full">
+        {/* Passage Text — left panel, sticky: stays visible as user scrolls through answers */}
+        <div className="flex-1 min-w-[42%] max-w-[50%] border-2 border-blue-200 rounded-xl p-6 bg-blue-50 sticky top-0 self-start">
           {passageTitle && (
             <h3 className="text-lg font-semibold text-blue-900 mb-4">
               <MathJaxRenderer>{normalizeWhitespace(passageTitle)}</MathJaxRenderer>
             </h3>
           )}
-          <div className="text-gray-700 whitespace-pre-wrap max-h-[650px] overflow-y-auto overflow-x-auto">
-            <MathJaxRenderer>{normalizeWhitespace(passageText)}</MathJaxRenderer>
-          </div>
+          {passageLineOffsets
+            ? renderPassageWithLineNumbers(passageText, passageLineOffsets)
+            : (
+              <div className="text-gray-700 whitespace-pre-wrap">
+                <MathJaxRenderer>{normalizeWhitespace(passageText)}</MathJaxRenderer>
+              </div>
+            )
+          }
         </div>
 
-        {/* Question and Options on the right - wider */}
-        <div className="flex-1 min-w-[45%] space-y-6">
+        {/* Question and Options — right panel, natural document flow */}
+        <div className="flex-1 min-w-[42%] space-y-6">
           {/* Question Text */}
           <div className="border-2 border-gray-200 rounded-xl p-6 bg-white overflow-x-auto">
             <div className="text-gray-800 text-lg whitespace-pre-wrap mb-4">
@@ -69,7 +217,7 @@ export function MultipleChoiceQuestion({
             {/* Image if present */}
             {imageUrl && (
               <div className="mt-4">
-                <ImageWithFallback
+                <img
                   src={imageUrl}
                   alt="Question illustration"
                   className="max-w-full h-auto rounded-lg"
@@ -79,91 +227,7 @@ export function MultipleChoiceQuestion({
           </div>
 
           {/* Answer Options */}
-          <div className="space-y-3">
-        {Object.entries(options).map(([key, text]) => {
-          const isSelected = selectedAnswer === key;
-          const isCorrectOption = showResults && correctAnswer === key;
-          const isWrongSelection = showResults && isSelected && correctAnswer !== key;
-
-          let borderClass = 'border-gray-200';
-          let bgClass = 'bg-white';
-          let borderStyle = 'border-2';
-
-          if (isSelected && isCorrectOption) {
-            // Student selected correct answer - solid green border
-            borderClass = 'border-green-600';
-            bgClass = 'bg-green-50';
-          } else if (isWrongSelection) {
-            // Student selected wrong answer - solid red border
-            borderClass = 'border-red-600';
-            bgClass = 'bg-red-50';
-          } else if (isCorrectOption) {
-            // Show correct answer when student got it wrong - dashed green border
-            borderClass = 'border-green-600';
-            bgClass = 'bg-green-50/70';
-            borderStyle = 'border-2 border-dashed';
-          } else if (isSelected && !showResults) {
-            // Selected during test (not results view)
-            borderClass = 'border-brand-green';
-            bgClass = 'bg-green-50';
-          }
-
-          return (
-            <button
-              key={key}
-              onClick={() => !readOnly && onAnswerChange(key)}
-              className={`w-full text-left p-4 rounded-xl ${borderStyle} transition-all ${borderClass} ${bgClass} ${
-                readOnly ? 'cursor-default pointer-events-none' : 'cursor-pointer hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-start gap-4">
-                <div
-                  className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold ${
-                    isWrongSelection
-                      ? 'bg-red-600 text-white'
-                      : isCorrectOption
-                        ? 'bg-green-600 text-white'
-                        : isSelected
-                          ? 'bg-brand-green text-white'
-                          : 'bg-gray-200 text-gray-700'
-                  }`}
-                >
-                  {key.toUpperCase()}
-                </div>
-                <div className="flex-1">
-                  {imageOptions?.[key] ? (
-                    <ImageWithFallback
-                      src={imageOptions[key]}
-                      alt={`Option ${key.toUpperCase()}`}
-                      className="max-w-full h-auto rounded"
-                    />
-                  ) : (
-                    text && <MathJaxRenderer>{normalizeOptionText(text)}</MathJaxRenderer>
-                  )}
-                  {showResults && isSelected && isCorrectOption && (
-                    <div className="text-xs text-green-700 font-semibold mt-1">{t('testResults.yourAnswerCorrect')}</div>
-                  )}
-                  {isWrongSelection && (
-                    <div className="text-xs text-red-700 font-semibold mt-1">{t('testResults.yourAnswerLabel')}</div>
-                  )}
-                  {isCorrectOption && !isSelected && (
-                    <div className="text-xs text-green-700 font-semibold mt-1">{t('testResults.correctAnswerLabel')}</div>
-                  )}
-                </div>
-                {isWrongSelection && (
-                  <FontAwesomeIcon icon={faTimesCircle} className="text-red-600 text-xl" />
-                )}
-                {isCorrectOption && (
-                  <FontAwesomeIcon icon={faCheckCircle} className="text-green-600 text-xl" />
-                )}
-                {isSelected && !showResults && (
-                  <FontAwesomeIcon icon={faCheckCircle} className="text-brand-green text-xl" />
-                )}
-              </div>
-            </button>
-          );
-        })}
-          </div>
+          {renderOptions()}
 
           {/* Explanation (shown in results view) */}
           {showResults && explanation && (
@@ -186,7 +250,7 @@ export function MultipleChoiceQuestion({
         {/* Image if present */}
         {imageUrl && (
           <div className="mt-4">
-            <ImageWithFallback
+            <img
               src={imageUrl}
               alt="Question illustration"
               className="max-w-full h-auto rounded-lg"
@@ -196,91 +260,7 @@ export function MultipleChoiceQuestion({
       </div>
 
       {/* Answer Options */}
-      <div className="space-y-3">
-        {Object.entries(options).map(([key, text]) => {
-          const isSelected = selectedAnswer === key;
-          const isCorrectOption = showResults && correctAnswer === key;
-          const isWrongSelection = showResults && isSelected && correctAnswer !== key;
-
-          let borderClass = 'border-gray-200';
-          let bgClass = 'bg-white';
-          let borderStyle = 'border-2';
-
-          if (isSelected && isCorrectOption) {
-            // Student selected correct answer - solid green border
-            borderClass = 'border-green-600';
-            bgClass = 'bg-green-50';
-          } else if (isWrongSelection) {
-            // Student selected wrong answer - solid red border
-            borderClass = 'border-red-600';
-            bgClass = 'bg-red-50';
-          } else if (isCorrectOption) {
-            // Show correct answer when student got it wrong - dashed green border
-            borderClass = 'border-green-600';
-            bgClass = 'bg-green-50/70';
-            borderStyle = 'border-2 border-dashed';
-          } else if (isSelected && !showResults) {
-            // Selected during test (not results view)
-            borderClass = 'border-brand-green';
-            bgClass = 'bg-green-50';
-          }
-
-          return (
-            <button
-              key={key}
-              onClick={() => !readOnly && onAnswerChange(key)}
-              className={`w-full text-left p-4 rounded-xl ${borderStyle} transition-all ${borderClass} ${bgClass} ${
-                readOnly ? 'cursor-default pointer-events-none' : 'cursor-pointer hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-start gap-4">
-                <div
-                  className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold ${
-                    isWrongSelection
-                      ? 'bg-red-600 text-white'
-                      : isCorrectOption
-                        ? 'bg-green-600 text-white'
-                        : isSelected
-                          ? 'bg-brand-green text-white'
-                          : 'bg-gray-200 text-gray-700'
-                  }`}
-                >
-                  {key.toUpperCase()}
-                </div>
-                <div className="flex-1">
-                  {imageOptions?.[key] ? (
-                    <ImageWithFallback
-                      src={imageOptions[key]}
-                      alt={`Option ${key.toUpperCase()}`}
-                      className="max-w-full h-auto rounded"
-                    />
-                  ) : (
-                    text && <MathJaxRenderer>{normalizeOptionText(text)}</MathJaxRenderer>
-                  )}
-                  {showResults && isSelected && isCorrectOption && (
-                    <div className="text-xs text-green-700 font-semibold mt-1">{t('testResults.yourAnswerCorrect')}</div>
-                  )}
-                  {isWrongSelection && (
-                    <div className="text-xs text-red-700 font-semibold mt-1">{t('testResults.yourAnswerLabel')}</div>
-                  )}
-                  {isCorrectOption && !isSelected && (
-                    <div className="text-xs text-green-700 font-semibold mt-1">{t('testResults.correctAnswerLabel')}</div>
-                  )}
-                </div>
-                {isWrongSelection && (
-                  <FontAwesomeIcon icon={faTimesCircle} className="text-red-600 text-xl" />
-                )}
-                {isCorrectOption && (
-                  <FontAwesomeIcon icon={faCheckCircle} className="text-green-600 text-xl" />
-                )}
-                {isSelected && !showResults && (
-                  <FontAwesomeIcon icon={faCheckCircle} className="text-brand-green text-xl" />
-                )}
-              </div>
-            </button>
-          );
-        })}
-      </div>
+      {renderOptions()}
 
       {/* Explanation (shown in results view) */}
       {showResults && explanation && (

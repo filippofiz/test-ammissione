@@ -8,7 +8,22 @@
       "Bash(wc:*)",
       "Bash(if not exist \"c:\\Users\\kappa\\Desktop\\UpToTen\\test-platform-uptoten\\GMAT\\material\\archive\\lessons\\slides\" mkdir \"c:\\Users\\kappa\\Desktop\\UpToTen\\test-platform-uptoten\\GMAT\\material\\archive\\lessons\\slides\")",
       "Bash(find:*)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "WebFetch(domain:www.gmac.com)",
+      "WebFetch(domain:www.mba.com)",
+      "WebFetch(domain:www.gmatninja.com)",
+      "WebFetch(domain:www.gmatdudes.com)",
+      "WebFetch(domain:gmatclub.com)",
+      "WebFetch(domain:blog.targettestprep.com)",
+      "WebFetch(domain:e-gmat.com)",
+      "WebFetch(domain:www.joinleland.com)",
+      "WebFetch(domain:analystprep.com)",
+      "WebFetch(domain:www.stacyblackman.com)",
+      "WebFetch(domain:www.mbacrystalball.com)",
+      "WebFetch(domain:gmat.targettestprep.com)",
+      "Bash(npx tsc:*)",
+      "Bash(pip show:*)",
+      "Bash(python:*)"
     ],
     "deny": [],
     "ask": []

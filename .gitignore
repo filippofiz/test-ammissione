@@ -16,6 +16,11 @@ debug.log*
 # Environment files
 .env
 
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
 # OS-generated files
 .DS_Store
 Thumbs.db

@@ -33,6 +33,7 @@ import {
   faLayerGroup,
   faLightbulb,
   faBookOpen,
+  faEye,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import { supabase } from '../lib/supabase';
@@ -59,6 +60,7 @@ import {
   SECTION_ASSESSMENT_CONFIG,
   MOCK_SIMULATION_CONFIG,
   calculateEstimatedGmatScore,
+  getAnalyticsData,
   type GmatProgress,
   type LegacyAssessmentResult,
   type GmatAssessmentResult,
@@ -66,6 +68,7 @@ import {
   type TrainingTemplate,
   type TrainingCompletion,
   type GMATTrainingAssignment,
+  type GmatAnalyticsData,
 } from '../lib/api/gmat';
 import { useNavigate, useParams } from 'react-router-dom';
 import { MATERIAL_TYPE_LABELS, GMAT_STRUCTURE } from '../lib/gmat/questionAllocation';
@@ -169,6 +172,9 @@ export default function GMATPreparationPage() {
   const [overlayFadingOut, setOverlayFadingOut] = useState(false);
   // Analytics modal state (now embedded in page, keep for backward compatibility)
   const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
+  // Enhanced analytics data (loaded lazily when analytics tab is active)
+  const [analyticsData, setAnalyticsData] = useState<GmatAnalyticsData | null>(null);
+  const [analyticsDataLoading, setAnalyticsDataLoading] = useState(false);
   // Active sidebar section
   const [activeSection, setActiveSection] = useState<GMATViewSection>('preparation');
   // Current user ID for materials
@@ -177,6 +183,20 @@ export default function GMATPreparationPage() {
   useEffect(() => {
     loadMaterials();
   }, [studentId]);
+
+  // Lazy-load enhanced analytics data when analytics tab is active
+  useEffect(() => {
+    if (activeSection !== 'analytics') return;
+    if (analyticsData || analyticsDataLoading) return;
+    const targetId = studentId || currentUserId;
+    if (!targetId) return;
+
+    setAnalyticsDataLoading(true);
+    getAnalyticsData(targetId)
+      .then(data => setAnalyticsData(data))
+      .catch(err => console.error('Failed to load analytics data:', err))
+      .finally(() => setAnalyticsDataLoading(false));
+  }, [activeSection, studentId, currentUserId, analyticsData, analyticsDataLoading]);
 
   async function loadMaterials() {
     setLoading(true);
@@ -484,8 +504,8 @@ export default function GMATPreparationPage() {
 
       {/* Main Layout: Sidebar + Content */}
       <div className="flex flex-col lg:flex-row flex-1 min-h-0">
-        {/* Sidebar - 1/3 width on desktop, full width on mobile */}
-        <aside className="w-full lg:w-1/3 lg:max-w-md bg-white border-b lg:border-b-0 lg:border-r border-gray-200 overflow-y-auto">
+        {/* Sidebar - narrower on laptop screens, slightly wider on large screens */}
+        <aside className="w-full lg:w-72 xl:w-80 2xl:w-96 flex-shrink-0 bg-white border-b lg:border-b-0 lg:border-r border-gray-200 overflow-y-auto">
           <GMATSidebar
             studentId={studentId}
             studentInfo={studentInfo}
@@ -539,12 +559,52 @@ export default function GMATPreparationPage() {
               trainingCompletions={trainingCompletions}
               totalTrainingTests={trainingTemplates.length}
               embedded={true}
+              analyticsData={analyticsData}
             />
           )}
 
           {/* Preparation View */}
           {activeSection === 'preparation' && (
             <>
+          {/* Placement Assessment CTA — Show for students with no cycle and no pending/completed placement */}
+          {!isTutorView && !gmatProgress?.gmat_cycle && !placementResult && (
+            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-300 rounded-2xl p-6 mb-6">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-xl bg-emerald-100 border-2 border-emerald-300 flex items-center justify-center">
+                  <FontAwesomeIcon icon={faClipboardCheck} className="text-2xl text-emerald-600" />
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-xl font-bold text-emerald-800">Take the Placement Assessment</h2>
+                  <p className="text-emerald-700 text-sm mt-1">
+                    Complete a placement assessment to determine your preparation cycle (Foundation, Development, or Excellence).
+                  </p>
+                  <p className="text-gray-500 text-xs mt-1">
+                    45 questions across 3 sections • 90 minutes
+                  </p>
+                </div>
+                <button
+                  onClick={() => navigate('/student/take-test/gmat-placement-assessment')}
+                  className="px-6 py-3 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition-colors whitespace-nowrap"
+                >
+                  Start Assessment
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Tutor: Preview Placement Assessment button */}
+          {isTutorView && viewMode === 'tutor' && (
+            <div className="flex justify-end mb-4">
+              <button
+                onClick={() => navigate('/tutor/take-test/gmat-placement-assessment?preview=true')}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors flex items-center gap-2"
+              >
+                <FontAwesomeIcon icon={faEye} className="text-gray-500" />
+                Preview Placement Assessment
+              </button>
+            </div>
+          )}
+
           {/* Pending Placement Validation Banner - Only show in main content for visibility */}
           {placementResult && !placementResult.tutor_validated && (
             <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-6 mb-6">
@@ -1202,16 +1262,23 @@ export default function GMATPreparationPage() {
                               Locked
                             </span>
                           ) : assessment ? (
-                            isPassed ? (
-                              <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-1">
-                                <FontAwesomeIcon icon={faCheckCircle} className="text-xs" />
-                                {Math.round(assessment.score_percentage)}%
-                              </span>
-                            ) : (
-                              <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">
-                                {Math.round(assessment.score_percentage)}%
-                              </span>
-                            )
+                            <div className="flex items-center gap-1.5">
+                              {assessment.metadata?.gmat_section_score != null && (
+                                <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold">
+                                  {assessment.metadata.gmat_section_score}
+                                </span>
+                              )}
+                              {isPassed ? (
+                                <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-1">
+                                  <FontAwesomeIcon icon={faCheckCircle} className="text-xs" />
+                                  {Math.round(assessment.score_percentage)}%
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">
+                                  {Math.round(assessment.score_percentage)}%
+                                </span>
+                              )}
+                            </div>
                           ) : null}
                         </div>
 
@@ -1346,6 +1413,13 @@ export default function GMATPreparationPage() {
                         Unlock Simulations
                       </button>
                     )}
+                    <button
+                      onClick={() => navigate('/tutor/take-test/gmat-simulation?preview=true')}
+                      className="px-2 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-200 transition-colors"
+                      title="Preview simulation"
+                    >
+                      Preview
+                    </button>
                   </div>
                 )}
               </div>
@@ -1442,6 +1516,7 @@ export default function GMATPreparationPage() {
                               View Results
                             </a>
                             <button
+                              onClick={() => navigate('/student/take-test/gmat-simulation')}
                               className="px-4 py-2 bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-sm font-medium hover:bg-indigo-200 transition-colors flex items-center gap-2"
                             >
                               <FontAwesomeIcon icon={faRocket} />
@@ -1456,6 +1531,7 @@ export default function GMATPreparationPage() {
                           You're ready for your first simulation! This will give you an estimated GMAT score.
                         </p>
                         <button
+                          onClick={() => navigate('/student/take-test/gmat-simulation')}
                           className="px-6 py-3 bg-brand-green text-white rounded-xl text-lg font-semibold hover:bg-green-700 transition-colors flex items-center gap-3 mx-auto"
                         >
                           <FontAwesomeIcon icon={faRocket} />
@@ -1549,6 +1625,7 @@ export default function GMATPreparationPage() {
           mockSimulation={mockSimulation}
           trainingCompletions={trainingCompletions}
           totalTrainingTests={trainingTemplates.length}
+          analyticsData={analyticsData}
         />
       )}
     </Layout>

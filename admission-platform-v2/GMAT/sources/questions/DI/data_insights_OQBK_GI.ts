@@ -1,0 +1,182 @@
+import {
+  DataInsightsQuestion,
+  GIQuestionData,
+  generateGIAnswers,
+} from "../types";
+
+// GMAT Online Question Bank (OQBK) - Data Insights: Graphics Interpretation
+// Generated on 2026-02-23 by generate_oqbk_typescript.py
+// Source: GMAT Online Question Bank screenshots (Data Insights GI - TA Custom Pool)
+// DO NOT EDIT MANUALLY — re-run generate_oqbk_typescript.py to regenerate
+// NOTE: image_url is initially null; run upload-di-images.mjs to populate.
+
+export const dataInsightsOQBK_GI: DataInsightsQuestion[] = [
+  {
+    id: "DI-GMAT-OQBK-00001",
+    question_number: 1,
+    section: "Data Insights",
+    difficulty: "hard",
+    difficultyLevel: 4,
+    questionData: {
+      di_type: "GI",
+      // image_url populated after upload-di-images step
+      image_url: null,
+      context_text: "Test audiences screened five $3$-minute previews of a certain movie. The movie contains both drama and comedy, but the previews were customized to show differing percentages of comedic and dramatic scenes (measured by screen time). The test audiences were asked, Do you think the preview is funny? and How likely are you to see the movie on the opening weekend it opens? The position of the center of each bubble indicates the percent of comedy (C) in the previews and the percent of test audience members who found the previews funny (F), and the greater the bubble's size the greater the average reported likelihood (L) of their seeing the movie on the opening weekend.",
+      statement_text: "If the same previews were shown to other test audiences, [BLANK1] could differ from the results shown.\n\nLet D equal the percent of drama in each preview. Assuming each preview is made up entirely of comedy and drama (such that $C + D = 100$), there is [BLANK2] correlation between D and F.",
+      blank1_options: ["only C", "only F", "only L", "only C and F", "only C and L", "only F and L", "C, F, and L"],
+      blank1_correct: "only F and L",
+      blank2_options: ["a negative", "no", "a positive"],
+      blank2_correct: "a negative",
+      explanation: "RO1\n\nSince the values of C depend only on the previews and not on the test audiences, the values of C cannot differ if the same previews were shown to other test audiences. However, the values of both F and L depend on the test audiences, and thus the values of both F and L could differ if the same previews were shown to other test audiences.\n\nThe correct answer is only F and L.\n\nRO2\n\nIf the values of D increase, then the values of $-D$ decrease, and hence the values of $C = -D + 100$ decrease. From the graph it follows that decreasing values of C correspond to decreasing values of F. Therefore, increasing values of D correspond to decreasing values of F, and thus there is a negative correlation between D and F.\n\nThe correct answer is a negative.",
+    } as unknown as GIQuestionData,
+    answers: generateGIAnswers("only F and L", "a negative"),
+    categories: ["Graphics Interpretation"],
+  },
+  {
+    id: "DI-GMAT-OQBK-00002",
+    question_number: 2,
+    section: "Data Insights",
+    difficulty: "hard",
+    difficultyLevel: 4,
+    questionData: {
+      di_type: "GI",
+      // image_url populated after upload-di-images step
+      image_url: null,
+      context_text: "The graph shows for each of four different countries the percentage of the total population made up by international immigrants for every fifth year, from 1980 to 2005.",
+      statement_text: "The information in the graph [BLANK1] the statement that the *number* of international immigrants in France did not change significantly during the period from 1980 to 2005.\n\nDuring the interval [BLANK2], the United States' rate of growth in international immigrants as a percent of total population was less than that of at least one of the other countries included in the graph.",
+      blank1_options: ["directly affirms", "directly contradicts", "neither directly affirms nor directly contradicts"],
+      blank1_correct: "neither directly affirms nor directly contradicts",
+      blank2_options: ["1980-1985", "1985-1990", "1990-1995", "1995-2000", "1995-2005"],
+      blank2_correct: "1995-2005",
+      explanation: "RO1, in the graph: International immigrants' population as a percentage of France's total population remained between $10\\%$ and $11\\%$ during 1980-2005, so international immigrants' population as a percentage of the total population did not change much. That fact is compatible with both the claim that the number of international immigrants in France did NOT change significantly and with the claim that that number DID change significantly. For instance, that number could have gone up significantly if the total population of France also increased significantly. The correct answer is neither directly affirms nor directly contradicts.\n\nRO2, the interval: Among the three intervals represented in the three answer choices - 1980-1985; 1980-1995; and 1995-2005 - in only one of those intervals is the change in percentage for any of the countries greater than the change in percentage for the United States, namely 1995-2005. Note that the slope is greater for the United States than for any of the other countries for each interval except for 1995-2005, where the slope for Ireland is obviously greater. The correct answer is 1995-2005.",
+    } as unknown as GIQuestionData,
+    answers: generateGIAnswers("neither directly affirms nor directly contradicts", "1995-2005"),
+    categories: ["Graphics Interpretation"],
+  },
+  {
+    id: "DI-GMAT-OQBK-00003",
+    question_number: 3,
+    section: "Data Insights",
+    difficulty: "hard",
+    difficultyLevel: 4,
+    questionData: {
+      di_type: "GI",
+      // image_url populated after upload-di-images step
+      image_url: null,
+      context_text: "The flowchart represents a mathematical algorithm that takes two positive integers as the input and returns a positive integer as the output. Processes are indicated in the rectangular symbols in the flowchart. Each process is symbolized by an equation, such as $T = T + a$. In this particular process, the current values of the variables $T$ and $a$ are added together and the sum then becomes the value of $T$. For example, if the value of $T$ is $3$ and the value of $a$ is $7$ before the process $T = T + a$ is completed, then the value of $T$ is $10$ and the value of $a$ is $7$ after the process is completed.\n\nUse the drop-down menus to fill in the blanks in the following statements based on the algorithm represented by the flowchart.",
+      statement_text: "If $24$ and $35$ are entered as the values for $a$ and $b$, respectively, then the first nonzero value of $T$ is [BLANK1].\n\nIf $35$ and $27$ are entered as the values for $a$ and $b$, respectively, then after the process $b = \\frac{b}{2}$ is completed for the **second** time, the value of $b$ is [BLANK2].",
+      blank1_options: ["24", "35", "48", "70"],
+      blank1_correct: "24",
+      blank2_options: ["6", "12", "13", "26"],
+      blank2_correct: "6",
+      explanation: "RO1:\nTo begin, $T = 0$. After entering $a$ and $b$, $a = 24$ and $b = 35$. Because the answer to \"Is $b$ odd?\" is Yes, $T$ becomes $T + a$ or $0 + 24 = 24$, which is nonzero. Thus, the first nonzero value of $T$ is $24$.\n\nThe correct answer is $24$.\n\nRO2:\nTo begin, $T = 0$. After entering $a$ and $b$, $a = 35$ and $b = 27$. Because the answer to \"Is $b$ odd?\" is Yes, $T$ becomes $T + a$ or $0 + 35 = 35$, $b$ becomes $27 - 1 = 26$, $a$ becomes $2(35) = 70$, and $b$ becomes $\\frac{26}{2} = 13$. Because the answer to \"Is $b = 1$\" is No, and the answer to \"Is $b$ odd?\" is Yes, $T$ becomes $T + a = 35 + 70 = 105$, $b$ becomes $13 - 1 = 12$, $a$ becomes $2(70) = 140$, and $b$ becomes $\\frac{12}{2} = 6$. At this point, the process $b = \\frac{b}{2}$ has been completed for the second time.\n\nThe correct answer is $6$.",
+    } as unknown as GIQuestionData,
+    answers: generateGIAnswers("24", "6"),
+    categories: ["Graphics Interpretation"],
+  },
+  {
+    id: "DI-GMAT-OQBK-00004",
+    question_number: 4,
+    section: "Data Insights",
+    difficulty: "medium",
+    difficultyLevel: 3,
+    questionData: {
+      di_type: "GI",
+      // image_url populated after upload-di-images step
+      image_url: null,
+      context_text: "The graph indicates the results of a survey of written material from three areas in early modern England. The graph shows the percent of use of *you* when either *you* or *ye* would be appropriate. Select the option from each drop-down menu that creates the statement that most accurately reflects the information provided.",
+      statement_text: "The area of early modern England that was first to favor the use of *you* over *ye* was [BLANK1]. In the surveyed writings from the area of the North between 1520 and 1559, *you* constituted [BLANK2] of the instances in which either *you* or *ye* would have been appropriate.",
+      blank1_options: ["London", "North", "East Anglia"],
+      blank1_correct: "London",
+      blank2_options: ["10%", "20%", "50%", "80%", "100%"],
+      blank2_correct: "20%",
+      explanation: "The graph indicates the percent of use in written material from three areas (London, North, and East Anglia) in early modern England of the word *you* in situations in which either *you* or *ye* would be appropriate.\n\nRO1, *London*: For the periods 1460-1479 and 1480-1519 the percentage of the use of *you* for all three areas is low - less than $20$ percent - but in the period 1520-1559 the use of *you* in London had increased to above $50$ percent, whereas the use in both North and East Anglia is still at $20$ percent or below, and does not rise to above $50$ percent until the period 1560-1599. Therefore, of the three areas, the area of early modern England that was first to favor the use of *you* over *ye* (that is, the first in which *you* was used in a majority of the situations in which either *you* or *ye* would be appropriate) is London. The correct answer is *London*.\n\nRO2, *$20\\%$*: The period 1520-1559 is the middle period indicated on the horizontal axis of the graph. The symbol signifying the area of the North indicates that *you* constituted $20\\%$ of the instances in which either *you* or *ye* would be appropriate. The correct answer is *$20\\%$*.",
+    } as unknown as GIQuestionData,
+    answers: generateGIAnswers("London", "20%"),
+    categories: ["Graphics Interpretation"],
+  },
+  {
+    id: "DI-GMAT-OQBK-00005",
+    question_number: 5,
+    section: "Data Insights",
+    difficulty: "medium",
+    difficultyLevel: 3,
+    questionData: {
+      di_type: "GI",
+      // image_url populated after upload-di-images step
+      image_url: null,
+      context_text: "During a four-day period, a height measurement and a weight measurement were recorded shortly after delivery for each baby born in a particular hospital. The $19$ babies in the study were divided into two groups, Group A and Group B. The chart shows the length, in centimeters (cm), and weight, in kilograms (kg), for each of the $19$ babies.",
+      statement_text: "The correlation between length and weight for the babies in the study is [BLANK1]. If a baby with weight less than $3.5$ kg were selected at random, the probability that the baby would be a part of Group A is [BLANK2].",
+      blank1_options: ["strongly positive", "weakly positive", "neither positive nor negative", "weakly negative", "strongly negative"],
+      blank1_correct: "strongly positive",
+      blank2_options: ["0.40", "0.50", "0.60", "0.67"],
+      blank2_correct: "0.40",
+      explanation: "A. Infer\n\nAmong all of the babies in the study, the graph shows that greater lengths tend to correspond to greater weights. This indicates a strongly positive correlation between length and weight.\n\nThe correct answer is strongly positive.\n\nB. Infer\n\nIn the graph there are $4$ blue circles and $6$ triangles below the horizontal line at $3.5$ kg. This indicates that $10$ babies in the study weighed less than $3.5$ kg, and that of these $10$, $4$ were in Group A. Thus the probability that the randomly selected baby was a part of Group A is $\\frac{4}{10} = 0.40$.\n\nThe correct answer is $0.40$.",
+    } as unknown as GIQuestionData,
+    answers: generateGIAnswers("strongly positive", "0.40"),
+    categories: ["Graphics Interpretation"],
+  },
+  {
+    id: "DI-GMAT-OQBK-00006",
+    question_number: 6,
+    section: "Data Insights",
+    difficulty: "medium",
+    difficultyLevel: 3,
+    questionData: {
+      di_type: "GI",
+      // image_url populated after upload-di-images step
+      image_url: null,
+      context_text: "In New Zealand, the grape is a long-established crop, but the truffle - an edible fungus that grows on the roots of certain trees - became a commercial crop in the 1980s. The graph represents projected cumulative net income for grape and truffle crops through the end of the year, in thousands of New Zealand dollars per hectare (NZ$\\$1{,}000$/ha), for each of the first $11$ years since planting. Cumulative net income is equal to total revenue from crop sales for the years since planting minus total investment costs over those same years.",
+      statement_text: "Cumulative net income from truffles is least at the end of the [BLANK1] year since planting.\n\nIf cumulative net income for grapes continues to grow at the same rate as in years $8$ through $11$ since planting, the cumulative net income from grapes for the 12th year since planting will be approximately NZ$\\$$ [BLANK2] per hectare.",
+      blank1_options: ["4th", "5th", "6th", "7th"],
+      blank1_correct: "5th",
+      blank2_options: ["8,000", "10,000", "12,000", "14,000"],
+      blank2_correct: "10,000",
+      explanation: "A. Infer\n\nThe graph shows the projected cumulative net income for New Zealand grape and truffle crops. The least cumulative net income from truffles is represented by the lowest mark on the corresponding line in the graph. The lowest point occurs at the end of the fifth year since planting, when the projected cumulative net income from truffles is approximately negative NZ$\\$$34{,}000$.\n\nThe correct answer is 5th.\n\nB. Apply\n\nGiven the sentence to be completed, it is first necessary to calculate the projected growth rate during years $8$ through $11$. At the end of year $7$, the cumulative net income for grapes is projected to be approximately negative NZ$\\$$10{,}000$/ha. At the end of year $11$, the cumulative net income is projected to be approximately NZ$\\$$6{,}000$/ha. This represents a total increase of NZ$\\$$16{,}000$/ha from the beginning of year $8$ to the end of year $11$ ($4$ years), or an approximate increase in net income of NZ$\\$$4{,}000$/ha/year. Given that the cumulative net income for grapes is projected to be approximately NZ$\\$$6{,}000$/ha at the end of year $11$, if this income continues to grow at a rate of approximately NZ$\\$$4{,}000$/ha/year, then the cumulative net income for grapes at the end of year $12$ would be approximately NZ$\\$$10{,}000$/ha.\n\nThe correct answer is 10,000.",
+    } as unknown as GIQuestionData,
+    answers: generateGIAnswers("5th", "10,000"),
+    categories: ["Graphics Interpretation"],
+  },
+  {
+    id: "DI-GMAT-OQBK-00007",
+    question_number: 7,
+    section: "Data Insights",
+    difficulty: "hard",
+    difficultyLevel: 4,
+    questionData: {
+      di_type: "GI",
+      // image_url populated after upload-di-images step
+      image_url: null,
+      context_text: "The graph shows the distributions of scores on official driving tests administered within a certain municipality for eight consecutive business days.\n\nSelect from each drop-down menu the option that creates the most accurate statement, given the information provided.",
+      statement_text: "The graph provides enough information to determine that the [BLANK1] over all of the days indicated in the graph is the same as that for [BLANK2] combined.",
+      blank1_options: ["range of scores", "mean of scores", "median of scores"],
+      blank1_correct: "range of scores",
+      blank2_options: ["Day 1 and Day 8", "Day 2 and Day 5", "Day 3 and Day 4", "Day 1 and Day 5", "Day 2 and Day 8"],
+      blank2_correct: "Day 2 and Day 5",
+      explanation: "A. Infer\n\nFor each of eight business days, the graph shows the distribution of scores on driving tests administered on that day. Because neither the graph nor the text indicates how many scores there were for each day, neither the mean nor the median for the eight days can be determined. However, since the top of each stacked bar indicates the highest score for tests administered on that day and the bottom of each stacked bar indicates the lowest score for tests administered on that day, the range for the eight days would be equal to the highest score shown on the graph ($90$ on Day 2) minus the lowest score shown on the graph ($20$ on Day 5). Therefore, the range of the scores for all eight days is equal to the range of the scores for Days 2 and 5 combined.\n\nThe correct answer is range of scores.\n\nB. Infer\n\nBased on the explanation for A, the correct answer is Day 2 and Day 5.\n\nThe correct answer is Day 2 and Day 5.",
+    } as unknown as GIQuestionData,
+    answers: generateGIAnswers("range of scores", "Day 2 and Day 5"),
+    categories: ["Graphics Interpretation"],
+  },
+  {
+    id: "DI-GMAT-OQBK-00008",
+    question_number: 8,
+    section: "Data Insights",
+    difficulty: "hard",
+    difficultyLevel: 4,
+    questionData: {
+      di_type: "GI",
+      // image_url populated after upload-di-images step
+      image_url: null,
+      context_text: "A certain restaurant serves exactly $5$ entrées - E1 through E5. Customers may order an entrée alone, but most customers order an entrée as part of a *combination meal*, which consists of one entrée plus *extras* - a side dish and drink. While the entrées vary in cost to the restaurant, the extras always have the same cost to the restaurant. The graph shows the actual cost to the restaurant for the entrée and the extras as a percent of the price charged for the meal.",
+      statement_text: "Of the five combination meals, the meal with entrée [BLANK1] has the highest price.\n\nOf the five combination meals, the sale of a single meal with entrée [BLANK2] nets the least profit.",
+      blank1_options: ["E1", "E2", "E3", "E4", "E5"],
+      blank1_correct: "E1",
+      blank2_options: ["E1", "E2", "E3", "E4", "E5"],
+      blank2_correct: "E4",
+      explanation: "RO1: Since the extras always have the same cost to the restaurant, that cost must be lowest as a percentage of the highest price charged for a combination meal. The graph shows the extras cost only about $15\\%$ of the price charged for the combination meal with entrée E1, but at least $20\\%$ of the price charged for each of the other combination meals. So, the combination meal with entrée E1 has the highest price. The correct answer is E1.\n\nRO2: Let's assume that apart from the costs shown in the graph, any other costs to the restaurant are the same for each combination meal served. Out of the sales price of a combination meal, the percentage profits to the restaurant are then lower for combination meals whose total percentage costs shown in the graph are higher. The total percentage costs shown in the graph are highest for the combination meal with entrée E4, so this meal must net the least profit as a percentage of its sales price. Next, note that the graph shows that the extras cost at least as high a percentage of this meal's sales price as of any of the other combination meals' sales prices. That means this meal must have a sales price no higher than any of the other combination meals do. So, because the meal with entrée E4 nets the least profit as a percentage of its sales price, and that sales price is no higher than any other combination meal's sales price, the meal with entrée E4 must net the least total amount profit per meal served. The correct answer is E4.",
+    } as unknown as GIQuestionData,
+    answers: generateGIAnswers("E1", "E4"),
+    categories: ["Graphics Interpretation"],
+  },
+];
