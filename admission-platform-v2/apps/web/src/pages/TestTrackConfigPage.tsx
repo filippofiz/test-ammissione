@@ -695,7 +695,7 @@ export default function TestTrackConfigPage() {
         if (data.total_time_minutes) {
           setTotalTimeMinutes(data.total_time_minutes);
         }
-        if (data.time_per_section) {
+        if (data.time_per_section && data.section_order_mode !== 'no_sections') {
           setSpecificSectionDurations(data.time_per_section as Record<string, number>);
           setSectionDurationMode('specific');
         } else {
@@ -863,7 +863,7 @@ export default function TestTrackConfigPage() {
         navigation_between_sections: hasSections ? config.navigation_between_sections : null,
         // Include time configuration
         total_time_minutes: totalTimeMinutes,
-        time_per_section: sectionDurationMode === 'specific' ? specificSectionDurations : null,
+        time_per_section: (hasSections && sectionDurationMode === 'specific') ? specificSectionDurations : null,
         // Include questions per section (only if has sections and values are set)
         questions_per_section: hasSections && Object.keys(questionsPerSection).length > 0 ? questionsPerSection : null,
         // Set pause_duration_minutes to null when no_pause is selected
@@ -893,6 +893,17 @@ export default function TestTrackConfigPage() {
       if (error) {
         console.error('Supabase error details:', error);
         throw error;
+      }
+
+      // Sync 2V_tests.default_duration_mins for single-section tests
+      if (!hasSections && totalTimeMinutes && testVariations.length > 0) {
+        for (const test of testVariations) {
+          await supabase
+            .from('2V_tests')
+            .update({ default_duration_mins: totalTimeMinutes })
+            .eq('id', test.id);
+        }
+        loadSections(); // Reload to reflect updated values
       }
 
       setSaveSuccess(true);
