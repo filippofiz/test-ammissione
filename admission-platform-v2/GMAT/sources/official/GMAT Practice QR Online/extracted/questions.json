@@ -1,0 +1,610 @@
+[
+  {
+    "gmat_id": "4GM116",
+    "question_text": "The cost of chartering a plane was shared equally among $30$ passengers. If there had been $35$ passengers sharing that cost, the cost per passenger would have been $\\$30$ less. What was the cost of chartering the plane?",
+    "options": {
+      "a": "$\\$5{,}400$",
+      "b": "$\\$6{,}125$",
+      "c": "$\\$6{,}300$",
+      "d": "$\\$6{,}800$",
+      "e": "$\\$7{,}350$"
+    },
+    "correct_answer": "c",
+    "explanation": "If $x$ represents the cost, in dollars, of chartering the plane, then $\\frac{x}{30}$ represents the cost per passenger with $30$ passengers sharing the cost, $\\frac{x}{35}$ represents the per passenger cost with $35$ passengers sharing the cost, and the difference is $\\$30$. Then,\n\n$\\frac{x}{30} - \\frac{x}{35} = 30$\n\n$35x - 30x = 30(30)(35)$\n\n$5x = (900)(35)$\n\n$x = (900)(7)$\n\n$x = 6,300$\n\nThe correct answer is C.",
+    "categories": [
+      "Algebra",
+      "First-degree equations"
+    ],
+    "has_table": false,
+    "has_chart": false,
+    "has_image": false,
+    "needs_manual_review": false
+  },
+  {
+    "gmat_id": "4GM117",
+    "question_text": "If $a$, $b$, and $c$ are consecutive positive integers where $a < b < c$, and $c - a = \\frac{16}{b}$, then $a + b + c =$",
+    "options": {
+      "a": "$30$",
+      "b": "$24$",
+      "c": "$18$",
+      "d": "$12$",
+      "e": "$6$"
+    },
+    "correct_answer": "b",
+    "explanation": "If $a$, $b$, and $c$ are consecutive integers, where $a < b < c$, then $b = a + 1$ and $c = a + 2$. It follows that $c - a = (a + 2) - a = 2$. Then, $2 = \\frac{16}{b}$ and $b = 8$. It follows that $a = 7$, $c = 9$, and $a + b + c = 7 + 8 + 9 = 24$. The correct answer is B.",
+    "categories": [
+      "Algebra",
+      "Simultaneous equations"
+    ],
+    "has_table": false,
+    "has_chart": false,
+    "has_image": false,
+    "needs_manual_review": false
+  },
+  {
+    "gmat_id": "4GM118",
+    "question_text": "In Country $X$, $\\frac{1}{2}$ of the population can speak English, $\\frac{1}{3}$ can speak French, and $\\frac{1}{5}$ can speak both English and French. What fraction of the population of Country $X$ can speak neither English nor French?",
+    "options": {
+      "a": "$\\frac{2}{15}$",
+      "b": "$\\frac{1}{6}$",
+      "c": "$\\frac{3}{10}$",
+      "d": "$\\frac{11}{30}$",
+      "e": "$\\frac{13}{30}$"
+    },
+    "correct_answer": "d",
+    "explanation": "",
+    "categories": [
+      "Arithmetic",
+      "Sets"
+    ],
+    "has_table": false,
+    "has_chart": false,
+    "has_image": false,
+    "needs_manual_review": true,
+    "difficulty": "hard"
+  },
+  {
+    "gmat_id": "4GM119",
+    "question_text": "$\\frac{(0.045)(1.9)}{(0.03)(0.005)(0.1)} =$",
+    "options": {
+      "a": "$5{,}700$",
+      "b": "$570$",
+      "c": "$57$",
+      "d": "$5.7$",
+      "e": "$0.57$"
+    },
+    "correct_answer": "a",
+    "explanation": "$\\frac{(0.045)(1.9)}{(0.03)(0.005)(0.1)} = \\frac{(0.045)(1.9)}{(0.03)(0.005)(0.1)} \\times \\frac{10^6}{10^6}$\n\n$= \\frac{(45)(19)(100)}{(3)(5)(1)}$\n\n$= (3)(19)(100)$\n\n$= 5,700$\n\nThe correct answer is A.",
+    "categories": [
+      "Arithmetic",
+      "Operations with decimals"
+    ],
+    "has_table": false,
+    "has_chart": false,
+    "has_image": false,
+    "needs_manual_review": false
+  },
+  {
+    "gmat_id": "4GM120",
+    "question_text": "If $t = 2^{x+1}$, then in terms of $t$, $4^x$ is",
+    "options": {
+      "a": "$t$",
+      "b": "$\\frac{t}{2}$",
+      "c": "$t^2$",
+      "d": "$\\frac{t^2}{2}$",
+      "e": "$\\frac{t^2}{4}$"
+    },
+    "correct_answer": "e",
+    "explanation": "",
+    "categories": [
+      "Algebra",
+      "Exponents"
+    ],
+    "has_table": false,
+    "has_chart": false,
+    "has_image": false,
+    "needs_manual_review": true,
+    "difficulty": "hard"
+  },
+  {
+    "gmat_id": "4GM121",
+    "question_text": "Ms. Kessler bought $100$ bonds for $\\$91.25$ each. At the end of $2$ years, the bonds matured and she collected the par value of $\\$100$ each. In addition, she collected interest for the $2$ years at an annual rate of $2.75$ percent of par value. What was Ms. Kessler's effective simple annual interest rate of return on her investment, to the nearest tenth of a percent?",
+    "options": {
+      "a": "$4.4\\%$",
+      "b": "$6.8\\%$",
+      "c": "$7.8\\%$",
+      "d": "$12.6\\%$",
+      "e": "$15.6\\%$"
+    },
+    "correct_answer": "c",
+    "explanation": "At the end of $2$ years, Ms. Kessler received $\\$100$(\\$100) + (100)(\\$100)(2)(0.0275) = \\$10,550$ from an investment of $\\$100$(\\$91.25) = \\$9,125$ for a gain of $\\$10,550-\\$9,125 = \\$1,425$ and a return of $\\frac{1,425}{9,125} \\approx 0.156$ or $15.6\\%$ over the $2$-year period. Therefore, the annualized rate of return is $\\frac{15.6}{2}\\% = 7.8\\%$.\n\nThe correct answer is C.",
+    "categories": [
+      "Arithmetic",
+      "Applied problems"
+    ],
+    "has_table": false,
+    "has_chart": false,
+    "has_image": false,
+    "needs_manual_review": false
+  },
+  {
+    "gmat_id": "4GM124",
+    "question_text": "PRICES OF THREE APPLIANCES\n\n| Mixer | $\\$30$ |\n| Blender | $\\$50$ |\n| Food Processor | $\\$120$ |\n\nA dealer sold a total of $60$ of the three appliances listed in the table above for a total of $\\$4{,}200$. If the dealer sold twice as many food processors as mixers, what was the ratio of the number of blenders sold to the number of food processors sold?",
+    "options": {
+      "a": "$\\frac{3}{2}$",
+      "b": "$\\frac{4}{3}$",
+      "c": "$\\frac{6}{7}$",
+      "d": "$\\frac{5}{12}$",
+      "e": "$\\frac{1}{3}$"
+    },
+    "correct_answer": "a",
+    "explanation": "Letting $M$, $B$, and $P$ represent the numbers of mixers, blenders, and food processors, respectively, sold by the dealer, where $P = 2M$, it follows that $M + B + P = M + B + 2M = 3M + B = 60$ or $B = 60 - 3M$. Also, $30M + 50B + 120P = 30M + 50(60 - 3M) + 120(2M) = 120M + 3,000 = 4,200$. Then, $M = 10$, $P = 2(10) = 20$, and $B = 60 - 3(10) = 30$. Therefore, $\\frac{B}{P} = \\frac{3}{2}$.",
+    "categories": [
+      "Algebra",
+      "Simultaneous equations"
+    ],
+    "has_table": true,
+    "has_chart": false,
+    "has_image": false,
+    "needs_manual_review": false,
+    "difficulty": "hard"
+  },
+  {
+    "gmat_id": "4GM126",
+    "question_text": "There are between $100$ and $110$ cards in a collection of cards. If they are counted out $3$ at a time, there are $2$ left over, but if they are counted out $4$ at a time, there is $1$ left over. How many cards are in the collection?",
+    "options": {
+      "a": "$101$",
+      "b": "$103$",
+      "c": "$106$",
+      "d": "$107$",
+      "e": "$109$"
+    },
+    "correct_answer": "a",
+    "explanation": "Let $N$ be the number of cards. When counted out $3$ at a time, there are $2$ left over and since $N$ is between $100$ and 110, it follows that $N$ could be 101, 104, or 107. Similarly, when counted out $4$ at a time, there is $1$ left over and since $N$ is between $100$ and 110, it follows that $N$ could be 101, 105, or 109. Therefore, $N = 101$ because only $101$ satisfies both conditions.\n\nThe correct answer is A.",
+    "categories": [
+      "Arithmetic",
+      "Properties of integers"
+    ],
+    "has_table": false,
+    "has_chart": false,
+    "has_image": false,
+    "needs_manual_review": false,
+    "difficulty": "hard"
+  },
+  {
+    "gmat_id": "4GM127",
+    "question_text": "If a motorist had driven $1$ hour longer on a certain day and at an average rate of $5$ miles per hour faster, he would have covered $70$ more miles than he actually did. How many more miles would he have covered than he actually did if he had driven $2$ hours longer and at an average rate of $10$ miles per hour faster on that day?",
+    "options": {
+      "a": "$100$",
+      "b": "$120$",
+      "c": "$140$",
+      "d": "$150$",
+      "e": "$160$"
+    },
+    "correct_answer": "d",
+    "explanation": "",
+    "categories": [
+      "Arithmetic",
+      "Rate problems"
+    ],
+    "has_table": false,
+    "has_chart": false,
+    "has_image": false,
+    "needs_manual_review": true,
+    "difficulty": "hard"
+  },
+  {
+    "gmat_id": "4GM134",
+    "question_text": "If a person purchases $15$ of the $3{,}000$ tickets sold in a raffle that awards one prize, what is the probability that this person will not win?",
+    "options": {
+      "a": "$0$",
+      "b": "$\\frac{1}{200}$",
+      "c": "$\\frac{1}{2}$",
+      "d": "$\\frac{199}{200}$",
+      "e": "$1$"
+    },
+    "correct_answer": "d",
+    "explanation": "The probability that one of the $15$ tickets the person purchased corresponds to the prize-winning ticket is $\\frac{15}{3,000} = \\frac{15}{30^2 \\times 100} = \\frac{1}{200}$. Therefore, the probability that none of these $15$ tickets corresponds to the prize-winning ticket is $1 - \\frac{1}{200} = \\frac{199}{200}$. The correct answer is D.",
+    "categories": [
+      "Arithmetic",
+      "Probability"
+    ],
+    "has_table": false,
+    "has_chart": false,
+    "has_image": false,
+    "needs_manual_review": false,
+    "difficulty": "medium"
+  },
+  {
+    "gmat_id": "4GM137",
+    "question_text": "If the sum of a set of ten different positive prime numbers is an even number, which of the following prime numbers CANNOT be in the set?",
+    "options": {
+      "a": "$2$",
+      "b": "$3$",
+      "c": "$5$",
+      "d": "$7$",
+      "e": "$11$"
+    },
+    "correct_answer": "a",
+    "explanation": "Since the $10$ prime numbers in the set are all different and $2$ is the only even prime, it follows that at least $9$ of the numbers must be odd. If exactly $9$ are odd, then the other prime is 2. The sum of the $10$ primes is (odd + odd) + (odd + odd) + (odd + odd) + (odd + odd) + (odd + $2$) or even + even + even + even + odd, which is odd. However, it is given that the sum is even. Therefore, all $10$ primes are odd and $2$ CANNOT be in the set.",
+    "categories": [
+      "Arithmetic",
+      "Properties of integers"
+    ],
+    "has_table": false,
+    "has_chart": false,
+    "has_image": false,
+    "needs_manual_review": false,
+    "difficulty": "medium"
+  },
+  {
+    "gmat_id": "4GM140",
+    "question_text": "$\\frac{1}{2^{10}} + \\frac{1}{2^{11}} + \\frac{1}{2^{12}} + \\frac{1}{2^{13}} =$",
+    "options": {
+      "a": "$\\frac{1}{2^7}$",
+      "b": "$\\frac{1}{2^8}$",
+      "c": "$\\frac{1}{2^9}$",
+      "d": "$\\frac{1}{2^{13}}$",
+      "e": "$\\frac{1}{2^{46}}$"
+    },
+    "correct_answer": "c",
+    "explanation": "$\\frac{1}{2^{10}} + \\frac{1}{2^{11}} + \\frac{1}{2^{12}} + \\frac{1}{2^{13}} = \\frac{4}{2^{12}} + \\frac{2}{2^{12}} + \\frac{1}{2^{12}} + \\frac{1}{2^{12}}$\n\n$= \\frac{4+2+1+1}{2^{12}}$\n\n$= \\frac{8}{2^{12}}$\n\n$= \\frac{2^3}{2^{12}}$\n\n$= \\frac{1}{2^9}$\n\nThe correct answer is C.",
+    "categories": [
+      "Arithmetic",
+      "Operations on rational numbers",
+      "Exponents"
+    ],
+    "has_table": false,
+    "has_chart": false,
+    "has_image": false,
+    "needs_manual_review": false
+  },
+  {
+    "gmat_id": "4GM143",
+    "question_text": "If $x > 0$ and $x^2 = 248$, what is the closest integer approximation of $x$?",
+    "options": {
+      "a": "$496$",
+      "b": "$124$",
+      "c": "$50$",
+      "d": "$16$",
+      "e": "$14$"
+    },
+    "correct_answer": "d",
+    "explanation": "Given that $x > 0$ and $x^2 = 248$, it follows that $x = \\sqrt{248}$\n\n$\\sqrt{248} = \\sqrt{4 \\times 62} = \\sqrt{4} \\times \\sqrt{62} = 2\\sqrt{62}$\n\n$\\sqrt{62} \\approx \\sqrt{64} = 8$\n\n$\\sqrt{248} \\approx 2\\sqrt{64} = 2(8) = 16$.\n\nAlternatively, consider the squares of the answer choices, and observe that $16^2 = 256$ which is the closest to 248.\n\nA. $496^2 > 100^2 = 10,000$\n\nB. $124^2 > 100^2 = 10,000$\n\nC. $50^2 = 2,500$\n\nD. $16^2 = 256$\n\nE. $14^2 = 196$\n\nThe correct answer is D.",
+    "categories": [
+      "Arithmetic",
+      "Estimation"
+    ],
+    "has_table": false,
+    "has_chart": false,
+    "has_image": false,
+    "needs_manual_review": false,
+    "difficulty": "medium"
+  },
+  {
+    "gmat_id": "4GM153",
+    "question_text": "The table above shows the net change, in dollars, in the price of a share of a certain stock each day last week. What was the average (arithmetic mean) daily net change, in dollars, for the $5$-day week?",
+    "options": {
+      "a": "$-\\frac{1}{2}$",
+      "b": "$+\\frac{1}{4}$",
+      "c": "$+\\frac{1}{2}$",
+      "d": "$+\\frac{5}{4}$",
+      "e": "$+\\frac{5}{2}$"
+    },
+    "correct_answer": "c",
+    "explanation": "The average of the $5$ net changes is their sum divided by 5. The sum of the $5$ net changes is\n\n$2\\frac{1}{2} - 1\\frac{1}{4} - \\frac{1}{8} + 0 + 1\\frac{3}{8}$\n\n$= \\frac{5}{2} - \\frac{5}{4} - \\frac{1}{8} + \\frac{11}{8}$\n\n$= \\frac{20}{8} - \\frac{10}{8} - \\frac{1}{8} + \\frac{11}{8}$\n\n$= \\frac{20}{8} = \\frac{5}{2}$\n\nTherefore, the sum of $5$ net changes divided by $5$ is $\\frac{5}{2} \\div 5 = \\frac{5}{2} \\times \\frac{1}{5} = \\frac{1}{2}$.\n\nThe correct answer is C.",
+    "categories": [
+      "Arithmetic",
+      "Statistics",
+      "Operations on rational numbers"
+    ],
+    "has_table": true,
+    "has_chart": false,
+    "has_image": false,
+    "needs_manual_review": false,
+    "difficulty": "medium"
+  },
+  {
+    "gmat_id": "4GM154",
+    "question_text": "CURRENT LIABILITIES AS A PERCENT OF CURRENT ASSETS FOR SELECTED COMPANIES ON JANUARY 1, 1985\n\n[Bar chart showing percentages for Companies A through E: Company A ≈ $24\\%$, Company B ≈ $22\\%$, Company C ≈ $20\\%$, Company D ≈ $14\\%$, Company E ≈ $12\\%$]\n\nOn January 1, 1985, if Company $A$ and Company $D$ had current assets of $x$ and $y$ dollars, respectively, which of the following expresses the ratio of the combined current liabilities of the two companies to the combined current assets of the two companies?",
+    "options": {
+      "a": "$\\frac{0.24x + 0.14y}{x + y}$",
+      "b": "$\\frac{0.24x}{0.14y}$",
+      "c": "$0.38$",
+      "d": "$\\frac{0.24x + 0.14y}{0.76x + 0.86y}$",
+      "e": "$\\frac{0.76x + 0.86y}{x + y}$"
+    },
+    "correct_answer": "a",
+    "explanation": "From the table we have\n\n$\\frac{\\text{current liabilities of company A}}{\\text{current assets of company A}} = \\frac{\\text{current liabilities of company A}}{x} = 0.24$\n\nand\n\n$\\frac{\\text{current liabilities of company D}}{\\text{current assets of company D}} = \\frac{\\text{current liabilities of company D}}{y} = 0.14$.\n\nTherefore, the current liabilities of Company A equals $0.24x$, the current liabilities of Company D equals $0.14y$, and the combined current liabilities of Companies A and D equals $0.24x + 0.14y$.\n\nSince the combined current assets of Companies A and D is $x + y$, it follows that the ratio of the combined current liabilities of Companies A and D to the combined current assets of Companies A and D is $\\frac{0.24x + 0.14y}{x + y}$.\n\nThe correct answer is A.",
+    "categories": [
+      "Algebra",
+      "Ratios"
+    ],
+    "has_table": false,
+    "has_chart": true,
+    "has_image": false,
+    "needs_manual_review": false,
+    "difficulty": "medium"
+  },
+  {
+    "gmat_id": "4GM155",
+    "question_text": "If working capital is current assets minus current liabilities, then on January 1, 1985, Company $C$'s current liabilities were what percent of its working capital?",
+    "options": {
+      "a": "$20\\%$",
+      "b": "$25\\%$",
+      "c": "$40\\%$",
+      "d": "$60\\%$",
+      "e": "$80\\%$"
+    },
+    "correct_answer": "b",
+    "explanation": "From the graph, for Company $C$, $\\frac{\\text{liabilities}}{\\text{assets}} = 0.2$ or liabilities $= 0.2$(assets). Then, by definition, working capital = assets − liabilities = assets − $\\$0.2$$(assets) = $\\$0.8$$(assets). It follows that $\\frac{\\text{liabilities}}{\\text{working capital}} = \\frac{$0.2$(\\text{assets})}{$0.8$(\\text{assets})} = 0.25$. The correct answer is B.",
+    "categories": [
+      "Algebra",
+      "Percents"
+    ],
+    "has_table": false,
+    "has_chart": true,
+    "has_image": false,
+    "needs_manual_review": false,
+    "difficulty": "medium"
+  },
+  {
+    "gmat_id": "4GM156",
+    "question_text": "The schedule above shows the local arrival and departure times for two flights that travel between City $X$ and City $Y$. The flights depart and arrive on the same day and take exactly the same amount of flight time. If it is 12:00 noon in City $X$ when it is 9:00 a.m. on the same day in City $Y$, what is the local arrival time for flight $241$ in City $X$?",
+    "options": {
+      "a": "10:00 p.m.",
+      "b": "9:00 p.m.",
+      "c": "7:00 p.m.",
+      "d": "5:00 p.m.",
+      "e": "4:00 p.m."
+    },
+    "correct_answer": "a",
+    "explanation": "Since 12:00 noon local time in City X corresponds to 9:00 a.m. local time in City Y, it follows that local times in City Y are $3$ hours behind local times in City X. Thus, measured by local time in City Y, Flight $240$ departs at 9:00 a.m. and arrives at 4:00 p.m., for a total flight time of $7$ hours. Since the total flight time of Flight $241$ is also $7$ hours, and Flight $241$ departs at 12:00 noon local time in City Y, it follows that Flight $241$ arrives at 7:00 p.m. local time in City Y, which is equal to 10:00 p.m. local time in City X. The correct answer is A.",
+    "categories": [
+      "Arithmetic",
+      "Applied problems",
+      "Measurement conversion"
+    ],
+    "has_table": true,
+    "has_chart": false,
+    "has_image": false,
+    "needs_manual_review": false,
+    "difficulty": "medium"
+  },
+  {
+    "gmat_id": "4GM157",
+    "question_text": "If $[x]$ is defined as $x^2 - 1$ for all integers $x$, then $[x + 1] - [x] =$",
+    "options": {
+      "a": "$0$",
+      "b": "$x$",
+      "c": "$x + 2$",
+      "d": "$2x$",
+      "e": "$2x + 1$"
+    },
+    "correct_answer": "e",
+    "explanation": "Since $[x + 1] = (x + 1)^2 - 1 = (x^2 + 2x + 1) - 1 = x^2 + 2x$ and $[x] = x^2 - 1$, it follows that $[x + 1] - [x] = (x^2 + 2x) - (x^2 - 1) = 2x + 1$.\n\nThe correct answer is E.",
+    "categories": [
+      "Algebra",
+      "Simplifying algebraic expressions"
+    ],
+    "has_table": false,
+    "has_chart": false,
+    "has_image": false,
+    "needs_manual_review": false
+  },
+  {
+    "gmat_id": "4GM166",
+    "question_text": "If an integer $n$ is to be chosen at random from the integers $1$ to 96, inclusive, what is the probability that $n(n + 1)(n + 2)$ will be divisible by $8$?",
+    "options": {
+      "a": "$\\frac{1}{4}$",
+      "b": "$\\frac{3}{8}$",
+      "c": "$\\frac{1}{2}$",
+      "d": "$\\frac{5}{8}$",
+      "e": "$\\frac{3}{4}$"
+    },
+    "correct_answer": "d",
+    "explanation": "In order for $n(n + 1)(n + 2)$ to be divisible by 8, the prime factorizations of the integers $n$, $n + 1$, and $n + 2$ must collectively contain at least $3$ factors of 2.\n\nCase 1: Consider the triples of the form $(n, n + 1, n + 2)$ in which one of $n$, $n + 1$, or $n + 2$ is an even multiple of $4$ and $1 \\le n \\le 96$. Note that every even multiple of $4$ is also a multiple of 8. There are $12$ triples in which $n$ is a multiple of 8, $12$ triples in which $n + 1$ is a multiple of 8, and $12$ triples in which $n + 2$ is a multiple of 8. Thus, there are $36$ triples in which one of $n$, $n + 1$, or $n + 2$ is an even multiple of $4$ (and therefore a multiple of $8$), and for each of these $36$ triples, $n(n + 1)(n + 2)$ is divisible by 8.\n\nCase 2: Consider the triples of the form $(n, n + 1, n + 2)$ in which one of $n$, $n + 1$, or $n + 2$ is an odd multiple of $4$ and $1 \\le n \\le 96$. Note that in order for the product $n(n + 1)(n + 2)$ to be divisible by 8, one of the other two members of the triple must be even. There are $12$ triples in which $n$ is an odd multiple of $4$ and $n + 2$ is even and $12$ triples in which $n + 2$ is an odd multiple of $4$ and $n$ is even. Note that if $n + 1$ is an odd multiple of 4, then each of $n$ and $n + 2$ is odd and so for these triples $n(n + 1)(n + 2)$ is not divisible by 8. Thus, there are $24$ triples in which one of $n$, $n + 1$, or $n + 2$ is an odd multiple of 4, one of $n$, $n + 1$, or $n + 2$ is even, and for each of these $24$ triples, $n(n + 1)(n + 2)$ is divisible by 8.\n\nIt follows that there are $36 + 24 = 60$ integers $n$ from $1$ through $96$ for which $n(n + 1)(n + 2)$ is divisible by 8. Since there are $96$ integers from $1$ through 96, the probability is $\\frac{60}{96} = \\frac{5}{8}$ that, when an integer $n$ is chosen at random from the integers from $1$ through 96, $n(n + 1)(n + 2)$ will be divisible by 8.\n\nThe correct answer is D.",
+    "categories": [
+      "Number Properties",
+      "Divisibility"
+    ],
+    "has_table": false,
+    "has_chart": false,
+    "has_image": false,
+    "needs_manual_review": false
+  },
+  {
+    "gmat_id": "4GM167",
+    "question_text": "For a certain set of numbers, if $x$ is in the set, then $x - 3$ is also in the set. If the number $1$ is in the set, which of the following must also be in the set?\n\nI. $4$\nII. $-1$\nIII. $-5$",
+    "options": {
+      "a": "I only",
+      "b": "II only",
+      "c": "III only",
+      "d": "I and II",
+      "e": "II and III"
+    },
+    "correct_answer": "c",
+    "explanation": "The rule for set membership is: If $x$ is in the set, then $x - 3$ is also in the set. It is given that $1$ is in the set. Therefore, $1 - 3 = -2$ is in the set. Also, since $-2$ is now known to be in the set, $-2 - 3 = -5$ is also known to be in the set. Similarly, since $-5$ is now known to be in the set, $-8$ is also known to be in the set. Note that the set could be {1, $-2$, $-5$, $-8$, ...} and this set does not contain either $4$ or $-1$. Therefore, it is not true that either $4$ or $-1$ must be in the set. Only $-5$ must be in the set.\n\nThe correct answer is C.",
+    "categories": [
+      "Algebra",
+      "Sets"
+    ],
+    "has_table": false,
+    "has_chart": false,
+    "has_image": false,
+    "needs_manual_review": false
+  },
+  {
+    "gmat_id": "4GM170",
+    "question_text": "There are $10$ solid-colored balls in a box, including $1$ green ball and $1$ yellow ball. If $3$ of the balls in the box are to be chosen at random, without replacement, what is the probability that the $3$ balls chosen will include the green ball but not the yellow ball?",
+    "options": {
+      "a": "$\\frac{1}{6}$",
+      "b": "$\\frac{7}{30}$",
+      "c": "$\\frac{1}{4}$",
+      "d": "$\\frac{4}{15}$",
+      "e": "$\\frac{3}{10}$"
+    },
+    "correct_answer": "b",
+    "explanation": "",
+    "categories": [
+      "Arithmetic",
+      "Probability"
+    ],
+    "has_table": false,
+    "has_chart": false,
+    "has_image": false,
+    "needs_manual_review": true,
+    "difficulty": "hard"
+  },
+  {
+    "gmat_id": "4GM171",
+    "question_text": "A total of $800$ students were asked whether they found two subjects, $M$ and $R$, interesting. Each answer was either \"yes\" or \"no\" or \"unsure,\" and the numbers of students who gave these answers are listed in the table above. If $200$ students answered \"yes\" only for subject $M$, how many of the students did not answer \"yes\" for either subject?",
+    "options": {
+      "a": "$100$",
+      "b": "$200$",
+      "c": "$300$",
+      "d": "$400$",
+      "e": "$500$"
+    },
+    "correct_answer": "c",
+    "explanation": "",
+    "categories": [
+      "Arithmetic",
+      "Sets"
+    ],
+    "has_table": true,
+    "has_chart": false,
+    "has_image": false,
+    "needs_manual_review": true,
+    "difficulty": "hard"
+  },
+  {
+    "gmat_id": "4GM175",
+    "question_text": "A certain quantity is measured on two different scales, the $R$-scale and the $S$-scale, that are related linearly. Measurements on the $R$-scale of $6$ and $24$ correspond to measurements on the $S$-scale of $30$ and 60, respectively. What measurement on the $R$-scale corresponds to a measurement of $100$ on the $S$-scale?",
+    "options": {
+      "a": "$20$",
+      "b": "$36$",
+      "c": "$48$",
+      "d": "$60$",
+      "e": "$84$"
+    },
+    "correct_answer": "c",
+    "explanation": "It is given that a linear relationship holds between the $R$-scale and the $S$-scale. Therefore, there are constants $b$ and $m$ such that values on the $R$-scale can be obtained by multiplying $m$ by the corresponding values on the $S$-scale and then adding $b$. Thus, the fact that the values $6$ and $24$ on the $R$-scale correspond to the values $30$ and $60$ on the $S$-scale, respectively, lead to the equations $6 = m(30) + b$ and $24 = m(60) + b$. Subtracting the first equation from the second equation gives $24 - 6 = 30m$, or $m = \\frac{18}{30} = \\frac{3}{5}$. Substituting this value of $m$ into the first equation gives $6 = (\\frac{3}{5})(30) + b$, or $6 = 18 + b$, or $b = -12$. Therefore, to obtain a value on the $R$-scale, multiply $\\frac{3}{5}$ by the corresponding value on the $S$-scale and then subtract 12. Carrying this out for the value $100$ on the $S$-scale gives $(\\frac{3}{5})(100) - 12 = 60 - 12 = 48$ for the corresponding value on the $R$-scale.\n\nAlternatively, the linear relation between the $R$-scale and $S$-scale, namely $R = mS + b$, can be interpreted as the equation of a line in the $(S,R)$ coordinate plane. Using the fact that this line contains the points $(S,R) = (30,6)$ and $(S,R) = (60,24)$, the slope $m$ is $\\frac{24-6}{60-30} = \\frac{3}{5}$. The vertical intercept $(0,b)$ of this line can be found by using $6 = \\frac{3}{5}(30) + b$, which gives $b = -12$. Thus, $R = \\frac{3}{5}S - 12$, and when $S = 100$, $R = \\frac{3}{5}(100) - 12 = 48$.\n\nThe correct answer is C.",
+    "categories": [
+      "Algebra",
+      "Linear equations"
+    ],
+    "has_table": false,
+    "has_chart": false,
+    "has_image": false,
+    "needs_manual_review": false
+  },
+  {
+    "gmat_id": "4GM176",
+    "question_text": "June 25, 1982, fell on a Friday. On which day of the week did June 25, 1987, fall? (Note: 1984 was a leap year.)",
+    "options": {
+      "a": "Sunday",
+      "b": "Monday",
+      "c": "Tuesday",
+      "d": "Wednesday",
+      "e": "Thursday"
+    },
+    "correct_answer": "e",
+    "explanation": "From June 25, 1982, to June 25, 1987, was a span of $5$ years, one of which was a leap year. It follows that the number of days from June 25, 1982, to June 25, 1987, was $5$($365$) + $1$ = $1{,}826$ days, which is equivalent to $260$ weeks plus $6$ days since $1{,}826$ = $260$($7$) + 6. Because June 25, 1982, fell on a Friday and $260$ weeks and $6$ days after Friday is Thursday, June 25, 1987, fell on a Thursday.\n\nThe correct answer is E.",
+    "categories": [
+      "Arithmetic",
+      "Operations with integers"
+    ],
+    "has_table": false,
+    "has_chart": false,
+    "has_image": false,
+    "needs_manual_review": false
+  },
+  {
+    "gmat_id": "4GM181",
+    "question_text": "A string of $10$ lightbulbs is wired in such a way that if any individual lightbulb fails, the entire string fails. If for each individual lightbulb the probability of failing during time period T is 0.06, what is the probability that the string of lightbulbs will fail during time period T?",
+    "options": {
+      "a": "$0.06$",
+      "b": "$(0.06)^{10}$",
+      "c": "$1 - (0.06)^{10}$",
+      "d": "$(0.94)^{10}$",
+      "e": "$1 - (0.94)^{10}$"
+    },
+    "correct_answer": "e",
+    "explanation": "For each $k$ = 1, 2, 3, ..., 10, let $F_k$ represent the event and $P(F_k)$ the probability of the event that the $k$th lightbulb will fail. Let $N_k$ represent the event and $P(N_k)$ the probability of the event that the $k$th lightbulb will not fail. It follows that $P(N_k)$ = $1$ - $P(F_k)$ = $1$ - $0.06$ = 0.94.\n\nLet $F$ represent the event that the string will fail and let $N$ represent the event that the string will not fail. If $P(F)$ denotes the probability that the string will fail and $P(N)$ denotes the probability that the string will not fail, then $P(F)$ = $1$ - $P(N)$. Because the string will not fail if and only if each of the $10$ lightbulbs does not fail, it follows that $P(N)$ = $P(N_1$ and $N_2$ and $N_3$ and ... and $N_{10})$ = $P(N_1) \\cdot P(N_2) \\cdot P(N_3) \\cdot ... \\cdot P(N_{10})$ = $(0.94)(0.94)(0.94)...(0.94)$ = $(0.94)^{10}$. Therefore, $P(F)$ = $1$ - $P(N)$ = $1 - (0.94)^{10}$.\n\nThe correct answer is E.",
+    "categories": [
+      "Arithmetic",
+      "Probability"
+    ],
+    "has_table": false,
+    "has_chart": false,
+    "has_image": false,
+    "needs_manual_review": false,
+    "difficulty": "hard"
+  },
+  {
+    "gmat_id": "4GM182",
+    "question_text": "Kay began a certain game with $x$ chips. On each of the next two plays, she lost one more than half the number of chips she had at the beginning of that play. If she had $5$ chips remaining after her two plays, then $x$ is in the interval",
+    "options": {
+      "a": "$7 \\leq x \\leq 12$",
+      "b": "$13 \\leq x \\leq 18$",
+      "c": "$19 \\leq x \\leq 24$",
+      "d": "$25 \\leq x \\leq 30$",
+      "e": "$31 \\leq x \\leq 35$"
+    },
+    "correct_answer": "d",
+    "explanation": "After the first play, Kay had $x - (\\frac{1}{2}x + 1) = \\frac{1}{2}x - 1$ chips left. After the second play, Kay had $(\\frac{1}{2}x - 1) - [\\frac{1}{2}(\\frac{1}{2}x - 1) + 1] = \\frac{1}{4}x - \\frac{3}{2}$ chips left. Therefore, $\\frac{1}{4}x - \\frac{3}{2} = 5$, which can be solved to obtain $x = 26$. Alternatively, if $y$ is the number of chips after the first play, then $y = x - (\\frac{1}{2}x + 1) = \\frac{1}{2}x - 1$ and the number of chips after the second play is $\\frac{1}{2}y - 1$. It is given that $\\frac{1}{2}y - 1 = 5$, so $y = 12$. Now use $y = \\frac{1}{2}x - 1$ to get $\\frac{1}{2}x - 1 = 12$, or $x = 26$. The correct answer is D.",
+    "categories": [
+      "Algebra",
+      "Applied problems"
+    ],
+    "has_table": false,
+    "has_chart": false,
+    "has_image": false,
+    "needs_manual_review": true
+  },
+  {
+    "gmat_id": "4GM184",
+    "question_text": "A farmer spent $\\$35$ on feed for chickens and goats. He spent $40$ percent of the money on chicken feed, which he bought at a $20$ percent discount off the full price, and spent the rest on goat feed, which he bought at full price. If the farmer had paid full price for both the chicken feed and the goat feed, what amount would he have spent on the chicken feed and goat feed combined?",
+    "options": {
+      "a": "$\\$37.80$",
+      "b": "$\\$38.50$",
+      "c": "$\\$39.20$",
+      "d": "$\\$39.50$",
+      "e": "$\\$40.60$"
+    },
+    "correct_answer": "b",
+    "explanation": "Let $F$ represent the full price of the chicken feed the farmer bought. Then,\n\n$\\$0.4$(\\$35) = 0.8F$\n\n$\\$14.00 = 0.8F$\n\n$\\$17.50 = F$\n\nThe farmer paid full price for the goat feed, which amounted to $\\$0.6$(\\$35) = \\$21.00$.\n\nTherefore, if the farmer had paid full price for both the chicken and goat feed, he would have paid $\\$17.50 + \\$21.00 = \\$38.50$.",
+    "categories": [
+      "Arithmetic",
+      "Percents"
+    ],
+    "has_table": false,
+    "has_chart": false,
+    "has_image": false,
+    "needs_manual_review": false,
+    "difficulty": "medium"
+  },
+  {
+    "gmat_id": "4GM208",
+    "question_text": "When the even integer $n$ is divided by 9, the remainder is 8. Which of the following, when added to $n$, gives a sum that is divisible by $18$?",
+    "options": {
+      "a": "$1$",
+      "b": "$4$",
+      "c": "$9$",
+      "d": "$10$",
+      "e": "$17$"
+    },
+    "correct_answer": "d",
+    "explanation": "Since the remainder is $8$ when $n$ is divided by 9, it follows that $n = 9q + 8$ for some integer value of $q$. Note that $q$ must be even because $n = 9q + 8$ is even. Test each answer choice.\n\n$n + 1 = 9q + 9 = 9(q + 1)$, which is odd and therefore not divisible by $18$;\n\n$n + 2 = 9q + 12$, which is not divisible by $18$ because $9q + 12 = 9(q + 1) + 3$ is $3$ more than a multiple of $9$;\n\n$n + 9 = 9q + 17$, which is not divisible by $18$ because $9q + 17 = 9(q + 1) + 8$ is $8$ more than a multiple of $9$;\n\n$n + 10 = 9q + 18 = 9(q + 2)$, which is divisible by $18$ since $q$ is even;\n\n$n + 17 = 9q + 25$, which is not divisible by $18$ because $9q + 25 = 9(q + 2) + 7$ is $7$ more than a multiple of 9.\n\nThus, $10$ is the only number among the answer choices that, when added to $n$, gives a number that is divisible by 18.\n\nThe correct answer is D.",
+    "categories": [
+      "Number Properties",
+      "Divisibility"
+    ],
+    "has_table": false,
+    "has_chart": false,
+    "has_image": false,
+    "needs_manual_review": false,
+    "difficulty": "medium"
+  }
+]

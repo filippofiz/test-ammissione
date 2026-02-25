@@ -1,0 +1,277 @@
+[
+  {
+    "di_type": "TA",
+    "gmat_id": "8GM127",
+    "table_title": "",
+    "stimulus_text": "The table shows graduation data, by academic discipline, for undergraduate students who entered University A in 2003. Percentages are given to the nearest $0.1$ percent.",
+    "column_headers": [
+      "Academic discipline",
+      "Total number of students",
+      "Number who graduated within $6$ years",
+      "Number who did not graduate within $6$ years",
+      "Proportion of total who graduated within $6$ years (%)"
+    ],
+    "table_data": [
+      [
+        "Arts",
+        "$1{,}087$",
+        "$504$",
+        "$583$",
+        "$46.4$"
+      ],
+      [
+        "Business",
+        "$2{,}813$",
+        "$1{,}410$",
+        "$1{,}403$",
+        "$50.1$"
+      ],
+      [
+        "Communications",
+        "$888$",
+        "$503$",
+        "$385$",
+        "$56.6$"
+      ],
+      [
+        "Engineering",
+        "$1{,}036$",
+        "$367$",
+        "$669$",
+        "$35.4$"
+      ],
+      [
+        "Health Sciences",
+        "$810$",
+        "$452$",
+        "$358$",
+        "$55.8$"
+      ],
+      [
+        "Humanities",
+        "$3{,}366$",
+        "$1{,}619$",
+        "$1{,}747$",
+        "$48.1$"
+      ],
+      [
+        "Natural Sciences",
+        "$933$",
+        "$402$",
+        "$531$",
+        "$43.1$"
+      ],
+      [
+        "Social Sciences",
+        "$2{,}479$",
+        "$1{,}332$",
+        "$1{,}147$",
+        "$53.7$"
+      ],
+      [
+        "Total",
+        "$13{,}412$",
+        "$6{,}589$",
+        "$6{,}823$",
+        "$49.1$"
+      ]
+    ],
+    "statements": [
+      {
+        "text": "Engineering had both the smallest number and the smallest proportion of students who graduated within $6$ years.",
+        "is_true": true
+      },
+      {
+        "text": "Business is the discipline for which the ratio of the number of students who graduated within $6$ years to the number of students who did not is closest to 1.",
+        "is_true": true
+      },
+      {
+        "text": "The discipline having the largest number of students who graduated within $6$ years also has the largest number of students who did not graduate within $6$ years.",
+        "is_true": true
+      }
+    ],
+    "answer_col1_title": "Yes",
+    "answer_col2_title": "No",
+    "statement_column_title": "Statement",
+    "explanation": "",
+    "needs_manual_review": false
+  },
+  {
+    "di_type": "TPA",
+    "gmat_id": "8GM133",
+    "scenario": "Archaeologists excavating an ancient Chi-Xua site found a small statue along with white-and-red striped pottery fragments and small bits of cloth in a one-room building approximately $6$ meters by $5$ meters. The building had a single entrance, opening to a narrow exterior porch. The building's walls were made of local sandstone.\n\nSelect the proposition that, if true, would provide the strongest evidence For the hypothesis that the room had a residential function and select the proposition that, if true, would provide the strongest evidence Against the hypothesis. Make only two selections, one in each column.",
+    "column1_title": "For",
+    "column2_title": "Against",
+    "shared_options": [
+      "Local sandstone was rarely used for building in ancient Chi-Xua sites.",
+      "Nearly all Chi-Xua residential buildings had multiple rooms.",
+      "Some Chi-Xua buildings included multiple storage rooms measuring approximately $30$ square meters.",
+      "The cloth fragments did not contain the pigments commonly used in Chi-Xua ceremonial robes.",
+      "Red-and-white striped pottery was used in Chi-Xua almost exclusively for personal food storage."
+    ],
+    "correct_col1": "Red-and-white striped pottery was used in Chi-Xua almost exclusively for personal food storage.",
+    "correct_col2": "Nearly all Chi-Xua residential buildings had multiple rooms.",
+    "explanation": "In the absence of more information about the use of sandstone in ancient Chi-Xua buildings, the fact that the building material was unusual does not, in itself, imply any particular function. This rules out A as the correct response for either selection. While the building in question did have an area of $30$ square meters, the fact that it was a one-room building makes C irrelevant. Finally, even if it could be known with certainty that the bits of cloth were not part of ceremonial robes, the absence of ceremonial robes provides no evidence to suggest that the room served a residential function. Thus D is also irrelevant.\n\nRO1: Evaluate\nIf red-and-white striped pottery was used almost exclusively for personal food storage, this strongly suggests that the room was a private space, such as a residence.\nThe correct answer is E, Red-and-white striped pottery was used in Chi-Xua almost exclusively for personal food storage.\n\nRO2: Evaluate\nIf nearly all of the Chi-Xua residential buildings had multiple rooms, then strong evidence of residential use would be required to accept that this building is one of the few exceptions.\nThe correct answer is B, Nearly all Chi-Xua residential buildings had multiple rooms.",
+    "needs_manual_review": false
+  },
+  {
+    "di_type": "TPA",
+    "gmat_id": "8GM147",
+    "scenario": "Advertisement: Our new 15/12 discount loan is perfect for quick business projects. Customers can borrow an amount up to $80\\%$ of the value of their collateral assets at $15\\%$ discounted interest and have $12$ months to repay the loan amount.*\n\n*Terms of loan: Loan proceeds, paid by check in rupees, are equal to the loan amount less the total interest for the loan-$15\\%$ of the loan amount.\n\nA 15/12 loan with amount $n$ rupees is taken out by a business. Select the expressions for the repayment amount (the sum of the payments made to fully repay the loan) and the loan proceeds for this loan. Make only two selections, one in each column.",
+    "column1_title": "Repayment amount",
+    "column2_title": "Loan proceeds",
+    "shared_options": [
+      "$0.15n$",
+      "$0.80n$",
+      "$0.85n$",
+      "$1.00n$",
+      "$1.15n$",
+      "$1.20n$"
+    ],
+    "correct_col1": "$1.00n$",
+    "correct_col2": "$0.85n$",
+    "explanation": "RO1, Repayment amount: Strategize\nThe terms of the loan indicate that the total interest ($15\\%$ of the loan amount) is deducted up front and that the loan proceeds are the remainder. This indicates that the amount that is to be repaid is precisely the loan amount. Since $n = 1.00n$ is the loan amount, in rupees, then $1.00n$ is the repayment amount as well.\nThe correct answer is D, $1.00n$.\n\nRO2, Loan proceeds: Strategize\nAccording to the terms of the loan, the proceeds are calculated by deducting $15\\%$ from the loan amount. Since the loan amount is $n$ rupees, the loan proceeds are $n - 0.15n = 0.85n$.\nThe correct answer is C, $0.85n$.",
+    "needs_manual_review": false
+  },
+  {
+    "di_type": "TPA",
+    "gmat_id": "8GM149",
+    "scenario": "Researcher: Soils are adversely affected by road salts used to melt ice and snow, particularly along roadsides and salt storage areas. Soil samples were collected from highway medians and in salt storage yards. These samples showed chloride levels $\\$11$$-$$160$$ times the level sufficient to inhibit bacteria growth in soil. The samples also had sodium levels $\\$15$$-$200$ times the level sufficient to inhibit bacterial growth in soil. Inhibited bacterial growth in soil greatly inhibits plant growth in that soil.\n\nAn agriculture official would like to use the researcher's results to support the argument that sand, rather than road salts, should be used as a winter road treatment, thereby eliminating the need for salt yards. Select the additional information that, if true, would most strengthen the official's case and select the additional information that, if true, would most weaken the official's case. Make only two selections, one in each column.",
+    "column1_title": "Most Strengthen",
+    "column2_title": "Most Weaken",
+    "shared_options": [
+      "A high number of road accidents are attributable to untreated roads in winter.",
+      "The cost of removing salts from soil in abandoned salt yards is high.",
+      "High chloride concentrations in drinking water supplies have a negative impact on health.",
+      "Sand is much less effective than salt at making roads safe to drive in winter conditions.",
+      "Runoff from roads is often absorbed by farmland."
+    ],
+    "correct_col1": "Runoff from roads is often absorbed by farmland.",
+    "correct_col2": "Sand is much less effective than salt at making roads safe to drive in winter conditions.",
+    "explanation": "RO1, Most strengthen: Evaluate\nThere is insufficient information to link drinking water to the agriculture official's argument, therefore C is eliminated.\nWhile the high cost of removing salts from soil in abandoned salt yards could strengthen the official's case, additional information would need to be presented. For instance, if additional salt yards had been proposed, then switching to sand as a road treatment method could prevent further environmental damage. In the absence of such additional information, the high cost of removing salts from soil in abandoned salt yards does not, in itself, strengthen the official's case significantly.\nThe statement that most strengthens the official's case is that runoff from roads is often absorbed by farmland. Unlike the statement about salt yards, this indicates that maintaining the use of salt as a road treatment presents an immediate consequence for food production-a consequence the agriculture official wants to avoid.\nThe correct answer is E, Runoff from roads is often absorbed by farmland.\n\nRO2, Most weaken: Evaluate\nThe high number of road accidents attributable to untreated roads in winter could weaken the case if the official had proposed not treating the roads at all, but as the agriculture official offered sand as an alternative, this option does not affect the official's proposal. If true, the statement comparing the effectiveness of sand as a road treatment to the effectiveness of salt provides an argument against the use of sand that the official's argument does not address.\nThe correct answer is D, Sand is much less effective than salt at making roads safe to drive in winter conditions.",
+    "needs_manual_review": false
+  },
+  {
+    "di_type": "MSR",
+    "gmat_id": "8GM169",
+    "sources": [
+      {
+        "tab_name": "Designs",
+        "content": "A certain electric utility is considering exactly two designs (Designs $1$ and $\\$2$$) for a new power generation plant. Each design would result in a plant that would generate the same amount of power annually; but Design $$1$$ would use a single Type A power generator, whereas Design $2$ would use three Type B power generators.\n\nType A generators cost less than Type B generators to fuel per unit of power generated and vent through taller chimneys, which better prevent pollutants from concentrating near the plant. However, Type A generators produce solid waste that is difficult and expensive to dispose of safely.\n\nType B generators produce no solid waste and, as compared to Type A generators, vent approximately half as much Pollutant X, and even less Pollutant Y, per unit of power generated annually. However, Type B generators vent through much shorter chimneys."
+      },
+      {
+        "tab_name": "Pollutants by Phase",
+        "content": "Both Type A and Type B generators emit (vent) significantly more of Pollutant Y during the startup phase-when a generator is brought to its normal power-generating phase from nonoperation. During startup, unhealthy levels of Pollutant Y can become concentrated at ground level near the power plant. The following table shows, for a single Type A or Type B generator, Pollutant Y emissions, in kilograms per hour (kg/hr), and the resultant contributions from those generators to the ground-level concentration of Pollutant Y, in micrograms per cubic meter of air (mcg/m³), near the plant during the startup and normal generating phases.\n\nTable:\nPower generator type | Operation phase | Pollutant Y Emissions (kg/hr) | Pollutant Y Increases ground-level concentration by (mcg/m³)\nA | startup | $744$ | $61$\nA | normal | $218$ | $13$\nB | startup | $203$ | $47$\nB | normal | $6$ | $3$"
+      }
+    ],
+    "questions": [
+      {
+        "text": "Suppose that the utility chooses Design $1$ over Design 2. For each of the following motivations, select Yes if the information in the tabs suggest that it would help explain this choice. Otherwise, select No.",
+        "options": {
+          "statement1": "A desire to use the type of generator that costs less to fuel per unit of power generated",
+          "statement2": "A desire to avoid having to dispose of solid waste",
+          "statement3": "A desire to emit less Pollutant X per unit of power generated annually"
+        },
+        "correct_answers": {
+          "statement1": "Yes",
+          "statement2": "No",
+          "statement3": "No"
+        }
+      }
+    ],
+    "explanation": "",
+    "needs_manual_review": true
+  },
+  {
+    "di_type": "GI",
+    "gmat_id": "8GM177",
+    "context_text": "Randomly selected members form each of four key stakeholder groups in the biofuels industry in Nation X were surveyed to determine which of several concerns had the greatest relative importance for each group. The diagram shows the concerns that were rated as highly important for each group.",
+    "statement_text": "Of the concerns that were rated as highly important by at least one of the four groups, exactly [BLANK1] were so designated by more than one group. Each of these concerns was rated as highly important by the [BLANK2].",
+    "blank1_options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "blank1_correct": "2",
+    "blank2_options": [
+      "Biofuel producer group",
+      "Fuel distributor group",
+      "Vehicle converter group",
+      "end user group"
+    ],
+    "blank2_correct": "end user group",
+    "chart_title": "Biofuels Stakeholders in Nation X",
+    "chart_type": "other",
+    "chart_description": "Organizational chart showing four stakeholder groups and their highly important concerns. Biofuel producer group has concerns: greenhouse gas balance, investment cost, production capacity, quality assurance, realistic profit margin. Fuel distributor group has concerns: availability of biofuels, level playing field, logistics. Vehicle converter group has concerns: competitive advantage, \"green\" image, legislation, market demand. End user group has concerns: availability of vehicles, availability of biofuels, cost of ownership, ease of use, \"green\" image, safety.",
+    "chart_data_points": {
+      "Biofuel producer group": [
+        "greenhouse gas balance",
+        "investment cost",
+        "production capacity",
+        "quality assurance",
+        "realistic profit margin"
+      ],
+      "Fuel distributor group": [
+        "availability of biofuels",
+        "level playing field",
+        "logistics"
+      ],
+      "Vehicle converter group": [
+        "competitive advantage",
+        "\"green\" image",
+        "legislation",
+        "market demand"
+      ],
+      "End user group": [
+        "availability of vehicles",
+        "availability of biofuels",
+        "cost of ownership",
+        "ease of use",
+        "\"green\" image",
+        "safety"
+      ]
+    },
+    "explanation": "RO1: Recognize - Of the concerns in the diagram, $2$ were rated as highly important by more than one stakeholder group: Availability of biofuels was rated as highly important by the Fuel distributor group and the End user group and \"green\" image was rated as highly important by the Vehicle converter group and the End user group. All other concerns were mentioned by only a single stakeholder group. The correct answer is 2. RO2: Recognize - As explained in the analysis of RO1, both availability of biofuels and \"green\" image were rated as highly important by the End user group. The correct answer is end user group.",
+    "needs_manual_review": true
+  },
+  {
+    "di_type": "DS",
+    "gmat_id": "8GM192",
+    "problem": "An actor read aloud and recorded a certain $\\$420$$-page book on several audiotapes. Was the average recording time per page less than $90$ seconds?",
+    "statement1": "Each tape was at most $40$ minutes long.",
+    "statement2": "The book was recorded on $15$ tapes.",
+    "correct_answer": "C",
+    "explanation": "Determine if the average recording time for the $420$ pages is less than $1.5$ minutes per page, or equivalently, if the total recording time is less than ($\\$420$$)($$1.5$$ min) = $630$ min.\n\n($\\$1$$) Given that each tape was at most $$40$$ minutes, the total recording time could be less than $$630$$ min or greater than $$630$$ min. For example, if there were only $$2$$ tapes, then the total recording time would be at most $$80$$ min. On the other hand, if there were $$20$$ tapes each with $$40$$ min recorded, then the total recording time would be $800$ min; NOT sufficient.\n\n($\\$2$$) Given that there were $$15$$ tapes, the total recording time could be less than $$630$$ min or greater than $$630$$ min. For example, if only $$10$$ min were recorded on each tape, then the total recording time would be $$150$$ min. On the other hand, if $$100$$ min were recorded on each tape, then the total recording time would be $$1${,}500$ min; NOT sufficient.\n\nGiven ($\\$1$$) and ($\\$2$$) together, the total recording time is at most $\\$15$$($$40$$ min) = $$600$$ min, which is less than $630$ min.\n\nThe correct answer is C; both statements together are sufficient.",
+    "needs_manual_review": false
+  },
+  {
+    "di_type": "DS",
+    "gmat_id": "8GM193",
+    "problem": "Of the $N$ candies in a bag, some are peppermint and the rest are spearmint. What is the value of $N$?",
+    "statement1": "If $1$ peppermint candy were removed from the $N$ candies, $\\frac{1}{5}$ of the remaining candies would be peppermint.",
+    "statement2": "If $2$ spearmint candies were removed from $N$ candies, $\\frac{1}{4}$ of the remaining candies would be peppermint.",
+    "correct_answer": "C",
+    "explanation": "Determine the number, $N$, of candies in a bag, some of which are peppermint and the rest of which are spearmint. If $P$ and $S$ represent the numbers of peppermint candies and spearmint candies, respectively, in the bag, then $N = P + S$.\n\n($\\$1$$) If $$1$$ peppermint candy were removed from the bag, there would be $N - $1$$ candies left in the bag and $P - $1$$ of them would be peppermint candies. It is given that $\\frac{$1$}{$5$}$ of the remaining candies would be peppermint, so $\\frac{$1$}{$5$}(N - $1$) = P - $1$$. Since the value of $P$ can vary, it is not possible to determine the value of $N$. For example, if $P = $11$$, it follows that $N = $51$$. However, if $P = $21$$, it follows that $N = 101$; NOT sufficient.\n\n($\\$2$$) If $$2$$ spearmint candies were removed from the bag, there would be $N - $2$$ candies left in the bag, $S - $2$$ of them would be spearmint and $P$ of them would be peppermint. It is given that $\\frac{$1$}{$4$}$ of the remaining candies would be peppermint, so $\\frac{$1$}{$4$}(N - $2$) = P$. Since the value of $P$ can vary, it is not possible to determine the value of $N$. For example, if $P = $8$$, it follows that $N = $34$$. However, if $P = $10$$, it follows that $N = 42$; NOT sufficient.\n\nTaking ($\\$1$$) and ($\\$2$$) together and combining $\\frac{$1$}{$5$}(N - $1$) = P - $1$$ from ($\\$1$$) and $\\frac{$1$}{$4$}(N - $2$) = P$ from ($\\$2$$), it follows that $\\frac{$1$}{$5$}(N - $1$) = \\frac{$1$}{$4$}(N - $2$) - $1$$. This is a linear equation in $N$ and can be solved for a unique value of $N$; SUFFICIENT.\n\nThe correct answer is C; both statements together are sufficient.",
+    "needs_manual_review": false
+  },
+  {
+    "di_type": "DS",
+    "gmat_id": "8GM204",
+    "problem": "Sally gave some of her candy to her friends. How many pieces of candy did she have before giving any to her friends?",
+    "statement1": "Sally gave each friend $8$ pieces of candy.",
+    "statement2": "Sally had $7$ pieces of candy left after giving candy to her friends.",
+    "correct_answer": "E",
+    "explanation": "Let $n$ be the number of pieces of candy Sally had before giving some away, let $n_1$ be the number of pieces of candy Sally gave away, and let $n_2$ be the number of pieces of candy Sally had left after giving some away. Then $n = n_1 + n_2$. Determine the value of $n$.\n\n($\\$1$$) Given that $n_$1$ = 8k$, where $k$ is the number of friends Sally gave candy to, the value of $n = 8k + n_2$ cannot be determined; NOT sufficient.\n\n($\\$2$$) Given that $n_$2$ = $7$$, the value of $n = n_$1$ + 7$ cannot be determined; NOT sufficient.\n\nGiven ($\\$1$$) and ($\\$2$$) together, the value of $n = 8k + $7$$ cannot be determined. For example, if Sally gave candy to $$2$$ friends, then $n = $8$($2$) + $7$ = $23$$. On the other hand, if Sally gave candy to $$3$$ friends, then $n = $8$($3$) + $7$ = 31$; NOT sufficient.\n\nThe correct answer is E; both statements together are still not sufficient.",
+    "needs_manual_review": false
+  },
+  {
+    "di_type": "DS",
+    "gmat_id": "8GM208",
+    "problem": "Color X ink is created by blending red, blue, green, and yellow inks in the ratio $6:5:2:2$. What is the number of liters of green ink that was used to create a certain batch of color X ink?",
+    "statement1": "The amount of red ink used to create the batch is $2$ liters more than the amount of blue ink used to create the batch.",
+    "statement2": "The batch consists of $30$ liters of color X ink.",
+    "correct_answer": "D",
+    "explanation": "For a batch of a certain color ink, red, blue, green, and yellow inks are blended in the ratio $6:5:2:2$. Determine how many liters of green ink were used.\n\nIf $R$, $B$, $G$, and $Y$ represent the amounts of red, blue, green, and yellow ink, respectively, then $T = R + B + G + Y = 6x + 5x + 2x + 2x = 15x$, where $T$ is the total amount of ink in the batch and $x$ is the constant of proportionality. If the value of $x$ can be determined, then the amount of green ink used, $G = 2x$, can be determined.\n\n($\\$1$$) The amount of red ink is $2$ liters more than the amount of blue ink, so\n$R = B + 2$\n$6x = 5x + 2$\n$x = 2$\n\nTherefore, $2(2) = 4$ liters of green ink were used; SUFFICIENT.\n\n($\\$2$$) The batch contains $30$ liters of ink, so\n$T = 30$\n$15x = 30$\n$x = 2$\n\nTherefore, $2(2) = 4$ liters of green ink were used; SUFFICIENT.\n\nThe correct answer is D; each statement alone is sufficient.",
+    "needs_manual_review": false
+  }
+]
