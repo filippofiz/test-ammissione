@@ -81,6 +81,7 @@ export interface QuestionData {
   passage_text_eng?: string;
   passage_title?: string;
   passage_title_eng?: string;
+  passage_line_offsets?: Record<string, number>;
 
   // Answer choices (for multiple choice)
   choices?: Array<{
@@ -324,9 +325,12 @@ export function QuestionRenderer({
     return (
       <TAQuestion
         tableTitle={questionData.table_title}
+        stimulusText={questionData.stimulus_text}
         columnHeaders={questionData.column_headers || []}
         tableData={questionData.table_data || []}
         statements={questionData.statements || []}
+        col1Title={questionData.answer_col1_title}
+        col2Title={questionData.answer_col2_title}
         selectedAnswers={currentAnswer.taAnswers || {}}
         onAnswerChange={(statementIndex, value) => {
           const newTAAnswers = {
@@ -391,6 +395,7 @@ export function QuestionRenderer({
         questionText={getLocalizedText(questionData, 'question_text', language)}
         passageText={getLocalizedText(questionData, 'passage_text', language) || undefined}
         passageTitle={getLocalizedText(questionData, 'passage_title', language) || undefined}
+        passageLineOffsets={questionData.passage_line_offsets}
         imageUrl={getLocalizedImage(questionData, language)}
         options={getLocalizedOptions(questionData, language)}
         imageOptions={getLocalizedImageOptions(questionData, language)}
@@ -411,23 +416,23 @@ export function QuestionRenderer({
     const passageTitle = getLocalizedText(questionData, 'passage_title', language);
 
     if (passageText) {
-      // Layout with passage text on the left
+      // Split-panel layout — passage sticks on the left, question drives the page scroll
       return (
-        <div className="flex gap-8 w-full">
-          {/* Passage Text on the left */}
-          <div className="flex-1 min-w-[45%] border-2 border-blue-200 rounded-xl p-6 bg-blue-50 h-fit sticky top-4">
+        <div className="flex items-start gap-6 w-full">
+          {/* Passage Text — left panel, sticky: stays visible as user scrolls */}
+          <div className="flex-1 min-w-[42%] max-w-[50%] border-2 border-blue-200 rounded-xl p-6 bg-blue-50 sticky top-0 self-start">
             {passageTitle && (
               <h3 className="text-lg font-semibold text-blue-900 mb-4">
                 {passageTitle}
               </h3>
             )}
-            <div className="text-gray-700 whitespace-pre-wrap max-h-[650px] overflow-y-auto">
+            <div className="text-gray-700 whitespace-pre-wrap">
               {passageText}
             </div>
           </div>
 
-          {/* Question and answer area on the right */}
-          <div className="flex-1 min-w-[45%] space-y-4">
+          {/* Question and answer area — right panel, natural document flow */}
+          <div className="flex-1 min-w-[42%] space-y-4">
             {questionText && (
               <div className="border-2 border-gray-200 rounded-xl p-6 bg-white">
                 <div className="text-lg text-gray-800">

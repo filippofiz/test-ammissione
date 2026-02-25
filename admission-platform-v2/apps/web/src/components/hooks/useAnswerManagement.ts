@@ -184,6 +184,10 @@ export function useAnswerManagement({
   useEffect(() => { answersRef.current = answers; }, [answers]);
 
   // ─── Track question start time ────────────────────────────────────────────
+  // Reset start time whenever the question index changes (not just the ID).
+  // This handles the case where a student navigates away and back to the same
+  // question in back_forward mode — the previous save deletes the start time,
+  // and we need a fresh timestamp for the new visit.
   useEffect(() => {
     if (currentQuestion?.id) {
       setQuestionStartTimes(prev => ({
@@ -191,7 +195,7 @@ export function useAnswerManagement({
         [currentQuestion.id]: new Date()
       }));
     }
-  }, [currentQuestion?.id]);
+  }, [currentQuestion?.id, currentQuestionIndex]);
 
   // ─── Network connection monitor ───────────────────────────────────────────
   useEffect(() => {

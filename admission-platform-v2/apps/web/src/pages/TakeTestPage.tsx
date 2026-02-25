@@ -4110,8 +4110,8 @@ export default function TakeTestPage() {
       />
 
       {/* Question Content */}
-      <div className={`flex-1 overflow-y-auto ${currentQuestion?.question_data?.passage_text || undefined ? 'p-4' : 'p-6'}`}>
-        <div className={`${currentQuestion?.question_data?.passage_text || undefined ? 'w-full max-w-full' : 'max-w-4xl'} mx-auto bg-white rounded-2xl shadow-lg ${currentQuestion?.question_data?.passage_text || undefined ? 'p-6' : 'p-8'}`}>
+      <div className={`flex-1 overflow-y-auto ${currentQuestion?.question_data?.passage_text ? 'p-4' : 'p-6'}`}>
+        <div className={`${currentQuestion?.question_data?.passage_text ? 'max-w-7xl' : 'max-w-4xl'} mx-auto bg-white rounded-2xl shadow-lg ${currentQuestion?.question_data?.passage_text ? 'p-6' : 'p-8'}`}>
           {/* Question Text */}
           <div className="mb-8">
             <div className="flex items-start justify-end gap-2 mb-4">

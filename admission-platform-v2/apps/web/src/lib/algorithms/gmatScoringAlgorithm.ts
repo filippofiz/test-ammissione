@@ -417,6 +417,37 @@ export function calculateWarmStartTheta(previousSectionTheta: number): number {
 // ============================================================================
 
 /**
+ * Per-item IRT parameters computed at the final converged theta.
+ * Returned alongside the summary theta/se for detailed analytics and algorithm auditing.
+ */
+export interface IrtItemDetail {
+  /** Zero-based index in the response array (question order within the section) */
+  responseIndex: number;
+  /** IRT b-parameter (difficulty). Derived from question difficulty label. */
+  b: number;
+  /** IRT a-parameter (discrimination). Currently constant = 1.2. */
+  a: number;
+  /** IRT c-parameter (pseudo-guessing). Format-dependent. */
+  c: number;
+  /** 2PL probability P*(θ) = 1 / (1 + exp(-a(θ-b))) */
+  pStar: number;
+  /** 3PL probability P(θ) = c + (1-c)*P*(θ) */
+  p: number;
+  /** Q(θ) = 1 - P(θ) */
+  q: number;
+  /** Fisher information contribution: (a²·(P-c)²·Q) / ((1-c)²·P) */
+  information: number;
+  /** Whether the student answered this item correctly */
+  isCorrect: boolean;
+  /** Difficulty label ('easy' | 'medium' | 'hard') */
+  difficulty: string;
+  /** Question type (for guessing param selection) */
+  questionType?: string;
+  /** DI subtype (for guessing param selection) */
+  diSubtype?: string | null;
+}
+
+/**
  * Estimate theta (ability) from a completed set of responses using MLE.
  *
  * Uses the same Newton-Raphson Maximum Likelihood Estimation as the
@@ -424,7 +455,7 @@ export function calculateWarmStartTheta(previousSectionTheta: number): number {
  * non-adaptive tests (e.g., section assessments with fixed questions).
  *
  * @param responses - Array of response objects with correctness and question metadata
- * @returns { theta, se } - Estimated ability and standard error
+ * @returns { theta, se, perItemDetails } - Estimated ability, standard error, and per-question IRT parameters
  */
 export function estimateThetaFromResponses(
   responses: Array<{
@@ -433,16 +464,16 @@ export function estimateThetaFromResponses(
     questionType?: string;               // For guessing parameter lookup
     diSubtype?: string | null;           // For DI-specific guessing params
   }>
-): { theta: number; se: number } {
+): { theta: number; se: number; perItemDetails: IrtItemDetail[] } {
   if (responses.length === 0) {
-    return { theta: 0, se: 999 };
+    return { theta: 0, se: 999, perItemDetails: [] };
   }
 
   // All correct or all incorrect: MLE diverges, return bounded estimate
   const allCorrect = responses.every(r => r.isCorrect);
   const allIncorrect = responses.every(r => !r.isCorrect);
-  if (allCorrect) return { theta: 3.0, se: 1.0 };
-  if (allIncorrect) return { theta: -3.0, se: 1.0 };
+  if (allCorrect) return { theta: 3.0, se: 1.0, perItemDetails: [] };
+  if (allIncorrect) return { theta: -3.0, se: 1.0, perItemDetails: [] };
 
   let theta = 0; // Start at average ability
   const maxIterations = 30;
@@ -491,9 +522,12 @@ export function estimateThetaFromResponses(
     if (Math.abs(delta) < convergence) break;
   }
 
-  // Calculate standard error: SE = 1 / sqrt(total_information)
+  // Calculate standard error and per-item details at the final converged theta
   let totalInformation = 0;
-  for (const response of responses) {
+  const perItemDetails: IrtItemDetail[] = [];
+
+  for (let idx = 0; idx < responses.length; idx++) {
+    const response = responses[idx];
     const b = getDifficultyB(response.difficulty);
     const a = getDiscriminationA();
     const c = getGuessingC(response.questionType, response.diSubtype as any);
@@ -503,16 +537,32 @@ export function estimateThetaFromResponses(
     const p = c + (1 - c) * pStar;
     const q = 1 - p;
 
+    let information = 0;
     if (p > 0.0001 && q > 0.0001 && (p - c) > 0.0001) {
       // Fisher information for 3PL
-      const info = (a * a * Math.pow(p - c, 2) * q) / (Math.pow(1 - c, 2) * p);
-      totalInformation += info;
+      information = (a * a * Math.pow(p - c, 2) * q) / (Math.pow(1 - c, 2) * p);
+      totalInformation += information;
     }
+
+    perItemDetails.push({
+      responseIndex: idx,
+      b: Math.round(b * 10000) / 10000,
+      a: Math.round(a * 10000) / 10000,
+      c: Math.round(c * 10000) / 10000,
+      pStar: Math.round(pStar * 10000) / 10000,
+      p: Math.round(p * 10000) / 10000,
+      q: Math.round(q * 10000) / 10000,
+      information: Math.round(information * 10000) / 10000,
+      isCorrect: response.isCorrect,
+      difficulty: String(response.difficulty ?? 'medium'),
+      questionType: response.questionType,
+      diSubtype: response.diSubtype,
+    });
   }
 
   const se = totalInformation > 0 ? 1 / Math.sqrt(totalInformation) : 999;
 
-  return { theta, se };
+  return { theta, se, perItemDetails };
 }
 
 // ============================================================================
