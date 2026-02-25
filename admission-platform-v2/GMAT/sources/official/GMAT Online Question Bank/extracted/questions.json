@@ -1,0 +1,1424 @@
+[
+  {
+    "di_type": "TA",
+    "gmat_id": "100312",
+    "table_title": "",
+    "stimulus_text": "For each of $20$ composers, the table lists the year of birth, the year of death, and the number of performances in 2010 of works written by that composer.\n\nFor each of the following statements, select Yes if the statement accurately reflects the information in the table; otherwise select No.",
+    "column_headers": [
+      "Composer",
+      "Year of birth",
+      "Year of death",
+      "Number of performances"
+    ],
+    "table_data": [
+      [
+        "Bach",
+        "1685",
+        "1750",
+        "$1{,}388$"
+      ],
+      [
+        "Beethoven",
+        "1770",
+        "1827",
+        "$2{,}859$"
+      ],
+      [
+        "Brahms",
+        "1833",
+        "1897",
+        "$1{,}848$"
+      ],
+      [
+        "Chopin",
+        "1810",
+        "1849",
+        "$748$"
+      ],
+      [
+        "Dvořák",
+        "1841",
+        "1904",
+        "$1{,}071$"
+      ],
+      [
+        "Handel",
+        "1685",
+        "1759",
+        "$757$"
+      ],
+      [
+        "Haydn",
+        "1732",
+        "1809",
+        "$989$"
+      ],
+      [
+        "Mendelssohn",
+        "1809",
+        "1847",
+        "$865$"
+      ],
+      [
+        "Mozart",
+        "1756",
+        "1791",
+        "$3{,}035$"
+      ],
+      [
+        "Prokofiev",
+        "1891",
+        "1953",
+        "$931$"
+      ],
+      [
+        "Puccini",
+        "1858",
+        "1924",
+        "$723$"
+      ],
+      [
+        "Rachmaninov",
+        "1873",
+        "1943",
+        "$673$"
+      ],
+      [
+        "Ravel",
+        "1875",
+        "1937",
+        "$864$"
+      ],
+      [
+        "Schubert",
+        "1797",
+        "1828",
+        "$1{,}023$"
+      ],
+      [
+        "Schumann",
+        "1810",
+        "1856",
+        "$1{,}460$"
+      ],
+      [
+        "Shostakovich",
+        "1906",
+        "1975",
+        "$779$"
+      ],
+      [
+        "Strauss",
+        "1864",
+        "1949",
+        "$720$"
+      ],
+      [
+        "Stravinsky",
+        "1882",
+        "1971",
+        "$849$"
+      ],
+      [
+        "Tchaikovsky",
+        "1840",
+        "1893",
+        "$2{,}295$"
+      ],
+      [
+        "Verdi",
+        "1813",
+        "1901",
+        "$845$"
+      ],
+      [
+        "Total",
+        "----",
+        "---",
+        "$24{,}722$"
+      ]
+    ],
+    "statements": [
+      {
+        "text": "Composers born in the 1700s accounted for less than a third of the total performances.",
+        "is_true": true
+      },
+      {
+        "text": "Music by composers ranked first, second, and third, in terms of number of performances, together accounted for more than half of the total number of performances.",
+        "is_true": false
+      },
+      {
+        "text": "The mean number of performances per composer exceeded the median by more than $300$ performances.",
+        "is_true": true
+      }
+    ],
+    "answer_col1_title": "Yes",
+    "answer_col2_title": "No",
+    "statement_column_title": "",
+    "explanation": "A: Infer\n\nSorting the table by \"Year of birth,\" we find four composers who were born in the 1700s. The total number of performances for these composers in 2010 was $989 + 3{,}035 + 2{,}859 + 1{,}023 = 7{,}906$, which is somewhat fewer than $8{,}000$. Note that the total for all of the performances in 2010 was $24{,}722$. Because $3 \\times 8{,}000 = 24{,}000 < 24{,}722$, we see that the number of performances for the composers born in the 1700s, $7{,}906$, is less than one-third of the total number of performances.\n\nThe correct answer is Yes.\n\nB. Infer\n\nSorting the table by the number of performances, we see that the composers ranked first, second, and third, in terms of number of performances, together accounted for $3{,}035 + 2{,}859 + 2{,}295$ of the performances. This is fewer than $12{,}000$, which in turn is less than half of $24{,}722$, the total number of performances.\n\nThe correct answer is No.\n\nC. Infer\n\nSorting the table by the number of performances, we find that the median number of performances was $\\frac{931+865}{2} = 898$. Given that the total number of performances for all of the $20$ composers was $24{,}722$, we find that the mean number of performances per composer, rounded to the nearest unit, was $1{,}236$. This exceeds the median, $898$, by $338$.\n\nThe correct answer is Yes.",
+    "needs_manual_review": false,
+    "difficulty": "easy"
+  },
+  {
+    "di_type": "GI",
+    "gmat_id": "100311",
+    "context_text": "Test audiences screened five $3$-minute previews of a certain movie. The movie contains both drama and comedy, but the previews were customized to show differing percentages of comedic and dramatic scenes (measured by screen time). The test audiences were asked, Do you think the preview is funny? and How likely are you to see the movie on the opening weekend it opens? The position of the center of each bubble indicates the percent of comedy (C) in the previews and the percent of test audience members who found the previews funny (F), and the greater the bubble's size the greater the average reported likelihood (L) of their seeing the movie on the opening weekend.",
+    "statement_text": "If the same previews were shown to other test audiences, [BLANK1] could differ from the results shown.\n\nLet D equal the percent of drama in each preview. Assuming each preview is made up entirely of comedy and drama (such that $C + D = 100$), there is [BLANK2] correlation between D and F.",
+    "blank1_options": [
+      "only C",
+      "only F",
+      "only L",
+      "only C and F",
+      "only C and L",
+      "only F and L",
+      "C, F, and L"
+    ],
+    "blank1_correct": "only F and L",
+    "blank2_options": [
+      "a negative",
+      "no",
+      "a positive"
+    ],
+    "blank2_correct": "a negative",
+    "chart_title": "",
+    "chart_type": "bubble",
+    "chart_description": "A bubble chart with the x-axis labeled 'percent of comedy in preview (C)' ranging from $0$ to $100$ in increments of $10$, and the y-axis labeled 'percent who found preview funny (F)' ranging from $0$ to $90$ in increments of $10$. There are five bubbles of varying sizes and shades representing five different previews. The bubbles show a positive correlation between C and F: a dark gray bubble at approximately ($15$, $40$) with small-medium size; a light gray bubble at approximately ($25$, $42$) with medium size; a black bubble at approximately ($60$, $48$) with medium size; a light gray bubble at approximately ($70$, $60$) with medium size; a medium gray bubble at approximately ($78$, $68$) with large size; and a dark gray bubble at approximately ($88$, $75$) with medium-large size. Larger bubbles indicate greater average reported likelihood (L) of seeing the movie on opening weekend.",
+    "chart_data_points": {
+      "preview1": {
+        "C": 15,
+        "F": 40,
+        "L": "small-medium"
+      },
+      "preview2": {
+        "C": 25,
+        "F": 42,
+        "L": "medium"
+      },
+      "preview3": {
+        "C": 60,
+        "F": 48,
+        "L": "medium"
+      },
+      "preview4": {
+        "C": 70,
+        "F": 60,
+        "L": "medium"
+      },
+      "preview5": {
+        "C": 78,
+        "F": 68,
+        "L": "large"
+      },
+      "preview6": {
+        "C": 88,
+        "F": 75,
+        "L": "medium-large"
+      }
+    },
+    "explanation": "RO1\n\nSince the values of C depend only on the previews and not on the test audiences, the values of C cannot differ if the same previews were shown to other test audiences. However, the values of both F and L depend on the test audiences, and thus the values of both F and L could differ if the same previews were shown to other test audiences.\n\nThe correct answer is only F and L.\n\nRO2\n\nIf the values of D increase, then the values of $-D$ decrease, and hence the values of $C = -D + 100$ decrease. From the graph it follows that decreasing values of C correspond to decreasing values of F. Therefore, increasing values of D correspond to decreasing values of F, and thus there is a negative correlation between D and F.\n\nThe correct answer is a negative.",
+    "needs_manual_review": true,
+    "difficulty": "hard"
+  },
+  {
+    "di_type": "GI",
+    "gmat_id": "100317",
+    "context_text": "The graph shows for each of four different countries the percentage of the total population made up by international immigrants for every fifth year, from 1980 to 2005.",
+    "statement_text": "The information in the graph [BLANK1] the statement that the *number* of international immigrants in France did not change significantly during the period from 1980 to 2005.\n\nDuring the interval [BLANK2], the United States' rate of growth in international immigrants as a percent of total population was less than that of at least one of the other countries included in the graph.",
+    "blank1_options": [
+      "directly affirms",
+      "directly contradicts",
+      "neither directly affirms nor directly contradicts"
+    ],
+    "blank1_correct": "neither directly affirms nor directly contradicts",
+    "blank2_options": [
+      "1980-1985",
+      "1985-1990",
+      "1990-1995",
+      "1995-2000",
+      "1995-2005"
+    ],
+    "blank2_correct": "1995-2005",
+    "chart_title": "Growth of International Immigrant Populations for Selected Countries",
+    "chart_type": "line",
+    "chart_description": "A line graph showing international immigrants as a percentage of total population from 1980 to 2005 for four countries. The x-axis shows years (1980, 1985, 1990, 1995, 2000, 2005) and the y-axis shows percentage from $5\\%$ to $15\\%$. Ireland (dashed light blue line with circles) starts at approximately $6\\%$ in 1980, stays relatively flat around $6.5\\%$ through 1995, dips slightly to about $10\\%$ in 2000, then rises sharply to approximately $14\\%$ by 2005. United States (solid teal line with triangles) starts at about $6\\%$ in 1980 and rises steadily to approximately $13\\%$ by 2005. Sweden (dash-dot black line with open squares) starts at about $7.5\\%$ in 1980, rises to about $8\\%$ in 1985, increases to about $9\\%$ by 1990, reaches approximately $10.5\\%$ by 1995, then continues rising to about $12.5\\%$ by 2005. France (solid red line with filled squares) remains relatively flat throughout the period, starting at approximately $11\\%$ in 1980 and ending at approximately $11\\%$ in 2005, fluctuating only slightly between $10\\%$ and $11\\%$ throughout.",
+    "chart_data_points": {
+      "Ireland": {
+        "1980": 6,
+        "1985": 6.5,
+        "1990": 6.5,
+        "1995": 6.5,
+        "2000": 10,
+        "2005": 14
+      },
+      "United States": {
+        "1980": 6,
+        "1985": 7.5,
+        "1990": 9,
+        "1995": 10,
+        "2000": 12,
+        "2005": 13
+      },
+      "Sweden": {
+        "1980": 7.5,
+        "1985": 8,
+        "1990": 9,
+        "1995": 10.5,
+        "2000": 11,
+        "2005": 12.5
+      },
+      "France": {
+        "1980": 11,
+        "1985": 10.5,
+        "1990": 10.5,
+        "1995": 10.5,
+        "2000": 10.5,
+        "2005": 11
+      }
+    },
+    "explanation": "RO1, in the graph: International immigrants' population as a percentage of France's total population remained between $10\\%$ and $11\\%$ during 1980-2005, so international immigrants' population as a percentage of the total population did not change much. That fact is compatible with both the claim that the number of international immigrants in France did NOT change significantly and with the claim that that number DID change significantly. For instance, that number could have gone up significantly if the total population of France also increased significantly. The correct answer is neither directly affirms nor directly contradicts.\n\nRO2, the interval: Among the three intervals represented in the three answer choices - 1980-1985; 1980-1995; and 1995-2005 - in only one of those intervals is the change in percentage for any of the countries greater than the change in percentage for the United States, namely 1995-2005. Note that the slope is greater for the United States than for any of the other countries for each interval except for 1995-2005, where the slope for Ireland is obviously greater. The correct answer is 1995-2005.",
+    "needs_manual_review": false,
+    "difficulty": "hard"
+  },
+  {
+    "di_type": "GI",
+    "gmat_id": "100321",
+    "context_text": "The flowchart represents a mathematical algorithm that takes two positive integers as the input and returns a positive integer as the output. Processes are indicated in the rectangular symbols in the flowchart. Each process is symbolized by an equation, such as $T = T + a$. In this particular process, the current values of the variables $T$ and $a$ are added together and the sum then becomes the value of $T$. For example, if the value of $T$ is $3$ and the value of $a$ is $7$ before the process $T = T + a$ is completed, then the value of $T$ is $10$ and the value of $a$ is $7$ after the process is completed.\n\nUse the drop-down menus to fill in the blanks in the following statements based on the algorithm represented by the flowchart.",
+    "statement_text": "If $24$ and $35$ are entered as the values for $a$ and $b$, respectively, then the first nonzero value of $T$ is [BLANK1].\n\nIf $35$ and $27$ are entered as the values for $a$ and $b$, respectively, then after the process $b = \\frac{b}{2}$ is completed for the **second** time, the value of $b$ is [BLANK2].",
+    "blank1_options": [
+      "24",
+      "35",
+      "48",
+      "70"
+    ],
+    "blank1_correct": "24",
+    "blank2_options": [
+      "6",
+      "12",
+      "13",
+      "26"
+    ],
+    "blank2_correct": "6",
+    "chart_title": "",
+    "chart_type": "other",
+    "chart_description": "This is a flowchart diagram representing a mathematical algorithm. The flow begins with a 'Start' oval, then proceeds to a rectangular process box '$T = 0$', followed by a parallelogram 'Enter $a$ and $b$'. The flow continues to a diamond decision box 'Is $b$ odd?' with two paths: 'Yes' leads upward to a rectangular process '$T = T + a$', then to '$b = b - 1$', which loops back to the decision. 'No' leads to rectangular process '$a = 2a$', then to '$b = \\frac{b}{2}$', then to a diamond decision 'Is $b = 1$?' with 'Yes' leading to rectangular process '$T = T + a$', then to parallelogram 'Output $T$', and finally to 'Stop' oval. If 'Is $b = 1$?' is 'No', the flow loops back to the 'Is $b$ odd?' decision diamond.",
+    "chart_data_points": null,
+    "explanation": "RO1:\nTo begin, $T = 0$. After entering $a$ and $b$, $a = 24$ and $b = 35$. Because the answer to \"Is $b$ odd?\" is Yes, $T$ becomes $T + a$ or $0 + 24 = 24$, which is nonzero. Thus, the first nonzero value of $T$ is $24$.\n\nThe correct answer is $24$.\n\nRO2:\nTo begin, $T = 0$. After entering $a$ and $b$, $a = 35$ and $b = 27$. Because the answer to \"Is $b$ odd?\" is Yes, $T$ becomes $T + a$ or $0 + 35 = 35$, $b$ becomes $27 - 1 = 26$, $a$ becomes $2(35) = 70$, and $b$ becomes $\\frac{26}{2} = 13$. Because the answer to \"Is $b = 1$\" is No, and the answer to \"Is $b$ odd?\" is Yes, $T$ becomes $T + a = 35 + 70 = 105$, $b$ becomes $13 - 1 = 12$, $a$ becomes $2(70) = 140$, and $b$ becomes $\\frac{12}{2} = 6$. At this point, the process $b = \\frac{b}{2}$ has been completed for the second time.\n\nThe correct answer is $6$.",
+    "needs_manual_review": true,
+    "difficulty": "hard"
+  },
+  {
+    "di_type": "TA",
+    "gmat_id": "100336",
+    "table_title": "",
+    "stimulus_text": "The table summarizes information in several categories about the $9$ stores in a small grocery chain. The table also includes chain-wide averages where appropriate.\n\nFor each of the following statements, select True if the statement can be verified to be true based on the information provided. Otherwise, select False.",
+    "column_headers": [
+      "Store",
+      "Self-check express lanes",
+      "Self-check unlimited lanes",
+      "Pharmacy",
+      "Fuel",
+      "Restaurant",
+      "Average customer age"
+    ],
+    "table_data": [
+      [
+        "A",
+        "8",
+        "4",
+        "yes",
+        "no",
+        "no",
+        "34.50"
+      ],
+      [
+        "B",
+        "8",
+        "6",
+        "no",
+        "no",
+        "no",
+        "28.40"
+      ],
+      [
+        "C",
+        "6",
+        "4",
+        "yes",
+        "no",
+        "yes",
+        "32.00"
+      ],
+      [
+        "D",
+        "8",
+        "0",
+        "yes",
+        "no",
+        "no",
+        "50.50"
+      ],
+      [
+        "E",
+        "12",
+        "4",
+        "yes",
+        "yes",
+        "no",
+        "42.50"
+      ],
+      [
+        "F",
+        "8",
+        "6",
+        "no",
+        "no",
+        "yes",
+        "34.60"
+      ],
+      [
+        "G",
+        "8",
+        "0",
+        "no",
+        "yes",
+        "no",
+        "38.80"
+      ],
+      [
+        "H",
+        "4",
+        "8",
+        "yes",
+        "no",
+        "yes",
+        "29.90"
+      ],
+      [
+        "I",
+        "0",
+        "0",
+        "yes",
+        "yes",
+        "yes",
+        "56.70"
+      ],
+      [
+        "averages",
+        "6.89",
+        "3.56",
+        "-",
+        "-",
+        "-",
+        "38.66"
+      ]
+    ],
+    "statements": [
+      {
+        "text": "In each store whose average customer age falls between $34$ and $36$, the number of self-check express lanes is above average.",
+        "is_true": true
+      },
+      {
+        "text": "There is a negative correlation between the number of self-check unlimited lanes and the average customer age.",
+        "is_true": true
+      },
+      {
+        "text": "Stores in this table that have fewer self-check express lanes than the chain-wide average are less likely to have restaurants than stores that have more self-check express lanes than the chain-wide average.",
+        "is_true": false
+      }
+    ],
+    "answer_col1_title": "True",
+    "answer_col2_title": "False",
+    "statement_column_title": "Statement",
+    "explanation": "",
+    "needs_manual_review": true,
+    "difficulty": "medium"
+  },
+  {
+    "di_type": "GI",
+    "gmat_id": "100356",
+    "context_text": "The graph indicates the results of a survey of written material from three areas in early modern England. The graph shows the percent of use of *you* when either *you* or *ye* would be appropriate. Select the option from each drop-down menu that creates the statement that most accurately reflects the information provided.",
+    "statement_text": "The area of early modern England that was first to favor the use of *you* over *ye* was [BLANK1]. In the surveyed writings from the area of the North between 1520 and 1559, *you* constituted [BLANK2] of the instances in which either *you* or *ye* would have been appropriate.",
+    "blank1_options": [
+      "London",
+      "North",
+      "East Anglia"
+    ],
+    "blank1_correct": "London",
+    "blank2_options": [
+      "10%",
+      "20%",
+      "50%",
+      "80%",
+      "100%"
+    ],
+    "blank2_correct": "20%",
+    "chart_title": "",
+    "chart_type": "line",
+    "chart_description": "The chart is a line graph with the x-axis showing five time periods: 1460-1479, 1480-1519, 1520-1559, 1560-1599, and 1600-1619. The y-axis shows 'percentage of *you*' ranging from $0$ to $100$. Three data series are plotted: London (shown with filled circles and dashed blue line), North (shown with open squares and dotted orange/brown line), and East Anglia (shown with open triangles and dash-dot purple line). All three regions start low (under $20\\%$) in the first two periods. London rises dramatically to about $50\\%$ in 1520-1559, then to nearly $100\\%$ by 1560-1599. North and East Anglia remain low (around $10\\%$-$20\\%$) through 1520-1559, then jump to approximately $100\\%$ by 1560-1599. All three regions remain near $100\\%$ in 1600-1619.",
+    "chart_data_points": {
+      "London": {
+        "1460-1479": 10,
+        "1480-1519": 10,
+        "1520-1559": 50,
+        "1560-1599": 98,
+        "1600-1619": 98
+      },
+      "North": {
+        "1460-1479": 8,
+        "1480-1519": 5,
+        "1520-1559": 20,
+        "1560-1599": 98,
+        "1600-1619": 100
+      },
+      "East Anglia": {
+        "1460-1479": 5,
+        "1480-1519": 0,
+        "1520-1559": 10,
+        "1560-1599": 100,
+        "1600-1619": 98
+      }
+    },
+    "explanation": "The graph indicates the percent of use in written material from three areas (London, North, and East Anglia) in early modern England of the word *you* in situations in which either *you* or *ye* would be appropriate.\n\nRO1, *London*: For the periods 1460-1479 and 1480-1519 the percentage of the use of *you* for all three areas is low - less than $20$ percent - but in the period 1520-1559 the use of *you* in London had increased to above $50$ percent, whereas the use in both North and East Anglia is still at $20$ percent or below, and does not rise to above $50$ percent until the period 1560-1599. Therefore, of the three areas, the area of early modern England that was first to favor the use of *you* over *ye* (that is, the first in which *you* was used in a majority of the situations in which either *you* or *ye* would be appropriate) is London. The correct answer is *London*.\n\nRO2, *$20\\%$*: The period 1520-1559 is the middle period indicated on the horizontal axis of the graph. The symbol signifying the area of the North indicates that *you* constituted $20\\%$ of the instances in which either *you* or *ye* would be appropriate. The correct answer is *$20\\%$*.",
+    "needs_manual_review": true,
+    "difficulty": "medium"
+  },
+  {
+    "di_type": "TA",
+    "gmat_id": "100384",
+    "table_title": "Women Enrolled, as a Percent of Total Enrollment",
+    "stimulus_text": "The table lists the women enrolled as a percent of the total enrollment for each of the $3$ universities - University X, University Y, and University Z - in Province A for the fall term of several consecutive years. For the fall term of each of these years, the table also lists the women enrolled at the $3$ universities combined as a percent of the total combined enrollment at the $3$ universities.",
+    "column_headers": [
+      "Fall",
+      "University X",
+      "University Y",
+      "University Z",
+      "Province A"
+    ],
+    "table_data": [
+      [
+        "2000",
+        "52.8",
+        "44.2",
+        "58.5",
+        "50.6"
+      ],
+      [
+        "2001",
+        "53.1",
+        "44.1",
+        "58.9",
+        "50.7"
+      ],
+      [
+        "2002",
+        "53.6",
+        "44.0",
+        "55.8",
+        "50.8"
+      ],
+      [
+        "2003",
+        "53.3",
+        "43.6",
+        "58.6",
+        "50.5"
+      ],
+      [
+        "2004",
+        "53.0",
+        "43.9",
+        "58.1",
+        "50.5"
+      ],
+      [
+        "2005",
+        "52.5",
+        "43.7",
+        "58.3",
+        "50.2"
+      ],
+      [
+        "2006",
+        "52.2",
+        "43.8",
+        "58.1",
+        "50.1"
+      ],
+      [
+        "2007",
+        "52.0",
+        "43.2",
+        "57.8",
+        "49.7"
+      ],
+      [
+        "2008",
+        "51.4",
+        "43.8",
+        "58.3",
+        "49.7"
+      ]
+    ],
+    "statements": [
+      {
+        "text": "Of the $3$ universities, University Y had the smallest total fall enrollment in each of the years 2000 through 2008.",
+        "is_true": false
+      },
+      {
+        "text": "In 2008, fewer women were enrolled in college in Province A than in 2000.",
+        "is_true": false
+      },
+      {
+        "text": "Each of the $3$ universities experienced at least one decline from one fall to the next in the number of women enrolled as a percent of the total enrollment.",
+        "is_true": true
+      }
+    ],
+    "answer_col1_title": "T",
+    "answer_col2_title": "F",
+    "statement_column_title": "Statement",
+    "explanation": "",
+    "needs_manual_review": true,
+    "difficulty": "medium"
+  },
+  {
+    "di_type": "TA",
+    "gmat_id": "100388",
+    "table_title": "",
+    "stimulus_text": "The table above gives information for 2008 on total passengers (total passengers enplaned and deplaned with passengers in transit counted once) and total movements (landing and takeoff of an aircraft) for $21$ airports throughout the world. The $21$ airports were chosen for inclusion in the table because, in 2008, each was among the busiest $30$ airports in the world in terms of both total passengers and total movements. In addition to the numbers of total passengers and total movements for each airport, the table also gives the percent of increase and decrease over the numbers for 2007 and the rank of the airport for total passengers and total movements.\n\nConsider each of the following statements about these airports. For each statement indicate whether the statement is true or false, based on the information provided in the table.",
+    "column_headers": [
+      "City",
+      "Country",
+      "Code",
+      "Number",
+      "% change",
+      "Rank",
+      "Number",
+      "% change",
+      "Rank"
+    ],
+    "table_data": [
+      [
+        "Amsterdam",
+        "NLD",
+        "AMS",
+        "47,430,019",
+        "-0.8",
+        "14",
+        "446,592",
+        "-1.7",
+        "17"
+      ],
+      [
+        "Atlanta",
+        "USA",
+        "ATL",
+        "90,039,280",
+        "0.7",
+        "1",
+        "978,824",
+        "-1.6",
+        "1"
+      ],
+      [
+        "Beijing",
+        "CHN",
+        "PEK",
+        "55,937,289",
+        "4.4",
+        "8",
+        "431,670",
+        "8.0",
+        "21"
+      ],
+      [
+        "Charlotte",
+        "USA",
+        "CLT",
+        "34,739,020",
+        "4.7",
+        "26",
+        "536,253",
+        "2.6",
+        "9"
+      ],
+      [
+        "Chicago",
+        "USA",
+        "ORD",
+        "69,353,876",
+        "-9.0",
+        "2",
+        "881,566",
+        "-4.9",
+        "2"
+      ],
+      [
+        "Dallas/Ft Worth",
+        "USA",
+        "DFW",
+        "57,093,187",
+        "-4.5",
+        "7",
+        "656,310",
+        "-4.3",
+        "3"
+      ],
+      [
+        "Denver",
+        "USA",
+        "DEN",
+        "51,245,334",
+        "2.8",
+        "10",
+        "619,503",
+        "0.9",
+        "5"
+      ],
+      [
+        "Detroit",
+        "USA",
+        "DTW",
+        "35,135,828",
+        "-2.4",
+        "24",
+        "462,520",
+        "-1.0",
+        "15"
+      ],
+      [
+        "Frankfurt",
+        "DEU",
+        "FRA",
+        "53,467,450",
+        "-1.3",
+        "9",
+        "485,783",
+        "1.4",
+        "12"
+      ],
+      [
+        "Houston",
+        "USA",
+        "IAH",
+        "41,709,389",
+        "-3.0",
+        "16",
+        "576,062",
+        "-4.6",
+        "7"
+      ],
+      [
+        "Las Vegas",
+        "USA",
+        "LAS",
+        "43,208,724",
+        "-8.0",
+        "15",
+        "578,949",
+        "-5.0",
+        "6"
+      ],
+      [
+        "London",
+        "GBR",
+        "LHR",
+        "67,056,379",
+        "-1.5",
+        "3",
+        "478,518",
+        "-0.6",
+        "13"
+      ],
+      [
+        "Los Angeles",
+        "USA",
+        "LAX",
+        "59,497,539",
+        "-4.7",
+        "6",
+        "622,506",
+        "-8.6",
+        "4"
+      ],
+      [
+        "Madrid",
+        "ESP",
+        "MAD",
+        "50,824,435",
+        "-2.4",
+        "11",
+        "469,740",
+        "-2.6",
+        "14"
+      ],
+      [
+        "Miami",
+        "USA",
+        "MIA",
+        "34,063,531",
+        "1.0",
+        "29",
+        "371,519",
+        "-3.8",
+        "29"
+      ],
+      [
+        "Minneapolis",
+        "USA",
+        "MSP",
+        "34,056,443",
+        "-3.0",
+        "30",
+        "450,044",
+        "-0.7",
+        "16"
+      ],
+      [
+        "Munich",
+        "DEU",
+        "MUC",
+        "34,530,593",
+        "1.7",
+        "27",
+        "432,296",
+        "0.1",
+        "20"
+      ],
+      [
+        "Newark",
+        "USA",
+        "EWR",
+        "35,360,848",
+        "-2.8",
+        "23",
+        "434,428",
+        "-0.4",
+        "19"
+      ],
+      [
+        "Paris",
+        "FRA",
+        "CDG",
+        "60,874,682",
+        "1.6",
+        "5",
+        "559,816",
+        "1.3",
+        "8"
+      ],
+      [
+        "Phoenix",
+        "USA",
+        "PHX",
+        "39,891,193",
+        "-5.4",
+        "17",
+        "502,499",
+        "-6.8",
+        "10"
+      ],
+      [
+        "San Francisco",
+        "USA",
+        "SFO",
+        "37,234,592",
+        "4.7",
+        "21",
+        "387,710",
+        "2.2",
+        "24"
+      ]
+    ],
+    "statements": [
+      {
+        "text": "The airport experiencing the greatest percent decrease in total passengers from 2007 to 2008 also experienced the greatest decrease in the percent of movements.",
+        "is_true": false
+      },
+      {
+        "text": "The airport with the median rank based on total number of passengers is the same as the airport with the median rank based on total number of movements.",
+        "is_true": false
+      },
+      {
+        "text": "Exactly $50\\%$ of the airports that experienced an increase in both total number of passengers and in total number of movements are located in the United States (USA).",
+        "is_true": true
+      }
+    ],
+    "answer_col1_title": "True",
+    "answer_col2_title": "False",
+    "statement_column_title": "",
+    "explanation": "A. Infer\n\nPercent decreases correspond to negative percent changes, for which lesser values correspond to greater percent decreases. We may thus sort the table on the column for percent change in passengers and note that the Chicago airport had the greatest percent decrease in number of passengers from 2007 to 2008. However, sorting the table on percent change in number of movements, we find that a different airport, in Los Angeles, had the greatest percent decrease in number of movements.\n\nThe correct answer is False.\n\nB. Infer\n\nSorting the table on number of passengers and then identifying the middle row - both 11th from the top and 11th from the bottom - we find that the Amsterdam airport had the median number of passengers. However, sorting the table on the number of movements and again identifying the middle row, we find that the Frankfurt airport had the median number of movements. The median rank based on total number of passengers is therefore different from the median rank based on total number of movements.\n\nThe correct answer is False.\n\nC. Infer\n\nNote that the airports that experienced an increase in both total number of passengers and in total number of movements must be the airports for which both of the percent changes are positive. With the table sorted according to percent change in number of passengers, we see that the airports that experienced an increase in both total number of passengers and in total number of movements are the $6$ airports listed in the bottom $6$ rows. Exactly $3$ of these rows, $50\\%$ of the $6$, have USA as the indicated country.\n\nThe correct answer is True.",
+    "needs_manual_review": false,
+    "difficulty": "medium"
+  },
+  {
+    "di_type": "GI",
+    "gmat_id": "100409",
+    "context_text": "During a four-day period, a height measurement and a weight measurement were recorded shortly after delivery for each baby born in a particular hospital. The $19$ babies in the study were divided into two groups, Group A and Group B. The chart shows the length, in centimeters (cm), and weight, in kilograms (kg), for each of the $19$ babies.",
+    "statement_text": "The correlation between length and weight for the babies in the study is [BLANK1]. If a baby with weight less than $3.5$ kg were selected at random, the probability that the baby would be a part of Group A is [BLANK2].",
+    "blank1_options": [
+      "strongly positive",
+      "weakly positive",
+      "neither positive nor negative",
+      "weakly negative",
+      "strongly negative"
+    ],
+    "blank1_correct": "strongly positive",
+    "blank2_options": [
+      "0.40",
+      "0.50",
+      "0.60",
+      "0.67"
+    ],
+    "blank2_correct": "0.40",
+    "chart_title": "Length v. Weight",
+    "chart_type": "scatter",
+    "chart_description": "A scatter plot showing the relationship between length (x-axis, in cm, ranging from $45$ to $55$) and weight (y-axis, in kg, ranging from $2.5$ to $4.5$). Two groups are distinguished: Group A represented by solid blue circles and Group B represented by hollow triangles. The data points show a positive correlation between length and weight. Key data points include: at approximately $46$ cm, one blue circle at about $2.8$ kg; at $47$ cm, one blue circle at $3.4$ kg and two triangles at approximately $3.1$ and $3.4$ kg; at $48$ cm, two triangles at about $3.1$ and $3.4$ kg; at $50$ cm, one blue circle at about $3.1$ kg; at $51$ cm, one triangle at about $3.1$ kg and one triangle at about $4.0$ kg; at $52$ cm, two blue circles at about $3.7$ and $3.8$ kg; at $53$ cm, three blue circles at approximately $3.6$, $3.7$, and $3.9$ kg, and two triangles at about $3.7$ and $3.8$ kg; at $55$ cm, one blue circle at about $4.5$ kg and one triangle at about $4.3$ kg.",
+    "chart_data_points": {
+      "Group A": [
+        {
+          "length": 46,
+          "weight": 2.8
+        },
+        {
+          "length": 47,
+          "weight": 3.4
+        },
+        {
+          "length": 50,
+          "weight": 3.1
+        },
+        {
+          "length": 52,
+          "weight": 3.7
+        },
+        {
+          "length": 52,
+          "weight": 3.8
+        },
+        {
+          "length": 53,
+          "weight": 3.6
+        },
+        {
+          "length": 53,
+          "weight": 3.7
+        },
+        {
+          "length": 53,
+          "weight": 3.9
+        },
+        {
+          "length": 55,
+          "weight": 4.5
+        }
+      ],
+      "Group B": [
+        {
+          "length": 47,
+          "weight": 3.1
+        },
+        {
+          "length": 47,
+          "weight": 3.4
+        },
+        {
+          "length": 48,
+          "weight": 3.1
+        },
+        {
+          "length": 48,
+          "weight": 3.4
+        },
+        {
+          "length": 51,
+          "weight": 3.1
+        },
+        {
+          "length": 51,
+          "weight": 4.0
+        },
+        {
+          "length": 53,
+          "weight": 3.7
+        },
+        {
+          "length": 53,
+          "weight": 3.8
+        },
+        {
+          "length": 55,
+          "weight": 4.3
+        }
+      ]
+    },
+    "explanation": "A. Infer\n\nAmong all of the babies in the study, the graph shows that greater lengths tend to correspond to greater weights. This indicates a strongly positive correlation between length and weight.\n\nThe correct answer is strongly positive.\n\nB. Infer\n\nIn the graph there are $4$ blue circles and $6$ triangles below the horizontal line at $3.5$ kg. This indicates that $10$ babies in the study weighed less than $3.5$ kg, and that of these $10$, $4$ were in Group A. Thus the probability that the randomly selected baby was a part of Group A is $\\frac{4}{10} = 0.40$.\n\nThe correct answer is $0.40$.",
+    "needs_manual_review": false,
+    "difficulty": "medium"
+  },
+  {
+    "di_type": "GI",
+    "gmat_id": "100427",
+    "context_text": "In New Zealand, the grape is a long-established crop, but the truffle - an edible fungus that grows on the roots of certain trees - became a commercial crop in the 1980s. The graph represents projected cumulative net income for grape and truffle crops through the end of the year, in thousands of New Zealand dollars per hectare (NZ$\\$1{,}000$/ha), for each of the first $11$ years since planting. Cumulative net income is equal to total revenue from crop sales for the years since planting minus total investment costs over those same years.",
+    "statement_text": "Cumulative net income from truffles is least at the end of the [BLANK1] year since planting.\n\nIf cumulative net income for grapes continues to grow at the same rate as in years $8$ through $11$ since planting, the cumulative net income from grapes for the 12th year since planting will be approximately NZ$\\$$ [BLANK2] per hectare.",
+    "blank1_options": [
+      "4th",
+      "5th",
+      "6th",
+      "7th"
+    ],
+    "blank1_correct": "5th",
+    "blank2_options": [
+      "8,000",
+      "10,000",
+      "12,000",
+      "14,000"
+    ],
+    "blank2_correct": "10,000",
+    "chart_title": "Projected Cumulative Net Income New Zealand Grape and Truffle Crops",
+    "chart_type": "line",
+    "chart_description": "The chart is a line graph with two data series. The x-axis shows 'years since planting' ranging from $1$ to $11$. The y-axis shows 'NZ$\\$$1{,}000$/ha' ranging from $-40$ to $18$. The grapes series is shown as a solid black line with open circle markers. The truffles series is shown as a dotted blue line with filled square markers. Grapes starts at approximately $-22$ at year $1$, decreases slightly to about $-24$ at year $2$, reaches its lowest point around $-26$ at year $3$, then steadily increases through year $11$ reaching approximately $6$. Truffles starts at approximately $-22$ at year $1$, decreases more steeply reaching its minimum around $-34$ at year $5$, then increases sharply, crossing zero around year $9$, and reaching approximately $16$ at year $11$.",
+    "chart_data_points": {
+      "grapes": {
+        "1": -22,
+        "2": -24,
+        "3": -26,
+        "4": -24,
+        "5": -22,
+        "6": -18,
+        "7": -14,
+        "8": -10,
+        "9": -6,
+        "10": 0,
+        "11": 6
+      },
+      "truffles": {
+        "1": -22,
+        "2": -26,
+        "3": -30,
+        "4": -32,
+        "5": -34,
+        "6": -32,
+        "7": -26,
+        "8": -10,
+        "9": 2,
+        "10": 10,
+        "11": 16
+      }
+    },
+    "explanation": "A. Infer\n\nThe graph shows the projected cumulative net income for New Zealand grape and truffle crops. The least cumulative net income from truffles is represented by the lowest mark on the corresponding line in the graph. The lowest point occurs at the end of the fifth year since planting, when the projected cumulative net income from truffles is approximately negative NZ$\\$$34{,}000$.\n\nThe correct answer is 5th.\n\nB. Apply\n\nGiven the sentence to be completed, it is first necessary to calculate the projected growth rate during years $8$ through $11$. At the end of year $7$, the cumulative net income for grapes is projected to be approximately negative NZ$\\$$10{,}000$/ha. At the end of year $11$, the cumulative net income is projected to be approximately NZ$\\$$6{,}000$/ha. This represents a total increase of NZ$\\$$16{,}000$/ha from the beginning of year $8$ to the end of year $11$ ($4$ years), or an approximate increase in net income of NZ$\\$$4{,}000$/ha/year. Given that the cumulative net income for grapes is projected to be approximately NZ$\\$$6{,}000$/ha at the end of year $11$, if this income continues to grow at a rate of approximately NZ$\\$$4{,}000$/ha/year, then the cumulative net income for grapes at the end of year $12$ would be approximately NZ$\\$$10{,}000$/ha.\n\nThe correct answer is 10,000.",
+    "needs_manual_review": false,
+    "difficulty": "medium"
+  },
+  {
+    "di_type": "TA",
+    "gmat_id": "100458",
+    "table_title": "",
+    "stimulus_text": "The table lists all the employees of the Metro Corporation's human resources department. Each employee's immediate supervisor is identified by the supervisor's employee ID number displayed in the last column on the right of the table. If one employee, say A, supervises another, say B, then A also supervises every employee supervised by B. Note that the hire date is given in the format month/day/year.\n\nFor each of the following, select Yes if it identifies an employee who, within the human resources department, supervises no one and who has at least $5$ supervisors within the human resources department above her or him. Otherwise, select No.",
+    "column_headers": [
+      "Employee ID",
+      "First name",
+      "Surname",
+      "Hire date",
+      "Supervisor's employee ID"
+    ],
+    "table_data": [
+      [
+        "1",
+        "Sally",
+        "Lee",
+        "4/12/2002",
+        "6"
+      ],
+      [
+        "2",
+        "Lauren",
+        "Schickler",
+        "3/16/2007",
+        "10"
+      ],
+      [
+        "3",
+        "Jonathan",
+        "Ogura",
+        "10/8/1998",
+        "1"
+      ],
+      [
+        "4",
+        "Shana",
+        "Serpaio",
+        "11/23/2000",
+        "9"
+      ],
+      [
+        "5",
+        "Michele",
+        "Dockett",
+        "5/11/2002",
+        "11"
+      ],
+      [
+        "6",
+        "Ben",
+        "Rivera",
+        "9/15/2003",
+        "14"
+      ],
+      [
+        "7",
+        "Lee",
+        "Patel",
+        "8/7/2010",
+        "3"
+      ],
+      [
+        "8",
+        "Eli",
+        "O'Neill",
+        "6/17/2009",
+        "11"
+      ],
+      [
+        "9",
+        "Ondrea",
+        "Ribah",
+        "3/12/1992",
+        "1"
+      ],
+      [
+        "10",
+        "Ben",
+        "Rubenstein",
+        "12/12/2005",
+        "6"
+      ],
+      [
+        "11",
+        "Jonica",
+        "Diaz",
+        "1/30/2004",
+        "4"
+      ]
+    ],
+    "statements": [
+      {
+        "text": "O'Neill",
+        "is_true": true
+      },
+      {
+        "text": "Patel",
+        "is_true": false
+      },
+      {
+        "text": "Schickler",
+        "is_true": false
+      }
+    ],
+    "answer_col1_title": "Yes",
+    "answer_col2_title": "No",
+    "statement_column_title": "",
+    "explanation": "",
+    "needs_manual_review": true,
+    "difficulty": "medium"
+  },
+  {
+    "di_type": "GI",
+    "gmat_id": "100459",
+    "context_text": "The graph shows the distributions of scores on official driving tests administered within a certain municipality for eight consecutive business days.\n\nSelect from each drop-down menu the option that creates the most accurate statement, given the information provided.",
+    "statement_text": "The graph provides enough information to determine that the [BLANK1] over all of the days indicated in the graph is the same as that for [BLANK2] combined.",
+    "blank1_options": [
+      "range of scores",
+      "mean of scores",
+      "median of scores"
+    ],
+    "blank1_correct": "range of scores",
+    "blank2_options": [
+      "Day 1 and Day 8",
+      "Day 2 and Day 5",
+      "Day 3 and Day 4",
+      "Day 1 and Day 5",
+      "Day 2 and Day 8"
+    ],
+    "blank2_correct": "Day 2 and Day 5",
+    "chart_title": "Driving Test Scores",
+    "chart_type": "bar",
+    "chart_description": "This is a stacked bar chart showing the distribution of driving test scores over eight consecutive business days (Day 1 through Day 8). The y-axis represents score values ranging from $0$ to $100$. The x-axis shows each day labeled Day 1 through Day 8. Each bar is divided into four segments representing quartiles: bottom $25\\%$ (dark navy/black), $50\\%-75\\%$ (light blue), $25\\%-50\\%$ (white), and top $25\\%$ (medium blue). The legend on the right indicates these four quartile categories. Each stacked bar shows the range of scores for that day, with the bottom of the bar indicating the lowest score and the top indicating the highest score. Day 2 has the highest maximum score (reaching $90$), while Day 5 has the lowest minimum score (reaching down to $20$).",
+    "chart_data_points": {
+      "Day 1": {
+        "min": 40,
+        "max": 80
+      },
+      "Day 2": {
+        "min": 45,
+        "max": 90
+      },
+      "Day 3": {
+        "min": 30,
+        "max": 75
+      },
+      "Day 4": {
+        "min": 30,
+        "max": 60
+      },
+      "Day 5": {
+        "min": 20,
+        "max": 60
+      },
+      "Day 6": {
+        "min": 45,
+        "max": 85
+      },
+      "Day 7": {
+        "min": 30,
+        "max": 80
+      },
+      "Day 8": {
+        "min": 45,
+        "max": 85
+      }
+    },
+    "explanation": "A. Infer\n\nFor each of eight business days, the graph shows the distribution of scores on driving tests administered on that day. Because neither the graph nor the text indicates how many scores there were for each day, neither the mean nor the median for the eight days can be determined. However, since the top of each stacked bar indicates the highest score for tests administered on that day and the bottom of each stacked bar indicates the lowest score for tests administered on that day, the range for the eight days would be equal to the highest score shown on the graph ($90$ on Day 2) minus the lowest score shown on the graph ($20$ on Day 5). Therefore, the range of the scores for all eight days is equal to the range of the scores for Days 2 and 5 combined.\n\nThe correct answer is range of scores.\n\nB. Infer\n\nBased on the explanation for A, the correct answer is Day 2 and Day 5.\n\nThe correct answer is Day 2 and Day 5.",
+    "needs_manual_review": false,
+    "difficulty": "hard"
+  },
+  {
+    "di_type": "TA",
+    "gmat_id": "100471",
+    "table_title": "Number of Kilometers Between Clients",
+    "stimulus_text": "Jorge travels to meet once daily with exactly six clients, Clients A through F. When scheduling these meetings, Jorge schedules the most urgent meeting to be the first of the day and then schedules each subsequent meeting according to which client is the least distance from the meeting immediately prior to it. The table shows the distances between Jorge's clients.\n\nOn Tuesday, Jorge's most urgent meeting will be with Client E. For each of the following pairs of clients, select Yes if Jorge will schedule meetings with the given clients in the given order. Otherwise, select No.",
+    "column_headers": [
+      "Client",
+      "A",
+      "B",
+      "C",
+      "D",
+      "E",
+      "F"
+    ],
+    "table_data": [
+      [
+        "A",
+        "0",
+        "7",
+        "3",
+        "4",
+        "2",
+        "1"
+      ],
+      [
+        "B",
+        "7",
+        "0",
+        "2",
+        "15",
+        "17",
+        "4"
+      ],
+      [
+        "C",
+        "3",
+        "2",
+        "0",
+        "3",
+        "18",
+        "6"
+      ],
+      [
+        "D",
+        "4",
+        "15",
+        "3",
+        "0",
+        "12",
+        "7"
+      ],
+      [
+        "E",
+        "2",
+        "17",
+        "18",
+        "12",
+        "0",
+        "9"
+      ],
+      [
+        "F",
+        "1",
+        "4",
+        "6",
+        "7",
+        "9",
+        "0"
+      ]
+    ],
+    "statements": [
+      {
+        "text": "Client B then Client C",
+        "is_true": true
+      },
+      {
+        "text": "Client C then Client D",
+        "is_true": true
+      },
+      {
+        "text": "Client D then Client A",
+        "is_true": false
+      }
+    ],
+    "answer_col1_title": "Yes",
+    "answer_col2_title": "No",
+    "statement_column_title": "",
+    "explanation": "",
+    "needs_manual_review": true,
+    "difficulty": "hard"
+  },
+  {
+    "di_type": "GI",
+    "gmat_id": "101121",
+    "context_text": "A certain restaurant serves exactly $5$ entrées - E1 through E5. Customers may order an entrée alone, but most customers order an entrée as part of a *combination meal*, which consists of one entrée plus *extras* - a side dish and drink. While the entrées vary in cost to the restaurant, the extras always have the same cost to the restaurant. The graph shows the actual cost to the restaurant for the entrée and the extras as a percent of the price charged for the meal.",
+    "statement_text": "Of the five combination meals, the meal with entrée [BLANK1] has the highest price.\n\nOf the five combination meals, the sale of a single meal with entrée [BLANK2] nets the least profit.",
+    "blank1_options": [
+      "E1",
+      "E2",
+      "E3",
+      "E4",
+      "E5"
+    ],
+    "blank1_correct": "E1",
+    "blank2_options": [
+      "E1",
+      "E2",
+      "E3",
+      "E4",
+      "E5"
+    ],
+    "blank2_correct": "E4",
+    "chart_title": "Cost to Restaurant for Entrée and Extras in Combination Meals",
+    "chart_type": "bar",
+    "chart_description": "This is a stacked bar chart showing the cost to the restaurant for entrée and extras as a percentage of the meal price for five combination meals (E1 through E5). The y-axis shows 'percentage of meal price' ranging from $0\\%$ to $70\\%$. The x-axis shows the five meals: E1 Meal, E2 Meal, E3 Meal, E4 Meal, and E5 Meal. Each bar is divided into two segments: the bottom segment (blue with vertical stripes) represents 'extras' and the top segment (gray) represents 'entrée'. The legend in the upper right shows gray for entrée and blue for extras. E1 Meal: total approximately $45\\%$ (extras about $15\\%$, entrée about $30\\%$). E2 Meal: total approximately $50\\%$ (extras about $20\\%$, entrée about $30\\%$). E3 Meal: total approximately $60\\%$ (extras about $25\\%$, entrée about $35\\%$). E4 Meal: total approximately $65\\%$ (extras about $25\\%$, entrée about $40\\%$). E5 Meal: total approximately $50\\%$ (extras about $20\\%$, entrée about $30\\%$).",
+    "chart_data_points": {
+      "E1_Meal": {
+        "extras": 15,
+        "entree": 30,
+        "total": 45
+      },
+      "E2_Meal": {
+        "extras": 20,
+        "entree": 30,
+        "total": 50
+      },
+      "E3_Meal": {
+        "extras": 25,
+        "entree": 35,
+        "total": 60
+      },
+      "E4_Meal": {
+        "extras": 25,
+        "entree": 40,
+        "total": 65
+      },
+      "E5_Meal": {
+        "extras": 20,
+        "entree": 30,
+        "total": 50
+      }
+    },
+    "explanation": "RO1: Since the extras always have the same cost to the restaurant, that cost must be lowest as a percentage of the highest price charged for a combination meal. The graph shows the extras cost only about $15\\%$ of the price charged for the combination meal with entrée E1, but at least $20\\%$ of the price charged for each of the other combination meals. So, the combination meal with entrée E1 has the highest price. The correct answer is E1.\n\nRO2: Let's assume that apart from the costs shown in the graph, any other costs to the restaurant are the same for each combination meal served. Out of the sales price of a combination meal, the percentage profits to the restaurant are then lower for combination meals whose total percentage costs shown in the graph are higher. The total percentage costs shown in the graph are highest for the combination meal with entrée E4, so this meal must net the least profit as a percentage of its sales price. Next, note that the graph shows that the extras cost at least as high a percentage of this meal's sales price as of any of the other combination meals' sales prices. That means this meal must have a sales price no higher than any of the other combination meals do. So, because the meal with entrée E4 nets the least profit as a percentage of its sales price, and that sales price is no higher than any other combination meal's sales price, the meal with entrée E4 must net the least total amount profit per meal served. The correct answer is E4.",
+    "needs_manual_review": false,
+    "difficulty": "hard"
+  },
+  {
+    "di_type": "TA",
+    "gmat_id": "102414",
+    "table_title": "",
+    "stimulus_text": "Ten people participated in the first round of a competition, after which their scores were analyzed to determine which people would compete in the second round. The table shows the participants' first-round scores, the difference between each participant's score and the average (arithmetic mean) score of all participants, and the square of that difference.\n\nBefore the second round of competition, one or more of the listed participants were disqualified. A new mean and new standard deviation will be calculated from only those players who were not disqualified.\n\nFor each of the following statements, select True if the statement is true based on the information provided. Otherwise, select False.",
+    "column_headers": [
+      "Participant Name",
+      "Score",
+      "Difference from Mean",
+      "Square of Difference from Mean"
+    ],
+    "table_data": [
+      [
+        "Arceneaux",
+        "$56$",
+        "$-9$",
+        "$81$"
+      ],
+      [
+        "Cabrera",
+        "$89$",
+        "$24$",
+        "$576$"
+      ],
+      [
+        "Costantino",
+        "$34$",
+        "$-31$",
+        "$961$"
+      ],
+      [
+        "Fournier",
+        "$24$",
+        "$-41$",
+        "$1{,}681$"
+      ],
+      [
+        "Hough",
+        "$109$",
+        "$44$",
+        "$1{,}936$"
+      ],
+      [
+        "Keffala",
+        "$56$",
+        "$-9$",
+        "$81$"
+      ],
+      [
+        "Lasek",
+        "$120$",
+        "$55$",
+        "$3{,}025$"
+      ],
+      [
+        "Sauer",
+        "$6$",
+        "$-59$",
+        "$3{,}481$"
+      ],
+      [
+        "Tsakiris",
+        "$78$",
+        "$13$",
+        "$169$"
+      ],
+      [
+        "Willems",
+        "$78$",
+        "$13$",
+        "$169$"
+      ]
+    ],
+    "statements": [
+      {
+        "text": "The disqualification of Sauer would decrease the standard deviation more than any other single disqualification.",
+        "is_true": true
+      },
+      {
+        "text": "The disqualification of Lasek would decrease the standard deviation more than any other single disqualification.",
+        "is_true": false
+      },
+      {
+        "text": "If Fournier and Sauer were both disqualified and no other changes were made, the standard deviation would decrease.",
+        "is_true": true
+      }
+    ],
+    "answer_col1_title": "True",
+    "answer_col2_title": "False",
+    "statement_column_title": "",
+    "explanation": "",
+    "needs_manual_review": true,
+    "difficulty": "easy"
+  }
+]

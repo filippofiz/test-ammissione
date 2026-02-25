@@ -17,9 +17,12 @@ interface TAStatement {
 
 interface TAQuestionProps {
   tableTitle?: string;
+  stimulusText?: string;
   columnHeaders: string[];
   tableData: string[][];
   statements: TAStatement[];
+  col1Title?: string;
+  col2Title?: string;
   selectedAnswers: Record<number, 'true' | 'false'>;
   onAnswerChange: (statementIndex: number, value: 'true' | 'false') => void;
   readOnly?: boolean; // For results view - disables answer buttons
@@ -31,9 +34,12 @@ interface TAQuestionProps {
 
 export function TAQuestion({
   tableTitle,
+  stimulusText,
   columnHeaders,
   tableData,
   statements,
+  col1Title,
+  col2Title,
   selectedAnswers,
   onAnswerChange,
   readOnly = false,
@@ -68,8 +74,18 @@ export function TAQuestion({
     normalizedCorrectAnswers[index] = normalizedValue;
   });
 
+  const label1 = col1Title || 'True';
+  const label2 = col2Title || 'False';
+
   return (
     <div className="space-y-6">
+      {/* Stimulus Text (table context/introduction) */}
+      {stimulusText && (
+        <div className="text-gray-700 text-sm leading-relaxed">
+          <MathJaxRenderer>{normalizeWhitespace(stimulusText)}</MathJaxRenderer>
+        </div>
+      )}
+
       {/* Table Section with Sortable Columns */}
       <SortableTable
         title={tableTitle}
@@ -82,7 +98,7 @@ export function TAQuestion({
       <div className="border-2 border-gray-200 rounded-xl overflow-hidden bg-white">
         <div className="px-6 py-3 bg-gray-50 border-b-2 border-gray-200">
           <h3 className="font-semibold text-gray-800">
-            For each statement, select True or False based on the table above
+            For each statement, select {label1} or {label2} based on the table above
           </h3>
         </div>
 
@@ -108,7 +124,7 @@ export function TAQuestion({
                 <MathJaxRenderer>{normalizeWhitespace(statement.text)}</MathJaxRenderer>
               </div>
 
-              {/* True/False Buttons */}
+              {/* Answer Buttons */}
               <div className="flex gap-3">
                 <button
                   onClick={() => !readOnly && onAnswerChange(index, 'true')}
@@ -139,9 +155,9 @@ export function TAQuestion({
                                 : 'bg-gray-200 text-gray-700'
                         }`}
                       >
-                        T
+                        {label1.charAt(0).toUpperCase()}
                       </div>
-                      <span className="font-semibold">True</span>
+                      <span className="font-semibold">{label1}</span>
                       {selectedTrueIsWrong && (
                         <FontAwesomeIcon icon={faTimesCircle} className="text-red-600" />
                       )}
@@ -193,9 +209,9 @@ export function TAQuestion({
                                 : 'bg-gray-200 text-gray-700'
                         }`}
                       >
-                        F
+                        {label2.charAt(0).toUpperCase()}
                       </div>
-                      <span className="font-semibold">False</span>
+                      <span className="font-semibold">{label2}</span>
                       {selectedFalseIsWrong && (
                         <FontAwesomeIcon icon={faTimesCircle} className="text-red-600" />
                       )}

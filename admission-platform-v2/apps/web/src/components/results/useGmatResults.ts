@@ -1,0 +1,228 @@
+/**
+ * useGmatResults Hook
+ *
+ * Loads GMAT assessment results from 2V_gmat_assessment_results
+ * and normalizes them into UnifiedResultData.
+ */
+
+import { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
+import {
+  calculateEstimatedGmatScore,
+  SECTION_ASSESSMENT_CONFIG,
+  type GmatSection,
+  type GmatAssessmentResult,
+  type GmatAssessmentType,
+  type GmatCycle,
+} from '../../lib/api/gmat';
+import { thetaToSectionScore, computeTotalScore, getTotalPercentile, getScoreBand } from '../../lib/algorithms/gmatScoringAlgorithm';
+import type { UnifiedResultData, UnifiedQuestionResult } from './types';
+import { getAssessmentTypeLabel, formatTopicName } from './types';
+
+export interface UseGmatResultsReturn {
+  data: UnifiedResultData | null;
+  loading: boolean;
+  error: string | null;
+  /** Raw GMAT assessment record for features that need it */
+  assessment: GmatAssessmentResult | null;
+}
+
+export function useGmatResults(assessmentId: string | undefined): UseGmatResultsReturn {
+  const [data, setData] = useState<UnifiedResultData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [assessment, setAssessment] = useState<GmatAssessmentResult | null>(null);
+
+  useEffect(() => {
+    if (!assessmentId) {
+      setError('No assessment ID provided');
+      setLoading(false);
+      return;
+    }
+    loadResults(assessmentId);
+  }, [assessmentId]);
+
+  async function loadResults(id: string) {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Load assessment result
+      const { data: assessmentData, error: assessmentError } = await supabase
+        .from('2V_gmat_assessment_results')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (assessmentError) throw assessmentError;
+      if (!assessmentData) throw new Error('Assessment not found');
+
+      const result: GmatAssessmentResult = {
+        ...assessmentData,
+        assessment_type: assessmentData.assessment_type as GmatAssessmentType,
+        suggested_cycle: assessmentData.suggested_cycle as GmatCycle | null,
+        assigned_cycle: assessmentData.assigned_cycle as GmatCycle | null,
+        difficulty_breakdown: assessmentData.difficulty_breakdown as GmatAssessmentResult['difficulty_breakdown'],
+        answers_data: assessmentData.answers_data as GmatAssessmentResult['answers_data'],
+        bookmarked_question_ids: assessmentData.bookmarked_question_ids as string[] | null,
+      };
+
+      setAssessment(result);
+
+      // Parse answers_data and bookmarks
+      const answersData = assessmentData.answers_data as Record<string, {
+        answer: any;
+        time_spent_seconds: number;
+        is_correct: boolean;
+        is_unanswered?: boolean;
+      }> | null;
+      const bookmarkedIds = new Set(assessmentData.bookmarked_question_ids || []);
+      const hasAnswersData = answersData && Object.keys(answersData).length > 0;
+
+      // Load questions
+      let questions: UnifiedQuestionResult[] = [];
+      if (assessmentData.question_ids && assessmentData.question_ids.length > 0) {
+        const { data: questionsData, error: questionsError } = await supabase
+          .from('2V_questions')
+          .select('*')
+          .in('id', assessmentData.question_ids);
+
+        if (questionsError) throw questionsError;
+
+        // Sort by original question_ids order
+        const orderMap = new Map(
+          assessmentData.question_ids.map((qid: string, idx: number) => [qid, idx])
+        );
+        const sortedQuestions = (questionsData || []).sort((a, b) => {
+          return (orderMap.get(a.id) ?? 999) - (orderMap.get(b.id) ?? 999);
+        });
+
+        questions = sortedQuestions.map((q, index) => {
+          const answerData = answersData?.[q.id];
+          return {
+            questionId: q.id,
+            question: {
+              id: q.id,
+              section: q.section,
+              difficulty: q.difficulty ?? undefined,
+              question_type: q.question_type,
+              question_data: typeof q.question_data === 'string'
+                ? JSON.parse(q.question_data)
+                : q.question_data,
+              answers: typeof q.answers === 'string'
+                ? JSON.parse(q.answers)
+                : q.answers,
+              topic: q.topic ?? undefined,
+            },
+            order: index + 1,
+            isCorrect: answerData?.is_correct ?? false,
+            hasAnswer: hasAnswersData ? !(answerData?.is_unanswered) : true,
+            timeSpentSeconds: answerData?.time_spent_seconds,
+            isBookmarked: bookmarkedIds.has(q.id),
+            studentAnswer: answerData?.answer,
+          };
+        });
+      }
+
+      // Build title
+      const isMock = result.assessment_type === 'mock';
+      const typeLabel = getAssessmentTypeLabel(result.assessment_type);
+      const sectionName = result.section
+        ? SECTION_ASSESSMENT_CONFIG[result.section as GmatSection]?.fullName || result.section
+        : null;
+      const title = sectionName ? `${typeLabel} - ${sectionName}` : typeLabel;
+
+      // Subtitle
+      const subtitle = result.topic ? formatTopicName(result.topic) : result.id;
+
+      // Sections from questions
+      const sections = [...new Set(questions.map(q => q.question.section))];
+
+      // Estimated GMAT score (mock only)
+      // For mocks: compute per-section scores via calibrated IRT algorithm for better accuracy
+      let estimatedGmatScore: number | undefined;
+      let gmatSectionScores: Record<string, number> | undefined;
+      let gmatPercentile: number | undefined;
+      let gmatScoreBand: string | undefined;
+
+      if (isMock) {
+        // Group questions by section to compute per-section scores
+        const sectionNameMap: Record<string, string> = {
+          QR: 'Quantitative Reasoning',
+          VR: 'Verbal Reasoning',
+          DI: 'Data Insights',
+        };
+        const sectionGroups: Record<string, { correct: number; total: number }> = {};
+        for (const q of questions) {
+          const section = q.question.section;
+          if (!sectionGroups[section]) {
+            sectionGroups[section] = { correct: 0, total: 0 };
+          }
+          sectionGroups[section].total++;
+          if (q.isCorrect) sectionGroups[section].correct++;
+        }
+
+        // Compute per-section theta from percentage (inverse logistic / 2)
+        const perSectionScores: Record<string, number> = {};
+        for (const [sectionKey, stats] of Object.entries(sectionGroups)) {
+          const pct = stats.total > 0 ? stats.correct / stats.total : 0;
+          const p = Math.max(0.01, Math.min(0.99, pct));
+          const theta = Math.log(p / (1 - p)) / 2;
+          const fullName = sectionNameMap[sectionKey] || sectionKey;
+          perSectionScores[fullName] = thetaToSectionScore(theta);
+        }
+
+        const qr = perSectionScores['Quantitative Reasoning'] ?? 60;
+        const vr = perSectionScores['Verbal Reasoning'] ?? 60;
+        const di = perSectionScores['Data Insights'] ?? 60;
+
+        // Use only sections that exist in the test
+        const sectionKeys = Object.keys(sectionGroups);
+        const hasAllSections = sectionKeys.some(k => k === 'QR' || k === 'Quantitative Reasoning')
+          && sectionKeys.some(k => k === 'VR' || k === 'Verbal Reasoning')
+          && sectionKeys.some(k => k === 'DI' || k === 'Data Insights');
+
+        if (hasAllSections) {
+          estimatedGmatScore = computeTotalScore(qr, vr, di);
+          gmatPercentile = getTotalPercentile(estimatedGmatScore);
+          gmatScoreBand = getScoreBand(estimatedGmatScore).label;
+        } else {
+          // Single section or partial — fall back to overall percentage
+          estimatedGmatScore = calculateEstimatedGmatScore(result.score_percentage);
+        }
+        gmatSectionScores = perSectionScores;
+      }
+
+      const unified: UnifiedResultData = {
+        source: 'gmat',
+        sourceId: id,
+        title,
+        subtitle,
+        completedAt: result.completed_at ?? undefined,
+        scoreRaw: result.score_raw,
+        scoreTotal: result.score_total,
+        scorePercentage: result.score_percentage,
+        totalTimeSeconds: result.time_spent_seconds ?? undefined,
+        questions,
+        sections,
+        estimatedGmatScore,
+        gmatSectionScores,
+        gmatPercentile,
+        gmatScoreBand,
+        difficultyBreakdown: result.difficulty_breakdown,
+        assessmentType: result.assessment_type,
+        gmatSection: result.section ?? undefined,
+        topicName: result.topic ? formatTopicName(result.topic) : undefined,
+      };
+
+      setData(unified);
+    } catch (err) {
+      console.error('Error loading GMAT results:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load results');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return { data, loading, error, assessment };
+}

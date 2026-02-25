@@ -7,7 +7,7 @@
  * - Review phase before submission
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -29,16 +29,20 @@ import {
   faChartLine,
 } from '@fortawesome/free-solid-svg-icons';
 import { supabase } from '../lib/supabase';
+import { checkAnswerCorrectness } from '../lib/gmat/answerChecking';
 import { getCurrentProfile } from '../lib/auth';
 import { MathJaxProvider } from '../components/MathJaxRenderer';
 import { Layout } from '../components/Layout';
-import { DSQuestion } from '../components/questions/DSQuestion';
-import { MSRQuestion } from '../components/questions/MSRQuestion';
-import { GIQuestion } from '../components/questions/GIQuestion';
-import { TAQuestion } from '../components/questions/TAQuestion';
-import { TPAQuestion } from '../components/questions/TPAQuestion';
-import { MultipleChoiceQuestion } from '../components/questions/MultipleChoiceQuestion';
 import { GMATCalculator } from '../components/GMATCalculator';
+import { useTestTimer, formatTime } from '../components/hooks/useTestTimer';
+import { TestTimerCompact } from '../components/test/TestTimer';
+import { QuestionRenderer, type UnifiedAnswer } from '../components/test/QuestionRenderer';
+import { TimeUpModal } from '../components/test/SectionTransition';
+import {
+  useTestProgress,
+  createProgressSnapshot,
+  type StoredAnswer,
+} from '../components/hooks/useTestProgress';
 import {
   getStudentGMATProgress,
   getTrainingTemplateDetails,
@@ -59,73 +63,8 @@ interface Question {
   answers: any;
 }
 
-interface Answer {
-  questionId: string;
-  answer: string | string[] | Record<string, string>;
-  timeSpent: number;
-}
-
-// Saved progress structure for crash recovery
-interface SavedTestProgress {
-  templateId: string;
-  studentId: string;
-  currentIndex: number;
-  answers: Array<[string, Answer]>; // Map entries as array for JSON serialization
-  bookmarkedQuestions: string[]; // Array of question IDs that are bookmarked
-  timeRemaining: number | null;
-  testStarted: boolean;
-  inReviewPhase: boolean;
-  savedAt: string; // ISO timestamp
-}
-
-const STORAGE_KEY_PREFIX = 'gmat_training_progress_';
-
-function getStorageKey(templateId: string, studentId: string): string {
-  return `${STORAGE_KEY_PREFIX}${templateId}_${studentId}`;
-}
-
-function saveProgressToStorage(progress: SavedTestProgress): void {
-  try {
-    const key = getStorageKey(progress.templateId, progress.studentId);
-    localStorage.setItem(key, JSON.stringify(progress));
-  } catch (err) {
-    console.error('Failed to save test progress:', err);
-  }
-}
-
-function loadProgressFromStorage(templateId: string, studentId: string): SavedTestProgress | null {
-  try {
-    const key = getStorageKey(templateId, studentId);
-    const saved = localStorage.getItem(key);
-    if (!saved) return null;
-
-    const progress = JSON.parse(saved) as SavedTestProgress;
-
-    // Validate the saved progress is not too old (max 24 hours)
-    const savedTime = new Date(progress.savedAt).getTime();
-    const now = Date.now();
-    const maxAge = 24 * 60 * 60 * 1000; // 24 hours
-
-    if (now - savedTime > maxAge) {
-      clearProgressFromStorage(templateId, studentId);
-      return null;
-    }
-
-    return progress;
-  } catch (err) {
-    console.error('Failed to load test progress:', err);
-    return null;
-  }
-}
-
-function clearProgressFromStorage(templateId: string, studentId: string): void {
-  try {
-    const key = getStorageKey(templateId, studentId);
-    localStorage.removeItem(key);
-  } catch (err) {
-    console.error('Failed to clear test progress:', err);
-  }
-}
+// Use StoredAnswer from the hook for answer storage
+type Answer = StoredAnswer;
 
 export default function GMATTrainingTestPage() {
   const { templateId } = useParams<{ templateId: string }>();
@@ -148,7 +87,7 @@ export default function GMATTrainingTestPage() {
   const [testCompleted, setTestCompleted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<GmatAssessmentResult | null>(null);
-  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+  const [initialTimeSeconds, setInitialTimeSeconds] = useState<number | null>(null);
   const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now());
   const [studentId, setStudentId] = useState<string | null>(null);
 
@@ -168,84 +107,40 @@ export default function GMATTrainingTestPage() {
 
   // Resume modal state
   const [showResumeModal, setShowResumeModal] = useState(false);
-  const [savedProgress, setSavedProgress] = useState<SavedTestProgress | null>(null);
 
-  // Timer ref and mounted tracking
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const isMountedRef = useRef(true);
+  // Time's Up modal state
+  const [showTimeUpModal, setShowTimeUpModal] = useState(false);
 
-  // Track component mount/unmount
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-    };
-  }, []);
+  // Use the shared timer hook
+  const { timeRemaining, setTimeRemaining } = useTestTimer({
+    initialSeconds: initialTimeSeconds,
+    isActive: testStarted,
+    onTimeUp: handleTimeUp,
+  });
+
+  // Use the shared progress hook for crash recovery
+  const testProgress = useTestProgress({
+    sessionId: templateId || '',
+    userId: studentId || '',
+    storageKeyPrefix: 'gmat_training_progress_',
+    disabled: isPreviewMode || !templateId || !studentId,
+    testType: 'gmat_training',
+  });
+
+  // Alias for cleaner code
+  const { savedProgress, saveProgress, clearProgress, hasSavedProgress } = testProgress;
 
   // Load template and questions
   useEffect(() => {
     loadData();
   }, [templateId]);
 
-  // Timer countdown - CRITICAL: only depends on testStarted
-  // Using a ref for the interval ensures we never create duplicate intervals
+  // Show resume modal when saved progress is detected
   useEffect(() => {
-    // Only start timer when test starts and component is mounted
-    if (!testStarted || !isMountedRef.current) {
-      return;
+    if (hasSavedProgress && !loading && !testStarted && !showResumeModal) {
+      setShowResumeModal(true);
     }
-
-    // Clear any existing interval first (defensive)
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-
-    // Create the timer interval
-    timerRef.current = setInterval(() => {
-      // Check if still mounted before updating state
-      if (!isMountedRef.current) {
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-          timerRef.current = null;
-        }
-        return;
-      }
-
-      setTimeRemaining(prev => {
-        if (prev === null) {
-          return null;
-        }
-        if (prev <= 1) {
-          // Time is up - clear interval and trigger submission
-          if (timerRef.current) {
-            clearInterval(timerRef.current);
-            timerRef.current = null;
-          }
-          // Use setTimeout to avoid calling handleTimeUp during state update
-          setTimeout(() => {
-            if (isMountedRef.current) {
-              handleTimeUp();
-            }
-          }, 0);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    // Cleanup function
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-    };
-  }, [testStarted]); // ONLY depends on testStarted - never add timeRemaining here!
+  }, [hasSavedProgress, loading, testStarted, showResumeModal]);
 
   async function loadData() {
     if (!templateId) {
@@ -335,19 +230,13 @@ export default function GMATTrainingTestPage() {
 
       setQuestions(orderedQuestions);
 
-      // Set time limit
+      // Set time limit (this will be passed to useTestTimer hook)
       if (templateDetails.question_requirements?.time_limit_minutes) {
-        setTimeRemaining(templateDetails.question_requirements.time_limit_minutes * 60);
+        setInitialTimeSeconds(templateDetails.question_requirements.time_limit_minutes * 60);
       }
 
-      // Check for saved progress (only in non-preview mode)
-      if (!isPreviewMode && profile.id && templateId) {
-        const existingProgress = loadProgressFromStorage(templateId, profile.id);
-        if (existingProgress && existingProgress.testStarted) {
-          setSavedProgress(existingProgress);
-          setShowResumeModal(true);
-        }
-      }
+      // Note: Saved progress is automatically loaded by useTestProgress hook
+      // The resume modal will be shown via useEffect when savedProgress is detected
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load training');
@@ -357,29 +246,44 @@ export default function GMATTrainingTestPage() {
   }
 
   function handleTimeUp() {
-    // Auto-submit when time is up
-    submitTest();
+    // Auto-save time spent on current question before showing modal
+    if (currentQuestion && !answers.has(currentQuestion.id)) {
+      // Record time spent even without an answer (will be counted as unanswered)
+      const timeSpent = Math.round((Date.now() - questionStartTime) / 1000);
+      const newAnswers = new Map(answers).set(currentQuestion.id, {
+        questionId: currentQuestion.id,
+        answer: '__UNANSWERED__', // Special marker for unanswered questions
+        timeSpent,
+      });
+      setAnswers(newAnswers);
+    } else if (currentQuestion && answers.has(currentQuestion.id)) {
+      // Update time spent on current question
+      const timeSpent = Math.round((Date.now() - questionStartTime) / 1000);
+      const existingAnswer = answers.get(currentQuestion.id)!;
+      const newAnswers = new Map(answers).set(currentQuestion.id, {
+        ...existingAnswer,
+        timeSpent: existingAnswer.timeSpent + timeSpent,
+      });
+      setAnswers(newAnswers);
+    }
+
+    // Show Time's Up modal
+    setShowTimeUpModal(true);
   }
 
   function startTest() {
     setTestStarted(true);
     setQuestionStartTime(Date.now());
 
-    // Save initial progress (only in non-preview mode)
-    if (!isPreviewMode && studentId && templateId) {
-      const progress: SavedTestProgress = {
-        templateId,
-        studentId,
-        currentIndex: 0,
-        answers: [],
-        bookmarkedQuestions: [],
-        timeRemaining,
-        testStarted: true,
-        inReviewPhase: false,
-        savedAt: new Date().toISOString(),
-      };
-      saveProgressToStorage(progress);
-    }
+    // Save initial progress using the hook
+    saveProgress(createProgressSnapshot(
+      0,
+      new Map(),
+      new Set(),
+      timeRemaining,
+      true,
+      false
+    ));
   }
 
   function resumeTest() {
@@ -387,7 +291,7 @@ export default function GMATTrainingTestPage() {
 
     // Restore state from saved progress
     setCurrentIndex(savedProgress.currentIndex);
-    setAnswers(new Map(savedProgress.answers));
+    setAnswers(new Map(savedProgress.answers as Array<[string, Answer]>));
     setBookmarkedQuestions(new Set(savedProgress.bookmarkedQuestions || []));
     if (savedProgress.timeRemaining !== null) {
       setTimeRemaining(savedProgress.timeRemaining);
@@ -396,16 +300,12 @@ export default function GMATTrainingTestPage() {
     setTestStarted(true);
     setQuestionStartTime(Date.now());
     setShowResumeModal(false);
-    setSavedProgress(null);
   }
 
   function startFresh() {
     // Clear saved progress and start new test
-    if (studentId && templateId) {
-      clearProgressFromStorage(templateId, studentId);
-    }
+    clearProgress();
     setShowResumeModal(false);
-    setSavedProgress(null);
     // Don't auto-start, let user click Start button
   }
 
@@ -419,63 +319,63 @@ export default function GMATTrainingTestPage() {
       }
 
       // Auto-save progress with updated bookmarks
-      if (!isPreviewMode && studentId && templateId) {
-        const progress: SavedTestProgress = {
-          templateId,
-          studentId,
-          currentIndex,
-          answers: Array.from(answers.entries()),
-          bookmarkedQuestions: Array.from(newSet),
-          timeRemaining,
-          testStarted: true,
-          inReviewPhase,
-          savedAt: new Date().toISOString(),
-        };
-        saveProgressToStorage(progress);
-      }
+      saveProgress(createProgressSnapshot(
+        currentIndex,
+        answers,
+        newSet,
+        timeRemaining,
+        true,
+        inReviewPhase
+      ));
 
       return newSet;
     });
   }
 
   function handleAnswer(questionId: string, answer: string | string[] | Record<string, string>) {
-    const timeSpent = Math.round((Date.now() - questionStartTime) / 1000);
+    const additionalTime = Math.round((Date.now() - questionStartTime) / 1000);
+    const existingAnswer = answers.get(questionId);
+    const accumulatedTime = (existingAnswer?.timeSpent || 0) + additionalTime;
     const newAnswers = new Map(answers).set(questionId, {
       questionId,
       answer,
-      timeSpent,
+      timeSpent: accumulatedTime,
     });
     setAnswers(newAnswers);
+    // Reset start time so goToQuestion/handleTimeUp won't double-count
+    setQuestionStartTime(Date.now());
 
-    // Auto-save progress after each answer (only in non-preview mode)
-    if (!isPreviewMode && studentId && templateId) {
-      const progress: SavedTestProgress = {
-        templateId,
-        studentId,
-        currentIndex,
-        answers: Array.from(newAnswers.entries()),
-        bookmarkedQuestions: Array.from(bookmarkedQuestions),
-        timeRemaining,
-        testStarted: true,
-        inReviewPhase,
-        savedAt: new Date().toISOString(),
-      };
-      saveProgressToStorage(progress);
-    }
+    // Auto-save progress after each answer
+    saveProgress(createProgressSnapshot(
+      currentIndex,
+      newAnswers,
+      bookmarkedQuestions,
+      timeRemaining,
+      true,
+      inReviewPhase
+    ));
   }
 
   function goToQuestion(index: number) {
-    // Save time for current question
+    // Save time for current question (even if unanswered — important for review phase)
     const currentQuestion = questions[currentIndex];
     let updatedAnswers = answers;
 
     if (currentQuestion) {
+      const additionalTime = Math.round((Date.now() - questionStartTime) / 1000);
       const existingAnswer = answers.get(currentQuestion.id);
       if (existingAnswer) {
-        const additionalTime = Math.round((Date.now() - questionStartTime) / 1000);
         updatedAnswers = new Map(answers).set(currentQuestion.id, {
           ...existingAnswer,
           timeSpent: existingAnswer.timeSpent + additionalTime,
+        });
+        setAnswers(updatedAnswers);
+      } else if (additionalTime > 0) {
+        // Track time even for unanswered questions (e.g., during review navigation)
+        updatedAnswers = new Map(answers).set(currentQuestion.id, {
+          questionId: currentQuestion.id,
+          answer: '__UNANSWERED__',
+          timeSpent: additionalTime,
         });
         setAnswers(updatedAnswers);
       }
@@ -484,21 +384,15 @@ export default function GMATTrainingTestPage() {
     setCurrentIndex(index);
     setQuestionStartTime(Date.now());
 
-    // Auto-save progress when navigating (only in non-preview mode)
-    if (!isPreviewMode && studentId && templateId) {
-      const progress: SavedTestProgress = {
-        templateId,
-        studentId,
-        currentIndex: index,
-        answers: Array.from(updatedAnswers.entries()),
-        bookmarkedQuestions: Array.from(bookmarkedQuestions),
-        timeRemaining,
-        testStarted: true,
-        inReviewPhase,
-        savedAt: new Date().toISOString(),
-      };
-      saveProgressToStorage(progress);
-    }
+    // Auto-save progress when navigating
+    saveProgress(createProgressSnapshot(
+      index,
+      updatedAnswers,
+      bookmarkedQuestions,
+      timeRemaining,
+      true,
+      inReviewPhase
+    ));
   }
 
   function nextQuestion() {
@@ -522,34 +416,32 @@ export default function GMATTrainingTestPage() {
     setInReviewPhase(true);
 
     // Auto-save progress with review phase state
-    if (!isPreviewMode && studentId && templateId) {
-      const progress: SavedTestProgress = {
-        templateId,
-        studentId,
-        currentIndex,
-        answers: Array.from(answers.entries()),
-        bookmarkedQuestions: Array.from(bookmarkedQuestions),
-        timeRemaining,
-        testStarted: true,
-        inReviewPhase: true,
-        savedAt: new Date().toISOString(),
-      };
-      saveProgressToStorage(progress);
-    }
+    saveProgress(createProgressSnapshot(
+      currentIndex,
+      answers,
+      bookmarkedQuestions,
+      timeRemaining,
+      true,
+      true // inReviewPhase = true
+    ));
   }
 
   async function submitTest() {
     if (submitting || !studentId || !template) return;
 
+    // Hide Time's Up modal if showing
+    setShowTimeUpModal(false);
     setSubmitting(true);
 
     try {
-      // Calculate scores
+      // Calculate scores - track unanswered separately
       let correctCount = 0;
-      const difficultyBreakdown: Record<string, { correct: number; total: number }> = {
-        easy: { correct: 0, total: 0 },
-        medium: { correct: 0, total: 0 },
-        hard: { correct: 0, total: 0 },
+      let unansweredCount = 0;
+      const unansweredQuestionIds: string[] = [];
+      const difficultyBreakdown: Record<string, { correct: number; total: number; unanswered: number }> = {
+        easy: { correct: 0, total: 0, unanswered: 0 },
+        medium: { correct: 0, total: 0, unanswered: 0 },
+        hard: { correct: 0, total: 0, unanswered: 0 },
       };
 
       const questionIds: string[] = [];
@@ -562,7 +454,16 @@ export default function GMATTrainingTestPage() {
         }
 
         const userAnswer = answers.get(question.id);
-        if (!userAnswer) continue;
+
+        // Check if unanswered (no answer or special marker)
+        if (!userAnswer || userAnswer.answer === '__UNANSWERED__') {
+          unansweredCount++;
+          unansweredQuestionIds.push(question.id);
+          if (difficultyBreakdown[difficulty]) {
+            difficultyBreakdown[difficulty].unanswered++;
+          }
+          continue;
+        }
 
         // Parse the correct answer
         const answersData = typeof question.answers === 'string'
@@ -570,15 +471,12 @@ export default function GMATTrainingTestPage() {
           : question.answers;
         const correctAnswer = answersData?.correct_answer;
 
-        // Check if answer is correct
-        let isCorrect = false;
-        if (typeof correctAnswer === 'string' && typeof userAnswer.answer === 'string') {
-          isCorrect = userAnswer.answer.toLowerCase() === correctAnswer.toLowerCase();
-        } else if (Array.isArray(correctAnswer) && Array.isArray(userAnswer.answer)) {
-          isCorrect = JSON.stringify(userAnswer.answer.sort()) === JSON.stringify(correctAnswer.sort());
-        } else if (typeof correctAnswer === 'object' && typeof userAnswer.answer === 'object') {
-          isCorrect = JSON.stringify(userAnswer.answer) === JSON.stringify(correctAnswer);
-        }
+        // Get DI subtype for proper answer comparison
+        const questionData = typeof question.question_data === 'string'
+          ? JSON.parse(question.question_data)
+          : question.question_data;
+
+        const isCorrect = checkAnswerCorrectness(userAnswer.answer, correctAnswer, questionData?.di_type);
 
         if (isCorrect) {
           correctCount++;
@@ -591,11 +489,23 @@ export default function GMATTrainingTestPage() {
       // Calculate total time
       const totalTimeSeconds = Array.from(answers.values()).reduce((sum, a) => sum + a.timeSpent, 0);
 
-      // Build per-question answers data with correctness info
-      const perQuestionAnswersData: Record<string, { answer: string | string[] | Record<string, string>; time_spent_seconds: number; is_correct: boolean }> = {};
+      // Build per-question answers data with correctness info and unanswered tracking
+      // Note: StoredAnswer uses Record<string, unknown> but the API expects Record<string, string>
+      // We cast to the API's expected type since we know the actual values are strings
+      const perQuestionAnswersData: Record<string, { answer: string | string[] | Record<string, string>; time_spent_seconds: number; is_correct: boolean; is_unanswered?: boolean }> = {};
       for (const question of questions) {
         const userAnswer = answers.get(question.id);
-        if (!userAnswer) continue;
+
+        // Handle unanswered questions
+        if (!userAnswer || userAnswer.answer === '__UNANSWERED__') {
+          perQuestionAnswersData[question.id] = {
+            answer: '',
+            time_spent_seconds: userAnswer?.timeSpent || 0,
+            is_correct: false,
+            is_unanswered: true,
+          };
+          continue;
+        }
 
         // Parse the correct answer
         const answersDataForQ = typeof question.answers === 'string'
@@ -603,20 +513,18 @@ export default function GMATTrainingTestPage() {
           : question.answers;
         const correctAnswer = answersDataForQ?.correct_answer;
 
-        // Check if answer is correct
-        let isCorrect = false;
-        if (typeof correctAnswer === 'string' && typeof userAnswer.answer === 'string') {
-          isCorrect = userAnswer.answer.toLowerCase() === correctAnswer.toLowerCase();
-        } else if (Array.isArray(correctAnswer) && Array.isArray(userAnswer.answer)) {
-          isCorrect = JSON.stringify(userAnswer.answer.sort()) === JSON.stringify(correctAnswer.sort());
-        } else if (typeof correctAnswer === 'object' && typeof userAnswer.answer === 'object') {
-          isCorrect = JSON.stringify(userAnswer.answer) === JSON.stringify(correctAnswer);
-        }
+        // Get DI subtype for proper answer comparison
+        const questionDataForQ = typeof question.question_data === 'string'
+          ? JSON.parse(question.question_data)
+          : question.question_data;
+
+        const isCorrect = checkAnswerCorrectness(userAnswer.answer, correctAnswer, questionDataForQ?.di_type);
 
         perQuestionAnswersData[question.id] = {
-          answer: userAnswer.answer,
+          answer: userAnswer.answer as string | string[] | Record<string, string>,
           time_spent_seconds: userAnswer.timeSpent,
           is_correct: isCorrect,
+          is_unanswered: false,
         };
       }
 
@@ -647,6 +555,8 @@ export default function GMATTrainingTestPage() {
           created_at: new Date().toISOString(),
           answers_data: perQuestionAnswersData,
           bookmarked_question_ids: bookmarkedIds,
+          unanswered_count: unansweredCount,
+          unanswered_question_ids: unansweredQuestionIds,
         };
         setResult(previewResult);
         setTestCompleted(true);
@@ -671,9 +581,7 @@ export default function GMATTrainingTestPage() {
       setTestCompleted(true);
 
       // Clear saved progress after successful submission
-      if (templateId && studentId) {
-        clearProgressFromStorage(templateId, studentId);
-      }
+      clearProgress();
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit test');
@@ -682,118 +590,89 @@ export default function GMATTrainingTestPage() {
     }
   }
 
-  // Format time as MM:SS
-  function formatTime(seconds: number): string {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  // Convert stored answer format to UnifiedAnswer for QuestionRenderer
+  function toUnifiedAnswer(
+    storedAnswer: string | string[] | Record<string, unknown> | undefined,
+    questionData: Record<string, unknown>
+  ): UnifiedAnswer {
+    if (!storedAnswer) return {};
+
+    const diType = questionData.di_type as string | undefined;
+
+    switch (diType) {
+      case 'DS':
+        return { answer: storedAnswer as string };
+      case 'MSR':
+        return { msrAnswers: storedAnswer as string[] };
+      case 'GI': {
+        const giArr = storedAnswer as string[];
+        return { blank1: giArr[0] || '', blank2: giArr[1] || '' };
+      }
+      case 'TA':
+        return { taAnswers: storedAnswer as Record<number, 'true' | 'false'> };
+      case 'TPA': {
+        const tpaObj = storedAnswer as Record<string, string>;
+        return { column1: tpaObj.col1, column2: tpaObj.col2 };
+      }
+      default:
+        // Multiple choice or other
+        return { answer: storedAnswer as string };
+    }
   }
 
-  // Render question component based on type
+  // Convert UnifiedAnswer back to stored format for handleAnswer
+  function fromUnifiedAnswer(
+    unifiedAnswer: UnifiedAnswer,
+    questionData: Record<string, unknown>
+  ): string | string[] | Record<string, string> {
+    const diType = questionData.di_type as string | undefined;
+
+    switch (diType) {
+      case 'DS':
+        return unifiedAnswer.answer || '';
+      case 'MSR':
+        return unifiedAnswer.msrAnswers || [];
+      case 'GI':
+        return [unifiedAnswer.blank1 || '', unifiedAnswer.blank2 || ''];
+      case 'TA':
+        return unifiedAnswer.taAnswers as unknown as Record<string, string> || {};
+      case 'TPA':
+        return { col1: unifiedAnswer.column1 || '', col2: unifiedAnswer.column2 || '' };
+      default:
+        return unifiedAnswer.answer || '';
+    }
+  }
+
+  // Handle answer change from QuestionRenderer
+  function handleQuestionRendererAnswer(questionId: string, unifiedAnswer: UnifiedAnswer) {
+    const question = questions.find(q => q.id === questionId);
+    if (!question) return;
+
+    const questionData = typeof question.question_data === 'string'
+      ? JSON.parse(question.question_data)
+      : question.question_data;
+
+    const storedAnswer = fromUnifiedAnswer(unifiedAnswer, questionData);
+    handleAnswer(questionId, storedAnswer);
+  }
+
+  // Render question component using QuestionRenderer
   function renderQuestion(question: Question) {
     const questionData = typeof question.question_data === 'string'
       ? JSON.parse(question.question_data)
       : question.question_data;
 
-    const currentAnswer = answers.get(question.id)?.answer;
+    const storedAnswer = answers.get(question.id)?.answer;
+    const unifiedAnswer = toUnifiedAnswer(storedAnswer, questionData);
 
-    // Data Insights question types
-    if (questionData.di_type === 'DS') {
-      return (
-        <DSQuestion
-          problem={questionData.problem || ''}
-          statement1={questionData.statement1 || ''}
-          statement2={questionData.statement2 || ''}
-          selectedAnswer={currentAnswer as string}
-          onAnswerChange={(answer: string) => handleAnswer(question.id, answer)}
-        />
-      );
-    }
-
-    if (questionData.di_type === 'MSR') {
-      const msrAnswers = currentAnswer as string[] || [];
-      return (
-        <MSRQuestion
-          sources={questionData.sources || []}
-          questions={questionData.questions || []}
-          selectedAnswers={msrAnswers}
-          onAnswerChange={(questionIndex: number, answer: string) => {
-            const newAnswers = [...msrAnswers];
-            newAnswers[questionIndex] = answer;
-            handleAnswer(question.id, newAnswers);
-          }}
-        />
-      );
-    }
-
-    if (questionData.di_type === 'GI') {
-      const giAnswers = currentAnswer as string[] || ['', ''];
-      return (
-        <GIQuestion
-          chartConfig={questionData.chart_config}
-          contextText={questionData.context_text}
-          statementText={questionData.statement_text || ''}
-          blank1Options={questionData.blank1_options || []}
-          blank2Options={questionData.blank2_options || []}
-          imageUrl={questionData.image_url}
-          selectedBlank1={giAnswers[0]}
-          selectedBlank2={giAnswers[1]}
-          onBlank1Change={(value: string) => {
-            handleAnswer(question.id, [value, giAnswers[1] || '']);
-          }}
-          onBlank2Change={(value: string) => {
-            handleAnswer(question.id, [giAnswers[0] || '', value]);
-          }}
-        />
-      );
-    }
-
-    if (questionData.di_type === 'TA') {
-      const taAnswers = currentAnswer as Record<number, 'true' | 'false'> || {};
-      return (
-        <TAQuestion
-          tableTitle={questionData.table_title}
-          columnHeaders={questionData.column_headers || []}
-          tableData={questionData.table_data || []}
-          statements={questionData.statements || []}
-          selectedAnswers={taAnswers}
-          onAnswerChange={(statementIndex: number, value: 'true' | 'false') => {
-            const newAnswers = { ...taAnswers, [statementIndex]: value };
-            handleAnswer(question.id, newAnswers as unknown as Record<string, string>);
-          }}
-        />
-      );
-    }
-
-    if (questionData.di_type === 'TPA') {
-      const tpaAnswers = currentAnswer as Record<string, string> || {};
-      return (
-        <TPAQuestion
-          scenario={questionData.scenario || ''}
-          column1Title={questionData.column1_title || ''}
-          column2Title={questionData.column2_title || ''}
-          sharedOptions={questionData.shared_options || []}
-          selectedColumn1={tpaAnswers.col1}
-          selectedColumn2={tpaAnswers.col2}
-          onColumn1Change={(value: string) => {
-            handleAnswer(question.id, { ...tpaAnswers, col1: value });
-          }}
-          onColumn2Change={(value: string) => {
-            handleAnswer(question.id, { ...tpaAnswers, col2: value });
-          }}
-        />
-      );
-    }
-
-    // Standard multiple choice
     return (
-      <MultipleChoiceQuestion
-        questionText={questionData.question_text || ''}
-        options={questionData.options || {}}
-        imageUrl={questionData.image_url}
-        imageOptions={questionData.image_options}
-        selectedAnswer={currentAnswer as string}
-        onAnswerChange={(answer: string) => handleAnswer(question.id, answer)}
+      <QuestionRenderer
+        question={{
+          ...question,
+          question_data: questionData,
+        }}
+        currentAnswer={unifiedAnswer}
+        onAnswerChange={handleQuestionRendererAnswer}
       />
     );
   }
@@ -804,6 +683,12 @@ export default function GMATTrainingTestPage() {
   const isCurrentBookmarked = currentQuestion && bookmarkedQuestions.has(currentQuestion.id);
   const allQuestionsAnswered = questions.length > 0 && answers.size === questions.length;
   const bookmarkedCount = bookmarkedQuestions.size;
+
+  // Detect passage-based questions to widen the container for split-panel layout
+  const currentQuestionData = currentQuestion?.question_data
+    ? (typeof currentQuestion.question_data === 'string' ? JSON.parse(currentQuestion.question_data) : currentQuestion.question_data)
+    : null;
+  const hasPassage = !!currentQuestionData?.passage_text;
 
   // Loading state
   if (loading) {
@@ -849,7 +734,7 @@ export default function GMATTrainingTestPage() {
               <div className="col-span-2">
                 <span className="text-gray-500">Time Remaining:</span>
                 <span className="font-semibold text-gray-800 ml-2">
-                  {Math.floor(savedProgress.timeRemaining / 60)}:{(savedProgress.timeRemaining % 60).toString().padStart(2, '0')}
+                  {formatTime(savedProgress.timeRemaining)}
                 </span>
               </div>
             )}
@@ -881,6 +766,10 @@ export default function GMATTrainingTestPage() {
       </div>
     </div>
   );
+
+  // Time's Up Modal - compute unanswered count
+  const answeredCount = Array.from(answers.values()).filter(a => a.answer !== '__UNANSWERED__').length;
+  const unansweredCount = questions.length - answeredCount;
 
   // Error state
   if (error) {
@@ -955,21 +844,12 @@ export default function GMATTrainingTestPage() {
     // Build question results with timing data
     const questionResults = questions.map((q, index) => {
       const answerData = answers.get(q.id);
-      const correctAnswer = q.answers?.correct_answer;
-      let isCorrect = false;
-
-      if (answerData && correctAnswer) {
-        const studentAns = answerData.answer;
-        if (Array.isArray(correctAnswer)) {
-          isCorrect = Array.isArray(studentAns)
-            ? JSON.stringify(studentAns.sort()) === JSON.stringify([...correctAnswer].sort())
-            : correctAnswer.includes(studentAns as string);
-        } else if (typeof correctAnswer === 'object') {
-          isCorrect = JSON.stringify(studentAns) === JSON.stringify(correctAnswer);
-        } else {
-          isCorrect = studentAns === correctAnswer;
-        }
-      }
+      const answersObj = typeof q.answers === 'string' ? JSON.parse(q.answers) : q.answers;
+      const correctAnswer = answersObj?.correct_answer;
+      const qData = typeof q.question_data === 'string' ? JSON.parse(q.question_data) : q.question_data;
+      const isCorrect = answerData && correctAnswer
+        ? checkAnswerCorrectness(answerData.answer, correctAnswer, qData?.di_type)
+        : false;
 
       return {
         question: q,
@@ -1013,142 +893,26 @@ export default function GMATTrainingTestPage() {
       return true;
     });
 
-    // Render question component for results
+    // Render question component for results using QuestionRenderer
     const renderResultQuestion = (qResult: typeof questionResults[0]) => {
       const { question, studentAnswer } = qResult;
       const questionData = question.question_data;
-      const answersData = question.answers;
-      const noOp = () => {};
-      const diType = questionData?.di_type || questionData?.diType;
 
-      if (diType === 'DS') {
-        return (
-          <DSQuestion
-            problem={questionData.problem || ''}
-            statement1={questionData.statement1 || ''}
-            statement2={questionData.statement2 || ''}
-            selectedAnswer={typeof studentAnswer === 'string' ? studentAnswer : null}
-            correctAnswer={answersData?.correct_answer?.[0] || answersData?.correct_answer}
-            onAnswerChange={noOp}
-            readOnly={true}
-            showResults={true}
-            explanation={questionData.explanation}
-          />
-        );
-      }
-
-      if (diType === 'MSR') {
-        return (
-          <MSRQuestion
-            sources={questionData.sources || []}
-            questions={questionData.questions || []}
-            selectedAnswers={Array.isArray(studentAnswer) ? studentAnswer : []}
-            onAnswerChange={noOp}
-            readOnly={true}
-            correctAnswers={answersData?.correct_answer || []}
-            showResults={true}
-            explanation={questionData.explanation}
-          />
-        );
-      }
-
-      if (diType === 'GI') {
-        const studentGI = studentAnswer && typeof studentAnswer === 'object' && !Array.isArray(studentAnswer)
-          ? studentAnswer as Record<string, string>
-          : {};
-        return (
-          <GIQuestion
-            chartConfig={questionData.chart_config}
-            contextText={questionData.context_text}
-            statementText={questionData.statement_text || ''}
-            blank1Options={questionData.blank1_options || []}
-            blank2Options={questionData.blank2_options || []}
-            selectedBlank1={studentGI.blank1}
-            selectedBlank2={studentGI.blank2}
-            onBlank1Change={noOp}
-            onBlank2Change={noOp}
-            readOnly={true}
-            correctBlank1={answersData?.correct_answer}
-            correctBlank2={answersData?.correct_answer}
-            showResults={true}
-            explanation={questionData.explanation}
-          />
-        );
-      }
-
-      if (diType === 'TA') {
-        const correctAnswer = Array.isArray(answersData?.correct_answer)
-          ? answersData.correct_answer[0]
-          : answersData?.correct_answer || {};
-        const studentTA = studentAnswer && typeof studentAnswer === 'object' && !Array.isArray(studentAnswer)
-          ? studentAnswer as Record<string, boolean>
-          : {};
-        return (
-          <TAQuestion
-            tableTitle={questionData.table_title}
-            columnHeaders={questionData.column_headers || []}
-            tableData={questionData.table_data || []}
-            statements={questionData.statements || []}
-            selectedAnswers={studentTA}
-            onAnswerChange={noOp}
-            readOnly={true}
-            tableSortable={true}
-            correctAnswers={correctAnswer}
-            showResults={true}
-            explanation={questionData.explanation}
-          />
-        );
-      }
-
-      if (diType === 'TPA') {
-        const correctAnswer = Array.isArray(answersData?.correct_answer)
-          ? answersData.correct_answer[0]
-          : answersData?.correct_answer || {};
-        const studentTPA = studentAnswer && typeof studentAnswer === 'object' && !Array.isArray(studentAnswer)
-          ? studentAnswer as Record<string, string>
-          : {};
-        return (
-          <TPAQuestion
-            scenario={questionData.scenario || ''}
-            column1Title={questionData.column1_title || ''}
-            column2Title={questionData.column2_title || ''}
-            sharedOptions={questionData.shared_options || []}
-            selectedColumn1={studentTPA.column1}
-            selectedColumn2={studentTPA.column2}
-            onColumn1Change={noOp}
-            onColumn2Change={noOp}
-            readOnly={true}
-            correctColumn1={correctAnswer}
-            correctColumn2={correctAnswer}
-            showResults={true}
-            explanation={questionData.explanation}
-          />
-        );
-      }
-
-      // Multiple Choice
-      if (question.question_type === 'multiple_choice' && questionData.options) {
-        return (
-          <MultipleChoiceQuestion
-            questionText={questionData.question_text || ''}
-            passageText={questionData.passage_text}
-            passageTitle={questionData.passage_title}
-            imageUrl={questionData.image_url}
-            options={questionData.options || []}
-            selectedAnswer={typeof studentAnswer === 'string' ? studentAnswer : null}
-            correctAnswer={answersData?.correct_answer}
-            onAnswerChange={noOp}
-            readOnly={true}
-            showResults={true}
-            explanation={questionData.explanation}
-          />
-        );
-      }
+      // Convert studentAnswer to UnifiedAnswer format for results view
+      const unifiedAnswer = toUnifiedAnswer(studentAnswer, questionData);
 
       return (
-        <div className="text-gray-500 italic">
-          Question type: {question.question_type}
-        </div>
+        <QuestionRenderer
+          question={{
+            ...question,
+            question_data: questionData,
+          }}
+          currentAnswer={unifiedAnswer}
+          onAnswerChange={() => {}} // No-op for results view
+          showResults={true}
+          readOnly={true}
+          explanation={questionData?.explanation}
+        />
       );
     };
 
@@ -1613,6 +1377,14 @@ export default function GMATTrainingTestPage() {
       <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
         {/* Resume Modal */}
         {resumeModal}
+        {/* Time's Up Modal */}
+        <TimeUpModal
+          isOpen={showTimeUpModal}
+          onSubmit={submitTest}
+          isSubmitting={submitting}
+          unansweredCount={unansweredCount}
+          totalQuestions={questions.length}
+        />
 
         <div className="max-w-2xl w-full">
           {/* Preview Mode Banner */}
@@ -1692,7 +1464,7 @@ export default function GMATTrainingTestPage() {
 
           {/* Review Content - Scrollable area */}
           <div className="flex-1 overflow-auto p-4">
-            <div className="max-w-4xl mx-auto">
+            <div className={`${hasPassage ? 'max-w-7xl' : 'max-w-4xl'} mx-auto`}>
               {/* Compact Header */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg">
@@ -1807,18 +1579,12 @@ export default function GMATTrainingTestPage() {
             <div className="max-w-6xl mx-auto flex items-center justify-between">
               {/* Left: Timer and stats */}
               <div className="flex items-center gap-2">
-                {timeRemaining !== null && (
-                  <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-sm font-semibold ${
-                    timeRemaining < 300
-                      ? 'bg-red-100 text-red-700'
-                      : timeRemaining < 600
-                      ? 'bg-amber-100 text-amber-700'
-                      : 'bg-gray-100 text-gray-700'
-                  }`}>
-                    <FontAwesomeIcon icon={faClock} className="text-xs" />
-                    <span className="font-mono">{formatTime(timeRemaining)}</span>
-                  </div>
-                )}
+                <TestTimerCompact
+                  timeRemaining={timeRemaining}
+                  warningThreshold={600}
+                  dangerThreshold={300}
+                  className="px-2 py-1 rounded-lg text-sm font-semibold bg-gray-100"
+                />
                 <span className="text-xs text-gray-500">
                   <span className="font-semibold text-gray-700">{answers.size}</span>/{questions.length}
                 </span>
@@ -1875,10 +1641,18 @@ export default function GMATTrainingTestPage() {
   }
 
   // Test in progress (normal phase)
-  const answeredCount = answers.size;
 
   return (
     <MathJaxProvider>
+      {/* Time's Up Modal */}
+      <TimeUpModal
+        isOpen={showTimeUpModal}
+        onSubmit={submitTest}
+        isSubmitting={submitting}
+        unansweredCount={unansweredCount}
+        totalQuestions={questions.length}
+      />
+
       <div className="h-screen bg-gray-100 flex flex-col overflow-hidden">
         {/* Preview Mode Indicator - Minimal */}
         {isPreviewMode && (
@@ -1890,7 +1664,7 @@ export default function GMATTrainingTestPage() {
 
         {/* Question Content - Takes all available space */}
         <div className="flex-1 overflow-auto p-4">
-          <div className="max-w-4xl mx-auto">
+          <div className={`${hasPassage ? 'max-w-7xl' : 'max-w-4xl'} mx-auto`}>
             {currentQuestion && (() => {
               const questionData = typeof currentQuestion.question_data === 'string'
                 ? JSON.parse(currentQuestion.question_data)
@@ -1936,18 +1710,12 @@ export default function GMATTrainingTestPage() {
         <div className="bg-white border-t border-gray-200 px-3 py-2 shadow-lg">
           <div className="max-w-6xl mx-auto flex items-center gap-3">
             {/* Left: Timer */}
-            {timeRemaining !== null && (
-              <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-sm font-semibold shrink-0 ${
-                timeRemaining < 300
-                  ? 'bg-red-100 text-red-700'
-                  : timeRemaining < 600
-                  ? 'bg-amber-100 text-amber-700'
-                  : 'bg-gray-100 text-gray-700'
-              }`}>
-                <FontAwesomeIcon icon={faClock} className="text-xs" />
-                <span className="font-mono">{formatTime(timeRemaining)}</span>
-              </div>
-            )}
+            <TestTimerCompact
+              timeRemaining={timeRemaining}
+              warningThreshold={600}
+              dangerThreshold={300}
+              className="px-2 py-1 rounded-lg text-sm font-semibold shrink-0 bg-gray-100"
+            />
 
             {/* Center: Question Pills - horizontal scroll */}
             <div className="flex-1 flex items-center gap-1 overflow-x-auto py-1 scrollbar-thin">

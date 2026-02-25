@@ -99,9 +99,12 @@ export function DataInsightsPreview({
     return (
       <TAQuestion
         tableTitle={questionData?.table_title}
+        stimulusText={questionData?.stimulus_text}
         columnHeaders={questionData?.column_headers || []}
         tableData={questionData?.table_data || []}
         statements={statements}
+        col1Title={questionData?.answer_col1_title}
+        col2Title={questionData?.answer_col2_title}
         selectedAnswers={{}}
         onAnswerChange={() => {}}
         readOnly={true}
