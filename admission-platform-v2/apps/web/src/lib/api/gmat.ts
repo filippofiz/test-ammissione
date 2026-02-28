@@ -1179,29 +1179,39 @@ export async function saveSectionAssessmentResult(
     response_pattern_details: responsePatternDetails ?? null,
   } : null;
 
+  // Use RPC (SECURITY DEFINER) to bypass RLS — students cannot direct-insert
+  // section_assessment rows, only tutors can via the base RLS policy.
+  const { data: resultId, error: rpcError } = await supabase.rpc(
+    'save_gmat_section_assessment_result',
+    {
+      p_student_id: studentId,
+      p_section: section,
+      p_score_raw: scoreRaw,
+      p_score_total: scoreTotal,
+      p_score_percentage: scorePercentage,
+      p_difficulty_breakdown: difficultyBreakdown ?? null,
+      p_time_spent_seconds: timeSpentSeconds || null,
+      p_question_ids: questionIds,
+      p_answers_data: answersData || null,
+      p_bookmarked_question_ids: bookmarkedQuestionIds || null,
+      p_metadata: metadata,
+    }
+  );
+
+  if (rpcError) {
+    console.error('Error saving section assessment result:', rpcError);
+    throw new Error(`Failed to save section assessment result: ${rpcError.message}`);
+  }
+
+  // Fetch the full row to return to the caller
   const { data, error } = await supabase
     .from('2V_gmat_assessment_results')
-    .insert({
-      student_id: studentId,
-      assessment_type: 'section_assessment',
-      section: section,
-      score_raw: scoreRaw,
-      score_total: scoreTotal,
-      score_percentage: scorePercentage,
-      difficulty_breakdown: difficultyBreakdown,
-      time_spent_seconds: timeSpentSeconds || null,
-      tutor_validated: true, // Section assessments don't require validation
-      question_ids: questionIds,
-      completed_at: new Date().toISOString(),
-      answers_data: answersData || null,
-      bookmarked_question_ids: bookmarkedQuestionIds || null,
-      metadata,
-    })
-    .select()
+    .select('*')
+    .eq('id', resultId)
     .single();
 
   if (error) {
-    console.error('Error saving section assessment result:', error);
+    console.error('Error fetching saved section assessment result:', error);
     throw new Error(`Failed to save section assessment result: ${error.message}`);
   }
 
@@ -1809,18 +1819,9 @@ export async function getTrainingCompletions(
     return new Map();
   }
 
-  // Filter out results with empty answers_data (incomplete/failed saves)
-  // This prevents showing duplicate counts for tests that failed to save properly
-  const validResults = (data || []).filter(row => {
-    const answersData = row.answers_data;
-    // Exclude if null/undefined
-    if (!answersData) return false;
-    // Exclude if empty string representation of object
-    if (typeof answersData === 'string' && (answersData === '{}' || answersData.trim() === '')) return false;
-    // Exclude if empty object
-    if (typeof answersData === 'object' && Object.keys(answersData).length === 0) return false;
-    return true;
-  });
+  // All returned rows are valid completions. Deduplication is handled below by
+  // grouping on topic and keeping the most recent per template.
+  const validResults = data || [];
 
   // Group by topic (which stores template_id for trainings)
   // Calculate attempt counts and best scores

@@ -316,7 +316,7 @@ export default function GMATPreparationPage() {
   // Check if a training test is locked
   function isTrainingTestLocked(templateId: string): boolean {
     const assignment = trainingAssignments.get(templateId);
-    // If no assignment exists, default to LOCKED (tutor must explicitly unlock)
+    // If no assignment exists, default to locked (tutor must explicitly unlock).
     if (!assignment) return true;
     return assignment.status === 'locked';
   }
@@ -949,7 +949,11 @@ export default function GMATPreparationPage() {
                                 .map(template => {
                                   const completion = trainingCompletions.get(template.id);
                                   const isCompleted = !!completion;
-                                  const isLocked = isTrainingTestLocked(template.id);
+                                  // For student view: a completed test is never shown as locked —
+                                  // the lock only prevents retaking, past work should always be visible.
+                                  const isLocked = isCompleted && !isTutorView
+                                    ? false
+                                    : isTrainingTestLocked(template.id);
                                   const requirements = template.question_requirements;
                                   const cycleAlloc = template.question_allocation?.by_cycle?.[gmatProgress.gmat_cycle];
                                   const hasQuestionsForCycle = cycleAlloc?.allocated_questions &&
@@ -1049,7 +1053,7 @@ export default function GMATPreparationPage() {
                                       </div>
 
                                       {requirements && (
-                                        <div className={`text-xs mb-auto ${isLocked ? 'text-gray-400' : 'text-gray-500'}`}>
+                                        <div className={`text-xs mb-auto ${isLocked && !isCompleted ? 'text-gray-400' : 'text-gray-500'}`}>
                                           {requirements.total_questions} questions
                                           {requirements.time_limit_minutes && ` • ${requirements.time_limit_minutes} min`}
                                         </div>
@@ -1240,7 +1244,7 @@ export default function GMATPreparationPage() {
                       {/* Assessment Card */}
                       <div
                         className={`flex-1 p-4 rounded-xl min-h-[120px] flex flex-col ${
-                          isLocked
+                          isLocked && !assessment
                             ? 'bg-gray-100'
                             : assessment
                             ? isPassed ? 'bg-green-50' : 'bg-amber-50'
@@ -1249,19 +1253,14 @@ export default function GMATPreparationPage() {
                       >
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-1.5">
-                            {isLocked && (
+                            {isLocked && !assessment && (
                               <FontAwesomeIcon icon={faLock} className="text-gray-400 text-xs" />
                             )}
-                            <span className={`text-sm font-medium ${isLocked ? 'text-gray-500' : 'text-gray-800'}`}>
+                            <span className={`text-sm font-medium ${isLocked && !assessment ? 'text-gray-500' : 'text-gray-800'}`}>
                               {config.fullName}
                             </span>
                           </div>
-                          {isLocked ? (
-                            <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full text-xs font-medium flex items-center gap-1">
-                              <FontAwesomeIcon icon={faLock} className="text-xs" />
-                              Locked
-                            </span>
-                          ) : assessment ? (
+                          {assessment ? (
                             <div className="flex items-center gap-1.5">
                               {assessment.metadata?.gmat_section_score != null && (
                                 <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold">
@@ -1279,10 +1278,15 @@ export default function GMATPreparationPage() {
                                 </span>
                               )}
                             </div>
+                          ) : isLocked ? (
+                            <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full text-xs font-medium flex items-center gap-1">
+                              <FontAwesomeIcon icon={faLock} className="text-xs" />
+                              Locked
+                            </span>
                           ) : null}
                         </div>
 
-                        <div className={`text-xs mb-auto ${isLocked ? 'text-gray-400' : 'text-gray-500'}`}>
+                        <div className={`text-xs mb-auto ${isLocked && !assessment ? 'text-gray-400' : 'text-gray-500'}`}>
                           {config.totalQuestions} questions • {config.timeMinutes} min
                         </div>
 
@@ -1325,13 +1329,8 @@ export default function GMATPreparationPage() {
                             </button>
                           </div>
                         ) : (
-                          // STUDENT VIEW: Start, View Results, Retake
-                          isLocked ? (
-                            <div className="text-xs text-gray-400 text-center py-1 mt-2">
-                              <FontAwesomeIcon icon={faLock} className="mr-1" />
-                              Assessment is locked
-                            </div>
-                          ) : assessment ? (
+                          // STUDENT VIEW: Start, View Results (no Retake when locked)
+                          assessment ? (
                             <div className="flex gap-2 mt-2">
                               <button
                                 onClick={() => navigate(`/student/gmat-results/${assessment.id}`)}
@@ -1339,12 +1338,19 @@ export default function GMATPreparationPage() {
                               >
                                 View Results
                               </button>
-                              <button
-                                onClick={() => navigate(`/student/take-test/gmat-section-assessment/${section}`)}
-                                className="flex-1 px-2 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-200 transition-colors"
-                              >
-                                Retake
-                              </button>
+                              {!isLocked && (
+                                <button
+                                  onClick={() => navigate(`/student/take-test/gmat-section-assessment/${section}`)}
+                                  className="flex-1 px-2 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-200 transition-colors"
+                                >
+                                  Retake
+                                </button>
+                              )}
+                            </div>
+                          ) : isLocked ? (
+                            <div className="text-xs text-gray-400 text-center py-1 mt-2">
+                              <FontAwesomeIcon icon={faLock} className="mr-1" />
+                              Assessment is locked
                             </div>
                           ) : (
                             <button
