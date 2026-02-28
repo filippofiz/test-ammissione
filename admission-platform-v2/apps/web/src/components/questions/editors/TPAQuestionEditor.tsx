@@ -3,8 +3,6 @@
  * Simple text-based editor for TPA question fields
  */
 
-import { useState, useEffect } from 'react';
-
 interface TPAQuestionEditorProps {
   questionData: {
     scenario?: string;
@@ -12,55 +10,62 @@ interface TPAQuestionEditorProps {
     column2_title?: string;
     shared_options?: string[];
   };
-  correctAnswer?: { col1?: string; col2?: string };
+  // DB stores correct_answer as [{col1, col2}] — accept both the array and the unwrapped object
+  correctAnswer?: { col1?: string; col2?: string } | [{ col1?: string; col2?: string }];
   onChange: (field: string, value: any) => void;
 }
 
 export function TPAQuestionEditor({
   questionData,
-  correctAnswer,
+  correctAnswer: correctAnswerRaw,
   onChange,
 }: TPAQuestionEditorProps) {
-  // Local state for JSON editing with validation
-  const [sharedOptionsJson, setSharedOptionsJson] = useState('');
-  const [correctAnswerJson, setCorrectAnswerJson] = useState('');
-  const [sharedOptionsError, setSharedOptionsError] = useState('');
-  const [correctAnswerError, setCorrectAnswerError] = useState('');
+  const options = questionData.shared_options || [];
 
-  // Initialize JSON strings from props
-  useEffect(() => {
-    setSharedOptionsJson(JSON.stringify(questionData.shared_options || [], null, 2));
-    setCorrectAnswerJson(JSON.stringify(correctAnswer || {}, null, 2));
-  }, []);
+  // Unwrap DB array format [{col1, col2}] → {col1, col2}
+  const correctAnswer: { col1?: string; col2?: string } =
+    Array.isArray(correctAnswerRaw) && correctAnswerRaw.length > 0
+      ? correctAnswerRaw[0]
+      : (correctAnswerRaw as { col1?: string; col2?: string }) || {};
 
-  const handleSharedOptionsChange = (value: string) => {
-    setSharedOptionsJson(value);
-    try {
-      const parsed = JSON.parse(value);
-      if (Array.isArray(parsed)) {
-        setSharedOptionsError('');
-        onChange('question_data.shared_options', parsed);
-      } else {
-        setSharedOptionsError('Must be an array');
-      }
-    } catch {
-      setSharedOptionsError('Invalid JSON');
+  // Always save in DB array format [{col1, col2}]
+  const saveCorrectAnswer = (updated: { col1?: string; col2?: string }) => {
+    onChange('answers.correct_answer', [updated]);
+  };
+
+  const handleOptionChange = (index: number, value: string) => {
+    const updated = options.map((o, i) => (i === index ? value : o));
+    onChange('question_data.shared_options', updated);
+    // If the changed option was a correct answer, keep it in sync
+    const newCorrect = { ...correctAnswer };
+    if (newCorrect.col1 === options[index]) newCorrect.col1 = value;
+    if (newCorrect.col2 === options[index]) newCorrect.col2 = value;
+    if (newCorrect.col1 !== correctAnswer.col1 || newCorrect.col2 !== correctAnswer.col2) {
+      saveCorrectAnswer(newCorrect);
     }
   };
 
-  const handleCorrectAnswerChange = (value: string) => {
-    setCorrectAnswerJson(value);
-    try {
-      const parsed = JSON.parse(value);
-      if (typeof parsed === 'object' && !Array.isArray(parsed)) {
-        setCorrectAnswerError('');
-        onChange('answers.correct_answer', parsed);
-      } else {
-        setCorrectAnswerError('Must be an object');
-      }
-    } catch {
-      setCorrectAnswerError('Invalid JSON');
-    }
+  const handleAddOption = () => {
+    onChange('question_data.shared_options', [...options, '']);
+  };
+
+  const handleRemoveOption = (index: number) => {
+    const removed = options[index];
+    const updated = options.filter((_, i) => i !== index);
+    onChange('question_data.shared_options', updated);
+    // Clear correct answer if removed option was selected
+    const newCorrect = { ...correctAnswer };
+    if (newCorrect.col1 === removed) newCorrect.col1 = '';
+    if (newCorrect.col2 === removed) newCorrect.col2 = '';
+    saveCorrectAnswer(newCorrect);
+  };
+
+  const handleCorrectCol1Change = (value: string) => {
+    saveCorrectAnswer({ ...correctAnswer, col1: value });
+  };
+
+  const handleCorrectCol2Change = (value: string) => {
+    saveCorrectAnswer({ ...correctAnswer, col2: value });
   };
 
   return (
@@ -89,7 +94,7 @@ export function TPAQuestionEditor({
             value={questionData.column1_title || ''}
             onChange={(e) => onChange('question_data.column1_title', e.target.value)}
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent"
-            placeholder="e.g., First Value"
+            placeholder="e.g., First Value (supports LaTeX)"
           />
         </div>
         <div>
@@ -101,51 +106,84 @@ export function TPAQuestionEditor({
             value={questionData.column2_title || ''}
             onChange={(e) => onChange('question_data.column2_title', e.target.value)}
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent"
-            placeholder="e.g., Second Value"
+            placeholder="e.g., Second Value (supports LaTeX)"
           />
         </div>
       </div>
 
-      {/* Shared Options (JSON) */}
+      {/* Shared Options */}
       <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-1">
-          Shared Options (JSON array)
+        <label className="block text-sm font-semibold text-gray-700 mb-2">
+          Shared Options
         </label>
-        <textarea
-          value={sharedOptionsJson}
-          onChange={(e) => handleSharedOptionsChange(e.target.value)}
-          className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent min-h-[120px] font-mono text-sm ${
-            sharedOptionsError ? 'border-red-500' : 'border-gray-300'
-          }`}
-          placeholder='["Option 1", "Option 2", "Option 3"]'
-        />
-        {sharedOptionsError && (
-          <p className="mt-1 text-xs text-red-500">{sharedOptionsError}</p>
-        )}
-        <p className="mt-1 text-xs text-gray-500">
-          Format: ["Option 1", "Option 2", ...]
-        </p>
+        <div className="space-y-2">
+          {options.map((option, index) => (
+            <div key={index} className="flex items-center gap-2">
+              <span className="text-sm text-gray-400 w-6 shrink-0 text-right">{index + 1}.</span>
+              <input
+                type="text"
+                value={option}
+                onChange={(e) => handleOptionChange(index, e.target.value)}
+                className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent font-mono text-sm"
+                placeholder={`Option ${index + 1} (supports LaTeX)`}
+              />
+              <button
+                type="button"
+                onClick={() => handleRemoveOption(index)}
+                className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                title="Remove option"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={handleAddOption}
+          className="mt-2 px-3 py-1.5 text-sm border border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-brand-green hover:text-brand-green transition-colors w-full"
+        >
+          + Add option
+        </button>
       </div>
 
-      {/* Correct Answers (JSON) */}
+      {/* Correct Answers */}
       <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-1">
-          Correct Answers (JSON object)
+        <label className="block text-sm font-semibold text-gray-700 mb-2">
+          Correct Answers
         </label>
-        <textarea
-          value={correctAnswerJson}
-          onChange={(e) => handleCorrectAnswerChange(e.target.value)}
-          className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent min-h-[80px] font-mono text-sm ${
-            correctAnswerError ? 'border-red-500' : 'border-gray-300'
-          }`}
-          placeholder='{"col1": "Option 1", "col2": "Option 2"}'
-        />
-        {correctAnswerError && (
-          <p className="mt-1 text-xs text-red-500">{correctAnswerError}</p>
-        )}
-        <p className="mt-1 text-xs text-gray-500">
-          Format: &#123;"col1": "value for column 1", "col2": "value for column 2"&#125;
-        </p>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">
+              {questionData.column1_title || 'Column 1'}
+            </label>
+            <select
+              value={correctAnswer?.col1 || ''}
+              onChange={(e) => handleCorrectCol1Change(e.target.value)}
+              className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent text-sm bg-white"
+            >
+              <option value="">— select correct option —</option>
+              {options.filter(o => o.trim()).map((option, index) => (
+                <option key={index} value={option}>{option}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">
+              {questionData.column2_title || 'Column 2'}
+            </label>
+            <select
+              value={correctAnswer?.col2 || ''}
+              onChange={(e) => handleCorrectCol2Change(e.target.value)}
+              className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent text-sm bg-white"
+            >
+              <option value="">— select correct option —</option>
+              {options.filter(o => o.trim()).map((option, index) => (
+                <option key={index} value={option}>{option}</option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
     </div>
   );

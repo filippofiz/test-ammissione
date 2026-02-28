@@ -62,6 +62,73 @@ export const MathJaxProvider: React.FC<{ children: React.ReactNode }> = ({ child
   );
 };
 
+// Helper to check if a line is part of a markdown table
+const isTableLine = (line: string): boolean => {
+  return line.trim().startsWith('|') && line.trim().endsWith('|');
+};
+
+// Markdown bold/italic segment types
+type MarkdownSegment =
+  | { type: 'bold'; content: string }
+  | { type: 'italic'; content: string }
+  | { type: 'text'; content: string };
+
+// Split text into segments based on **bold**, __bold__, and *italic* markers.
+// Segments preserve their inner content (including any math) so MathJax can process them.
+const splitMarkdownSegments = (text: string): MarkdownSegment[] => {
+  const segments: MarkdownSegment[] = [];
+  // Matches **bold**, __bold__, or *italic* (in that priority order)
+  const pattern = /(\*\*(.+?)\*\*|__(.+?)__|(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*))/gs;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      segments.push({ type: 'text', content: text.slice(lastIndex, match.index) });
+    }
+    if (match[0].startsWith('**') || match[0].startsWith('__')) {
+      // Bold: inner content is capture group 2 or 3
+      const inner = match[2] ?? match[3];
+      segments.push({ type: 'bold', content: inner });
+    } else {
+      // Italic: inner content is capture group 4
+      segments.push({ type: 'italic', content: match[4] });
+    }
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    segments.push({ type: 'text', content: text.slice(lastIndex) });
+  }
+
+  return segments.length > 0 ? segments : [{ type: 'text', content: text }];
+};
+
+// Render a line or cell with markdown bold/italic support.
+// Bold/italic inner text is rendered as plain HTML (no MathJax wrapper) so it stays inline.
+// Surrounding plain-text segments are passed to MathJax for math rendering.
+const InlineMarkdownRenderer: React.FC<{ content: string; inline?: boolean }> = memo(({ content, inline = true }) => {
+  const segments = splitMarkdownSegments(content);
+  if (segments.length === 1 && segments[0].type === 'text') {
+    return <MathJax dynamic inline={inline}>{content}</MathJax>;
+  }
+  // When there are mixed segments (bold/italic + text/math), force inline=true on all
+  // MathJax segments so they flow inline alongside the bold/italic HTML elements.
+  return (
+    <span style={{ display: 'inline' }}>
+      {segments.map((seg, i) => {
+        if (seg.type === 'bold') {
+          return <strong key={i} style={{ display: 'inline', fontWeight: 'bold' }}><MathJax dynamic inline>{seg.content}</MathJax></strong>;
+        } else if (seg.type === 'italic') {
+          return <em key={i} style={{ display: 'inline', fontStyle: 'italic' }}><MathJax dynamic inline>{seg.content}</MathJax></em>;
+        }
+        return <MathJax key={i} dynamic inline>{seg.content}</MathJax>;
+      })}
+    </span>
+  );
+});
+InlineMarkdownRenderer.displayName = 'InlineMarkdownRenderer';
+
 // Helper to parse and render markdown-style tables
 const parseMarkdownTable = (tableLines: string[]): React.ReactNode => {
   // Filter out separator line (contains only |, -, and spaces)
@@ -89,7 +156,7 @@ const parseMarkdownTable = (tableLines: string[]): React.ReactNode => {
         <tr className="bg-gray-100">
           {headerCells.map((cell, i) => (
             <th key={i} className="border border-gray-300 px-4 py-2 text-left font-semibold">
-              <MathJax dynamic inline>{cell}</MathJax>
+              <InlineMarkdownRenderer content={cell} />
             </th>
           ))}
         </tr>
@@ -99,7 +166,7 @@ const parseMarkdownTable = (tableLines: string[]): React.ReactNode => {
           <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
             {row.map((cell, cellIndex) => (
               <td key={cellIndex} className="border border-gray-300 px-4 py-2">
-                <MathJax dynamic inline>{cell}</MathJax>
+                <InlineMarkdownRenderer content={cell} />
               </td>
             ))}
           </tr>
@@ -107,11 +174,6 @@ const parseMarkdownTable = (tableLines: string[]): React.ReactNode => {
       </tbody>
     </table>
   );
-};
-
-// Helper to check if a line is part of a markdown table
-const isTableLine = (line: string): boolean => {
-  return line.trim().startsWith('|') && line.trim().endsWith('|');
 };
 
 // Placeholder for extracted display math blocks
@@ -198,13 +260,19 @@ export const MathJaxRenderer: React.FC<MathJaxRendererProps> = memo(({ children,
     // Preprocess: Normalize escaped dollars for MathJax
     // When stored in DB as JSON, \$ becomes \\$ - normalize to \$ for MathJax's processEscapes
     // Also handle malformed \9.00 or \\9.00 patterns (should be \$9.00 for MathJax)
+    // Also collapse newlines around markdown bold/italic markers so they render inline.
+    // e.g. "In the\n**graduating**\nclass" → "In the **graduating** class"
     const processedContent = children
       .replace(/\\\\\$/g, '\\$')  // \\$ → \$ (normalize double backslash from JSON)
-      .replace(/\\\\([\d,]+(?:\.\d+)?)/g, '\\$$$1'); // \\9.00 → \$9.00
+      .replace(/\\\\([\d,]+(?:\.\d+)?)/g, '\\$$$1') // \\9.00 → \$9.00
+      // Collapse newlines that isolate a markdown marker onto its own line → render inline
+      // e.g. "In the\n**graduating**\nclass" → "In the **graduating** class"
+      .replace(/\n(\*\*[^*\n]+\*\*|\*[^*\n]+\*|__[^_\n]+__)\n/g, ' $1 ')
+      .replace(/\n(\*\*[^*\n]+\*\*|\*[^*\n]+\*|__[^_\n]+__)$/gm, ' $1'); // handle end-of-string case
 
     const lines = processedContent.split('\n');
     if (lines.length === 1) {
-      return <MemoizedMathJax content={processedContent} />;
+      return <InlineMarkdownRenderer content={processedContent} inline={false} />;
     }
 
     // STEP 1: Extract display math blocks before line splitting
@@ -253,7 +321,7 @@ export const MathJaxRenderer: React.FC<MathJaxRendererProps> = memo(({ children,
         elements.push(
           <React.Fragment key={elements.length}>
             {elements.length > 0 && <br />}
-            <MemoizedMathJax content={restoredLine} inline />
+            <InlineMarkdownRenderer content={restoredLine} />
           </React.Fragment>
         );
         i++;

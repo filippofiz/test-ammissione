@@ -122,9 +122,11 @@ export function DataInsightsPreview({
     let correctCol2: string | undefined;
 
     if (showCorrectAnswer && correctAnswer) {
-      if (typeof correctAnswer === 'object' && 'col1' in correctAnswer) {
-        correctCol1 = correctAnswer.col1;
-        correctCol2 = correctAnswer.col2;
+      // DB stores correct_answer as [{col1, col2}] — unwrap the array
+      const ca = Array.isArray(correctAnswer) ? correctAnswer[0] : correctAnswer;
+      if (ca && typeof ca === 'object' && 'col1' in ca) {
+        correctCol1 = ca.col1;
+        correctCol2 = ca.col2;
       }
     }
 
