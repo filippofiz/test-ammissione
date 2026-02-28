@@ -79,10 +79,10 @@ export function TPAQuestion({
             Options
           </div>
           <div className="px-4 py-3 font-semibold text-gray-700 text-center border-r-2 border-gray-200">
-            {normalizeOptionText(column1Title)}
+            <MathJaxRenderer>{normalizeOptionText(column1Title)}</MathJaxRenderer>
           </div>
           <div className="px-4 py-3 font-semibold text-gray-700 text-center">
-            {normalizeOptionText(column2Title)}
+            <MathJaxRenderer>{normalizeOptionText(column2Title)}</MathJaxRenderer>
           </div>
         </div>
 

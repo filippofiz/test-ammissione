@@ -9,6 +9,34 @@ interface LaTeXProps {
 // Placeholder for escaped dollar signs - used during parsing
 const ESCAPED_DOLLAR_PLACEHOLDER = '\u0000ESCAPED_DOLLAR\u0000';
 
+// Render a plain-text string with **bold** and *italic* markdown formatting applied.
+// Returns an array of React nodes (strings, <strong>, <em>).
+const renderWithMarkdown = (text: string): React.ReactNode[] => {
+  const nodes: React.ReactNode[] = [];
+  const pattern = /(\*\*(.+?)\*\*|__(.+?)__|(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*))/gs;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      nodes.push(text.slice(lastIndex, match.index));
+    }
+    if (match[0].startsWith('**') || match[0].startsWith('__')) {
+      const inner = match[2] ?? match[3];
+      nodes.push(<strong key={nodes.length}>{inner}</strong>);
+    } else {
+      nodes.push(<em key={nodes.length}>{match[4]}</em>);
+    }
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    nodes.push(text.slice(lastIndex));
+  }
+
+  return nodes.length > 0 ? nodes : [text];
+};
+
 // Helper to restore escaped dollar placeholders back to $
 const restoreEscapedDollars = (text: string): string => {
   return text.replace(new RegExp(ESCAPED_DOLLAR_PLACEHOLDER, 'g'), '$');
@@ -48,7 +76,7 @@ const parseMarkdownTable = (tableLines: string[], startKey: number): { node: Rea
         <tr className="bg-gray-100">
           {headerCells.map((cell, i) => (
             <th key={i} className="border border-gray-300 px-4 py-2 text-left font-semibold">
-              {restoreEscapedDollars(cell)}
+              {renderWithMarkdown(restoreEscapedDollars(cell))}
             </th>
           ))}
         </tr>
@@ -58,7 +86,7 @@ const parseMarkdownTable = (tableLines: string[], startKey: number): { node: Rea
           <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
             {row.map((cell, cellIndex) => (
               <td key={cellIndex} className="border border-gray-300 px-4 py-2">
-                {restoreEscapedDollars(cell)}
+                {renderWithMarkdown(restoreEscapedDollars(cell))}
               </td>
             ))}
           </tr>
@@ -101,9 +129,9 @@ const renderTextWithLineBreaks = (text: string, startKey: number): { nodes: Reac
         nodes.push(<br key={`br-${key++}`} />);
       }
       if (line) {
-        // Restore any escaped dollar placeholders back to $
+        // Restore any escaped dollar placeholders back to $, then apply markdown formatting
         const restoredLine = restoreEscapedDollars(line);
-        nodes.push(<React.Fragment key={key++}>{restoredLine}</React.Fragment>);
+        nodes.push(<React.Fragment key={key++}>{renderWithMarkdown(restoredLine)}</React.Fragment>);
       }
       i++;
     }
