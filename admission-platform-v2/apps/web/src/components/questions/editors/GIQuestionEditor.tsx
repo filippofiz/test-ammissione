@@ -3,6 +3,8 @@
  * Simple text-based editor for GI question fields
  */
 
+import { LaTeXEditor } from './LaTeXEditor';
+
 interface GIQuestionEditorProps {
   questionData: {
     context_text?: string;
@@ -53,6 +55,7 @@ export function GIQuestionEditor({
           onChange={(e) => onChange('question_data.image_url', e.target.value)}
           className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent"
           placeholder="https://example.com/chart.png"
+          spellCheck={false}
         />
       </div>
 
@@ -61,11 +64,11 @@ export function GIQuestionEditor({
         <label className="block text-sm font-semibold text-gray-700 mb-1">
           Context Text
         </label>
-        <textarea
+        <LaTeXEditor
           value={questionData.context_text || ''}
-          onChange={(e) => onChange('question_data.context_text', e.target.value)}
-          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent min-h-[100px] font-mono text-sm"
+          onChange={(value) => onChange('question_data.context_text', value)}
           placeholder="Enter context text describing the graph (supports LaTeX)"
+          minHeight="100px"
         />
       </div>
 
@@ -74,11 +77,11 @@ export function GIQuestionEditor({
         <label className="block text-sm font-semibold text-gray-700 mb-1">
           Statement Text
         </label>
-        <textarea
+        <LaTeXEditor
           value={questionData.statement_text || ''}
-          onChange={(e) => onChange('question_data.statement_text', e.target.value)}
-          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent min-h-[100px] font-mono text-sm"
+          onChange={(value) => onChange('question_data.statement_text', value)}
           placeholder="Use [BLANK1] and [BLANK2] for dropdown placeholders"
+          minHeight="100px"
         />
         <p className="mt-1 text-xs text-gray-500">
           Use [BLANK1] and [BLANK2] to mark where dropdown options appear
@@ -99,6 +102,7 @@ export function GIQuestionEditor({
           }}
           className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent"
           placeholder="Option A, Option B, Option C"
+          spellCheck={false}
         />
       </div>
 
@@ -113,6 +117,7 @@ export function GIQuestionEditor({
           onChange={(e) => handleCorrectAnswerChange('blank1', e.target.value)}
           className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent"
           placeholder="Enter the correct value for blank 1"
+          spellCheck={false}
         />
       </div>
 
@@ -130,6 +135,7 @@ export function GIQuestionEditor({
           }}
           className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent"
           placeholder="Option X, Option Y, Option Z"
+          spellCheck={false}
         />
       </div>
 
@@ -144,6 +150,7 @@ export function GIQuestionEditor({
           onChange={(e) => handleCorrectAnswerChange('blank2', e.target.value)}
           className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent"
           placeholder="Enter the correct value for blank 2"
+          spellCheck={false}
         />
       </div>
     </div>
