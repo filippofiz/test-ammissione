@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { MathJaxRenderer } from '../MathJaxRenderer';
 import { normalizeWhitespace, normalizeOptionText } from '../../lib/textUtils';
 import { ExplanationDisplay } from './ExplanationDisplay';
+import { QuestionImage } from '../test/QuestionImage';
 
 interface MultipleChoiceQuestionProps {
   questionText: string;
@@ -148,7 +149,7 @@ export function MultipleChoiceQuestion({
               </div>
               <div className="flex-1">
                 {imageOptions?.[key] ? (
-                  <img
+                  <QuestionImage
                     src={imageOptions[key]}
                     alt={`Option ${key.toUpperCase()}`}
                     className="max-w-full h-auto rounded"
@@ -217,10 +218,9 @@ export function MultipleChoiceQuestion({
             {/* Image if present */}
             {imageUrl && (
               <div className="mt-4">
-                <img
+                <QuestionImage
                   src={imageUrl}
                   alt="Question illustration"
-                  className="max-w-full h-auto rounded-lg"
                 />
               </div>
             )}
@@ -250,10 +250,9 @@ export function MultipleChoiceQuestion({
         {/* Image if present */}
         {imageUrl && (
           <div className="mt-4">
-            <img
+            <QuestionImage
               src={imageUrl}
               alt="Question illustration"
-              className="max-w-full h-auto rounded-lg"
             />
           </div>
         )}

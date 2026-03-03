@@ -16,6 +16,7 @@ import { GIQuestion } from '../questions/GIQuestion';
 import { TAQuestion } from '../questions/TAQuestion';
 import { TPAQuestion } from '../questions/TPAQuestion';
 import { MultipleChoiceQuestion } from '../questions/MultipleChoiceQuestion';
+import { QuestionImage } from './QuestionImage';
 
 /**
  * Question data structure from database
@@ -436,11 +437,7 @@ export function QuestionRenderer({
           <div className="flex-1 min-w-[42%] space-y-4">
             {imageUrl && (
               <div className="mb-4">
-                <img
-                  src={imageUrl}
-                  alt="Question image"
-                  className="max-w-full h-auto rounded-lg border border-gray-200"
-                />
+                <QuestionImage src={imageUrl} alt="Question image" />
               </div>
             )}
             {questionText && (
@@ -467,11 +464,7 @@ export function QuestionRenderer({
       <div className="space-y-4">
         {imageUrl && (
           <div className="mb-4">
-            <img
-              src={imageUrl}
-              alt="Question image"
-              className="max-w-full h-auto rounded-lg border border-gray-200"
-            />
+            <QuestionImage src={imageUrl} alt="Question image" />
           </div>
         )}
         {questionText && (

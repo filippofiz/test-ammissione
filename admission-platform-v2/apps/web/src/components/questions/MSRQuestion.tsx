@@ -9,7 +9,7 @@ import { faCheckCircle, faTimesCircle } from '@fortawesome/free-solid-svg-icons'
 import { MathJaxRenderer } from '../MathJaxRenderer';
 import { normalizeWhitespace, normalizeOptionText } from '../../lib/textUtils';
 import { ExplanationDisplay } from './ExplanationDisplay';
-import { ImageWithFallback } from '../ImageWithFallback';
+import { QuestionImage } from '../test/QuestionImage';
 
 interface MSRSource {
   content?: string;
@@ -168,7 +168,7 @@ export function MSRQuestion({ sources, questions, selectedAnswers, onAnswerChang
                         </div>
                         <div className="flex-1">
                           {question.image_options?.[key] ? (
-                            <ImageWithFallback
+                            <QuestionImage
                               src={question.image_options[key]}
                               alt={`Option ${key.toUpperCase()}`}
                               className="max-w-full h-auto rounded"
