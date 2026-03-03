@@ -168,22 +168,14 @@ export function MultiQuestionView({
                     question={{
                       id: question.id,
                       question_type: question.question_type,
-                      question_data: {
-                        ...question.question_data,
-                        // Hide question text and passage in renderer since we show them separately
-                        question_text: undefined,
-                        question_text_eng: undefined,
-                        passage_text: undefined,
-                        passage_text_eng: undefined,
-                        passage_title: undefined,
-                        passage_title_eng: undefined,
-                      },
+                      question_data: question.question_data,
                       answers: question.answers,
                     }}
                     currentAnswer={toUnifiedAnswer(answers[question.id])}
                     onAnswerChange={(answer) => onAnswerChange(question.id, answer)}
                     language={rendererLanguage}
                     showResults={(isGuidedMode && showCorrectAnswers) || isPreviewMode}
+                    hideQuestionText={true}
                   />
                 ) : (
                   <div className="text-gray-500 italic">

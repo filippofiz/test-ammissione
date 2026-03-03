@@ -140,6 +140,8 @@ export interface QuestionRendererProps {
   readOnly?: boolean;
   /** Explanation text to show (for results view) */
   explanation?: string;
+  /** Hide question text (for multi-question view where text is shown separately) */
+  hideQuestionText?: boolean;
 }
 
 /**
@@ -219,6 +221,7 @@ export function QuestionRenderer({
   showResults = false,
   readOnly = false,
   explanation,
+  hideQuestionText = false,
 }: QuestionRendererProps) {
   const { t } = useTranslation();
 
@@ -406,6 +409,7 @@ export function QuestionRenderer({
         correctAnswer={correctAnswer}
         readOnly={readOnly}
         explanation={explanation}
+        hideQuestionText={hideQuestionText}
       />
     );
   }

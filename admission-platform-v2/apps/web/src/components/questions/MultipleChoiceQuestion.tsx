@@ -28,6 +28,7 @@ interface MultipleChoiceQuestionProps {
   correctAnswer?: string; // For results view - shows correct answer
   showResults?: boolean; // For results view - displays answer feedback
   explanation?: string; // For results view - shows explanation after answer
+  hideQuestionText?: boolean; // Hide question text box (for multi-question view)
 }
 
 export function MultipleChoiceQuestion({
@@ -44,6 +45,7 @@ export function MultipleChoiceQuestion({
   correctAnswer,
   showResults = false,
   explanation,
+  hideQuestionText = false,
 }: MultipleChoiceQuestionProps) {
   const { t } = useTranslation();
 
@@ -241,22 +243,34 @@ export function MultipleChoiceQuestion({
   // Default layout when there's no passage text
   return (
     <div className="space-y-6">
-      {/* Question Text */}
-      <div className="border-2 border-gray-200 rounded-xl p-6 bg-white overflow-x-auto">
-        <div className="text-gray-800 text-lg whitespace-pre-wrap mb-4">
-          <MathJaxRenderer>{normalizeWhitespace(questionText)}</MathJaxRenderer>
-        </div>
-
-        {/* Image if present */}
-        {imageUrl && (
-          <div className="mt-4">
-            <QuestionImage
-              src={imageUrl}
-              alt="Question illustration"
-            />
+      {/* Question Text - hidden when hideQuestionText is true */}
+      {!hideQuestionText && (
+        <div className="border-2 border-gray-200 rounded-xl p-6 bg-white overflow-x-auto">
+          <div className="text-gray-800 text-lg whitespace-pre-wrap mb-4">
+            <MathJaxRenderer>{normalizeWhitespace(questionText)}</MathJaxRenderer>
           </div>
-        )}
-      </div>
+
+          {/* Image if present */}
+          {imageUrl && (
+            <div className="mt-4">
+              <QuestionImage
+                src={imageUrl}
+                alt="Question illustration"
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Image shown separately if question text is hidden */}
+      {hideQuestionText && imageUrl && (
+        <div className="mb-4">
+          <QuestionImage
+            src={imageUrl}
+            alt="Question illustration"
+          />
+        </div>
+      )}
 
       {/* Answer Options */}
       {renderOptions()}
