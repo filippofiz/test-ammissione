@@ -414,6 +414,7 @@ export function QuestionRenderer({
     const questionText = getLocalizedText(questionData, 'question_text', language);
     const passageText = getLocalizedText(questionData, 'passage_text', language);
     const passageTitle = getLocalizedText(questionData, 'passage_title', language);
+    const imageUrl = getLocalizedImage(questionData, language);
 
     if (passageText) {
       // Split-panel layout — passage sticks on the left, question drives the page scroll
@@ -433,6 +434,15 @@ export function QuestionRenderer({
 
           {/* Question and answer area — right panel, natural document flow */}
           <div className="flex-1 min-w-[42%] space-y-4">
+            {imageUrl && (
+              <div className="mb-4">
+                <img
+                  src={imageUrl}
+                  alt="Question image"
+                  className="max-w-full h-auto rounded-lg border border-gray-200"
+                />
+              </div>
+            )}
             {questionText && (
               <div className="border-2 border-gray-200 rounded-xl p-6 bg-white">
                 <div className="text-lg text-gray-800">
@@ -455,6 +465,15 @@ export function QuestionRenderer({
     // Layout without passage text
     return (
       <div className="space-y-4">
+        {imageUrl && (
+          <div className="mb-4">
+            <img
+              src={imageUrl}
+              alt="Question image"
+              className="max-w-full h-auto rounded-lg border border-gray-200"
+            />
+          </div>
+        )}
         {questionText && (
           <div className="text-lg text-gray-800 mb-4">
             <MathJaxRenderer>{questionText}</MathJaxRenderer>
