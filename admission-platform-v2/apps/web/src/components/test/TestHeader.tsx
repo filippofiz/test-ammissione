@@ -202,7 +202,7 @@ export function TestHeader({
       </div>
       <div className="flex items-center gap-4">
         {/* Section indicator */}
-        {expectedTotalSections > 1 && (
+        {expectedTotalSections > 0 && (
           <div className="text-sm text-gray-600 font-medium">
             {t('takeTest.section')} {currentSectionIndex + 1} {t('takeTest.of')} {expectedTotalSections}
           </div>
