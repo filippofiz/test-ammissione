@@ -65,8 +65,8 @@ export function SectionProgressList({
     };
   });
 
-  // Don't show if only one section or no sections
-  if (sections.length <= 1) {
+  // Don't show if no sections
+  if (sections.length === 0) {
     return null;
   }
 
