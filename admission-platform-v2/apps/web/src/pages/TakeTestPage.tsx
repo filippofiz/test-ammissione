@@ -27,7 +27,6 @@ import { TestStartScreen } from '../components/test/TestStartScreen';
 import { SectionSelectionScreen } from '../components/test/SectionSelectionScreen';
 import { TestHeader } from '../components/test/TestHeader';
 import { NavigationControls } from '../components/test/NavigationControls';
-import { QuestionNavigationList } from '../components/test/QuestionNavigationList';
 import { TestLockedScreen } from '../components/test/TestLockedScreen';
 import { TestAnnulledScreen } from '../components/test/TestAnnulledScreen';
 import { ExitWarningScreen } from '../components/test/ExitWarningScreen';
@@ -4272,23 +4271,7 @@ export default function TakeTestPage() {
         </div>
       </div>
 
-      {/* Question Navigation List */}
-      <div className="max-w-4xl mx-auto px-4 mb-4">
-        <QuestionNavigationList
-          totalQuestions={sectionQuestions.length}
-          currentQuestionIndex={currentQuestionIndex}
-          answeredQuestions={new Set(
-            sectionQuestions
-              .map((q, idx) => ({ idx, answered: !!(answers[q.id]?.answer || answers[q.id]?.msrAnswers?.length || answers[q.id]?.blank1 || answers[q.id]?.taAnswers || answers[q.id]?.column1) }))
-              .filter(x => x.answered)
-              .map(x => x.idx)
-          )}
-          canGoBack={canGoBack()}
-          onNavigate={(idx) => setCurrentQuestionIndex(idx)}
-        />
-      </div>
-
-      {/* Navigation Controls */}
+      {/* Navigation Controls with Question Numbers */}
       <NavigationControls
         currentSectionIndex={currentSectionIndex}
         currentQuestionIndex={currentQuestionIndex}
@@ -4303,6 +4286,13 @@ export default function TakeTestPage() {
         adaptivityMode={config?.adaptivity_mode}
         timeRemaining={timeRemaining}
         canGoBack={canGoBack()}
+        answeredQuestions={new Set(
+          sectionQuestions
+            .map((q, idx) => ({ idx, answered: !!(answers[q.id]?.answer || answers[q.id]?.msrAnswers?.length || answers[q.id]?.blank1 || answers[q.id]?.taAnswers || answers[q.id]?.column1) }))
+            .filter(x => x.answered)
+            .map(x => x.idx)
+        )}
+        onNavigateToQuestion={(idx) => setCurrentQuestionIndex(idx)}
         onPrevious={goToPreviousQuestion}
         onNext={goToNextQuestion}
         onReturnToReview={returnToReviewScreen}
