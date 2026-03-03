@@ -2,6 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
+/* CaskaydiaCove Nerd Font — used for question content editor fields */
+@font-face {
+  font-family: 'CaskaydiaCove Nerd Font';
+  src: url('/fonts/CaskaydiaCoveNerdFont-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'CaskaydiaCove Nerd Font';
+  src: url('/fonts/CaskaydiaCoveNerdFont-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'CaskaydiaCove Nerd Font';
+  src: url('/fonts/CaskaydiaCoveNerdFont-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'CaskaydiaCove Nerd Font';
+  src: url('/fonts/CaskaydiaCoveNerdFont-BoldItalic.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
 @layer base {
   * {
     @apply box-border;
