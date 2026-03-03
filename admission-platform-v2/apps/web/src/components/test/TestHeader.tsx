@@ -200,13 +200,7 @@ export function TestHeader({
         */}
         </div>
       </div>
-      <div className="flex items-center gap-4">
-        {/* Section indicator */}
-        {expectedTotalSections > 0 && (
-          <div className="text-sm text-gray-600 font-medium">
-            {t('takeTest.section')} {currentSectionIndex + 1} {t('takeTest.of')} {expectedTotalSections}
-          </div>
-        )}
+      <div className="flex flex-col items-end gap-1">
         {/* Timer */}
         {timeRemaining !== null && (
           <div className="flex items-center gap-2 text-lg">
@@ -214,6 +208,12 @@ export function TestHeader({
             <span className={`font-mono font-bold ${timeRemaining < 300 ? 'text-red-600' : 'text-gray-800'}`}>
               {formatTime(timeRemaining)}
             </span>
+          </div>
+        )}
+        {/* Section indicator below timer */}
+        {expectedTotalSections > 0 && (
+          <div className="text-sm text-gray-600 font-medium">
+            {t('takeTest.section')} {currentSectionIndex + 1} {t('takeTest.of')} {expectedTotalSections}
           </div>
         )}
       </div>
