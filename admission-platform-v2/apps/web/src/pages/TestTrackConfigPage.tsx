@@ -148,6 +148,9 @@ export default function TestTrackConfigPage() {
   // Track editing state for durations (reserved for future use)
   const [, ] = useState<string>('');
 
+  // Store saved section order from config to prevent loadSections() from overwriting it
+  const savedSectionOrderRef = React.useRef<string[] | null>(null);
+
   // Track section duration allocation mode
   const [sectionDurationMode, setSectionDurationMode] = useState<'proportional' | 'specific'>('proportional');
 
@@ -412,34 +415,50 @@ export default function TestTrackConfigPage() {
         questionsData?.map(q => useMacroSections ? q.macro_section : q.section).filter(Boolean) || []
       ));
 
-      // Fetch the global section order from 2V_section_order table
-      const { data: sectionOrderData, error: sectionOrderError } = await supabase
-        .from('2V_section_order')
-        .select('section_order')
-        .eq('test_type', testType || '')
-        .single();
-
-      if (sectionOrderError && sectionOrderError.code !== 'PGRST116') {
-        // Log error but continue (PGRST116 = no rows found, which is acceptable)
-        console.warn('Error fetching section order:', sectionOrderError);
-      }
-
-      // Order the sections according to 2V_section_order if available
-      if (sectionOrderData && sectionOrderData.section_order && Array.isArray(sectionOrderData.section_order) && sectionOrderData.section_order.length > 0) {
-        const globalOrder = (sectionOrderData.section_order as (string | null)[]).filter((s): s is string => s !== null);
+      // If we have a saved section order from the config, use it instead of fetching from global table
+      if (savedSectionOrderRef.current && savedSectionOrderRef.current.length > 0) {
+        const savedOrder = savedSectionOrderRef.current;
         const uniqueSectionsSet = new Set(uniqueSections as string[]);
 
-        // Filter global order to only include sections that exist in this track
-        const orderedSections = globalOrder.filter((section): section is string => uniqueSectionsSet.has(section));
+        // Filter saved order to only include sections that still exist
+        const orderedSections = savedOrder.filter((section): section is string => uniqueSectionsSet.has(section));
 
-        // Add any sections that exist in the track but not in global order (append at end)
+        // Add any new sections that aren't in the saved order (append at end)
         const sectionsInOrder = new Set(orderedSections);
         const missingSections = (uniqueSections as string[]).filter(section => !sectionsInOrder.has(section));
 
         setSections([...orderedSections, ...missingSections.sort()]);
+        console.log('📝 Using saved section order from config:', [...orderedSections, ...missingSections.sort()]);
       } else {
-        // No global order found, use alphabetical sort
-        setSections((uniqueSections as string[]).sort());
+        // No saved order, fetch the global section order from 2V_section_order table
+        const { data: sectionOrderData, error: sectionOrderError } = await supabase
+          .from('2V_section_order')
+          .select('section_order')
+          .eq('test_type', testType || '')
+          .single();
+
+        if (sectionOrderError && sectionOrderError.code !== 'PGRST116') {
+          // Log error but continue (PGRST116 = no rows found, which is acceptable)
+          console.warn('Error fetching section order:', sectionOrderError);
+        }
+
+        // Order the sections according to 2V_section_order if available
+        if (sectionOrderData && sectionOrderData.section_order && Array.isArray(sectionOrderData.section_order) && sectionOrderData.section_order.length > 0) {
+          const globalOrder = (sectionOrderData.section_order as (string | null)[]).filter((s): s is string => s !== null);
+          const uniqueSectionsSet = new Set(uniqueSections as string[]);
+
+          // Filter global order to only include sections that exist in this track
+          const orderedSections = globalOrder.filter((section): section is string => uniqueSectionsSet.has(section));
+
+          // Add any sections that exist in the track but not in global order (append at end)
+          const sectionsInOrder = new Set(orderedSections);
+          const missingSections = (uniqueSections as string[]).filter(section => !sectionsInOrder.has(section));
+
+          setSections([...orderedSections, ...missingSections.sort()]);
+        } else {
+          // No global order found, use alphabetical sort
+          setSections((uniqueSections as string[]).sort());
+        }
       }
 
       // Get tests for this test type and exercise type for time information
@@ -550,6 +569,8 @@ export default function TestTrackConfigPage() {
     newSections.splice(index, 0, draggedItem);
 
     setSections(newSections);
+    // Update the ref so loadSections() uses the new order
+    savedSectionOrderRef.current = newSections;
     setDraggedIndex(index);
   }
 
@@ -624,6 +645,8 @@ export default function TestTrackConfigPage() {
   async function loadConfig() {
     setLoading(true);
     setError(null);
+    // Clear saved section order ref to prevent stale data when switching tracks
+    savedSectionOrderRef.current = null;
 
     try {
       const { data, error } = await supabase
@@ -688,8 +711,14 @@ export default function TestTrackConfigPage() {
           console.log('📝 Auto-detected: Multi-section test (section_order_mode =', data.section_order_mode + ')');
         }
 
-        // Section order will be set by loadSections() which runs after useMacroSections is set
-        // loadSections() will use the saved section_order when saving, but load from DB when changing modes
+        // Load saved section order if available (for mandatory mode)
+        if (data.section_order && Array.isArray(data.section_order) && data.section_order.length > 0) {
+          savedSectionOrderRef.current = data.section_order as string[];
+          setSections(data.section_order as string[]);
+          console.log('📝 Loaded saved section order from config:', data.section_order);
+        } else {
+          savedSectionOrderRef.current = null;
+        }
 
         // Load time configuration
         if (data.total_time_minutes) {
