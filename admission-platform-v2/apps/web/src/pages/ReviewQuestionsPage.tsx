@@ -152,6 +152,8 @@ export default function ReviewQuestionsPage() {
 
   // Local editing state - holds a copy of the question being edited to avoid re-rendering entire list on each keystroke
   const [localEditingQuestion, setLocalEditingQuestion] = useState<Question | null>(null);
+  // MSR source sync feedback: [questionId, message]
+  const [syncInfo, setSyncInfo] = useState<{ id: string; msg: string } | null>(null);
 
   // Language toggle
   const [viewLanguage, setViewLanguage] = useState<'it' | 'en'>('it');
@@ -759,12 +761,26 @@ export default function ReviewQuestionsPage() {
     });
   };
 
+  // Returns a stable string key for an MSR sources array based on tab_name + content only.
+  // Used to detect sibling questions that share identical sources and should be kept in sync.
+  function sourcesMatchKey(sources: Array<{ tab_name?: string; content?: string }>): string {
+    return (sources ?? [])
+      .map(s => `${normalizeWhitespace(s.tab_name ?? '')}|||${normalizeWhitespace(s.content ?? '')}`)
+      .join(':::');
+  }
+
   const handleSaveQuestion = async (questionId: string) => {
     // Use local editing state if available, otherwise fall back to main state
     const question = localEditingQuestion?.id === questionId
       ? localEditingQuestion
       : questions.find(q => q.id === questionId);
     if (!question) return;
+
+    // Capture pre-edit sources for MSR sibling detection (must read from stable questions state)
+    const originalQuestion = questions.find(q => q.id === questionId);
+    const isMSR = question.question_data?.di_type === 'MSR';
+    const originalSources = (originalQuestion?.question_data?.sources ?? []) as Array<{ tab_name?: string; content?: string; image_url?: string | null; content_type?: string }>;
+    const newSources = (question.question_data?.sources ?? []) as typeof originalSources;
 
     setSavingQuestion(true);
     try {
@@ -795,6 +811,65 @@ export default function ReviewQuestionsPage() {
       setLocalEditingQuestion(null);
       setEditingQuestionId(null);
       console.log('Question saved successfully');
+
+      // ── MSR source propagation (non-fatal) ───────────────────────────────
+      // When MSR sources changed, find all other MSR questions whose sources
+      // matched the pre-edit originals and push the new sources to them.
+      if (isMSR && originalSources.length > 0 &&
+          sourcesMatchKey(originalSources) !== sourcesMatchKey(newSources)) {
+        try {
+          const originalKey = sourcesMatchKey(originalSources);
+
+          const { data: allMSR, error: fetchError } = await supabase
+            .from('2V_questions')
+            .select('id, test_id, question_data')
+            .eq('question_type', 'data_insights')
+            .filter('question_data->>di_type', 'eq', 'MSR');
+
+          if (fetchError) throw fetchError;
+
+          const siblings = (allMSR ?? []).filter(q =>
+            q.id !== questionId &&
+            sourcesMatchKey(q.question_data?.sources ?? []) === originalKey
+          );
+
+          if (siblings.length > 0) {
+            const results = await Promise.all(
+              siblings.map(s =>
+                supabase
+                  .from('2V_questions')
+                  .update({ question_data: { ...s.question_data, sources: newSources } })
+                  .eq('id', s.id)
+              )
+            );
+
+            const ok = results.filter(r => !r.error).length;
+            const fail = results.filter(r => r.error).length;
+
+            // Update local state for siblings visible in the current test view
+            const syncedIds = new Set(
+              siblings.filter(s => s.test_id === selectedTest?.id).map(s => s.id)
+            );
+            if (syncedIds.size > 0) {
+              setQuestions(prev => prev.map(q =>
+                syncedIds.has(q.id)
+                  ? { ...q, question_data: { ...q.question_data, sources: newSources } }
+                  : q
+              ));
+            }
+
+            const msg = fail > 0
+              ? `Sources synced to ${ok} question(s). ${fail} failed.`
+              : `Sources synced to ${ok} other question(s).`;
+            setSyncInfo({ id: questionId, msg });
+            setTimeout(() => setSyncInfo(null), 5000);
+          }
+        } catch (syncErr) {
+          console.warn('MSR source sync failed (non-fatal):', syncErr);
+          setSyncInfo({ id: questionId, msg: 'Source sync warning — primary save succeeded.' });
+          setTimeout(() => setSyncInfo(null), 5000);
+        }
+      }
     } catch (err) {
       console.error('Error saving question:', err);
       alert('Failed to save question');
@@ -2917,6 +2992,13 @@ export default function ReviewQuestionsPage() {
                                 </button>
                               )}
                             </div>
+
+                          {/* MSR source sync feedback — shown briefly after save */}
+                          {syncInfo?.id === question.id && (
+                            <div className="mt-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700">
+                              {syncInfo.msg}
+                            </div>
+                          )}
 
                           {/* Question Content - Different rendering for Data Insights vs regular questions */}
                           <div className="bg-blue-50 p-4 rounded-lg mb-3 border border-blue-200 overflow-x-auto">
