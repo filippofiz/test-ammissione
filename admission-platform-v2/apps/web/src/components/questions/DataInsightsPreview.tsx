@@ -26,13 +26,16 @@ export function DataInsightsPreview({
 
   // DS - Data Sufficiency
   if (diType === 'DS') {
+    // DB stores correct_answer as ["C"] (array of 1 string) — unwrap it
+    const dsCorrect = answers?.correct_answer;
+    const dsCorrectStr = Array.isArray(dsCorrect) ? dsCorrect[0] : dsCorrect;
     return (
       <DSQuestion
         problem={questionData?.problem || ''}
         statement1={questionData?.statement1 || ''}
         statement2={questionData?.statement2 || ''}
         selectedAnswer={undefined}
-        correctAnswer={showCorrectAnswer ? answers?.correct_answer : undefined}
+        correctAnswer={showCorrectAnswer ? dsCorrectStr : undefined}
         onAnswerChange={() => {}}
         readOnly={true}
         showResults={showCorrectAnswer}
@@ -50,6 +53,7 @@ export function DataInsightsPreview({
       <MSRQuestion
         sources={sources}
         questions={questions}
+        questionStem={questionData?.question_stem}
         selectedAnswers={[]}
         onAnswerChange={() => {}}
         readOnly={true}
@@ -61,6 +65,9 @@ export function DataInsightsPreview({
 
   // GI - Graphical Interpretation
   if (diType === 'GI') {
+    // DB stores correct_answer as ["val1", "val2"] — index 0 = blank1, index 1 = blank2
+    const giCorrect = answers?.correct_answer;
+    const giCorrectArr = Array.isArray(giCorrect) ? giCorrect : [];
     return (
       <GIQuestion
         chartConfig={questionData?.chart_config}
@@ -74,8 +81,8 @@ export function DataInsightsPreview({
         onBlank1Change={() => {}}
         onBlank2Change={() => {}}
         readOnly={true}
-        correctBlank1={showCorrectAnswer ? answers?.correct_answer : undefined}
-        correctBlank2={showCorrectAnswer ? answers?.correct_answer : undefined}
+        correctBlank1={showCorrectAnswer ? giCorrectArr[0] : undefined}
+        correctBlank2={showCorrectAnswer ? giCorrectArr[1] : undefined}
         showResults={showCorrectAnswer}
       />
     );
@@ -87,7 +94,11 @@ export function DataInsightsPreview({
     // Build correct answers mapping from statements
     const correctAnswers: Record<number, 'true' | 'false'> = {};
     if (showCorrectAnswer && answers?.correct_answer) {
-      Object.entries(answers.correct_answer).forEach(([key, value]) => {
+      // DB stores correct_answer as [{stmt0: "col1", ...}] — unwrap the array
+      const ca = Array.isArray(answers.correct_answer)
+        ? answers.correct_answer[0]
+        : answers.correct_answer;
+      Object.entries(ca || {}).forEach(([key, value]) => {
         const match = key.match(/stmt(\d+)/);
         if (match) {
           const index = parseInt(match[1], 10);
