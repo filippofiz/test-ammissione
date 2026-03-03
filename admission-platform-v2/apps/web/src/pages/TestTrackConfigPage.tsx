@@ -1333,6 +1333,7 @@ export default function TestTrackConfigPage() {
                             </div>
                             <input
                               type="number"
+                              key={`duration-${uniqueDurations[0]}`}
                               defaultValue={uniqueDurations[0] || ''}
                               onBlur={async (e) => {
                                 const value = e.target.value;
@@ -1395,7 +1396,7 @@ export default function TestTrackConfigPage() {
                                     <div className="flex items-center gap-2">
                                       <input
                                         type="number"
-                                        key={test.id}
+                                        key={`${test.id}-${test.default_duration_mins}`}
                                         defaultValue={test.default_duration_mins || ''}
                                         onBlur={async (e) => {
                                           const value = e.target.value;
@@ -1467,7 +1468,7 @@ export default function TestTrackConfigPage() {
                                     <div className="flex items-center gap-2">
                                       <input
                                         type="number"
-                                        key={test.id}
+                                        key={`${test.id}-${test.default_duration_mins}`}
                                         defaultValue={test.default_duration_mins || ''}
                                         onBlur={async (e) => {
                                           const value = e.target.value;
