@@ -27,7 +27,7 @@ import { TestStartScreen } from '../components/test/TestStartScreen';
 import { SectionSelectionScreen } from '../components/test/SectionSelectionScreen';
 import { TestHeader } from '../components/test/TestHeader';
 import { NavigationControls } from '../components/test/NavigationControls';
-import { SectionProgressList } from '../components/test/SectionProgressList';
+import { QuestionNavigationList } from '../components/test/QuestionNavigationList';
 import { TestLockedScreen } from '../components/test/TestLockedScreen';
 import { TestAnnulledScreen } from '../components/test/TestAnnulledScreen';
 import { ExitWarningScreen } from '../components/test/ExitWarningScreen';
@@ -4272,14 +4272,19 @@ export default function TakeTestPage() {
         </div>
       </div>
 
-      {/* Section Progress List */}
+      {/* Question Navigation List */}
       <div className="max-w-4xl mx-auto px-4 mb-4">
-        <SectionProgressList
-          sections={sections}
-          questions={allQuestions}
-          answers={answers}
-          currentSection={currentSection}
-          getSectionField={getSectionField}
+        <QuestionNavigationList
+          totalQuestions={sectionQuestions.length}
+          currentQuestionIndex={currentQuestionIndex}
+          answeredQuestions={new Set(
+            sectionQuestions
+              .map((q, idx) => ({ idx, answered: !!(answers[q.id]?.answer || answers[q.id]?.msrAnswers?.length || answers[q.id]?.blank1 || answers[q.id]?.taAnswers || answers[q.id]?.column1) }))
+              .filter(x => x.answered)
+              .map(x => x.idx)
+          )}
+          canGoBack={canGoBack()}
+          onNavigate={(idx) => setCurrentQuestionIndex(idx)}
         />
       </div>
 
