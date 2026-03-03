@@ -27,6 +27,7 @@ import { TestStartScreen } from '../components/test/TestStartScreen';
 import { SectionSelectionScreen } from '../components/test/SectionSelectionScreen';
 import { TestHeader } from '../components/test/TestHeader';
 import { NavigationControls } from '../components/test/NavigationControls';
+import { MultiQuestionView } from '../components/test/MultiQuestionView';
 import { TestLockedScreen } from '../components/test/TestLockedScreen';
 import { TestAnnulledScreen } from '../components/test/TestAnnulledScreen';
 import { ExitWarningScreen } from '../components/test/ExitWarningScreen';
@@ -95,6 +96,9 @@ interface TestConfig {
 
   // Algorithm reference
   algorithm_id?: string;
+
+  // Display configuration
+  questions_per_page?: number; // Number of questions to show per page (default 1)
 }
 
 interface Question {
@@ -551,6 +555,18 @@ export default function TakeTestPage() {
 
   const currentQuestion = sectionQuestions[currentQuestionIndex];
   const totalQuestionsInSection = sectionQuestions.length;
+
+  // Multi-question page support
+  const questionsPerPage = config?.questions_per_page && config.questions_per_page > 1 ? config.questions_per_page : 1;
+  const isMultiQuestionPage = questionsPerPage > 1;
+  const currentPageIndex = Math.floor(currentQuestionIndex / questionsPerPage);
+  const totalPages = Math.ceil(totalQuestionsInSection / questionsPerPage);
+
+  // Get questions for current page (when multi-question mode)
+  const currentPageStartIndex = currentPageIndex * questionsPerPage;
+  const currentPageQuestions = isMultiQuestionPage
+    ? sectionQuestions.slice(currentPageStartIndex, currentPageStartIndex + questionsPerPage)
+    : [currentQuestion].filter(Boolean);
 
   // Alias for review functions (same as sectionQuestions)
   const currentSectionQuestionsList = sectionQuestions;
@@ -4078,6 +4094,32 @@ export default function TakeTestPage() {
 
       {/* Question Content */}
       <div className={`flex-1 overflow-y-auto ${currentQuestion?.question_data?.passage_text ? 'p-4' : 'p-6'}`}>
+        {/* Multi-Question Page View */}
+        {isMultiQuestionPage ? (
+          <div className="max-w-4xl mx-auto">
+            <MultiQuestionView
+              questions={currentPageQuestions}
+              answers={answers}
+              currentSection={currentSection}
+              testLanguage={testLanguage}
+              bookmarkedQuestions={bookmarkedQuestions}
+              timeRemaining={timeRemaining}
+              allowBookmarks={config?.allow_bookmarks}
+              isGuidedMode={isGuidedMode}
+              showCorrectAnswers={showCorrectAnswers}
+              isPreviewMode={isPreviewMode}
+              onAnswerChange={(questionId, answer) => {
+                setAnswers(prev => ({
+                  ...prev,
+                  [questionId]: { ...prev[questionId], ...answer }
+                }));
+              }}
+              onToggleBookmark={toggleBookmark}
+              toUnifiedAnswer={toUnifiedAnswer}
+              startIndex={currentPageStartIndex}
+            />
+          </div>
+        ) : (
         <div className={`${currentQuestion?.question_data?.passage_text ? 'max-w-7xl' : 'max-w-4xl'} mx-auto bg-white rounded-2xl shadow-lg ${currentQuestion?.question_data?.passage_text ? 'p-6' : 'p-8'}`}>
           {/* Question Text */}
           <div className="mb-8">
@@ -4271,6 +4313,7 @@ export default function TakeTestPage() {
             </button>
           </div>
         </div>
+        )}
       </div>
 
       {/* Navigation Controls with Question Numbers */}
@@ -4295,6 +4338,8 @@ export default function TakeTestPage() {
             .map(x => x.idx)
         )}
         onNavigateToQuestion={(idx) => setCurrentQuestionIndex(idx)}
+        questionsPerPage={questionsPerPage}
+        currentPageIndex={currentPageIndex}
         onPrevious={goToPreviousQuestion}
         onNext={goToNextQuestion}
         onReturnToReview={returnToReviewScreen}
