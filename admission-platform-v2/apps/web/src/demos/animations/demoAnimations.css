@@ -1,0 +1,211 @@
+/* Demo-specific animations — only imported by demo pages */
+
+@keyframes demoFadeInUp {
+  from { opacity: 0; transform: translateY(40px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes demoFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes demoSlideInLeft {
+  from { opacity: 0; transform: translateX(-60px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes demoSlideInRight {
+  from { opacity: 0; transform: translateX(60px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes demoScaleIn {
+  from { opacity: 0; transform: scale(0.5); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes demoBounceIn {
+  0% { opacity: 0; transform: scale(0.3); }
+  50% { opacity: 1; transform: scale(1.1); }
+  70% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+@keyframes demoConfettiDrop {
+  0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+@keyframes demoPulseGlow {
+  0%, 100% { box-shadow: 0 0 5px rgba(0, 166, 102, 0.3); }
+  50% { box-shadow: 0 0 25px rgba(0, 166, 102, 0.8), 0 0 50px rgba(0, 166, 102, 0.4); }
+}
+
+@keyframes demoScanLine {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+@keyframes demoUnlockShake {
+  0%, 100% { transform: rotate(0deg); }
+  10% { transform: rotate(-15deg); }
+  20% { transform: rotate(15deg); }
+  30% { transform: rotate(-12deg); }
+  40% { transform: rotate(12deg); }
+  50% { transform: rotate(-8deg); }
+  60% { transform: rotate(8deg); }
+  70% { transform: rotate(-4deg); }
+  80% { transform: rotate(4deg); }
+  90% { transform: rotate(-2deg); }
+}
+
+@keyframes demoUnlockBurst {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.5); opacity: 0.8; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+@keyframes demoDrawLine {
+  from { stroke-dashoffset: 1000; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes demoBarGrow {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
+@keyframes demoProgressFill {
+  from { width: 0%; }
+  to { width: var(--target-width); }
+}
+
+@keyframes demoTypewriter {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes demoCounterFlip {
+  0% { transform: translateY(0); opacity: 1; }
+  50% { transform: translateY(-20px); opacity: 0; }
+  51% { transform: translateY(20px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes demoCheckmark {
+  0% { stroke-dashoffset: 100; }
+  100% { stroke-dashoffset: 0; }
+}
+
+@keyframes demoRipple {
+  0% { transform: scale(0); opacity: 0.5; }
+  100% { transform: scale(4); opacity: 0; }
+}
+
+@keyframes demoSlideDown {
+  from { max-height: 0; opacity: 0; }
+  to { max-height: 500px; opacity: 1; }
+}
+
+@keyframes demoSpinnerDash {
+  0% { stroke-dasharray: 1, 150; stroke-dashoffset: 0; }
+  50% { stroke-dasharray: 90, 150; stroke-dashoffset: -35; }
+  100% { stroke-dasharray: 90, 150; stroke-dashoffset: -124; }
+}
+
+/* Utility classes */
+.demo-animate-fadeInUp { animation: demoFadeInUp 0.6s ease-out forwards; }
+.demo-animate-fadeIn { animation: demoFadeIn 0.5s ease-out forwards; }
+.demo-animate-slideInLeft { animation: demoSlideInLeft 0.6s ease-out forwards; }
+.demo-animate-slideInRight { animation: demoSlideInRight 0.6s ease-out forwards; }
+.demo-animate-scaleIn { animation: demoScaleIn 0.5s ease-out forwards; }
+.demo-animate-bounceIn { animation: demoBounceIn 0.8s ease-out forwards; }
+.demo-animate-pulseGlow { animation: demoPulseGlow 2s ease-in-out infinite; }
+.demo-animate-scanLine { animation: demoScanLine 1.5s ease-in-out; }
+.demo-animate-unlockShake { animation: demoUnlockShake 0.8s ease-in-out; }
+.demo-animate-unlockBurst { animation: demoUnlockBurst 0.6s ease-out forwards; }
+.demo-animate-barGrow { animation: demoBarGrow 0.8s ease-out forwards; transform-origin: bottom; }
+.demo-animate-slideDown { animation: demoSlideDown 0.5s ease-out forwards; overflow: hidden; }
+.demo-animate-ripple { animation: demoRipple 0.6s ease-out; }
+
+/* Confetti pieces */
+.demo-confetti-piece {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  top: -10px;
+  animation: demoConfettiDrop 3s ease-in forwards;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* Stagger delays */
+.demo-delay-0 { animation-delay: 0ms; }
+.demo-delay-100 { animation-delay: 100ms; }
+.demo-delay-200 { animation-delay: 200ms; }
+.demo-delay-300 { animation-delay: 300ms; }
+.demo-delay-400 { animation-delay: 400ms; }
+.demo-delay-500 { animation-delay: 500ms; }
+.demo-delay-600 { animation-delay: 600ms; }
+.demo-delay-700 { animation-delay: 700ms; }
+.demo-delay-800 { animation-delay: 800ms; }
+.demo-delay-900 { animation-delay: 900ms; }
+.demo-delay-1000 { animation-delay: 1000ms; }
+.demo-delay-1200 { animation-delay: 1200ms; }
+.demo-delay-1500 { animation-delay: 1500ms; }
+.demo-delay-2000 { animation-delay: 2000ms; }
+
+/* Initially hidden for animation */
+.demo-hidden { opacity: 0; }
+
+/* Score counter text */
+.demo-score-text {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Smooth scroll target highlight */
+.demo-highlight {
+  transition: box-shadow 0.3s ease;
+  box-shadow: 0 0 0 3px rgba(0, 166, 102, 0.5);
+}
+
+/* Cursor simulation */
+.demo-cursor {
+  width: 20px;
+  height: 20px;
+  background: rgba(0, 166, 102, 0.4);
+  border: 2px solid #00a666;
+  border-radius: 50%;
+  position: absolute;
+  pointer-events: none;
+  transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  z-index: 100;
+}
+
+/* Click ripple */
+.demo-click-ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(0, 166, 102, 0.3);
+  animation: demoRipple 0.6s ease-out forwards;
+  pointer-events: none;
+}
+
+/* Progress bar fill animation */
+.demo-progress-bar {
+  transition: width 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Chart drawing */
+.demo-chart-line {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: demoDrawLine 2s ease-in-out forwards;
+}
+
+/* Loading spinner */
+.demo-spinner-circle {
+  animation: demoSpinnerDash 1.5s ease-in-out infinite;
+  stroke-linecap: round;
+}
