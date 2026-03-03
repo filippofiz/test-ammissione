@@ -4090,6 +4090,7 @@ export default function TakeTestPage() {
         guidedTimed={guidedTimed}
         showCorrectAnswers={showCorrectAnswers}
         onToggleCorrectAnswers={() => setShowCorrectAnswers(!showCorrectAnswers)}
+        questionsPerPage={config?.questions_per_page}
       />
 
       {/* Question Content */}

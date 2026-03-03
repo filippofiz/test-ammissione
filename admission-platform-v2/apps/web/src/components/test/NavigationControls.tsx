@@ -169,7 +169,7 @@ export function NavigationControls({
                       : isFullyAnswered
                         ? 'bg-green-500 text-white'
                         : isPartiallyAnswered
-                          ? 'bg-green-300 text-green-800'
+                          ? 'bg-yellow-400 text-yellow-900'
                           : 'bg-gray-200 text-gray-600'
                     }
                     ${canClick && !isTimeExpired ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}

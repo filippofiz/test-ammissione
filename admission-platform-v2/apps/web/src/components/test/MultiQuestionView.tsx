@@ -116,49 +116,44 @@ export function MultiQuestionView({
             key={question.id}
             className="bg-white rounded-2xl shadow-lg border-2 border-gray-100 overflow-hidden"
           >
-            {/* Question Header */}
-            <div className="flex items-center justify-between px-6 py-3 bg-gray-50 border-b border-gray-200">
-              <div className="flex items-center gap-3">
-                <span className="bg-brand-green text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">
-                  {questionNumber}
-                </span>
-                <span className="text-sm text-gray-500 font-medium">
-                  Domanda {questionNumber}
-                </span>
-              </div>
-              {/* Bookmark Button */}
-              {allowBookmarks && (
-                <button
-                  onClick={() => onToggleBookmark(question.id)}
-                  disabled={isTimeExpired}
-                  className={`px-2 py-1 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                    bookmarkedQuestions.has(question.id)
-                      ? 'bg-yellow-100 text-yellow-700 border border-yellow-400'
-                      : 'bg-white text-gray-500 hover:bg-gray-100 border border-gray-200'
-                  }`}
-                >
-                  <FontAwesomeIcon icon={faBookmark} />
-                </button>
-              )}
-            </div>
-
             {/* Two-column layout: Question text left, Answers right */}
             <div className="grid grid-cols-1 lg:grid-cols-2">
-              {/* Left: Question Text */}
-              <div className="p-6 border-b lg:border-b-0 lg:border-r border-gray-100 bg-gray-50/30">
-                {questionText ? (
-                  <div className="text-gray-800 text-base leading-relaxed">
-                    <MathJaxRenderer>{questionText}</MathJaxRenderer>
+              {/* Left: Question Number + Text */}
+              <div className="p-4 border-b lg:border-b-0 lg:border-r border-gray-100 bg-gray-50/30">
+                <div className="flex items-start gap-3">
+                  <span className="bg-brand-green text-white w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                    {questionNumber}
+                  </span>
+                  <div className="flex-1">
+                    {questionText ? (
+                      <div className="text-gray-800 text-base leading-relaxed">
+                        <MathJaxRenderer>{questionText}</MathJaxRenderer>
+                      </div>
+                    ) : (
+                      <div className="text-gray-400 italic text-sm">
+                        Vedi le opzioni di risposta →
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="text-gray-400 italic text-sm">
-                    Vedi le opzioni di risposta →
-                  </div>
-                )}
+                  {/* Bookmark Button */}
+                  {allowBookmarks && (
+                    <button
+                      onClick={() => onToggleBookmark(question.id)}
+                      disabled={isTimeExpired}
+                      className={`px-2 py-1 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 ${
+                        bookmarkedQuestions.has(question.id)
+                          ? 'bg-yellow-100 text-yellow-700 border border-yellow-400'
+                          : 'bg-white text-gray-500 hover:bg-gray-100 border border-gray-200'
+                      }`}
+                    >
+                      <FontAwesomeIcon icon={faBookmark} />
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Right: Answer Options */}
-              <div className="p-6">
+              <div className="p-4">
                 {question.question_data && (
                   question.question_data.di_type ||
                   (question.question_type === 'multiple_choice' && question.question_data.options) ||
@@ -172,7 +167,7 @@ export function MultiQuestionView({
                       answers: question.answers,
                     }}
                     currentAnswer={toUnifiedAnswer(answers[question.id])}
-                    onAnswerChange={(answer) => onAnswerChange(question.id, answer)}
+                    onAnswerChange={(_questionId, answer) => onAnswerChange(question.id, answer)}
                     language={rendererLanguage}
                     showResults={(isGuidedMode && showCorrectAnswers) || isPreviewMode}
                     hideQuestionText={true}

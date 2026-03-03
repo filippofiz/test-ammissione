@@ -59,6 +59,9 @@ export interface TestHeaderProps {
   guidedTimed: boolean;
   showCorrectAnswers: boolean;
   onToggleCorrectAnswers: () => void;
+
+  // Multi-question page
+  questionsPerPage?: number;
 }
 
 export function TestHeader({
@@ -85,6 +88,7 @@ export function TestHeader({
   guidedTimed,
   showCorrectAnswers,
   onToggleCorrectAnswers,
+  questionsPerPage,
 }: TestHeaderProps) {
   const { t } = useTranslation();
 
@@ -200,6 +204,16 @@ export function TestHeader({
         */}
         </div>
       </div>
+
+      {/* Center: Questions per page indicator */}
+      {questionsPerPage && questionsPerPage > 1 && (
+        <div className="flex items-center justify-center">
+          <div className="px-4 py-2 bg-blue-100 text-blue-800 rounded-xl font-bold text-lg">
+            La pagina contiene {questionsPerPage} domande
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col items-end gap-1">
         {/* Timer */}
         {timeRemaining !== null && (
