@@ -41,6 +41,10 @@ export interface TestHeaderProps {
   isInReviewMode: boolean;
   answerChangesUsed: number;
 
+  // Section navigation
+  currentSectionIndex: number;
+  expectedTotalSections: number;
+
   // Preview mode
   isPreviewMode: boolean;
   previewTestId?: string | null;
@@ -71,6 +75,8 @@ export function TestHeader({
   deviceDiagnostics,
   isInReviewMode,
   answerChangesUsed,
+  currentSectionIndex,
+  expectedTotalSections,
   isPreviewMode,
   testLanguage,
   onExitPreview,
@@ -194,14 +200,23 @@ export function TestHeader({
         */}
         </div>
       </div>
-      {timeRemaining !== null && (
-        <div className="flex items-center gap-2 text-lg">
-          <FontAwesomeIcon icon={faClock} className="text-brand-green" />
-          <span className={`font-mono font-bold ${timeRemaining < 300 ? 'text-red-600' : 'text-gray-800'}`}>
-            {formatTime(timeRemaining)}
-          </span>
-        </div>
-      )}
+      <div className="flex items-center gap-4">
+        {/* Section indicator */}
+        {expectedTotalSections > 1 && (
+          <div className="text-sm text-gray-600 font-medium">
+            {t('takeTest.section')} {currentSectionIndex + 1} {t('takeTest.of')} {expectedTotalSections}
+          </div>
+        )}
+        {/* Timer */}
+        {timeRemaining !== null && (
+          <div className="flex items-center gap-2 text-lg">
+            <FontAwesomeIcon icon={faClock} className="text-brand-green" />
+            <span className={`font-mono font-bold ${timeRemaining < 300 ? 'text-red-600' : 'text-gray-800'}`}>
+              {formatTime(timeRemaining)}
+            </span>
+          </div>
+        )}
+      </div>
       {/* Guided Mode Indicator */}
       {isGuidedMode && (
         <div className="flex items-center gap-3">

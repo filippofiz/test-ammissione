@@ -4049,6 +4049,8 @@ export default function TakeTestPage() {
         deviceDiagnostics={deviceDiagnostics}
         isInReviewMode={isInReviewMode}
         answerChangesUsed={answerChangesUsed}
+        currentSectionIndex={currentSectionIndex}
+        expectedTotalSections={expectedTotalSections}
         isPreviewMode={isPreviewMode}
         previewTestId={previewTestId}
         previewStartQuestion={previewStartQuestion}
