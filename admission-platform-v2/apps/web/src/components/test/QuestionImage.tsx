@@ -3,7 +3,7 @@
  * Displays images with loading state, error handling, and automatic retry
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner, faExclamationTriangle, faRedo } from '@fortawesome/free-solid-svg-icons';
 
@@ -26,6 +26,7 @@ export function QuestionImage({
   const [error, setError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [imageSrc, setImageSrc] = useState(src);
+  const imgRef = useRef<HTMLImageElement>(null);
 
   // Reset state when src changes
   useEffect(() => {
@@ -35,11 +36,26 @@ export function QuestionImage({
     setImageSrc(src);
   }, [src]);
 
+  // Check if image is already cached/complete after render
+  useEffect(() => {
+    const img = imgRef.current;
+    if (img && img.complete) {
+      if (img.naturalWidth > 0) {
+        // Image loaded successfully from cache
+        setLoading(false);
+        setError(false);
+      } else {
+        // Image failed to load
+        setLoading(false);
+        setError(true);
+      }
+    }
+  }, [imageSrc]);
+
   // Auto-retry on error
   useEffect(() => {
     if (error && retryCount < maxRetries) {
       const timer = setTimeout(() => {
-        console.log(`🔄 Retrying image load (attempt ${retryCount + 1}/${maxRetries}):`, src);
         setError(false);
         setLoading(true);
         // Add cache-busting parameter
@@ -54,14 +70,12 @@ export function QuestionImage({
   const handleLoad = useCallback(() => {
     setLoading(false);
     setError(false);
-    console.log('✅ Image loaded successfully:', src);
-  }, [src]);
+  }, []);
 
   const handleError = useCallback(() => {
     setLoading(false);
     setError(true);
-    console.warn(`❌ Image failed to load (attempt ${retryCount + 1}):`, src);
-  }, [src, retryCount]);
+  }, []);
 
   const handleManualRetry = useCallback(() => {
     setRetryCount(0);
@@ -71,27 +85,7 @@ export function QuestionImage({
     setImageSrc(src + cacheBuster);
   }, [src]);
 
-  // Show loading placeholder
-  if (loading && !error) {
-    return (
-      <div className={`flex items-center justify-center bg-gray-100 rounded-lg border border-gray-200 min-h-[100px] ${className}`}>
-        <div className="text-center text-gray-500">
-          <FontAwesomeIcon icon={faSpinner} className="text-2xl animate-spin mb-2" />
-          <p className="text-sm">Loading image...</p>
-        </div>
-        {/* Hidden image to trigger load */}
-        <img
-          src={imageSrc}
-          alt={alt}
-          onLoad={handleLoad}
-          onError={handleError}
-          className="hidden"
-        />
-      </div>
-    );
-  }
-
-  // Show error state with retry button
+  // Show error state with retry button (after max retries)
   if (error && retryCount >= maxRetries) {
     return (
       <div className={`flex flex-col items-center justify-center bg-red-50 rounded-lg border border-red-200 min-h-[100px] p-4 ${className}`}>
@@ -108,15 +102,28 @@ export function QuestionImage({
     );
   }
 
-  // Show the image
+  // Always render the image - show loading overlay when loading
   return (
-    <img
-      key={imageSrc}
-      src={imageSrc}
-      alt={alt}
-      onLoad={handleLoad}
-      onError={handleError}
-      className={`max-w-full h-auto rounded-lg border border-gray-200 ${className}`}
-    />
+    <div className={`relative ${className}`}>
+      {/* Loading overlay */}
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-lg border border-gray-200 z-10">
+          <div className="text-center text-gray-500">
+            <FontAwesomeIcon icon={faSpinner} className="text-2xl animate-spin mb-2" />
+            <p className="text-sm">Loading image...</p>
+          </div>
+        </div>
+      )}
+      {/* Actual image - always rendered to properly trigger load events */}
+      <img
+        ref={imgRef}
+        key={imageSrc}
+        src={imageSrc}
+        alt={alt}
+        onLoad={handleLoad}
+        onError={handleError}
+        className={`max-w-full h-auto rounded-lg border border-gray-200 ${loading ? 'invisible' : 'visible'}`}
+      />
+    </div>
   );
 }

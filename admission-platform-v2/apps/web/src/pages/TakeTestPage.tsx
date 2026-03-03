@@ -27,6 +27,7 @@ import { TestStartScreen } from '../components/test/TestStartScreen';
 import { SectionSelectionScreen } from '../components/test/SectionSelectionScreen';
 import { TestHeader } from '../components/test/TestHeader';
 import { NavigationControls } from '../components/test/NavigationControls';
+import { SectionProgressList } from '../components/test/SectionProgressList';
 import { TestLockedScreen } from '../components/test/TestLockedScreen';
 import { TestAnnulledScreen } from '../components/test/TestAnnulledScreen';
 import { ExitWarningScreen } from '../components/test/ExitWarningScreen';
@@ -544,39 +545,13 @@ export default function TakeTestPage() {
     ? selectedQuestions
     : allQuestions;
 
-  console.log('🎯 [RENDER] Questions to use:', {
-    selectedQuestionsCount: selectedQuestions.length,
-    allQuestionsCount: allQuestions.length,
-    questionsToUseCount: questionsToUse.length,
-    currentSection,
-    sectionOrderMode: config?.section_order_mode
-  });
-
   // In no_sections mode, use all questions; otherwise filter by section
   const sectionQuestions = config?.section_order_mode === 'no_sections'
     ? questionsToUse
     : questionsToUse.filter(q => getSectionField(q) === currentSection);
 
-  console.log('📊 [RENDER] Section questions filtered:', {
-    sectionQuestionsCount: sectionQuestions.length,
-    currentQuestionIndex,
-    currentSection,
-    firstSectionQuestion: sectionQuestions[0] ? {
-      id: sectionQuestions[0].id,
-      section: getSectionField(sectionQuestions[0])
-    } : null
-  });
-
   const currentQuestion = sectionQuestions[currentQuestionIndex];
   const totalQuestionsInSection = sectionQuestions.length;
-
-  console.log('🔎 [RENDER] Current question:', {
-    exists: !!currentQuestion,
-    currentQuestionIndex,
-    totalQuestionsInSection,
-    questionId: currentQuestion?.id,
-    hasQuestionData: !!currentQuestion?.question_data
-  });
 
   // Alias for review functions (same as sectionQuestions)
   const currentSectionQuestionsList = sectionQuestions;
@@ -3710,7 +3685,8 @@ export default function TakeTestPage() {
   // Wait until all critical state is loaded to prevent race condition
   // where sections is set to ['All Questions'] but config is not yet loaded,
   // causing the filter to incorrectly return 0 questions
-  if (loading || !config || sections.length === 0) {
+  // Note: In 'no_sections' mode, sections array is intentionally empty - that's valid
+  if (loading || !config || (config.section_order_mode !== 'no_sections' && sections.length === 0)) {
     return (
       <Layout>
         <div className="flex items-center justify-center min-h-[60vh]">
@@ -4056,16 +4032,6 @@ export default function TakeTestPage() {
   }
 
   // Main Test Interface
-  console.log('🎨 [MAIN RENDER] Component rendering:', {
-    hasCurrentQuestion: !!currentQuestion,
-    currentQuestionId: currentQuestion?.id,
-    sectionQuestionsLength: sectionQuestions.length,
-    currentQuestionIndex,
-    currentSection,
-    allQuestionsLength: allQuestions.length,
-    selectedQuestionsLength: selectedQuestions.length
-  });
-
   return (
     <MathJaxProvider>
     <div className="flex flex-col h-screen bg-gray-50">
@@ -4304,6 +4270,17 @@ export default function TakeTestPage() {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Section Progress List */}
+      <div className="max-w-4xl mx-auto px-4 mb-4">
+        <SectionProgressList
+          sections={sections}
+          questions={allQuestions}
+          answers={answers}
+          currentSection={currentSection}
+          getSectionField={getSectionField}
+        />
       </div>
 
       {/* Navigation Controls */}
