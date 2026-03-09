@@ -43,6 +43,7 @@ import {
   getLegacyInitialAssessment,
   getLatestPlacementResult,
   getLatestSectionAssessments,
+  getSectionAssessmentLocks,
   getLatestMockSimulation,
   getTrainingTemplates,
   getTrainingCompletions,
@@ -61,6 +62,8 @@ import {
   MOCK_SIMULATION_CONFIG,
   calculateEstimatedGmatScore,
   getAnalyticsData,
+  GMAT_CYCLES,
+  type GmatCycle,
   type GmatProgress,
   type LegacyAssessmentResult,
   type GmatAssessmentResult,
@@ -153,13 +156,18 @@ export default function GMATPreparationPage() {
     DI: null,
     VR: null,
   });
+  const [sectionLocks, setSectionLocks] = useState<Record<GmatSection, boolean>>({
+    QR: true,
+    DI: true,
+    VR: true,
+  });
   const [mockSimulation, setMockSimulation] = useState<GmatAssessmentResult | null>(null);
   const [trainingTemplates, setTrainingTemplates] = useState<TrainingTemplate[]>([]);
   const [trainingCompletions, setTrainingCompletions] = useState<Map<string, TrainingCompletion>>(new Map());
   const [expandedTrainingSections, setExpandedTrainingSections] = useState<Set<string>>(new Set());
   const [studentInfo, setStudentInfo] = useState<StudentInfo | null>(null);
   // Track which profile we're viewing data for (used for tutor mode)
-  const [_targetProfileId, setTargetProfileId] = useState<string | null>(null);
+  const [targetProfileId, setTargetProfileId] = useState<string | null>(null);
   // View mode toggle for tutors to preview student view
   const [viewMode, setViewMode] = useState<'tutor' | 'student'>('tutor');
   // Show/hide cycle manager modal
@@ -179,6 +187,8 @@ export default function GMATPreparationPage() {
   const [activeSection, setActiveSection] = useState<GMATViewSection>('preparation');
   // Current user ID for materials
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  // Which cycle is currently being viewed (may differ from current cycle for historical browsing)
+  const [viewedCycle, setViewedCycle] = useState<GmatCycle | null>(null);
 
   useEffect(() => {
     loadMaterials();
@@ -197,6 +207,21 @@ export default function GMATPreparationPage() {
       .catch(err => console.error('Failed to load analytics data:', err))
       .finally(() => setAnalyticsDataLoading(false));
   }, [activeSection, studentId, currentUserId, analyticsData, analyticsDataLoading]);
+
+  async function handleCycleChange(cycle: GmatCycle) {
+    setViewedCycle(cycle);
+    if (!targetProfileId) return;
+    const [completions, assignments, sectionResults, secLocks] = await Promise.all([
+      getTrainingCompletions(targetProfileId, cycle),
+      getGMATTrainingAssignments(targetProfileId, cycle),
+      getLatestSectionAssessments(targetProfileId, cycle),
+      getSectionAssessmentLocks(targetProfileId, cycle),
+    ]);
+    setTrainingCompletions(completions);
+    setTrainingAssignments(assignments);
+    setSectionAssessments(sectionResults);
+    setSectionLocks(secLocks);
+  }
 
   async function loadMaterials() {
     setLoading(true);
@@ -238,25 +263,37 @@ export default function GMATPreparationPage() {
 
       setTargetProfileId(targetProfileId);
 
-      // Load GMAT progress, legacy assessment, placement result, section assessments, mock simulation, and training data in parallel
-      const [progress, legacyResult, placementRes, sectionResults, mockResult, templates, completions, assignments] = await Promise.all([
+      // Load progress and non-cycle data in parallel; cycle-dependent fetches come after
+      const [progress, legacyResult, placementRes, mockResult, templates] = await Promise.all([
         getStudentGMATProgress(targetProfileId),
         getLegacyInitialAssessment(targetProfileId),
         getLatestPlacementResult(targetProfileId),
-        getLatestSectionAssessments(targetProfileId),
         getLatestMockSimulation(targetProfileId),
         getTrainingTemplates(),
-        getTrainingCompletions(targetProfileId),
-        getGMATTrainingAssignments(targetProfileId),
       ]);
       setGmatProgress(progress);
       setLegacyAssessment(legacyResult);
       setPlacementResult(placementRes);
-      setSectionAssessments(sectionResults);
       setMockSimulation(mockResult);
       setTrainingTemplates(templates);
+
+      // Fetch all cycle-dependent data now that we know the student's cycle
+      const cycle = progress?.gmat_cycle ?? 'Foundation' as GmatCycle;
+      const [completions, assignments, sectionResults, secLocks] = await Promise.all([
+        getTrainingCompletions(targetProfileId, cycle),
+        getGMATTrainingAssignments(targetProfileId, cycle),
+        getLatestSectionAssessments(targetProfileId, cycle),
+        getSectionAssessmentLocks(targetProfileId, cycle),
+      ]);
       setTrainingCompletions(completions);
       setTrainingAssignments(assignments);
+      setSectionAssessments(sectionResults);
+      setSectionLocks(secLocks);
+
+      // Reset viewed cycle to student's current cycle on (re)load
+      if (progress?.gmat_cycle) {
+        setViewedCycle(progress.gmat_cycle);
+      }
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load materials');
@@ -276,11 +313,12 @@ export default function GMATPreparationPage() {
     setOverlayFadingOut(false);
 
     try {
+      const cycle = viewedCycle ?? gmatProgress!.gmat_cycle;
       // Perform the actual lock/unlock
       if (action === 'lock') {
-        await lockGMATTrainingTest(studentId, templateId);
+        await lockGMATTrainingTest(studentId, templateId, cycle);
       } else {
-        await unlockGMATTrainingTest(studentId, templateId);
+        await unlockGMATTrainingTest(studentId, templateId, cycle);
       }
 
       // Update local state
@@ -314,13 +352,6 @@ export default function GMATPreparationPage() {
   }
 
   // Check if a training test is locked
-  function isTrainingTestLocked(templateId: string): boolean {
-    const assignment = trainingAssignments.get(templateId);
-    // If no assignment exists, default to locked (tutor must explicitly unlock).
-    if (!assignment) return true;
-    return assignment.status === 'locked';
-  }
-
   // Lock all training tests for a student
   async function handleLockAllTrainingTests() {
     if (!studentId) return;
@@ -330,9 +361,10 @@ export default function GMATPreparationPage() {
     setOverlayFadingOut(false);
 
     try {
+      const cycle = viewedCycle ?? gmatProgress!.gmat_cycle;
       // Lock all training templates
       const lockPromises = trainingTemplates.map(template =>
-        lockGMATTrainingTest(studentId, template.id)
+        lockGMATTrainingTest(studentId, template.id, cycle)
       );
       await Promise.all(lockPromises);
 
@@ -368,20 +400,15 @@ export default function GMATPreparationPage() {
 
   // Lock all section assessments for a student
   async function handleLockAllSectionAssessments() {
-    if (!studentId) return;
-
+    if (!studentId || !gmatProgress) return;
+    const cycle = viewedCycle ?? gmatProgress.gmat_cycle;
     try {
       await Promise.all([
-        lockSectionAssessment(studentId, 'QR'),
-        lockSectionAssessment(studentId, 'DI'),
-        lockSectionAssessment(studentId, 'VR'),
+        lockSectionAssessment(studentId, 'QR', cycle),
+        lockSectionAssessment(studentId, 'DI', cycle),
+        lockSectionAssessment(studentId, 'VR', cycle),
       ]);
-      setGmatProgress(prev => prev ? {
-        ...prev,
-        section_qr_locked: true,
-        section_di_locked: true,
-        section_vr_locked: true,
-      } : null);
+      setSectionLocks({ QR: true, DI: true, VR: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to lock all section assessments');
     }
@@ -389,20 +416,15 @@ export default function GMATPreparationPage() {
 
   // Unlock all section assessments for a student
   async function handleUnlockAllSectionAssessments() {
-    if (!studentId) return;
-
+    if (!studentId || !gmatProgress) return;
+    const cycle = viewedCycle ?? gmatProgress.gmat_cycle;
     try {
       await Promise.all([
-        unlockSectionAssessment(studentId, 'QR'),
-        unlockSectionAssessment(studentId, 'DI'),
-        unlockSectionAssessment(studentId, 'VR'),
+        unlockSectionAssessment(studentId, 'QR', cycle),
+        unlockSectionAssessment(studentId, 'DI', cycle),
+        unlockSectionAssessment(studentId, 'VR', cycle),
       ]);
-      setGmatProgress(prev => prev ? {
-        ...prev,
-        section_qr_locked: false,
-        section_di_locked: false,
-        section_vr_locked: false,
-      } : null);
+      setSectionLocks({ QR: false, DI: false, VR: false });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to unlock all section assessments');
     }
@@ -417,9 +439,10 @@ export default function GMATPreparationPage() {
     setOverlayFadingOut(false);
 
     try {
+      const cycle = viewedCycle ?? gmatProgress!.gmat_cycle;
       // Unlock all training templates
       const unlockPromises = trainingTemplates.map(template =>
-        unlockGMATTrainingTest(studentId, template.id)
+        unlockGMATTrainingTest(studentId, template.id, cycle)
       );
       await Promise.all(unlockPromises);
 
@@ -566,6 +589,48 @@ export default function GMATPreparationPage() {
           {/* Preparation View */}
           {activeSection === 'preparation' && (
             <>
+          {/* Cycle Navigation — shown when student has a cycle assigned */}
+          {gmatProgress?.gmat_cycle && viewedCycle && (
+            <div className="flex items-center gap-1 mb-6 p-1 bg-gray-100 rounded-xl w-fit">
+              {GMAT_CYCLES.filter(c => {
+                const currentIdx = GMAT_CYCLES.indexOf(gmatProgress.gmat_cycle);
+                return GMAT_CYCLES.indexOf(c) <= currentIdx;
+              }).map(cycle => {
+                const isActive = viewedCycle === cycle;
+                const isCurrent = gmatProgress.gmat_cycle === cycle;
+                return (
+                  <button
+                    key={cycle}
+                    onClick={() => handleCycleChange(cycle)}
+                    className={`relative px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                      isActive
+                        ? 'bg-white shadow text-gray-900'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    {cycle}
+                    {isCurrent && (
+                      <span className="absolute -top-1 -right-1 w-2 h-2 bg-brand-green rounded-full" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Past cycle banner */}
+          {gmatProgress?.gmat_cycle && viewedCycle && viewedCycle !== gmatProgress.gmat_cycle && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 mb-4 flex items-center gap-3 text-sm text-amber-700">
+              <span>Viewing <strong>{viewedCycle}</strong> cycle history — read only</span>
+              <button
+                onClick={() => handleCycleChange(gmatProgress.gmat_cycle)}
+                className="ml-auto px-3 py-1 bg-white border border-amber-300 hover:bg-amber-100 rounded-lg text-xs font-semibold transition-colors"
+              >
+                Back to current
+              </button>
+            </div>
+          )}
+
           {/* Placement Assessment CTA — Show for students with no cycle and no pending/completed placement */}
           {!isTutorView && !gmatProgress?.gmat_cycle && !placementResult && (
             <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-300 rounded-2xl p-6 mb-6">
@@ -816,13 +881,13 @@ export default function GMATPreparationPage() {
                   <div>
                     <h2 className="text-lg font-bold text-gray-800">Topic Training Tests</h2>
                     <p className="text-sm text-gray-500">
-                      Practice tests tailored to your {gmatProgress.gmat_cycle} cycle
+                      Practice tests tailored to your {viewedCycle ?? gmatProgress.gmat_cycle} cycle
                     </p>
                   </div>
                 </div>
 
-                {/* Tutor Lock All / Unlock All Controls */}
-                {isTutorView && viewMode === 'tutor' && studentId && (
+                {/* Tutor Lock All / Unlock All Controls — only for current cycle */}
+                {isTutorView && viewMode === 'tutor' && studentId && viewedCycle === gmatProgress.gmat_cycle && (
                   <div className="flex items-center gap-2">
                     <button
                       onClick={handleUnlockAllTrainingTests}
@@ -949,16 +1014,25 @@ export default function GMATPreparationPage() {
                                 .map(template => {
                                   const completion = trainingCompletions.get(template.id);
                                   const isCompleted = !!completion;
-                                  // For student view: a completed test is never shown as locked —
-                                  // the lock only prevents retaking, past work should always be visible.
-                                  const isLocked = isCompleted && !isTutorView
-                                    ? false
-                                    : isTrainingTestLocked(template.id);
-                                  const requirements = template.question_requirements;
-                                  const cycleAlloc = template.question_allocation?.by_cycle?.[gmatProgress.gmat_cycle];
+                                  const effectiveCycle = viewedCycle ?? gmatProgress.gmat_cycle;
+                                  const cycleAlloc = template.question_allocation?.by_cycle?.[effectiveCycle];
                                   const hasQuestionsForCycle = cycleAlloc?.allocated_questions &&
                                     cycleAlloc.allocated_questions.length > 0;
-                                  const showLockControls = isTutorView && viewMode === 'tutor';
+                                  const isViewingPastCycle = viewedCycle !== gmatProgress.gmat_cycle;
+                                  const requirements = template.question_requirements;
+                                  // Past cycle: never show as locked (history view only)
+                                  // Student view: completed tests are never locked (can view result)
+                                  // Current cycle: locked by default until tutor explicitly unlocks
+                                  const isLocked = isViewingPastCycle
+                                    ? false
+                                    : isCompleted && !isTutorView
+                                    ? false
+                                    : (() => {
+                                        const assignment = trainingAssignments.get(template.id);
+                                        if (!assignment) return true; // no record = locked by default
+                                        return assignment.status === 'locked';
+                                      })();
+                                  const showLockControls = isTutorView && viewMode === 'tutor' && !isViewingPastCycle;
 
                                   return (
                                     <div
@@ -1100,13 +1174,15 @@ export default function GMATPreparationPage() {
                                           )}
                                         </div>
                                       ) : (
-                                        // STUDENT VIEW: Start, View Results, or status message
+                                        // STUDENT VIEW (or tutor in past-cycle read-only): Start, View Results, or status message
                                         isCompleted && completion ? (
-                                          // Test completed - show results or pending message
                                           <div className="flex flex-col gap-2">
-                                            {completion.results_visible ? (
+                                            {/* Tutors always see View Results; students only see it when results_visible */}
+                                            {(isTutorView || completion.results_visible) ? (
                                               <button
-                                                onClick={() => navigate(`/student/gmat-results/${completion.id}`)}
+                                                onClick={() => navigate(isTutorView
+                                                  ? `/tutor/gmat-results/${completion.id}`
+                                                  : `/student/gmat-results/${completion.id}`)}
                                                 className="w-full px-2 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-200 transition-colors"
                                               >
                                                 View Results
@@ -1127,7 +1203,10 @@ export default function GMATPreparationPage() {
                                         ) : hasQuestionsForCycle ? (
                                           // Unlocked and not completed - can start
                                           <button
-                                            onClick={() => navigate(`/student/take-test/gmat-training/${template.id}`)}
+                                            onClick={() => {
+                                              const url = `/student/take-test/gmat-training/${template.id}`;
+                                              navigate(isViewingPastCycle ? `${url}?cycle=${effectiveCycle}` : url);
+                                            }}
                                             className="w-full px-3 py-1.5 bg-brand-green text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
                                           >
                                             <FontAwesomeIcon icon={faRocket} />
@@ -1135,7 +1214,7 @@ export default function GMATPreparationPage() {
                                           </button>
                                         ) : (
                                           <div className="text-xs text-gray-400 text-center py-1">
-                                            No questions for {gmatProgress.gmat_cycle} cycle
+                                            No questions for {effectiveCycle} cycle
                                           </div>
                                         )
                                       )}
@@ -1168,8 +1247,8 @@ export default function GMATPreparationPage() {
                   </div>
                 </div>
 
-                {/* Tutor Lock All / Unlock All Controls */}
-                {isTutorView && viewMode === 'tutor' && studentId && (
+                {/* Tutor Lock All / Unlock All Controls — only for current cycle */}
+                {isTutorView && viewMode === 'tutor' && studentId && viewedCycle === gmatProgress.gmat_cycle && (
                   <div className="flex items-center gap-2">
                     <button
                       onClick={handleUnlockAllSectionAssessments}
@@ -1194,12 +1273,11 @@ export default function GMATPreparationPage() {
                   const config = SECTION_ASSESSMENT_CONFIG[section];
                   const assessment = sectionAssessments[section];
                   const isPassed = assessment && assessment.score_percentage >= 60;
-                  const showLockControls = isTutorView && viewMode === 'tutor';
+                  const isViewingPastCycle = viewedCycle !== gmatProgress.gmat_cycle;
+                  const showLockControls = isTutorView && viewMode === 'tutor' && !isViewingPastCycle;
 
-                  // Check if section is locked
-                  const isLocked = section === 'QR' ? gmatProgress.section_qr_locked
-                    : section === 'DI' ? gmatProgress.section_di_locked
-                    : gmatProgress.section_vr_locked;
+                  // Past cycle view: never show locked (history only)
+                  const isLocked = isViewingPastCycle ? false : sectionLocks[section];
 
                   // Section-specific colors and icons
                   const sectionConfig: Record<GmatSection, { bg: string; border: string; text: string; lightBg: string; icon: typeof faCalculator }> = {
@@ -1212,18 +1290,14 @@ export default function GMATPreparationPage() {
                   // Handle lock/unlock toggle for section assessments
                   const handleSectionLockToggle = async (action: 'lock' | 'unlock') => {
                     if (!studentId) return;
+                    const cycle = viewedCycle ?? gmatProgress.gmat_cycle;
                     try {
                       if (action === 'lock') {
-                        await lockSectionAssessment(studentId, section);
+                        await lockSectionAssessment(studentId, section, cycle);
                       } else {
-                        await unlockSectionAssessment(studentId, section);
+                        await unlockSectionAssessment(studentId, section, cycle);
                       }
-                      // Update local state
-                      setGmatProgress(prev => {
-                        if (!prev) return null;
-                        const key = `section_${section.toLowerCase()}_locked` as keyof GmatProgress;
-                        return { ...prev, [key]: action === 'lock' };
-                      });
+                      setSectionLocks(prev => ({ ...prev, [section]: action === 'lock' }));
                     } catch (err) {
                       setError(err instanceof Error ? err.message : `Failed to ${action} ${section} assessment`);
                     }

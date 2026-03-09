@@ -37,7 +37,9 @@ export interface QuestionData {
     content_type: 'text' | 'table';
     table_data?: string[][];
     table_headers?: string[];
+    image_url?: string | null;
   }>;
+  question_stem?: string;  // shared question shown above tabular sub-questions
   questions?: Array<{
     text: string;
     options: Record<string, string>;
@@ -271,6 +273,7 @@ export function QuestionRenderer({
       <MSRQuestion
         sources={questionData.sources || []}
         questions={questionData.questions || []}
+        questionStem={questionData.question_stem}
         selectedAnswers={currentAnswer.msrAnswers || []}
         onAnswerChange={(qIndex, answer) => {
           const newMSRAnswers = [...(currentAnswer.msrAnswers || [])];

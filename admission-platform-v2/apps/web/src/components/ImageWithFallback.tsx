@@ -3,7 +3,7 @@
  * Helps debug and handle cases where images fail to load
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faImage, faExclamationTriangle } from '@fortawesome/free-solid-svg-icons';
 
@@ -24,6 +24,7 @@ export function ImageWithFallback({
   const [errorDetails, setErrorDetails] = useState<string>('');
   const [retryCount, setRetryCount] = useState(0);
   const [retryKey, setRetryKey] = useState(0);
+  const imgRef = useRef<HTMLImageElement>(null);
   const MAX_RETRIES = 3;
 
   // Reset state when src changes
@@ -33,6 +34,14 @@ export function ImageWithFallback({
     setRetryCount(0);
     setRetryKey(0);
   }, [src]);
+
+  // Handle already-cached images: if the img element already has naturalWidth
+  // the browser won't fire onLoad again, so check immediately after mount/update.
+  useEffect(() => {
+    if (imgRef.current && imgRef.current.complete && imgRef.current.naturalWidth > 0) {
+      setImageState('loaded');
+    }
+  });
 
   const handleLoad = () => {
     setImageState('loaded');
@@ -104,6 +113,7 @@ export function ImageWithFallback({
         </div>
       )}
       <img
+        ref={imgRef}
         key={`${src}-${retryKey}`}
         src={src}
         alt={alt}

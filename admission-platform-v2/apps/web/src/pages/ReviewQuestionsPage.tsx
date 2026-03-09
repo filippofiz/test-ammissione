@@ -75,6 +75,7 @@ interface Question {
   question_number: number;
   question_type: string;
   section: string;
+  difficulty: 'easy' | 'medium' | 'hard' | null;
   question_data: any;
   answers: any;
   is_active: boolean;
@@ -152,6 +153,8 @@ export default function ReviewQuestionsPage() {
 
   // Local editing state - holds a copy of the question being edited to avoid re-rendering entire list on each keystroke
   const [localEditingQuestion, setLocalEditingQuestion] = useState<Question | null>(null);
+  // MSR source sync feedback: [questionId, message]
+  const [syncInfo, setSyncInfo] = useState<{ id: string; msg: string } | null>(null);
 
   // Language toggle
   const [viewLanguage, setViewLanguage] = useState<'it' | 'en'>('it');
@@ -759,12 +762,26 @@ export default function ReviewQuestionsPage() {
     });
   };
 
+  // Returns a stable string key for an MSR sources array based on tab_name + content only.
+  // Used to detect sibling questions that share identical sources and should be kept in sync.
+  function sourcesMatchKey(sources: Array<{ tab_name?: string; content?: string }>): string {
+    return (sources ?? [])
+      .map(s => `${normalizeWhitespace(s.tab_name ?? '')}|||${normalizeWhitespace(s.content ?? '')}`)
+      .join(':::');
+  }
+
   const handleSaveQuestion = async (questionId: string) => {
     // Use local editing state if available, otherwise fall back to main state
     const question = localEditingQuestion?.id === questionId
       ? localEditingQuestion
       : questions.find(q => q.id === questionId);
     if (!question) return;
+
+    // Capture pre-edit sources for MSR sibling detection (must read from stable questions state)
+    const originalQuestion = questions.find(q => q.id === questionId);
+    const isMSR = question.question_data?.di_type === 'MSR';
+    const originalSources = (originalQuestion?.question_data?.sources ?? []) as Array<{ tab_name?: string; content?: string; image_url?: string | null; content_type?: string }>;
+    const newSources = (question.question_data?.sources ?? []) as typeof originalSources;
 
     setSavingQuestion(true);
     try {
@@ -784,6 +801,14 @@ export default function ReviewQuestionsPage() {
 
       if (answerError) throw answerError;
 
+      // Update difficulty (GMAT questions)
+      const { error: difficultyError } = await supabase
+        .from('2V_questions')
+        .update({ difficulty: question.difficulty ?? null })
+        .eq('id', questionId);
+
+      if (difficultyError) throw difficultyError;
+
       // Sync local changes back to main questions state
       if (localEditingQuestion?.id === questionId) {
         setQuestions(prev => prev.map(q =>
@@ -795,6 +820,65 @@ export default function ReviewQuestionsPage() {
       setLocalEditingQuestion(null);
       setEditingQuestionId(null);
       console.log('Question saved successfully');
+
+      // ── MSR source propagation (non-fatal) ───────────────────────────────
+      // When MSR sources changed, find all other MSR questions whose sources
+      // matched the pre-edit originals and push the new sources to them.
+      if (isMSR && originalSources.length > 0 &&
+          sourcesMatchKey(originalSources) !== sourcesMatchKey(newSources)) {
+        try {
+          const originalKey = sourcesMatchKey(originalSources);
+
+          const { data: allMSR, error: fetchError } = await supabase
+            .from('2V_questions')
+            .select('id, test_id, question_data')
+            .eq('question_type', 'data_insights')
+            .filter('question_data->>di_type', 'eq', 'MSR');
+
+          if (fetchError) throw fetchError;
+
+          const siblings = (allMSR ?? []).filter(q =>
+            q.id !== questionId &&
+            sourcesMatchKey(q.question_data?.sources ?? []) === originalKey
+          );
+
+          if (siblings.length > 0) {
+            const results = await Promise.all(
+              siblings.map(s =>
+                supabase
+                  .from('2V_questions')
+                  .update({ question_data: { ...s.question_data, sources: newSources } })
+                  .eq('id', s.id)
+              )
+            );
+
+            const ok = results.filter(r => !r.error).length;
+            const fail = results.filter(r => r.error).length;
+
+            // Update local state for siblings visible in the current test view
+            const syncedIds = new Set(
+              siblings.filter(s => s.test_id === selectedTest?.id).map(s => s.id)
+            );
+            if (syncedIds.size > 0) {
+              setQuestions(prev => prev.map(q =>
+                syncedIds.has(q.id)
+                  ? { ...q, question_data: { ...q.question_data, sources: newSources } }
+                  : q
+              ));
+            }
+
+            const msg = fail > 0
+              ? `Sources synced to ${ok} question(s). ${fail} failed.`
+              : `Sources synced to ${ok} other question(s).`;
+            setSyncInfo({ id: questionId, msg });
+            setTimeout(() => setSyncInfo(null), 5000);
+          }
+        } catch (syncErr) {
+          console.warn('MSR source sync failed (non-fatal):', syncErr);
+          setSyncInfo({ id: questionId, msg: 'Source sync warning — primary save succeeded.' });
+          setTimeout(() => setSyncInfo(null), 5000);
+        }
+      }
     } catch (err) {
       console.error('Error saving question:', err);
       alert('Failed to save question');
@@ -2830,6 +2914,18 @@ export default function ReviewQuestionsPage() {
                                   Page {question.question_data.page_number}
                                 </span>
                               )}
+                              {/* Difficulty badge — GMAT only, read-only preview */}
+                              {selectedTest?.test_type === 'GMAT' && question.difficulty && (
+                                <span className={`text-xs px-2 py-1 rounded font-medium ${
+                                  question.difficulty === 'easy'
+                                    ? 'bg-green-100 text-green-700'
+                                    : question.difficulty === 'medium'
+                                    ? 'bg-amber-100 text-amber-700'
+                                    : 'bg-red-100 text-red-700'
+                                }`}>
+                                  {question.difficulty.charAt(0).toUpperCase() + question.difficulty.slice(1)}
+                                </span>
+                              )}
                               {/* Manage Passage */}
                               <button
                                 onClick={() => {
@@ -2918,6 +3014,13 @@ export default function ReviewQuestionsPage() {
                               )}
                             </div>
 
+                          {/* MSR source sync feedback — shown briefly after save */}
+                          {syncInfo?.id === question.id && (
+                            <div className="mt-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700">
+                              {syncInfo.msg}
+                            </div>
+                          )}
+
                           {/* Question Content - Different rendering for Data Insights vs regular questions */}
                           <div className="bg-blue-50 p-4 rounded-lg mb-3 border border-blue-200 overflow-x-auto">
                             {question.question_data?.di_type ? (
@@ -2927,6 +3030,8 @@ export default function ReviewQuestionsPage() {
                                   questionData={localEditingQuestion.question_data}
                                   answers={localEditingQuestion.answers}
                                   onChange={(field, value) => handleEditQuestion(question.id, field, value)}
+                                  difficulty={localEditingQuestion.difficulty}
+                                  onDifficultyChange={selectedTest?.test_type === 'GMAT' ? (val) => setLocalEditingQuestion({ ...localEditingQuestion, difficulty: val }) : undefined}
                                 />
                               ) : (
                                 <DataInsightsPreview
@@ -2936,19 +3041,47 @@ export default function ReviewQuestionsPage() {
                                 />
                               )
                             ) : editingQuestionId === question.id && localEditingQuestion ? (
-                              <textarea
-                                value={
-                                  getQuestionLanguage(question.id) === 'en'
-                                    ? (localEditingQuestion.question_data?.question_text_eng || '')
-                                    : (localEditingQuestion.question_data?.question_text || '')
-                                }
-                                onChange={(e) => {
-                                  const field = getQuestionLanguage(question.id) === 'en' ? 'question_text_eng' : 'question_text';
-                                  handleEditQuestion(question.id, field, e.target.value);
-                                }}
-                                className="w-full p-3 border border-blue-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent min-h-[100px] font-mono text-sm"
-                                placeholder="Enter question text (supports LaTeX)"
-                              />
+                              <div className="space-y-3">
+                                <textarea
+                                  value={
+                                    getQuestionLanguage(question.id) === 'en'
+                                      ? (localEditingQuestion.question_data?.question_text_eng || '')
+                                      : (localEditingQuestion.question_data?.question_text || '')
+                                  }
+                                  onChange={(e) => {
+                                    const field = getQuestionLanguage(question.id) === 'en' ? 'question_text_eng' : 'question_text';
+                                    handleEditQuestion(question.id, field, e.target.value);
+                                  }}
+                                  className="w-full p-3 border border-blue-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent min-h-[100px] font-mono text-sm"
+                                  placeholder="Enter question text (supports LaTeX)"
+                                />
+                                {selectedTest?.test_type === 'GMAT' && (
+                                  <div className="flex items-center gap-2">
+                                    <label className="text-sm font-semibold text-gray-700">Difficulty:</label>
+                                    <select
+                                      value={localEditingQuestion.difficulty ?? ''}
+                                      onChange={(e) => {
+                                        const val = e.target.value as 'easy' | 'medium' | 'hard' | '';
+                                        setLocalEditingQuestion({ ...localEditingQuestion, difficulty: val === '' ? null : val });
+                                      }}
+                                      className={`text-sm px-3 py-1 rounded border font-medium cursor-pointer ${
+                                        localEditingQuestion.difficulty === 'easy'
+                                          ? 'bg-green-100 text-green-700 border-green-300'
+                                          : localEditingQuestion.difficulty === 'medium'
+                                          ? 'bg-amber-100 text-amber-700 border-amber-300'
+                                          : localEditingQuestion.difficulty === 'hard'
+                                          ? 'bg-red-100 text-red-700 border-red-300'
+                                          : 'bg-gray-100 text-gray-500 border-gray-300'
+                                      }`}
+                                    >
+                                      <option value="">— not set —</option>
+                                      <option value="easy">Easy</option>
+                                      <option value="medium">Medium</option>
+                                      <option value="hard">Hard</option>
+                                    </select>
+                                  </div>
+                                )}
+                              </div>
                             ) : (
                               <div className="overflow-x-auto">
                                 <MathJaxRenderer>

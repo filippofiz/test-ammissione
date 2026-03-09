@@ -5,7 +5,7 @@
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheckCircle, faTimesCircle } from '@fortawesome/free-solid-svg-icons';
-import { MathJaxRenderer } from '../MathJaxRenderer';
+import { MathJaxRenderer, InlineMarkdownRenderer } from '../MathJaxRenderer';
 import { Chart } from '../Chart';
 import { normalizeWhitespace, normalizeOptionText } from '../../lib/textUtils';
 import { ExplanationDisplay } from './ExplanationDisplay';
@@ -101,28 +101,32 @@ export function GIQuestion({
 
       {/* Statement with Dropdowns */}
       <div className="border-2 border-gray-200 rounded-xl p-6 bg-white">
-        <div className="text-gray-800 text-lg flex flex-wrap items-center gap-2">
+        <p className="text-gray-800 text-base leading-relaxed">
           {parts.map((part, index) => {
             if (part === '[BLANK1]') {
               const isBlank1Correct = showResults && selectedBlank1 === normalizedCorrectBlank1;
               const isBlank1Wrong = showResults && selectedBlank1 && selectedBlank1 !== normalizedCorrectBlank1;
 
+              // In showResults+readOnly mode with no student answer, display the correct answer
+              const blank1DisplayValue = (showResults && readOnly && !selectedBlank1)
+                ? (normalizedCorrectBlank1 || '')
+                : (selectedBlank1 || '');
+
               return (
                 <select
                   key={index}
-                  value={selectedBlank1 || ''}
+                  value={blank1DisplayValue}
                   onChange={(e) => !readOnly && onBlank1Change(e.target.value)}
-                  className={`inline-block px-4 py-2 border-2 rounded-lg font-semibold text-gray-800 transition-colors focus:outline-none focus:ring-2 ${
-                    isBlank1Correct
+                  disabled={readOnly}
+                  className={`inline-block align-middle mx-1 px-2 py-0.5 border-2 rounded font-semibold text-sm text-gray-800 max-w-[180px] transition-colors focus:outline-none focus:ring-2 ${
+                    isBlank1Correct || (showResults && readOnly && !selectedBlank1 && normalizedCorrectBlank1)
                       ? 'border-green-600 bg-green-100 focus:ring-green-600'
                       : isBlank1Wrong
                         ? 'border-red-600 bg-red-100 focus:ring-red-600'
                         : 'border-brand-green bg-green-50 focus:ring-brand-green'
-                  } cursor-pointer ${!readOnly ? 'hover:bg-green-100' : ''}`}
+                  } ${!readOnly ? 'cursor-pointer hover:bg-green-100' : 'cursor-default'}`}
                 >
-                  <option value="" disabled>
-                    Select...
-                  </option>
+                  <option value="" disabled>Select...</option>
                   {blank1Options.map((option, i) => {
                     const isCorrectOption = showResults && option === normalizedCorrectBlank1;
                     const isSelectedOption = option === selectedBlank1;
@@ -146,22 +150,26 @@ export function GIQuestion({
               const isBlank2Correct = showResults && selectedBlank2 === normalizedCorrectBlank2;
               const isBlank2Wrong = showResults && selectedBlank2 && selectedBlank2 !== normalizedCorrectBlank2;
 
+              // In showResults+readOnly mode with no student answer, display the correct answer
+              const blank2DisplayValue = (showResults && readOnly && !selectedBlank2)
+                ? (normalizedCorrectBlank2 || '')
+                : (selectedBlank2 || '');
+
               return (
                 <select
                   key={index}
-                  value={selectedBlank2 || ''}
+                  value={blank2DisplayValue}
                   onChange={(e) => !readOnly && onBlank2Change(e.target.value)}
-                  className={`inline-block px-4 py-2 border-2 rounded-lg font-semibold text-gray-800 transition-colors focus:outline-none focus:ring-2 ${
-                    isBlank2Correct
+                  disabled={readOnly}
+                  className={`inline-block align-middle mx-1 px-2 py-0.5 border-2 rounded font-semibold text-sm text-gray-800 max-w-[180px] transition-colors focus:outline-none focus:ring-2 ${
+                    isBlank2Correct || (showResults && readOnly && !selectedBlank2 && normalizedCorrectBlank2)
                       ? 'border-green-600 bg-green-100 focus:ring-green-600'
                       : isBlank2Wrong
                         ? 'border-red-600 bg-red-100 focus:ring-red-600'
                         : 'border-brand-green bg-green-50 focus:ring-brand-green'
-                  } cursor-pointer ${!readOnly ? 'hover:bg-green-100' : ''}`}
+                  } ${!readOnly ? 'cursor-pointer hover:bg-green-100' : 'cursor-default'}`}
                 >
-                  <option value="" disabled>
-                    Select...
-                  </option>
+                  <option value="" disabled>Select...</option>
                   {blank2Options.map((option, i) => {
                     const isCorrectOption = showResults && option === normalizedCorrectBlank2;
                     const isSelectedOption = option === selectedBlank2;
@@ -182,10 +190,12 @@ export function GIQuestion({
                 </select>
               );
             } else {
-              return <span key={index}><MathJaxRenderer>{normalizeWhitespace(part)}</MathJaxRenderer></span>;
+              return (
+                <InlineMarkdownRenderer key={index} content={normalizeWhitespace(part)} />
+              );
             }
           })}
-        </div>
+        </p>
       </div>
 
       {/* Instructions and Feedback */}
