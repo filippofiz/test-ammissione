@@ -21,6 +21,7 @@ import {
   faUsers,
   faRobot,
   faCopy,
+  faSwimmingPool,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 // Import from full generated Supabase types
@@ -34,10 +35,18 @@ export default function AdminDashboardPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [flaggedCount, setFlaggedCount] = useState<number>(0);
+  const [pendingPoolCount, setPendingPoolCount] = useState<number>(0);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  const POOL_ALLOWED_EMAIL = 'filippo.fiz@uptoten.it';
 
   useEffect(() => {
     loadProfile();
     loadFlaggedCount();
+    loadPendingPoolCount();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user?.email) setUserEmail(user.email);
+    });
   }, []);
 
   async function loadProfile() {
@@ -95,6 +104,21 @@ export default function AdminDashboardPage() {
       setFlaggedCount(count);
     } catch (err) {
       console.error('Error loading flagged count:', err);
+    }
+  }
+
+  async function loadPendingPoolCount() {
+    try {
+      const { data, error } = await (supabase as any)
+        .from('ai_pool_questions')
+        .select('id')
+        .eq('review_status', 'pending');
+
+      if (!error && data) {
+        setPendingPoolCount(data.length);
+      }
+    } catch (err) {
+      console.error('Error loading pending pool count:', err);
     }
   }
 
@@ -534,6 +558,57 @@ export default function AdminDashboardPage() {
                   </svg>
                 </div>
               </button>
+
+              {/* AI Pool Review Card — restricted to filippo.fiz@uptoten.it */}
+              {userEmail === POOL_ALLOWED_EMAIL && <button
+                onClick={() => navigate('/admin/pool-review')}
+                className="group relative bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 border-2 border-gray-100 hover:border-sky-500 transform hover:scale-105"
+              >
+                {/* Pending Badge */}
+                {pendingPoolCount > 0 && (
+                  <div className="absolute top-4 right-4 bg-yellow-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
+                    {pendingPoolCount} pending
+                  </div>
+                )}
+
+                {/* Icon */}
+                <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-sky-500 to-sky-700 rounded-full flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
+                  <FontAwesomeIcon icon={faSwimmingPool} className="text-4xl text-white" />
+                </div>
+
+                {/* Title */}
+                <h3 className="text-2xl font-bold text-brand-dark mb-3">
+                  AI Pool Review
+                </h3>
+
+                {/* Description */}
+                <p className="text-gray-600 mb-4">
+                  Review and approve AI-generated practice pool questions
+                </p>
+
+                {/* Features List */}
+                <ul className="text-left text-sm text-gray-500 space-y-2">
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-sky-500 rounded-full"></span>
+                    Review AI questions
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-sky-500 rounded-full"></span>
+                    Approve or reject
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-sky-500 rounded-full"></span>
+                    Generate new questions
+                  </li>
+                </ul>
+
+                {/* Arrow Indicator */}
+                <div className="absolute bottom-4 right-4 text-sky-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </button>}
 
               {/* System Analytics Card */}
               <button

@@ -118,7 +118,7 @@ export interface UseAnswerManagementReturn {
 
   // Operations
   updateAnswer: (questionId: string, updater: (prev: AnswerManagementStudentAnswer | undefined) => AnswerManagementStudentAnswer) => void;
-  saveAnswer: (questionId: string, answerData: AnswerManagementStudentAnswer, isFlagged?: boolean, retryCount?: number, questionOrder?: number) => Promise<boolean>;
+  saveAnswer: (questionId: string, answerData: AnswerManagementStudentAnswer, isFlagged?: boolean, _retryCount?: number, questionOrder?: number) => Promise<boolean>;
   handleAnswerSelect: (answer: string) => void;
   handleRendererAnswerChange: (questionId: string, unified: UnifiedAnswer) => void;
   toUnifiedAnswer: (sa: AnswerManagementStudentAnswer | undefined) => UnifiedAnswer;
@@ -175,6 +175,7 @@ export function useAnswerManagement({
   const currentAttemptRef = useRef<number>(1);
   const questionStartTimesRef = useRef<Record<string, Date>>({});
   const answersRef = useRef<Record<string, AnswerManagementStudentAnswer>>({});
+  const consecutiveSaveFailuresRef = useRef<number>(0);
 
   // ─── Ref Sync Effects ──────────────────────────────────────────────────────
   useEffect(() => { currentQuestionIdRef.current = currentQuestion?.id || null; }, [currentQuestion?.id]);
@@ -194,6 +195,8 @@ export function useAnswerManagement({
         ...prev,
         [currentQuestion.id]: new Date()
       }));
+      // Reset save failure counter on question change so auto-save resumes
+      consecutiveSaveFailuresRef.current = 0;
     }
   }, [currentQuestion?.id, currentQuestionIndex]);
 
@@ -240,6 +243,12 @@ export function useAnswerManagement({
 
     const currentAnswer = answers[currentQuestion.id];
     if (!currentAnswer) return;
+
+    // Stop auto-save storm: if 3+ consecutive failures, back off significantly
+    if (consecutiveSaveFailuresRef.current >= 3) {
+      console.log('⏸️ [AUTO-SAVE] Suppressed — too many consecutive failures');
+      return;
+    }
 
     if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
 
@@ -314,7 +323,7 @@ export function useAnswerManagement({
     questionId: string,
     answerData: AnswerManagementStudentAnswer,
     isFlagged: boolean = false,
-    retryCount: number = 0,
+    _retryCount: number = 0,
     questionOrder?: number
   ): Promise<boolean> {
     if (isPreviewMode) return true;
@@ -326,142 +335,213 @@ export function useAnswerManagement({
     }
 
     const savePromise = (async () => {
+      // FIX: Retry loop INSIDE the promise — prevents recursive calls that
+      // would check savingInProgressRef and deadlock by awaiting their own promise.
+      const MAX_RETRIES = 3;
       try {
-        setIsSaving(true);
-        setSaveError(prev => prev?.includes('internet') ? prev : null);
+      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        try {
+          setIsSaving(true);
+          setSaveError(prev => prev?.includes('internet') ? prev : null);
 
-        const actualCurrentAttempt = currentAttemptRef.current;
-        const actualQuestionStartTimes = questionStartTimesRef.current;
+          const actualCurrentAttempt = currentAttemptRef.current;
+          const actualQuestionStartTimes = questionStartTimesRef.current;
 
-        console.log('💾 [SAVE] saveAnswer using ref values', {
-          questionId: questionId.substring(0, 8),
-          actualCurrentAttempt,
-          hasStartTime: !!actualQuestionStartTimes[questionId],
-          questionOrder
-        });
-
-        const tableSuffix = isTestMode ? '_test' : '';
-
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Network timeout')), 5000)
-        );
-
-        const queryPromise = db
-          .from(`2V_student_answers${tableSuffix}`)
-          .select('question_order, time_spent_seconds')
-          .eq('assignment_id', assignmentId)
-          .eq('question_id', questionId)
-          .eq('attempt_number', actualCurrentAttempt)
-          .maybeSingle();
-
-        const { data: existingAnswer } = await Promise.race([queryPromise, timeoutPromise]) as any;
-
-        const startTime = actualQuestionStartTimes[questionId];
-        const newTimeSpentSeconds = startTime
-          ? Math.floor((new Date().getTime() - startTime.getTime()) / 1000)
-          : 0;
-
-        const finalTimeSpentSeconds = existingAnswer
-          ? (existingAnswer.time_spent_seconds || 0) + newTimeSpentSeconds
-          : newTimeSpentSeconds;
-
-        const finalQuestionOrder = existingAnswer
-          ? existingAnswer.question_order
-          : questionOrder;
-
-        console.log('⏱️ [SAVE] Time calculation', {
-          questionId: questionId.substring(0, 8),
-          hasStartTime: !!startTime,
-          newTimeSpent: newTimeSpentSeconds,
-          existingTimeSpent: existingAnswer?.time_spent_seconds || 0,
-          finalTimeSpent: finalTimeSpentSeconds,
-          questionOrder: finalQuestionOrder
-        });
-
-        // Transform answer to JSONB format
-        let jsonbAnswer: JsonbAnswer;
-        if (answerData.msrAnswers) {
-          jsonbAnswer = { answers: answerData.msrAnswers };
-        } else if (answerData.blank1 !== undefined || answerData.blank2 !== undefined) {
-          jsonbAnswer = { answers: { part1: answerData.blank1 || null, part2: answerData.blank2 || null } };
-        } else if (answerData.taAnswers) {
-          jsonbAnswer = { answers: answerData.taAnswers };
-        } else if (answerData.column1 || answerData.column2) {
-          jsonbAnswer = { answers: { part1: answerData.column1 || null, part2: answerData.column2 || null } };
-        } else if (answerData.answer !== undefined) {
-          jsonbAnswer = { answer: answerData.answer };
-        } else {
-          jsonbAnswer = { answer: null };
-        }
-
-        const upsertTimeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Network timeout')), 5000)
-        );
-
-        const upsertQueryPromise = db
-          .from(`2V_student_answers${tableSuffix}`)
-          .upsert({
-            assignment_id: assignmentId,
-            student_id: studentId,
-            question_id: questionId,
-            attempt_number: actualCurrentAttempt,
-            answer: jsonbAnswer,
-            is_flagged: isFlagged,
-            time_spent_seconds: finalTimeSpentSeconds,
-            question_order: finalQuestionOrder,
-            is_guided: isGuidedMode,
-            guided_settings: isGuidedMode ? { timed: guidedTimed } : null,
-          }, {
-            onConflict: 'assignment_id,question_id,attempt_number'
+          console.log('💾 [SAVE] saveAnswer using ref values', {
+            questionId: questionId.substring(0, 8),
+            actualCurrentAttempt,
+            hasStartTime: !!actualQuestionStartTimes[questionId],
+            questionOrder,
+            attempt: attempt + 1
           });
 
-        const { error } = await Promise.race([upsertQueryPromise, upsertTimeoutPromise]) as any;
-        if (error) throw error;
+          const tableSuffix = isTestMode ? '_test' : '';
 
-        // Update assignment status to 'in_progress' on first answer
-        const statusTimeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Network timeout')), 5000)
-        );
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Network timeout')), 5000)
+          );
 
-        const statusQueryPromise = db
-          .from(`2V_test_assignments${tableSuffix}`)
-          .update({ status: 'in_progress', start_time: new Date().toISOString() })
-          .eq('id', assignmentId)
-          .eq('status', 'unlocked');
+          const queryPromise = db
+            .from(`2V_student_answers${tableSuffix}`)
+            .select('question_order, time_spent_seconds')
+            .eq('assignment_id', assignmentId)
+            .eq('question_id', questionId)
+            .eq('attempt_number', actualCurrentAttempt)
+            .maybeSingle();
 
-        await Promise.race([statusQueryPromise, statusTimeoutPromise]) as any;
+          // FIX: Destructure error from SELECT to avoid silent failures
+          const { data: existingAnswer, error: selectError } = await Promise.race([queryPromise, timeoutPromise]) as any;
 
-        // Clear the start time
-        setQuestionStartTimes(prev => {
-          const updated = { ...prev };
-          delete updated[questionId];
-          return updated;
-        });
+          if (selectError) {
+            console.warn('⚠️ [SAVE] SELECT existing answer failed:', selectError.message);
+            // Continue with save anyway — use provided questionOrder and 0 for time
+          }
 
-        return true;
-      } catch (error: any) {
-        console.error('❌ [SAVE] Error:', error);
+          const startTime = actualQuestionStartTimes[questionId];
+          const newTimeSpentSeconds = startTime
+            ? Math.floor((new Date().getTime() - startTime.getTime()) / 1000)
+            : 0;
 
-        const errorMessage = error?.message?.toLowerCase() || '';
-        const isNetworkError = !navigator.onLine ||
-          errorMessage.includes('fetch') ||
-          errorMessage.includes('network') ||
-          errorMessage.includes('timeout') ||
-          error?.code === 'ENOTFOUND';
+          const finalTimeSpentSeconds = (existingAnswer && !selectError)
+            ? (existingAnswer.time_spent_seconds || 0) + newTimeSpentSeconds
+            : newTimeSpentSeconds;
 
-        if (isNetworkError) {
-          setSaveError('⚠️ No internet connection. Cannot proceed until connection is restored.');
-          return false;
+          const finalQuestionOrder = (existingAnswer && !selectError)
+            ? existingAnswer.question_order
+            : questionOrder;
+
+          console.log('⏱️ [SAVE] Time calculation', {
+            questionId: questionId.substring(0, 8),
+            hasStartTime: !!startTime,
+            newTimeSpent: newTimeSpentSeconds,
+            existingTimeSpent: existingAnswer?.time_spent_seconds || 0,
+            finalTimeSpent: finalTimeSpentSeconds,
+            questionOrder: finalQuestionOrder,
+            selectFailed: !!selectError
+          });
+
+          // Transform answer to JSONB format
+          let jsonbAnswer: JsonbAnswer;
+          if (answerData.msrAnswers) {
+            jsonbAnswer = { answers: answerData.msrAnswers };
+          } else if (answerData.blank1 !== undefined || answerData.blank2 !== undefined) {
+            jsonbAnswer = { answers: { part1: answerData.blank1 || null, part2: answerData.blank2 || null } };
+          } else if (answerData.taAnswers) {
+            jsonbAnswer = { answers: answerData.taAnswers };
+          } else if (answerData.column1 || answerData.column2) {
+            jsonbAnswer = { answers: { part1: answerData.column1 || null, part2: answerData.column2 || null } };
+          } else if (answerData.answer !== undefined) {
+            jsonbAnswer = { answer: answerData.answer };
+          } else {
+            jsonbAnswer = { answer: null };
+          }
+
+          const upsertTimeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Network timeout')), 5000)
+          );
+
+          const upsertQueryPromise = db
+            .from(`2V_student_answers${tableSuffix}`)
+            .upsert({
+              assignment_id: assignmentId,
+              student_id: studentId,
+              question_id: questionId,
+              attempt_number: actualCurrentAttempt,
+              answer: jsonbAnswer,
+              is_flagged: isFlagged,
+              time_spent_seconds: finalTimeSpentSeconds,
+              question_order: finalQuestionOrder,
+              is_guided: isGuidedMode,
+              guided_settings: isGuidedMode ? { timed: guidedTimed } : null,
+            }, {
+              onConflict: 'assignment_id,question_id,attempt_number'
+            });
+
+          const { error } = await Promise.race([upsertQueryPromise, upsertTimeoutPromise]) as any;
+
+          if (error) {
+            // Check for conflict/duplicate key error (409 from PostgREST)
+            const isConflict = error.code === '23505' ||
+              error.message?.toLowerCase()?.includes('duplicate key') ||
+              error.message?.toLowerCase()?.includes('unique constraint') ||
+              error.message?.toLowerCase()?.includes('conflict');
+
+            if (isConflict) {
+              console.log('🔄 [SAVE] Conflict on upsert, falling back to direct UPDATE', {
+                questionId: questionId.substring(0, 8),
+                errorCode: error.code,
+                errorMessage: error.message?.substring(0, 100)
+              });
+
+              // Row already exists — try a direct UPDATE instead
+              const updateTimeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Network timeout')), 5000)
+              );
+
+              const updateQueryPromise = db
+                .from(`2V_student_answers${tableSuffix}`)
+                .update({
+                  answer: jsonbAnswer,
+                  is_flagged: isFlagged,
+                  time_spent_seconds: finalTimeSpentSeconds,
+                  question_order: finalQuestionOrder,
+                  is_guided: isGuidedMode,
+                  guided_settings: isGuidedMode ? { timed: guidedTimed } : null,
+                })
+                .eq('assignment_id', assignmentId)
+                .eq('question_id', questionId)
+                .eq('attempt_number', actualCurrentAttempt);
+
+              const { error: updateError } = await Promise.race([updateQueryPromise, updateTimeoutPromise]) as any;
+
+              if (updateError) {
+                console.warn('⚠️ [SAVE] UPDATE fallback also failed:', updateError.message);
+                // Row exists but we can't update — don't block navigation
+                // The previous data is preserved
+                return true;
+              }
+
+              console.log('✅ [SAVE] UPDATE fallback succeeded');
+              // Fall through to success handling below
+            } else {
+              throw error;
+            }
+          }
+
+          // Update assignment status to 'in_progress' on first answer
+          const statusTimeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Network timeout')), 5000)
+          );
+
+          const statusQueryPromise = db
+            .from(`2V_test_assignments${tableSuffix}`)
+            .update({ status: 'in_progress', start_time: new Date().toISOString() })
+            .eq('id', assignmentId)
+            .eq('status', 'unlocked');
+
+          await Promise.race([statusQueryPromise, statusTimeoutPromise]) as any;
+
+          // FIX: Reset start time to now (not delete) so subsequent auto-saves
+          // still record accurate time for the current visit to this question.
+          setQuestionStartTimes(prev => ({
+            ...prev,
+            [questionId]: new Date()
+          }));
+
+          consecutiveSaveFailuresRef.current = 0;
+          return true;
+        } catch (error: any) {
+          console.error(`❌ [SAVE] Error (attempt ${attempt + 1}/${MAX_RETRIES}):`, error);
+          consecutiveSaveFailuresRef.current++;
+
+          const errorMessage = error?.message?.toLowerCase() || '';
+          const isNetworkError = !navigator.onLine ||
+            errorMessage.includes('fetch') ||
+            errorMessage.includes('network') ||
+            errorMessage.includes('timeout') ||
+            error?.code === 'ENOTFOUND';
+
+          if (isNetworkError) {
+            setSaveError('⚠️ No internet connection. Cannot proceed until connection is restored.');
+            return false;
+          }
+
+          // If we have retries left, wait with exponential backoff and loop
+          if (attempt < MAX_RETRIES - 1) {
+            const delay = Math.pow(2, attempt) * 1000;
+            console.log(`🔄 [SAVE] Retrying in ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            // Loop continues — no recursive call, no deadlock
+          } else {
+            setSaveError('Failed to save answer. Your progress may not be saved.');
+            // Don't block navigation — allow student to continue even if save fails
+            // Navigation blocking only for network errors (no connectivity)
+            return true;
+          }
         }
-
-        if (retryCount < 2) {
-          const delay = Math.pow(2, retryCount) * 1000;
-          await new Promise(resolve => setTimeout(resolve, delay));
-          return saveAnswer(questionId, answerData, isFlagged, retryCount + 1, questionOrder);
-        } else {
-          setSaveError('Failed to save answer. Your progress may not be saved.');
-          return false;
-        }
+      }
+      // Should not reach here, but just in case
+      return true;
       } finally {
         setIsSaving(false);
         savingInProgressRef.current.delete(questionId);

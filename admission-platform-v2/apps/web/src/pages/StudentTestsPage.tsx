@@ -34,12 +34,16 @@ import {
   faInfinity,
   faRocket,
   faInfoCircle,
+  faBook,
 } from '@fortawesome/free-solid-svg-icons';
 import { Layout } from '../components/Layout';
 import { supabase } from '../lib/supabase';
 import { translateTestTrackAsync } from '../lib/translateTestTrack';
 import i18n from 'i18next';
 import { GMATCycleManager } from '../components/GMATCycleManager';
+import { PoolPractice } from '../components/pool/PoolPractice';
+import { PoolSectionSelector } from '../components/pool/PoolSectionSelector';
+import { SemestreFiltroBank } from '../components/semestre-filtro/SemestreFiltroBank';
 
 // BIG DRAMATIC LOCK ANIMATION STYLES
 const lockAnimationStyles = `
@@ -228,6 +232,13 @@ export default function StudentTestsPage() {
   const [startTestMode, setStartTestMode] = useState<'student' | 'guided'>('student');
   const [guidedTimed, setGuidedTimed] = useState(true);
 
+  // Pool Practice state
+  const [showPoolSelector, setShowPoolSelector] = useState(false);
+  const [poolSection, setPoolSection] = useState<string | null>(null);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+
+  const POOL_ALLOWED_EMAIL = 'filippo.fiz@uptoten.it';
+
   // Redirect GMAT to the dedicated GMAT preparation page
   useEffect(() => {
     if (testType === 'GMAT' && studentId) {
@@ -239,6 +250,10 @@ export default function StudentTestsPage() {
     if (studentId && testType && testType !== 'GMAT') {
       loadData();
     }
+    // Fetch current user email for pool access control
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user?.email) setCurrentUserEmail(user.email);
+    });
   }, [studentId, testType]);
 
   // Translate section names when assignments change
@@ -1282,6 +1297,70 @@ export default function StudentTestsPage() {
     );
   }
 
+  // Semestre Filtro: completely different page — question bank with filters
+  if (testType?.toUpperCase().includes('SEMESTRE FILTRO') && studentId) {
+    return (
+      <Layout
+        pageTitle={student?.name || student?.email}
+        pageSubtitle={testType}
+      >
+        <div className="flex-1 p-4 md:p-8">
+          <div className="max-w-7xl mx-auto">
+            {/* Back Button */}
+            <button
+              onClick={() => navigate('/tutor/students')}
+              className="mb-6 flex items-center gap-2 text-brand-dark hover:text-brand-green transition-colors group"
+            >
+              <FontAwesomeIcon icon={faArrowLeft} className="group-hover:-translate-x-1 transition-transform" />
+              <span className="font-medium">{t('studentTests.backToStudents')}</span>
+            </button>
+
+            {/* Student Header */}
+            <div className="mb-8 animate-fadeInUp">
+              <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8">
+                <div className="flex items-start gap-4">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-16 h-16 bg-gradient-to-br from-brand-green to-green-600 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-lg flex-shrink-0">
+                      <FontAwesomeIcon icon={faUserGraduate} />
+                    </div>
+                    <button
+                      onClick={() => navigate(`/tutor/student/${studentId}/profile`)}
+                      className="px-4 py-2 bg-gradient-to-r from-brand-green to-green-600 text-white rounded-lg text-sm font-semibold hover:shadow-lg transition-all whitespace-nowrap"
+                    >
+                      <FontAwesomeIcon icon={faUser} className="mr-2" />
+                      Profile
+                    </button>
+                  </div>
+                  <div className="flex-1">
+                    {student?.name && (
+                      <p className="text-gray-600 mb-3">{student.email}</p>
+                    )}
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-semibold border border-blue-200">
+                        <FontAwesomeIcon icon={faClipboardList} className="mr-2" />
+                        {testType}
+                      </span>
+                      <button
+                        onClick={() => navigate('/tutor/theory-management')}
+                        className="px-4 py-2 bg-purple-50 text-purple-700 rounded-lg text-sm font-semibold border border-purple-200 hover:bg-purple-100 transition-colors"
+                      >
+                        <FontAwesomeIcon icon={faBook} className="mr-2" />
+                        Manage Theory
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Question Bank */}
+            <SemestreFiltroBank studentId={studentId} testType={testType} />
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout
       pageTitle={student?.name || student?.email}
@@ -1428,6 +1507,53 @@ export default function StudentTestsPage() {
           )}
 
           {/* Note: Tests are now auto-assigned when student visits this page */}
+
+          {/* Practice Pool Section — restricted to filippo.fiz@uptoten.it */}
+          {studentId && testType && currentUserEmail === POOL_ALLOWED_EMAIL && (
+            <div className="mb-8 animate-fadeInUp">
+              {showPoolSelector ? (
+                <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8">
+                  <PoolSectionSelector
+                    studentId={studentId}
+                    testType={testType}
+                    onSelectSection={(section) => {
+                      setPoolSection(section);
+                      setShowPoolSelector(false);
+                    }}
+                    onClose={() => setShowPoolSelector(false)}
+                  />
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowPoolSelector(true)}
+                  className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 rounded-2xl shadow-xl p-6 text-white hover:shadow-2xl transition-all hover:scale-[1.01] text-left"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center">
+                        <FontAwesomeIcon icon={faInfinity} className="text-2xl" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold">Practice Pool</h3>
+                        <p className="text-white/80 text-sm">Infinite practice with proficiency tracking</p>
+                      </div>
+                    </div>
+                    <FontAwesomeIcon icon={faPlay} className="text-2xl text-white/80" />
+                  </div>
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Pool Practice Overlay */}
+          {poolSection && studentId && testType && currentUserEmail === POOL_ALLOWED_EMAIL && (
+            <PoolPractice
+              studentId={studentId}
+              testType={testType}
+              section={poolSection}
+              onClose={() => setPoolSection(null)}
+            />
+          )}
 
           {/* Tests List */}
           {assignments.length === 0 ? (

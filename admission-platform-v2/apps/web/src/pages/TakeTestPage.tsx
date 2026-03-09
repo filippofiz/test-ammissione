@@ -1464,11 +1464,22 @@ export default function TakeTestPage() {
         return;
       }
 
-      setAllQuestions(questions);
+      // Parse question_data and answers fields if they are strings
+      const parsedQuestions = questions.map(q => ({
+        ...q,
+        question_data: typeof q.question_data === 'string'
+          ? JSON.parse(q.question_data)
+          : q.question_data,
+        answers: typeof q.answers === 'string'
+          ? JSON.parse(q.answers)
+          : q.answers
+      }));
+
+      setAllQuestions(parsedQuestions);
 
       // Set sections (if any)
       if (configData.section_order_mode !== 'no_sections') {
-        const uniqueSections = [...new Set(questions.map(q => q.section))];
+        const uniqueSections = [...new Set(parsedQuestions.map(q => q.section))];
         setSections(uniqueSections);
       } else {
         setSections([]);
@@ -1929,7 +1940,7 @@ export default function TakeTestPage() {
           ? 'macro_section'
           : 'section';
         sectionsToUse = Array.from(new Set(
-          questions?.map(q => (q as any)[sectionField]).filter(Boolean) || []
+          parsedQuestions.map(q => (q as any)[sectionField]).filter(Boolean)
         ));
       }
 
@@ -1950,7 +1961,7 @@ export default function TakeTestPage() {
 
       // Initialize question selection based on config
       const initialQuestions = prepareInitialQuestions(
-        questions || [],
+        parsedQuestions,
         configData,
         algorithmConfigData
       );
@@ -2472,6 +2483,9 @@ export default function TakeTestPage() {
       sectionIndex: actualCurrentSectionIndex,
       pauseMode: config?.pause_mode
     });
+    // Reset refs before submitting — if submitTest fails, completeSection must remain callable
+    setIsCompletingSection(false);
+    isCompletingSectionRef.current = false;
     moveToNextSection(actualCurrentSectionIndex);
   }
 
@@ -3143,8 +3157,9 @@ export default function TakeTestPage() {
     }
 
     // Last section - move to completion
-    // Note: Don't reset refs here - let submitTest handle completion
-    // This prevents race conditions from multiple timer callbacks
+    // Reset refs before submitting — if submitTest fails, completeSection must remain callable
+    setIsCompletingSection(false);
+    isCompletingSectionRef.current = false;
     moveToNextSection(actualCurrentSectionIndex);
   }
   // Keep completeSectionRef in sync so useReviewMode.completeReview() calls the latest version
@@ -3440,12 +3455,21 @@ export default function TakeTestPage() {
     }
 
     // Mark test as completed in database with completion_details
+    // Safety: if submission takes longer than 30s, force-show completion screen
+    // This prevents students from being stuck on "Submitting..." overlay forever
+    const submissionTimeout = setTimeout(() => {
+      console.warn('⚠️ [SUBMIT] Submission timed out after 30s — forcing completion screen');
+      setShowCompletionScreen(true);
+      setSubmitting(false);
+    }, 30000);
+
     try {
       // Save completion details
       const success = await saveCompletionDetails('completed', 'submitted');
 
       if (!success) {
-        throw new Error('Failed to save completion details');
+        console.error('❌ [SUBMIT] saveCompletionDetails returned false — showing completion screen anyway');
+        // Don't throw — still show completion screen. The answers are already saved individually.
       }
 
       // For GMAT tests, track seen questions
@@ -3461,11 +3485,15 @@ export default function TakeTestPage() {
       }
 
       // Show completion screen
+      clearTimeout(submissionTimeout);
       setShowCompletionScreen(true);
       setSubmitting(false);
     } catch (err) {
+      clearTimeout(submissionTimeout);
+      console.error('❌ [SUBMIT] Error during submission:', err);
+      // Still show completion screen — individual answers were already saved
+      setShowCompletionScreen(true);
       setSubmitting(false);
-      alert('Error submitting test. Please contact your instructor.');
     }
   }
 
@@ -3483,13 +3511,24 @@ export default function TakeTestPage() {
     reason: 'submitted' | 'time_expired' | 'fullscreen_exit' | 'multiple_screens' | 'browser_closed',
     annulmentReason?: string
   ) {
+    // Helper: wrap any promise with a timeout to prevent hanging forever
+    const withTimeout = <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> =>
+      Promise.race([
+        promise,
+        new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms))
+      ]);
+
     try {
       // Get existing attempts history from database
-      const { data: currentAssignment, error: _fetchError } = await supabase
-        .from('2V_test_assignments')
-        .select('completion_details, start_time, current_attempt, total_attempts')
-        .eq('id', assignmentId!)
-        .single() as { data: { completion_details: { attempts: AttemptData[] } | null; start_time: string | null; current_attempt: number | null; total_attempts: number | null } | null; error: unknown };
+      const { data: currentAssignment, error: _fetchError } = await withTimeout(
+        supabase
+          .from('2V_test_assignments')
+          .select('completion_details, start_time, current_attempt, total_attempts')
+          .eq('id', assignmentId!)
+          .single() as Promise<any>,
+        10000,
+        'Fetch assignment'
+      ) as { data: { completion_details: { attempts: AttemptData[] } | null; start_time: string | null; current_attempt: number | null; total_attempts: number | null } | null; error: unknown };
 
       const existingDetails = currentAssignment?.completion_details || { attempts: [] };
       const attempts = Array.isArray(existingDetails.attempts) ? existingDetails.attempts : [];
@@ -3601,11 +3640,15 @@ export default function TakeTestPage() {
         results_viewable_by_student: false
       } as any;
 
-      const { data: _updateResult, error } = await supabase
-        .from('2V_test_assignments')
-        .update(updateData)
-        .eq('id', assignmentId!)
-        .select();
+      const { data: _updateResult, error } = await withTimeout(
+        supabase
+          .from('2V_test_assignments')
+          .update(updateData)
+          .eq('id', assignmentId!)
+          .select() as Promise<any>,
+        10000,
+        'Update assignment'
+      );
 
       if (error) {
         throw error;
@@ -3615,13 +3658,17 @@ export default function TakeTestPage() {
       if (status === 'completed') {
         try {
           // Get student's external_student_id
-          const { data: { user } } = await supabase.auth.getUser();
+          const { data: { user } } = await withTimeout(supabase.auth.getUser(), 5000, 'Get user');
           if (user) {
-            const { data: profile } = await supabase
-              .from('2V_profiles')
-              .select('external_student_id')
-              .eq('auth_uid', user.id)
-              .single();
+            const { data: profile } = await withTimeout(
+              supabase
+                .from('2V_profiles')
+                .select('external_student_id')
+                .eq('auth_uid', user.id)
+                .single() as Promise<any>,
+              5000,
+              'Get profile'
+            );
 
             if (profile?.external_student_id) {
               // Calculate correct, wrong, blank answers using isolated calculator
@@ -3629,11 +3676,15 @@ export default function TakeTestPage() {
               const totalQuestions = selectedQuestions.length;
 
               // Get test info for external sync
-              const { data: assignmentWithTest } = await supabase
-                .from('2V_test_assignments')
-                .select('2V_tests(test_type, exercise_type, test_number, section)')
-                .eq('id', assignmentId!)
-                .single();
+              const { data: assignmentWithTest } = await withTimeout(
+                supabase
+                  .from('2V_test_assignments')
+                  .select('2V_tests(test_type, exercise_type, test_number, section)')
+                  .eq('id', assignmentId!)
+                  .single() as Promise<any>,
+                5000,
+                'Get test info'
+              );
 
               const testInfo = (assignmentWithTest as any)?.['2V_tests'];
               const testType = testInfo?.test_type || 'Unknown';
@@ -3658,13 +3709,17 @@ export default function TakeTestPage() {
               }
 
               console.log('📊 [EXTERNAL SYNC] Calculating results for external platform');
-              const results = await calculateResultsForExternalSync(
-                assignmentId!,
-                currentAttempt,
-                totalQuestions
+              const results = await withTimeout(
+                calculateResultsForExternalSync(
+                  assignmentId!,
+                  currentAttempt,
+                  totalQuestions
+                ),
+                10000,
+                'Calculate results'
               );
 
-              await syncTestResultsToExternal({
+              await withTimeout(syncTestResultsToExternal({
                 externalStudentId: profile.external_student_id,
                 testType: testType,
                 testName: testName,
@@ -3675,7 +3730,7 @@ export default function TakeTestPage() {
                 wrong: results.wrong,
                 blank: results.blank,
                 totalQuestions: results.totalQuestions
-              });
+              }), 10000, 'Sync to external');
             }
           }
         } catch (syncError) {
@@ -4121,7 +4176,7 @@ export default function TakeTestPage() {
             />
           </div>
         ) : (
-        <div className={`${currentQuestion?.question_data?.passage_text ? 'max-w-7xl' : 'max-w-4xl'} mx-auto bg-white rounded-2xl shadow-lg ${currentQuestion?.question_data?.passage_text ? 'p-6' : 'p-8'}`}>
+        <div key={currentQuestion?.id || currentQuestionIndex} className={`${currentQuestion?.question_data?.passage_text ? 'max-w-7xl' : 'max-w-4xl'} mx-auto bg-white rounded-2xl shadow-lg ${currentQuestion?.question_data?.passage_text ? 'p-6' : 'p-8'}`}>
           {/* Question Text */}
           <div className="mb-8">
             <div className="flex items-start justify-end gap-2 mb-4">
@@ -4295,6 +4350,13 @@ export default function TakeTestPage() {
             </div>
             );
           })()}
+
+          {/* Fallback when no rendering path matched */}
+          {currentQuestion && !currentQuestion?.question_text && !currentQuestion?.question_data?.options && !currentQuestion?.question_data?.di_type && !currentQuestion?.question_data?.choices && currentQuestion?.question_type !== 'open_ended' && (
+            <div className="text-center py-8 text-gray-500">
+              <p>Question could not be displayed. Please try refreshing the page.</p>
+            </div>
+          )}
 
           {/* Report Issue Button - subtle link at bottom */}
           <div className="mt-6 pt-4 border-t border-gray-100 text-center">
