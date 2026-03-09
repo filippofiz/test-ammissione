@@ -197,16 +197,15 @@ export async function lockSimulation(studentId: string): Promise<void> {
  * @param section - The section to lock (QR, DI, or VR)
  * @throws Error if update fails or student has no progress record
  */
-export async function lockSectionAssessment(studentId: string, section: GmatSection): Promise<void> {
-  // Note: section_*_locked columns added in migration 039
-  // Type cast needed until database.types.ts is regenerated
-  const columnName = `section_${section.toLowerCase()}_locked`;
+export async function lockSectionAssessment(studentId: string, section: GmatSection, cycle: GmatCycle): Promise<void> {
   const { error } = await supabase
-    .from('2V_gmat_student_progress')
-    .update({
-      [columnName]: true,
-    } as Record<string, unknown>)
-    .eq('student_id', studentId);
+    .from('2V_gmat_section_assessment_locks')
+    .upsert({
+      student_id: studentId,
+      section,
+      gmat_cycle: cycle,
+      is_locked: true,
+    }, { onConflict: 'student_id,section,gmat_cycle' });
 
   if (error) {
     console.error(`Error locking ${section} section assessment:`, error);
@@ -214,24 +213,15 @@ export async function lockSectionAssessment(studentId: string, section: GmatSect
   }
 }
 
-/**
- * Unlock a section assessment for a student (tutor action)
- * This allows the student to start/retake that section's assessment
- *
- * @param studentId - The student's profile ID
- * @param section - The section to unlock (QR, DI, or VR)
- * @throws Error if update fails or student has no progress record
- */
-export async function unlockSectionAssessment(studentId: string, section: GmatSection): Promise<void> {
-  // Note: section_*_locked columns added in migration 039
-  // Type cast needed until database.types.ts is regenerated
-  const columnName = `section_${section.toLowerCase()}_locked`;
+export async function unlockSectionAssessment(studentId: string, section: GmatSection, cycle: GmatCycle): Promise<void> {
   const { error } = await supabase
-    .from('2V_gmat_student_progress')
-    .update({
-      [columnName]: false,
-    } as Record<string, unknown>)
-    .eq('student_id', studentId);
+    .from('2V_gmat_section_assessment_locks')
+    .upsert({
+      student_id: studentId,
+      section,
+      gmat_cycle: cycle,
+      is_locked: false,
+    }, { onConflict: 'student_id,section,gmat_cycle' });
 
   if (error) {
     console.error(`Error unlocking ${section} section assessment:`, error);
@@ -1266,7 +1256,8 @@ export async function getSectionAssessmentHistory(
  * Useful for showing section readiness status
  */
 export async function getLatestSectionAssessments(
-  studentId: string
+  studentId: string,
+  cycle?: GmatCycle
 ): Promise<Record<GmatSection, GmatAssessmentResult | null>> {
   const result: Record<GmatSection, GmatAssessmentResult | null> = {
     QR: null,
@@ -1281,22 +1272,55 @@ export async function getLatestSectionAssessments(
       .eq('student_id', studentId)
       .eq('assessment_type', 'section_assessment')
       .eq('section', section)
-      .order('completed_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .order('completed_at', { ascending: false });
 
     if (!error && data) {
-      result[section] = {
-        ...data,
-        assessment_type: data.assessment_type as GmatAssessmentType,
-        suggested_cycle: data.suggested_cycle as GmatCycle | null,
-        assigned_cycle: data.assigned_cycle as GmatCycle | null,
-        difficulty_breakdown: data.difficulty_breakdown as GmatAssessmentResult['difficulty_breakdown'],
-      };
+      // Filter by cycle client-side: rows without metadata.cycle default to Foundation
+      const filtered = cycle
+        ? data.filter(r => (r.metadata?.cycle ?? 'Foundation') === cycle)
+        : data;
+
+      const row = filtered[0];
+      if (row) {
+        result[section] = {
+          ...row,
+          assessment_type: row.assessment_type as GmatAssessmentType,
+          suggested_cycle: row.suggested_cycle as GmatCycle | null,
+          assigned_cycle: row.assigned_cycle as GmatCycle | null,
+          difficulty_breakdown: row.difficulty_breakdown as GmatAssessmentResult['difficulty_breakdown'],
+        };
+      }
     }
   }
 
   return result;
+}
+
+/**
+ * Get section assessment lock states for a student and cycle.
+ * No record = locked by default (same as training locks).
+ */
+export async function getSectionAssessmentLocks(
+  studentId: string,
+  cycle: GmatCycle
+): Promise<Record<GmatSection, boolean>> {
+  const locks: Record<GmatSection, boolean> = { QR: true, DI: true, VR: true };
+
+  const { data, error } = await supabase
+    .from('2V_gmat_section_assessment_locks')
+    .select('section, is_locked')
+    .eq('student_id', studentId)
+    .eq('gmat_cycle', cycle);
+
+  if (!error && data) {
+    data.forEach((row: any) => {
+      if (row.section in locks) {
+        locks[row.section as GmatSection] = row.is_locked;
+      }
+    });
+  }
+
+  return locks;
 }
 
 /**
@@ -1805,7 +1829,8 @@ export async function getTrainingTemplates(): Promise<TrainingTemplate[]> {
  * Groups by template and calculates attempt counts and best scores
  */
 export async function getTrainingCompletions(
-  studentId: string
+  studentId: string,
+  cycle?: GmatCycle
 ): Promise<Map<string, TrainingCompletion>> {
   const { data, error } = await supabase
     .from('2V_gmat_assessment_results')
@@ -1821,7 +1846,13 @@ export async function getTrainingCompletions(
 
   // All returned rows are valid completions. Deduplication is handled below by
   // grouping on topic and keeping the most recent per template.
-  const validResults = data || [];
+  const allResults = data || [];
+  const validResults = cycle
+    ? allResults.filter(r => {
+        const rowCycle = r.metadata?.gmat_cycle ?? 'Foundation';
+        return rowCycle === cycle;
+      })
+    : allResults;
 
   // Group by topic (which stores template_id for trainings)
   // Calculate attempt counts and best scores
@@ -1881,7 +1912,8 @@ export async function saveTrainingResult(
   difficultyBreakdown?: GmatAssessmentResult['difficulty_breakdown'],
   timeSpentSeconds?: number,
   answersData?: Record<string, QuestionAnswerData>,
-  bookmarkedQuestionIds?: string[]
+  bookmarkedQuestionIds?: string[],
+  studentCycle?: GmatCycle
 ): Promise<GmatAssessmentResult> {
   // Validate: Prevent saving empty results (which cause duplicate count issues)
   if (!answersData || Object.keys(answersData).length === 0) {
@@ -1907,6 +1939,7 @@ export async function saveTrainingResult(
     p_question_ids: questionIds,
     p_answers_data: answersData || null,
     p_bookmarked_question_ids: bookmarkedQuestionIds || null,
+    p_metadata: studentCycle ? { gmat_cycle: studentCycle } : null,
   });
 
   if (rpcError) {
@@ -2308,13 +2341,14 @@ export interface GMATTrainingAssignment {
  * Uses the dedicated 2V_gmat_training_locks table
  */
 export async function getGMATTrainingAssignments(
-  studentId: string
+  studentId: string,
+  cycle: GmatCycle
 ): Promise<Map<string, GMATTrainingAssignment>> {
-  // Note: 2V_gmat_training_locks table created in migration 041
   const { data, error } = await supabase
     .from('2V_gmat_training_locks')
     .select('*')
-    .eq('student_id', studentId);
+    .eq('student_id', studentId)
+    .eq('gmat_cycle', cycle);
 
   if (error) {
     console.error('Error fetching GMAT training locks:', error);
@@ -2345,19 +2379,19 @@ export async function upsertGMATTrainingLock(
   studentId: string,
   templateId: string,
   isLocked: boolean,
+  cycle: GmatCycle,
   tutorId?: string
 ): Promise<void> {
-  // Note: 2V_gmat_training_locks table created in migration 041
-  // Use upsert with on_conflict
   const { error } = await supabase
     .from('2V_gmat_training_locks')
     .upsert({
       student_id: studentId,
       template_id: templateId,
+      gmat_cycle: cycle,
       is_locked: isLocked,
       locked_by: tutorId || null,
     }, {
-      onConflict: 'student_id,template_id',
+      onConflict: 'student_id,template_id,gmat_cycle',
     });
 
   if (error) {
@@ -2372,9 +2406,10 @@ export async function upsertGMATTrainingLock(
 export async function lockGMATTrainingTest(
   studentId: string,
   templateId: string,
+  cycle: GmatCycle,
   tutorId?: string
 ): Promise<void> {
-  await upsertGMATTrainingLock(studentId, templateId, true, tutorId);
+  await upsertGMATTrainingLock(studentId, templateId, true, cycle, tutorId);
 }
 
 /**
@@ -2383,9 +2418,10 @@ export async function lockGMATTrainingTest(
 export async function unlockGMATTrainingTest(
   studentId: string,
   templateId: string,
+  cycle: GmatCycle,
   tutorId?: string
 ): Promise<void> {
-  await upsertGMATTrainingLock(studentId, templateId, false, tutorId);
+  await upsertGMATTrainingLock(studentId, templateId, false, cycle, tutorId);
 }
 
 /**
