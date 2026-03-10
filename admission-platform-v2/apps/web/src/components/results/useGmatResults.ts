@@ -18,6 +18,7 @@ import {
 import { thetaToSectionScore, computeTotalScore, getTotalPercentile, getScoreBand } from '../../lib/algorithms/gmatScoringAlgorithm';
 import type { UnifiedResultData, UnifiedQuestionResult } from './types';
 import { getAssessmentTypeLabel, formatTopicName } from './types';
+import { checkAnswerCorrectness } from '../../lib/gmat/answerChecking';
 
 export interface UseGmatResultsReturn {
   data: UnifiedResultData | null;
@@ -99,6 +100,28 @@ export function useGmatResults(assessmentId: string | undefined): UseGmatResults
 
         questions = sortedQuestions.map((q, index) => {
           const answerData = answersData?.[q.id];
+          const questionDataParsed = typeof q.question_data === 'string'
+            ? JSON.parse(q.question_data)
+            : q.question_data;
+          const answersParsed = typeof q.answers === 'string'
+            ? JSON.parse(q.answers)
+            : q.answers;
+
+          // Always recompute isCorrect from the raw student answer and correct answer.
+          // This fixes legacy results where is_correct was stored incorrectly (e.g. due to
+          // TA JSON.stringify key-order bug or DS comparison failure that stored false for
+          // correct answers). Recomputing at display time is always accurate.
+          let isCorrect: boolean;
+          if (answerData?.answer != null && !answerData.is_unanswered) {
+            isCorrect = checkAnswerCorrectness(
+              answerData.answer,
+              answersParsed?.correct_answer,
+              questionDataParsed?.di_type,
+            );
+          } else {
+            isCorrect = false;
+          }
+
           return {
             questionId: q.id,
             question: {
@@ -106,16 +129,12 @@ export function useGmatResults(assessmentId: string | undefined): UseGmatResults
               section: q.section,
               difficulty: q.difficulty ?? undefined,
               question_type: q.question_type,
-              question_data: typeof q.question_data === 'string'
-                ? JSON.parse(q.question_data)
-                : q.question_data,
-              answers: typeof q.answers === 'string'
-                ? JSON.parse(q.answers)
-                : q.answers,
+              question_data: questionDataParsed,
+              answers: answersParsed,
               topic: q.topic ?? undefined,
             },
             order: index + 1,
-            isCorrect: answerData?.is_correct ?? false,
+            isCorrect,
             hasAnswer: hasAnswersData ? !(answerData?.is_unanswered) : true,
             timeSpentSeconds: answerData?.time_spent_seconds,
             isBookmarked: bookmarkedIds.has(q.id),
@@ -193,15 +212,28 @@ export function useGmatResults(assessmentId: string | undefined): UseGmatResults
         gmatSectionScores = perSectionScores;
       }
 
+      // Recompute scoreRaw from per-question isCorrect values when question data is available.
+      // This fixes legacy results where score_raw was stored as 0 due to answer-checking bugs
+      // (e.g. TA JSON.stringify key-order issue, DS comparison failure).
+      let scoreRaw = result.score_raw;
+      let scoreTotal = result.score_total;
+      let scorePercentage = result.score_percentage;
+      if (questions.length > 0 && hasAnswersData) {
+        const recomputedCorrect = questions.filter(q => q.isCorrect).length;
+        scoreRaw = recomputedCorrect;
+        scoreTotal = questions.length;
+        scorePercentage = scoreTotal > 0 ? (scoreRaw / scoreTotal) * 100 : 0;
+      }
+
       const unified: UnifiedResultData = {
         source: 'gmat',
         sourceId: id,
         title,
         subtitle,
         completedAt: result.completed_at ?? undefined,
-        scoreRaw: result.score_raw,
-        scoreTotal: result.score_total,
-        scorePercentage: result.score_percentage,
+        scoreRaw,
+        scoreTotal,
+        scorePercentage,
         totalTimeSeconds: result.time_spent_seconds ?? undefined,
         questions,
         sections,

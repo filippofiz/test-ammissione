@@ -29,7 +29,7 @@ import {
   faChartLine,
 } from '@fortawesome/free-solid-svg-icons';
 import { supabase } from '../lib/supabase';
-import { checkAnswerCorrectness } from '../lib/gmat/answerChecking';
+import { checkAnswerCorrectness, countTpaCorrectColumns } from '../lib/gmat/answerChecking';
 import { getCurrentProfile } from '../lib/auth';
 import { MathJaxProvider } from '../components/MathJaxRenderer';
 import { Layout } from '../components/Layout';
@@ -444,6 +444,7 @@ export default function GMATTrainingTestPage() {
     try {
       // Calculate scores - track unanswered separately
       let correctCount = 0;
+      let extraTpaPoints = 0; // TPA questions add extra scoring points (2 columns = 2 pts each)
       let unansweredCount = 0;
       const unansweredQuestionIds: string[] = [];
       const difficultyBreakdown: Record<string, { correct: number; total: number; unanswered: number }> = {
@@ -484,12 +485,23 @@ export default function GMATTrainingTestPage() {
           ? JSON.parse(question.question_data)
           : question.question_data;
 
-        const isCorrect = checkAnswerCorrectness(userAnswer.answer, correctAnswer, questionData?.di_type);
-
-        if (isCorrect) {
-          correctCount++;
+        // TPA in training: count partial credit (each correct column = +1)
+        if (questionData?.di_type === 'TPA') {
+          const { correct: tpaCorrect, total: tpaTotal } = countTpaCorrectColumns(userAnswer.answer, correctAnswer);
+          correctCount += tpaCorrect;
+          // tpaTotal columns replace the 1 point the question would have counted
+          extraTpaPoints += tpaTotal - 1;
           if (difficultyBreakdown[difficulty]) {
-            difficultyBreakdown[difficulty].correct++;
+            difficultyBreakdown[difficulty].correct += tpaCorrect;
+            difficultyBreakdown[difficulty].total += tpaTotal - 1; // extra slots
+          }
+        } else {
+          const isCorrect = checkAnswerCorrectness(userAnswer.answer, correctAnswer, questionData?.di_type);
+          if (isCorrect) {
+            correctCount++;
+            if (difficultyBreakdown[difficulty]) {
+              difficultyBreakdown[difficulty].correct++;
+            }
           }
         }
       }
@@ -526,6 +538,7 @@ export default function GMATTrainingTestPage() {
           ? JSON.parse(question.question_data)
           : question.question_data;
 
+        // TPA in training: is_correct = true only if all columns correct (for display purposes)
         const isCorrect = checkAnswerCorrectness(userAnswer.answer, correctAnswer, questionDataForQ?.di_type);
 
         perQuestionAnswersData[question.id] = {
@@ -538,6 +551,8 @@ export default function GMATTrainingTestPage() {
 
       // Convert bookmarked questions Set to array
       const bookmarkedIds = Array.from(bookmarkedQuestions);
+      // TPA questions contribute 2 scoring slots (one per column); adjust total accordingly
+      const scoreTotal = questions.length + extraTpaPoints;
 
       // In preview mode, don't save results - just show them
       if (isPreviewMode) {
@@ -548,8 +563,8 @@ export default function GMATTrainingTestPage() {
           section: template.section,
           topic: template.topic || null,
           score_raw: correctCount,
-          score_total: questions.length,
-          score_percentage: (correctCount / questions.length) * 100,
+          score_total: scoreTotal,
+          score_percentage: (correctCount / scoreTotal) * 100,
           question_ids: questionIds,
           difficulty_breakdown: difficultyBreakdown,
           time_spent_seconds: totalTimeSeconds,
@@ -577,7 +592,7 @@ export default function GMATTrainingTestPage() {
         template.id,
         template.section,
         correctCount,
-        questions.length,
+        scoreTotal,
         questionIds,
         difficultyBreakdown,
         totalTimeSeconds,

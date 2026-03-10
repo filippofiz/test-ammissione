@@ -41,6 +41,8 @@ import { Layout } from '../components/Layout';
 import { supabase } from '../lib/supabase';
 import { MathJaxProvider, MathJaxRenderer } from '../components/MathJaxRenderer';
 import { DataInsightsPreview } from '../components/questions/DataInsightsPreview';
+import { QRQuestionEditor } from '../components/questions/editors/QRQuestionEditor';
+import { VRQuestionEditor } from '../components/questions/editors/VRQuestionEditor';
 import {
   generateGMATQuestions,
   saveGeneratedQuestion,
@@ -3822,35 +3824,6 @@ export default function GMATQuestionAllocationPage() {
                     </div>
                   )}
 
-                  {/* VR Type (only for Verbal Reasoning) */}
-                  {manualQuestionSection === 'Verbal Reasoning' && manualQuestionType === 'multiple_choice' && (
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Verbal Type</label>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => setManualQuestionVRType('critical_reasoning')}
-                          className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                            manualQuestionVRType === 'critical_reasoning'
-                              ? 'bg-green-500 text-white'
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          }`}
-                        >
-                          Critical Reasoning
-                        </button>
-                        <button
-                          onClick={() => setManualQuestionVRType('reading_comprehension')}
-                          className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                            manualQuestionVRType === 'reading_comprehension'
-                              ? 'bg-green-500 text-white'
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          }`}
-                        >
-                          Reading Comprehension
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
                   {/* Difficulty */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Difficulty</label>
@@ -3932,84 +3905,34 @@ export default function GMATQuestionAllocationPage() {
                       />
                     </div>
                   ) : (
-                    <div className="space-y-4">
-                      {/* Passage/Argument for Verbal Reasoning */}
-                      {manualQuestionSection === 'Verbal Reasoning' && (
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            {manualQuestionVRType === 'critical_reasoning' ? 'Argument/Stimulus' : 'Passage'}
-                            <span className="text-gray-400 font-normal ml-1">(optional)</span>
-                          </label>
-                          <textarea
-                            value={manualQuestionPassage}
-                            onChange={(e) => setManualQuestionPassage(e.target.value)}
-                            placeholder={manualQuestionVRType === 'critical_reasoning'
-                              ? "Enter the argument or stimulus that the question refers to..."
-                              : "Enter the reading passage that the question refers to..."}
-                            className="w-full h-32 p-3 border rounded-lg text-sm"
-                          />
-                          <p className="text-xs text-gray-500 mt-1">
-                            {manualQuestionVRType === 'critical_reasoning'
-                              ? "The argument or scenario that the question asks about."
-                              : "The reading passage that contains the information for answering the question."}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Question Text */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Question Text
-                        </label>
-                        <textarea
-                          value={manualQuestionText}
-                          onChange={(e) => setManualQuestionText(e.target.value)}
-                          placeholder={manualQuestionSection === 'Verbal Reasoning'
-                            ? "Enter the question (e.g., 'Which of the following most weakens the argument above?')"
-                            : "Enter the question text... (supports LaTeX with $...$)"}
-                          className="w-full h-24 p-3 border rounded-lg text-sm"
+                    <div>
+                      {manualQuestionSection === 'Verbal Reasoning' ? (
+                        <VRQuestionEditor
+                          vrType={manualQuestionVRType}
+                          passageText={manualQuestionPassage}
+                          questionText={manualQuestionText}
+                          options={manualQuestionOptions}
+                          correctAnswer={manualQuestionCorrectAnswer}
+                          onVRTypeChange={setManualQuestionVRType}
+                          onPassageTextChange={setManualQuestionPassage}
+                          onQuestionTextChange={setManualQuestionText}
+                          onOptionChange={(key, value) =>
+                            setManualQuestionOptions(prev => ({ ...prev, [key]: value }))
+                          }
+                          onCorrectAnswerChange={setManualQuestionCorrectAnswer}
                         />
-                      </div>
-
-                      {/* Options */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Answer Options
-                        </label>
-                        <div className="space-y-2">
-                          {['a', 'b', 'c', 'd', 'e'].map(opt => (
-                            <div key={opt} className="flex items-center gap-2">
-                              <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                                manualQuestionCorrectAnswer === opt
-                                  ? 'bg-green-500 text-white'
-                                  : 'bg-gray-200 text-gray-600'
-                              }`}>
-                                {opt.toUpperCase()}
-                              </span>
-                              <input
-                                type="text"
-                                value={manualQuestionOptions[opt] || ''}
-                                onChange={(e) => setManualQuestionOptions(prev => ({
-                                  ...prev,
-                                  [opt]: e.target.value
-                                }))}
-                                placeholder={`Option ${opt.toUpperCase()}`}
-                                className="flex-1 px-3 py-2 border rounded-lg text-sm"
-                              />
-                              <button
-                                onClick={() => setManualQuestionCorrectAnswer(opt)}
-                                className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                                  manualQuestionCorrectAnswer === opt
-                                    ? 'bg-green-500 text-white'
-                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                }`}
-                              >
-                                {manualQuestionCorrectAnswer === opt ? 'Correct' : 'Set Correct'}
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+                      ) : (
+                        <QRQuestionEditor
+                          questionText={manualQuestionText}
+                          options={manualQuestionOptions}
+                          correctAnswer={manualQuestionCorrectAnswer}
+                          onQuestionTextChange={setManualQuestionText}
+                          onOptionChange={(key, value) =>
+                            setManualQuestionOptions(prev => ({ ...prev, [key]: value }))
+                          }
+                          onCorrectAnswerChange={setManualQuestionCorrectAnswer}
+                        />
+                      )}
                     </div>
                   )}
                 </div>

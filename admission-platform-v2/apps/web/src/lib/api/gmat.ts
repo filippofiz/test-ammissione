@@ -7,6 +7,7 @@ import { supabase } from '../supabase';
 // Import from full generated Supabase types
 import type { Database } from '../../../database.types';
 import { GmatScoringAlgorithm, type GmatScoreResult } from '../algorithms/gmatScoringAlgorithm';
+import { checkAnswerCorrectness } from '../gmat/answerChecking';
 
 // Types
 export type GmatCycle = 'Foundation' | 'Development' | 'Excellence';
@@ -1265,6 +1266,7 @@ export async function getLatestSectionAssessments(
     VR: null,
   };
 
+  const rows: any[] = [];
   for (const section of ['QR', 'DI', 'VR'] as GmatSection[]) {
     const { data, error } = await supabase
       .from('2V_gmat_assessment_results')
@@ -1279,18 +1281,59 @@ export async function getLatestSectionAssessments(
       const filtered = cycle
         ? data.filter(r => (r.metadata?.cycle ?? 'Foundation') === cycle)
         : data;
-
       const row = filtered[0];
-      if (row) {
-        result[section] = {
-          ...row,
-          assessment_type: row.assessment_type as GmatAssessmentType,
-          suggested_cycle: row.suggested_cycle as GmatCycle | null,
-          assigned_cycle: row.assigned_cycle as GmatCycle | null,
-          difficulty_breakdown: row.difficulty_breakdown as GmatAssessmentResult['difficulty_breakdown'],
-        };
-      }
+      if (row) rows.push(row);
     }
+  }
+
+  // Batch-fetch question data to recompute scores from answers_data
+  const allQids = new Set<string>();
+  for (const row of rows) {
+    for (const qid of (row.question_ids || [])) allQids.add(qid);
+  }
+  const sectionQuestionMap = new Map<string, { question_data: any; answers: any }>();
+  if (allQids.size > 0) {
+    const { data: qData } = await supabase
+      .from('2V_questions')
+      .select('id, question_data, answers')
+      .in('id', Array.from(allQids));
+    for (const q of (qData || [])) {
+      sectionQuestionMap.set(q.id, {
+        question_data: typeof q.question_data === 'string' ? JSON.parse(q.question_data) : q.question_data,
+        answers: typeof q.answers === 'string' ? JSON.parse(q.answers) : q.answers,
+      });
+    }
+  }
+
+  for (const row of rows) {
+    const answersData = row.answers_data as Record<string, { answer: any; is_unanswered?: boolean }> | null;
+    const questionIds: string[] = row.question_ids || [];
+    let scoreRaw = row.score_raw;
+    let scoreTotal = row.score_total;
+    let scorePercentage = row.score_percentage;
+    if (answersData && questionIds.length > 0) {
+      let correct = 0;
+      for (const qid of questionIds) {
+        const answerData = answersData[qid];
+        if (!answerData || answerData.is_unanswered || answerData.answer == null) continue;
+        const q = sectionQuestionMap.get(qid);
+        if (!q) continue;
+        if (checkAnswerCorrectness(answerData.answer, q.answers?.correct_answer, q.question_data?.di_type)) correct++;
+      }
+      scoreRaw = correct;
+      scoreTotal = questionIds.length;
+      scorePercentage = scoreTotal > 0 ? (correct / scoreTotal) * 100 : 0;
+    }
+    result[row.section as GmatSection] = {
+      ...row,
+      score_raw: scoreRaw,
+      score_total: scoreTotal,
+      score_percentage: scorePercentage,
+      assessment_type: row.assessment_type as GmatAssessmentType,
+      suggested_cycle: row.suggested_cycle as GmatCycle | null,
+      assigned_cycle: row.assigned_cycle as GmatCycle | null,
+      difficulty_breakdown: row.difficulty_breakdown as GmatAssessmentResult['difficulty_breakdown'],
+    };
   }
 
   return result;
@@ -1865,20 +1908,65 @@ export async function getTrainingCompletions(
     }
   }
 
+  // Batch-fetch question data so we can recompute scores from answers_data.
+  // This fixes cases where score_raw=0 was stored due to answer-checking bugs (TA/DS).
+  const allQuestionIds = new Set<string>();
+  for (const attempts of templateAttempts.values()) {
+    for (const attempt of attempts) {
+      for (const qid of (attempt.question_ids || [])) {
+        allQuestionIds.add(qid);
+      }
+    }
+  }
+  let questionMap = new Map<string, { question_data: any; answers: any }>();
+  if (allQuestionIds.size > 0) {
+    const { data: questionsData } = await supabase
+      .from('2V_questions')
+      .select('id, question_data, answers')
+      .in('id', Array.from(allQuestionIds));
+    for (const q of (questionsData || [])) {
+      questionMap.set(q.id, {
+        question_data: typeof q.question_data === 'string' ? JSON.parse(q.question_data) : q.question_data,
+        answers: typeof q.answers === 'string' ? JSON.parse(q.answers) : q.answers,
+      });
+    }
+  }
+
+  /** Recompute correct count for a result row using fresh answer-checking logic. */
+  function recomputeScore(row: any): { score_raw: number; score_total: number; score_percentage: number } {
+    const answersData = row.answers_data as Record<string, { answer: any; is_unanswered?: boolean }> | null;
+    const questionIds: string[] = row.question_ids || [];
+    if (!answersData || questionIds.length === 0) {
+      return { score_raw: row.score_raw, score_total: row.score_total, score_percentage: row.score_percentage };
+    }
+    let correct = 0;
+    for (const qid of questionIds) {
+      const answerData = answersData[qid];
+      if (!answerData || answerData.is_unanswered || answerData.answer == null) continue;
+      const q = questionMap.get(qid);
+      if (!q) continue;
+      const isCorrect = checkAnswerCorrectness(answerData.answer, q.answers?.correct_answer, q.question_data?.di_type);
+      if (isCorrect) correct++;
+    }
+    const total = questionIds.length;
+    return { score_raw: correct, score_total: total, score_percentage: total > 0 ? (correct / total) * 100 : 0 };
+  }
+
   const completions = new Map<string, TrainingCompletion>();
   for (const [templateId, attempts] of templateAttempts) {
     // Most recent attempt (first in the sorted array)
     const mostRecent = attempts[0];
-    // Best score
-    const bestScore = Math.max(...attempts.map(a => a.score_percentage));
+    const mostRecentScore = recomputeScore(mostRecent);
+    // Best score across all attempts (recomputed)
+    const bestScore = Math.max(...attempts.map(a => recomputeScore(a).score_percentage));
 
     completions.set(templateId, {
-      id: mostRecent.id, // assessment result ID for viewing results
+      id: mostRecent.id,
       template_id: templateId,
       completed_at: mostRecent.completed_at || '',
-      score_raw: mostRecent.score_raw,
-      score_total: mostRecent.score_total,
-      score_percentage: mostRecent.score_percentage,
+      score_raw: mostRecentScore.score_raw,
+      score_total: mostRecentScore.score_total,
+      score_percentage: mostRecentScore.score_percentage,
       results_visible: mostRecent.results_visible ?? false,
       attempt_count: attempts.length,
       best_score_percentage: bestScore,
