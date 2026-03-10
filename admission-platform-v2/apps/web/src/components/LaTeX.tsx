@@ -170,6 +170,14 @@ export const LaTeX: React.FC<LaTeXProps> = ({ children, className = '' }) => {
     .replace(/\\\\?\$/g, ESCAPED_DOLLAR_PLACEHOLDER)  // \$ or \\$ → placeholder (restored later)
     .replace(/\\\\?([\d,]+(?:\.\d+)?)/g, '$$$$1'); // \9.00 or \\9.00 → $9.00 (need $$ because it's a replacement string)
 
+  // Fix malformed LaTeX: if the entire value is $<number><optional-suffix> with no closing $,
+  // add the closing $ so it renders as math instead of being treated as currency.
+  // E.g. "$46.4" → "$46.4$", "$46.4%" → "$46.4\%$"
+  // This handles table cell values stored with a leading $ delimiter but missing the closing one.
+  if (/^\$[\d,]+(?:\.\d+)?%?\s*$/.test(processedText)) {
+    processedText = processedText.trimEnd().replace(/%$/, '\\%') + '$';
+  }
+
   // Quick optimization: if no LaTeX delimiters, just return plain text with line breaks
   if (!processedText.includes('$') && !processedText.includes('\\[')) {
     const { nodes } = renderTextWithLineBreaks(processedText, 0);

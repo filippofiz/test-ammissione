@@ -140,7 +140,7 @@ const splitMarkdownSegments = (text: string): MarkdownSegment[] => {
 // Render a line or cell with markdown bold/italic support.
 // Bold/italic inner text is rendered as plain HTML (no MathJax wrapper) so it stays inline.
 // Surrounding plain-text segments are passed to MathJax for math rendering.
-const InlineMarkdownRenderer: React.FC<{ content: string; inline?: boolean }> = memo(({ content, inline = true }) => {
+export const InlineMarkdownRenderer: React.FC<{ content: string; inline?: boolean }> = memo(({ content, inline = true }) => {
   const segments = splitMarkdownSegments(content);
   if (segments.length === 1 && segments[0].type === 'text') {
     return <MathJax dynamic inline={inline}>{content}</MathJax>;
@@ -162,46 +162,132 @@ const InlineMarkdownRenderer: React.FC<{ content: string; inline?: boolean }> = 
 });
 InlineMarkdownRenderer.displayName = 'InlineMarkdownRenderer';
 
-// Helper to parse and render markdown-style tables
+// Split a markdown table line into raw cells (preserving empty cells)
+const splitTableRow = (line: string): string[] =>
+  line.split('|').slice(1, -1).map(cell => cell.trim());
+
+// Helper to parse and render markdown-style tables.
+// Supports colspan (consecutive empty header cells) and rowspan (leading empty body cells
+// that repeat the structure from the previous non-empty row).
 const parseMarkdownTable = (tableLines: string[]): React.ReactNode => {
-  // Filter out separator line (contains only |, -, and spaces)
+  // Filter out separator lines (contain only |, -, :, and spaces)
   const dataLines = tableLines.filter(line => !line.match(/^\|[\s\-:|]+\|$/));
 
   if (dataLines.length < 1) return null;
 
-  // Parse header
-  const headerCells = dataLines[0]
-    .split('|')
-    .map(cell => cell.trim())
-    .filter(cell => cell.length > 0);
+  // --- Parse header with colspan detection ---
+  // Empty cells immediately following a non-empty cell extend its colspan.
+  const rawHeader = splitTableRow(dataLines[0]);
+  interface HeaderCell { content: string; colspan: number }
+  const headerCells: HeaderCell[] = [];
+  for (const cell of rawHeader) {
+    if (cell === '' && headerCells.length > 0) {
+      headerCells[headerCells.length - 1].colspan++;
+    } else {
+      headerCells.push({ content: cell, colspan: 1 });
+    }
+  }
 
-  // Parse body rows
-  const bodyRows = dataLines.slice(1).map(line =>
-    line
-      .split('|')
-      .map(cell => cell.trim())
-      .filter(cell => cell.length > 0)
-  );
+  // Total logical columns = sum of colspans (= rawHeader.length)
+  const totalCols = rawHeader.length;
+
+  // --- Parse body rows with rowspan detection ---
+  // An empty leading cell that aligns with a column that had content in a previous row
+  // is treated as a rowspan continuation.
+  const rawBodyRows = dataLines.slice(1).map(splitTableRow);
+
+  // rowspanTracker[colIndex] = { content, remaining } — tracks active rowspan cells
+  const rowspanTracker: Array<{ content: string; remaining: number } | null> =
+    Array(totalCols).fill(null);
+
+  interface BodyCell { content: string; rowspan: number; colspan: number; isSpanned: boolean }
+  const parsedBodyRows: BodyCell[][] = [];
+
+  for (const rawRow of rawBodyRows) {
+    // Pad row to totalCols if shorter
+    const padded = [...rawRow];
+    while (padded.length < totalCols) padded.push('');
+
+    const cells: BodyCell[] = [];
+    let colIdx = 0;
+
+    while (colIdx < totalCols) {
+      // Skip columns occupied by an active rowspan
+      if (rowspanTracker[colIdx] && rowspanTracker[colIdx]!.remaining > 0) {
+        rowspanTracker[colIdx]!.remaining--;
+        cells.push({ content: rowspanTracker[colIdx]!.content, rowspan: 1, colspan: 1, isSpanned: true });
+        colIdx++;
+        continue;
+      }
+
+      const cellContent = padded[colIdx] ?? '';
+
+      // Detect colspan: count consecutive empty cells after this one
+      let colspan = 1;
+      while (colIdx + colspan < totalCols && (padded[colIdx + colspan] ?? '') === '') {
+        colspan++;
+      }
+
+      // Detect rowspan: if this cell is non-empty, scan ahead to count how many
+      // subsequent rows have empty cells in the same column position.
+      let rowspan = 1;
+      if (cellContent !== '' && colspan === 1) {
+        const rowPos = parsedBodyRows.length;
+        for (let r = rowPos + 1; r < rawBodyRows.length; r++) {
+          const futureRow = rawBodyRows[r];
+          const futureCell = (futureRow[colIdx] ?? '').trim();
+          if (futureCell === '') rowspan++;
+          else break;
+        }
+        if (rowspan > 1) {
+          rowspanTracker[colIdx] = { content: cellContent, remaining: rowspan - 1 };
+        }
+      }
+
+      cells.push({ content: cellContent, rowspan, colspan, isSpanned: false });
+      colIdx += colspan;
+    }
+
+    parsedBodyRows.push(cells);
+  }
+
+  // Filter out rows that are entirely spanned (all cells are isSpanned placeholders)
+  // so we don't render duplicate rows — only render each logical row once.
+  // We use a "rowgroup" approach: group consecutive raw rows that belong to the same
+  // visual row (where the first non-spanned column repeats).
+  // Instead, we simply skip rendering a cell when isSpanned=true (it was already rendered
+  // via rowspan on a previous row).
 
   return (
-    <table className="border-collapse border border-gray-300 my-3 mx-auto">
+    <table className="border-collapse border border-gray-300 my-3 mx-auto text-sm">
       <thead>
         <tr className="bg-gray-100">
           {headerCells.map((cell, i) => (
-            <th key={i} className="border border-gray-300 px-4 py-2 text-left font-semibold">
-              <InlineMarkdownRenderer content={cell} />
+            <th
+              key={i}
+              colSpan={cell.colspan}
+              className="border border-gray-300 px-4 py-2 text-center font-semibold"
+            >
+              <InlineMarkdownRenderer content={cell.content} />
             </th>
           ))}
         </tr>
       </thead>
       <tbody>
-        {bodyRows.map((row, rowIndex) => (
+        {parsedBodyRows.map((row, rowIndex) => (
           <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-            {row.map((cell, cellIndex) => (
-              <td key={cellIndex} className="border border-gray-300 px-4 py-2">
-                <InlineMarkdownRenderer content={cell} />
-              </td>
-            ))}
+            {row.map((cell, cellIndex) =>
+              cell.isSpanned ? null : (
+                <td
+                  key={cellIndex}
+                  rowSpan={cell.rowspan > 1 ? cell.rowspan : undefined}
+                  colSpan={cell.colspan > 1 ? cell.colspan : undefined}
+                  className="border border-gray-300 px-4 py-2 text-center align-middle"
+                >
+                  <InlineMarkdownRenderer content={cell.content} />
+                </td>
+              )
+            )}
           </tr>
         ))}
       </tbody>

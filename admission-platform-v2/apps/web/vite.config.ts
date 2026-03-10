@@ -35,6 +35,16 @@ export default defineConfig({
       '@admission/ui': path.resolve(__dirname, '../../packages/ui/src'),
     },
   },
+  optimizeDeps: {
+    include: [
+      '@lezer/highlight',
+      '@codemirror/state',
+      '@codemirror/view',
+      '@codemirror/language',
+      '@codemirror/lang-markdown',
+      '@uiw/react-codemirror',
+    ],
+  },
   server: {
     port: 5173,
     open: true,

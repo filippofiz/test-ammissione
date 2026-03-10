@@ -17,6 +17,8 @@ export default {
       },
       fontFamily: {
         sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        // Used for question content editor fields (scenario, statements, options, etc.)
+        editor: ['CaskaydiaCove Nerd Font', 'Cascadia Code', 'Consolas', 'monospace'],
       },
     },
   },

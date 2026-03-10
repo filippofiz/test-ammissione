@@ -13,72 +13,119 @@ interface DataInsightsEditorProps {
   questionData: any;
   answers: any;
   onChange: (field: string, value: any) => void;
+  difficulty?: 'easy' | 'medium' | 'hard' | null;
+  onDifficultyChange?: (value: 'easy' | 'medium' | 'hard' | null) => void;
 }
 
 export function DataInsightsEditor({
   questionData,
   answers,
   onChange,
+  difficulty,
+  onDifficultyChange,
 }: DataInsightsEditorProps) {
   const diType = questionData?.di_type;
+
+  const difficultyRow = onDifficultyChange ? (
+    <div className="flex items-center gap-2 mb-4">
+      <label className="text-sm font-semibold text-gray-700">Difficulty:</label>
+      <select
+        value={difficulty ?? ''}
+        onChange={(e) => {
+          const val = e.target.value as 'easy' | 'medium' | 'hard' | '';
+          onDifficultyChange(val === '' ? null : val);
+        }}
+        className={`text-sm px-3 py-1 rounded border font-medium cursor-pointer ${
+          difficulty === 'easy'
+            ? 'bg-green-100 text-green-700 border-green-300'
+            : difficulty === 'medium'
+            ? 'bg-amber-100 text-amber-700 border-amber-300'
+            : difficulty === 'hard'
+            ? 'bg-red-100 text-red-700 border-red-300'
+            : 'bg-gray-100 text-gray-500 border-gray-300'
+        }`}
+      >
+        <option value="">— not set —</option>
+        <option value="easy">Easy</option>
+        <option value="medium">Medium</option>
+        <option value="hard">Hard</option>
+      </select>
+    </div>
+  ) : null;
 
   // DS - Data Sufficiency
   if (diType === 'DS') {
     return (
-      <DSQuestionEditor
-        questionData={questionData}
-        correctAnswer={answers?.correct_answer}
-        onChange={onChange}
-      />
+      <>
+        {difficultyRow}
+        <DSQuestionEditor
+          questionData={questionData}
+          correctAnswer={answers?.correct_answer}
+          onChange={onChange}
+        />
+      </>
     );
   }
 
   // TA - Table Analysis
   if (diType === 'TA') {
     return (
-      <TAQuestionEditor
-        questionData={questionData}
-        correctAnswer={answers?.correct_answer}
-        onChange={onChange}
-      />
+      <>
+        {difficultyRow}
+        <TAQuestionEditor
+          questionData={questionData}
+          correctAnswer={answers?.correct_answer}
+          onChange={onChange}
+        />
+      </>
     );
   }
 
   // TPA - Two-Part Analysis
   if (diType === 'TPA') {
     return (
-      <TPAQuestionEditor
-        questionData={questionData}
-        correctAnswer={answers?.correct_answer}
-        onChange={onChange}
-      />
+      <>
+        {difficultyRow}
+        <TPAQuestionEditor
+          questionData={questionData}
+          correctAnswer={answers?.correct_answer}
+          onChange={onChange}
+        />
+      </>
     );
   }
 
   // GI - Graphical Interpretation
   if (diType === 'GI') {
     return (
-      <GIQuestionEditor
-        questionData={questionData}
-        correctAnswer={answers?.correct_answer}
-        onChange={onChange}
-      />
+      <>
+        {difficultyRow}
+        <GIQuestionEditor
+          questionData={questionData}
+          correctAnswer={answers?.correct_answer}
+          onChange={onChange}
+        />
+      </>
     );
   }
 
   // MSR - Multi-Source Reasoning
   if (diType === 'MSR') {
     return (
-      <MSRQuestionEditor
-        questionData={questionData}
-        onChange={onChange}
-      />
+      <>
+        {difficultyRow}
+        <MSRQuestionEditor
+          questionData={questionData}
+          onChange={onChange}
+        />
+      </>
     );
   }
 
   // Unknown type - show warning with raw JSON editor
   return (
     <div className="p-4 bg-yellow-50 border-2 border-yellow-300 rounded-lg">
+      {difficultyRow}
       <p className="text-yellow-800 font-semibold mb-2">
         Unknown Data Insights type: {diType || 'not specified'}
       </p>

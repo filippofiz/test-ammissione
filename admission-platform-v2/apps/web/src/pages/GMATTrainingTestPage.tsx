@@ -200,13 +200,21 @@ export default function GMATTrainingTestPage() {
           setLoading(false);
           return;
         }
-        cycleToUse = progress.gmat_cycle;
+
+        // Allow overriding the cycle via query param (used when viewing a past cycle from GMATPreparationPage)
+        const cycleParam = searchParams.get('cycle') as GmatCycle | null;
+        const validCycles: GmatCycle[] = ['Foundation', 'Development', 'Excellence'];
+        if (cycleParam && validCycles.includes(cycleParam)) {
+          cycleToUse = cycleParam;
+        } else {
+          cycleToUse = progress.gmat_cycle;
+        }
         setStudentCycle(cycleToUse);
 
-        // Get allocated question IDs for student's cycle
+        // Get allocated question IDs for the chosen cycle
         allocatedIds = await getAllocatedQuestionIds(templateId, cycleToUse);
         if (!allocatedIds || allocatedIds.length === 0) {
-          setError(`No questions have been allocated for your ${cycleToUse} cycle. Please contact your tutor.`);
+          setError(`No questions have been allocated for the ${cycleToUse} cycle. Please contact your tutor.`);
           setLoading(false);
           return;
         }
@@ -574,7 +582,8 @@ export default function GMATTrainingTestPage() {
         difficultyBreakdown,
         totalTimeSeconds,
         perQuestionAnswersData,
-        bookmarkedIds
+        bookmarkedIds,
+        studentCycle ?? undefined
       );
 
       setResult(savedResult);

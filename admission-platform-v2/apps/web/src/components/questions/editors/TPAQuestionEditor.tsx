@@ -3,6 +3,8 @@
  * Simple text-based editor for TPA question fields
  */
 
+import { LaTeXEditor } from './LaTeXEditor';
+
 interface TPAQuestionEditorProps {
   questionData: {
     scenario?: string;
@@ -75,11 +77,11 @@ export function TPAQuestionEditor({
         <label className="block text-sm font-semibold text-gray-700 mb-1">
           Scenario
         </label>
-        <textarea
+        <LaTeXEditor
           value={questionData.scenario || ''}
-          onChange={(e) => onChange('question_data.scenario', e.target.value)}
-          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent min-h-[150px] font-mono text-sm"
+          onChange={(value) => onChange('question_data.scenario', value)}
           placeholder="Enter the scenario text (supports LaTeX)"
+          minHeight="150px"
         />
       </div>
 
@@ -89,24 +91,22 @@ export function TPAQuestionEditor({
           <label className="block text-sm font-semibold text-gray-700 mb-1">
             Column 1 Title
           </label>
-          <input
-            type="text"
+          <LaTeXEditor
             value={questionData.column1_title || ''}
-            onChange={(e) => onChange('question_data.column1_title', e.target.value)}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent"
+            onChange={(value) => onChange('question_data.column1_title', value)}
             placeholder="e.g., First Value (supports LaTeX)"
+            minHeight="44px"
           />
         </div>
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-1">
             Column 2 Title
           </label>
-          <input
-            type="text"
+          <LaTeXEditor
             value={questionData.column2_title || ''}
-            onChange={(e) => onChange('question_data.column2_title', e.target.value)}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent"
+            onChange={(value) => onChange('question_data.column2_title', value)}
             placeholder="e.g., Second Value (supports LaTeX)"
+            minHeight="44px"
           />
         </div>
       </div>
@@ -118,19 +118,20 @@ export function TPAQuestionEditor({
         </label>
         <div className="space-y-2">
           {options.map((option, index) => (
-            <div key={index} className="flex items-center gap-2">
-              <span className="text-sm text-gray-400 w-6 shrink-0 text-right">{index + 1}.</span>
-              <input
-                type="text"
-                value={option}
-                onChange={(e) => handleOptionChange(index, e.target.value)}
-                className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent font-mono text-sm"
-                placeholder={`Option ${index + 1} (supports LaTeX)`}
-              />
+            <div key={index} className="flex items-start gap-2">
+              <span className="text-sm text-gray-400 w-6 shrink-0 text-right pt-2.5">{index + 1}.</span>
+              <div className="flex-1">
+                <LaTeXEditor
+                  value={option}
+                  onChange={(value) => handleOptionChange(index, value)}
+                  placeholder={`Option ${index + 1} (supports LaTeX)`}
+                  minHeight="44px"
+                />
+              </div>
               <button
                 type="button"
                 onClick={() => handleRemoveOption(index)}
-                className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors mt-0.5"
                 title="Remove option"
               >
                 ✕

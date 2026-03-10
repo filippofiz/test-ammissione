@@ -3,6 +3,8 @@
  * Simple text-based editor for DS question fields
  */
 
+import { LaTeXEditor } from './LaTeXEditor';
+
 interface DSQuestionEditorProps {
   questionData: {
     problem?: string;
@@ -27,11 +29,11 @@ export function DSQuestionEditor({
         <label className="block text-sm font-semibold text-gray-700 mb-1">
           Problem Statement
         </label>
-        <textarea
+        <LaTeXEditor
           value={questionData.problem || ''}
-          onChange={(e) => onChange('question_data.problem', e.target.value)}
-          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent min-h-[120px] font-mono text-sm"
+          onChange={(value) => onChange('question_data.problem', value)}
           placeholder="Enter the problem statement (supports LaTeX)"
+          minHeight="120px"
         />
       </div>
 
@@ -40,11 +42,11 @@ export function DSQuestionEditor({
         <label className="block text-sm font-semibold text-gray-700 mb-1">
           Statement (1)
         </label>
-        <textarea
+        <LaTeXEditor
           value={questionData.statement1 || ''}
-          onChange={(e) => onChange('question_data.statement1', e.target.value)}
-          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent min-h-[80px] font-mono text-sm"
+          onChange={(value) => onChange('question_data.statement1', value)}
           placeholder="Enter statement 1 (supports LaTeX)"
+          minHeight="80px"
         />
       </div>
 
@@ -53,11 +55,11 @@ export function DSQuestionEditor({
         <label className="block text-sm font-semibold text-gray-700 mb-1">
           Statement (2)
         </label>
-        <textarea
+        <LaTeXEditor
           value={questionData.statement2 || ''}
-          onChange={(e) => onChange('question_data.statement2', e.target.value)}
-          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent min-h-[80px] font-mono text-sm"
+          onChange={(value) => onChange('question_data.statement2', value)}
           placeholder="Enter statement 2 (supports LaTeX)"
+          minHeight="80px"
         />
       </div>
 
