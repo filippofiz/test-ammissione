@@ -27,6 +27,7 @@ import AdminMigrateAnswersPage from './pages/AdminMigrateAnswersPage';
 import ManageAccountsPage from './pages/ManageAccountsPage';
 import AIValidationDashboard from './pages/AIValidationDashboard';
 import CloneTestsPage from './pages/CloneTestsPage';
+import PoolReviewPage from './pages/PoolReviewPage';
 import GMATPreparationPage from './pages/GMATPreparationPage';
 import GMATMaterialsManagementPage from './pages/GMATMaterialsManagementPage';
 import GMATMaterialPage from './pages/GMATMaterialPage';
@@ -37,6 +38,8 @@ import GMATTrainingTestPage from './pages/GMATTrainingTestPage';
 import GMATSectionAssessmentPage from './pages/GMATSectionAssessmentPage';
 import GMATSimulationPage from './pages/GMATSimulationPage';
 import GMATPlacementAssessmentPage from './pages/GMATPlacementAssessmentPage';
+import SemestreFiltroPage from './pages/SemestreFiltroPage';
+import TheoryManagementPage from './pages/TheoryManagementPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 function App() {
@@ -303,6 +306,14 @@ function App() {
           }
         />
         <Route
+          path="/tutor/theory-management"
+          element={
+            <ProtectedRoute requiredRoles={['TUTOR', 'ADMIN']}>
+              <TheoryManagementPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/tutor/test-track-config/:testType"
           element={
             <ProtectedRoute requiredRoles={['TUTOR', 'ADMIN']}>
@@ -387,6 +398,22 @@ function App() {
           element={
             <ProtectedRoute requiredRoles={['ADMIN']}>
               <CloneTestsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/pool-review"
+          element={
+            <ProtectedRoute requiredRoles={['ADMIN']}>
+              <PoolReviewPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/semestre-filtro/:assignmentId"
+          element={
+            <ProtectedRoute requiredRoles={['STUDENT']}>
+              <SemestreFiltroPage />
             </ProtectedRoute>
           }
         />

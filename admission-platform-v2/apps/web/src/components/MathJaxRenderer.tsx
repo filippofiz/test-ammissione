@@ -75,33 +75,66 @@ type MarkdownSegment =
 
 // Split text into segments based on **bold**, __bold__, and *italic* markers.
 // Segments preserve their inner content (including any math) so MathJax can process them.
+// IMPORTANT: Protects $...$ and $$...$$ math blocks from markdown parsing so that
+// asterisks inside math (e.g. $m^*$) are not treated as italic markers.
+const MATH_PLACEHOLDER = '\uFFFE_MATH_';
+
 const splitMarkdownSegments = (text: string): MarkdownSegment[] => {
+  // Step 1: Extract inline/display math blocks to protect them from markdown parsing
+  const mathBlocks: string[] = [];
+  let protected_ = text;
+  // Extract $$...$$ first (greedy match for display math)
+  protected_ = protected_.replace(/\$\$([\s\S]*?)\$\$/g, (m) => {
+    const idx = mathBlocks.length;
+    mathBlocks.push(m);
+    return `${MATH_PLACEHOLDER}${idx}\uFFFE`;
+  });
+  // Extract $...$ (inline math, non-greedy, single line)
+  protected_ = protected_.replace(/\$([^$\n]+?)\$/g, (m) => {
+    const idx = mathBlocks.length;
+    mathBlocks.push(m);
+    return `${MATH_PLACEHOLDER}${idx}\uFFFE`;
+  });
+
+  // Step 2: Apply markdown parsing on the protected text
   const segments: MarkdownSegment[] = [];
   // Matches **bold**, __bold__, or *italic* (in that priority order)
   const pattern = /(\*\*(.+?)\*\*|__(.+?)__|(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*))/gs;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
-  while ((match = pattern.exec(text)) !== null) {
+  while ((match = pattern.exec(protected_)) !== null) {
     if (match.index > lastIndex) {
-      segments.push({ type: 'text', content: text.slice(lastIndex, match.index) });
+      segments.push({ type: 'text', content: protected_.slice(lastIndex, match.index) });
     }
     if (match[0].startsWith('**') || match[0].startsWith('__')) {
-      // Bold: inner content is capture group 2 or 3
       const inner = match[2] ?? match[3];
       segments.push({ type: 'bold', content: inner });
     } else {
-      // Italic: inner content is capture group 4
       segments.push({ type: 'italic', content: match[4] });
     }
     lastIndex = match.index + match[0].length;
   }
 
-  if (lastIndex < text.length) {
-    segments.push({ type: 'text', content: text.slice(lastIndex) });
+  if (lastIndex < protected_.length) {
+    segments.push({ type: 'text', content: protected_.slice(lastIndex) });
   }
 
-  return segments.length > 0 ? segments : [{ type: 'text', content: text }];
+  const result = segments.length > 0 ? segments : [{ type: 'text', content: protected_ }];
+
+  // Step 3: Restore math blocks in all segments
+  if (mathBlocks.length > 0) {
+    const restore = (s: string): string => {
+      return s.replace(new RegExp(`${MATH_PLACEHOLDER}(\\d+)\uFFFE`, 'g'), (_, idx) => {
+        return mathBlocks[parseInt(idx, 10)];
+      });
+    };
+    for (const seg of result) {
+      seg.content = restore(seg.content);
+    }
+  }
+
+  return result;
 };
 
 // Render a line or cell with markdown bold/italic support.
