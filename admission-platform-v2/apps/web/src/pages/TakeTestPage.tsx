@@ -3431,27 +3431,35 @@ export default function TakeTestPage() {
       }
     }
 
-    // Save final answer if any (or save empty answer to track question order)
-    // Use ref values to avoid stale closures
-    if (actualCurrentQuestionId) {
-      console.log('📤 [SUBMIT] Saving current question before completion', {
-        questionId: actualCurrentQuestionId.substring(0, 8),
-        questionOrder: actualGlobalQuestionOrder + 1,
-        hasAnswer: !!actualAnswers[actualCurrentQuestionId],
-        answerValue: actualAnswers[actualCurrentQuestionId]?.answer || 'null'
-      });
-      await saveAnswer(
-        actualCurrentQuestionId,
-        actualAnswers[actualCurrentQuestionId] || {
-          questionId: actualCurrentQuestionId,
-          answer: null,
-          timeSpent: 0,
-          flagged: false
-        },
-        actualAnswers[actualCurrentQuestionId]?.flagged || false,
-        0,
-        actualGlobalQuestionOrder + 1
+    // Flush ALL answers from state to DB before completing
+    // Prevents data loss from failed auto-saves (network issues, sidebar navigation, etc.)
+    const answerEntries = Object.entries(actualAnswers);
+    console.log('📤 [SUBMIT] Flushing all answers to DB', {
+      totalInState: answerEntries.length,
+      currentQuestionId: actualCurrentQuestionId?.substring(0, 8)
+    });
+
+    if (answerEntries.length > 0) {
+      // Derive question order from position in selectedQuestions
+      const questionOrderMap = new Map<string, number>();
+      selectedQuestions.forEach((q, idx) => { questionOrderMap.set(q.id, idx + 1); });
+
+      const savePromises = answerEntries.map(([questionId, answerData]) =>
+        saveAnswer(
+          questionId,
+          answerData,
+          answerData?.flagged || false,
+          0,
+          questionOrderMap.get(questionId)
+        ).catch(err => {
+          console.warn('⚠️ [SUBMIT] Failed to save answer', questionId.substring(0, 8), err);
+          return false;
+        })
       );
+
+      const results = await Promise.all(savePromises);
+      const saved = results.filter(Boolean).length;
+      console.log(`📤 [SUBMIT] Flushed ${saved}/${answerEntries.length} answers`);
     }
 
     // Mark test as completed in database with completion_details
@@ -4400,7 +4408,7 @@ export default function TakeTestPage() {
             .filter(x => x.answered)
             .map(x => x.idx)
         )}
-        onNavigateToQuestion={(idx) => setCurrentQuestionIndex(idx)}
+        onNavigateToQuestion={undefined}
         questionsPerPage={questionsPerPage}
         currentPageIndex={currentPageIndex}
         onPrevious={goToPreviousQuestion}
