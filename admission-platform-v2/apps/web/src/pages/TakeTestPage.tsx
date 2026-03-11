@@ -1395,7 +1395,6 @@ function TakeTestPageInner() {
       }
     }
 
-<<<<<<< HEAD
     // Flush ALL answers from state to DB before completing
     // Prevents data loss from failed auto-saves (network issues, sidebar navigation, etc.)
     const answerEntries = Object.entries(actualAnswers);
@@ -2221,7 +2220,6 @@ function TakeTestPageInner() {
         />
         <SubmittingOverlay visible={submitting} />
       </div>
-<<<<<<< HEAD
 
       {/* Navigation Controls with Question Numbers */}
       <NavigationControls
@@ -2255,7 +2253,7 @@ function TakeTestPageInner() {
       {/* Review Screen Overlay */}
       <ReviewScreen
         isOpen={showReviewScreen}
-        questions={currentSectionQuestionsList.map((q, idx) => ({
+        questions={sectionQuestions.map((q, idx) => ({
           id: q.id,
           questionNumber: idx + 1,
           isAnswered: !!(answers[q.id]?.answer || answers[q.id]?.msrAnswers || answers[q.id]?.blank1 || answers[q.id]?.taAnswers || answers[q.id]?.column1),
