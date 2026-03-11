@@ -11,7 +11,7 @@
  * bootstrap them once at load time.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { i18n as I18nInstance } from 'i18next';
@@ -29,7 +29,7 @@ import {
   type GmatSection,
 } from '@/lib/api/gmat';
 import { findMatchingTemplate, getAllocatedQuestionIds, parseTestIdentifier } from '@/lib/gmat/questionAllocation';
-import { filterSectionsWithAdaptivity } from '@/lib/utils/sectionUtils';
+import { filterSectionsWithAdaptivity, getSectionField } from '@/lib/utils/sectionUtils';
 import { prepareInitialQuestions } from '@/lib/utils/questionPreparation';
 import type {
   TestConfig,
@@ -166,6 +166,12 @@ export function useTestDataLoader(params: TestDataLoaderParams) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, StudentAnswer>>({});
   const [globalQuestionOrder, setGlobalQuestionOrder] = useState(0);
+
+  // Guard against React Strict Mode double-mount race condition.
+  // Each loadTestData call captures the current counter value; if a newer
+  // load has started by the time an async step completes, the stale run
+  // skips all remaining setState calls.
+  const loadCounterRef = useRef(0);
 
   // ---------------------------------------------------------------------------
   // loadGmatData — GMAT fork (no assignmentId, no 2V_test_assignments)
@@ -459,7 +465,10 @@ export function useTestDataLoader(params: TestDataLoaderParams) {
   // loadTestData
   // ---------------------------------------------------------------------------
 
-  async function loadTestData() {
+  async function loadTestData(loadId: number) {
+    // Helper: abort if a newer load has started (React Strict Mode double-mount)
+    const isStale = () => loadId !== loadCounterRef.current;
+
     try {
       setLoading(true);
 
@@ -470,6 +479,7 @@ export function useTestDataLoader(params: TestDataLoaderParams) {
         .eq('id', assignmentId!)
         .single() as { data: TestAssignment | null; error: unknown };
 
+      if (isStale()) return;
       if (assignmentError) throw assignmentError;
       if (!assignment) throw new Error('Assignment not found');
 
@@ -565,6 +575,7 @@ export function useTestDataLoader(params: TestDataLoaderParams) {
         .eq('id', assignment.student_id)
         .single();
 
+      if (isStale()) return;
       const studentHasSpecialNeeds = studentProfile?.esigenze_speciali || false;
       setHasSpecialNeeds(studentHasSpecialNeeds);
 
@@ -587,6 +598,7 @@ export function useTestDataLoader(params: TestDataLoaderParams) {
         .select('*')
         .eq('test_type', testType) as { data: TestConfig[] | null; error: unknown };
 
+      if (isStale()) return;
       if (configsError) throw configsError;
 
       const configData = configsData?.find((c: TestConfig) =>
@@ -729,6 +741,7 @@ export function useTestDataLoader(params: TestDataLoaderParams) {
       }
 
       console.log('📊 Questions fetched:', { count: questions?.length || 0 });
+      if (isStale()) return;
 
       const parsedQuestions = parseQuestions(questions || []);
 
@@ -791,6 +804,7 @@ export function useTestDataLoader(params: TestDataLoaderParams) {
           .eq('assignment_id', assignmentId!)
           .eq('attempt_number', currentAttemptNum) as { data: DbStudentAnswer[] | null; error: unknown };
 
+        if (isStale()) return;
         if (!answersError && existingAnswers) {
           const loadedAnswers: Record<string, StudentAnswer> = {};
 
@@ -830,6 +844,12 @@ export function useTestDataLoader(params: TestDataLoaderParams) {
             loadedAnswers[questionId] = localAnswer as StudentAnswer;
           });
 
+          const nonNullCount = Object.values(loadedAnswers).filter(a => a.answer !== null && a.answer !== undefined).length;
+          console.log('📦 [RESUME] Setting answers state:', {
+            totalEntries: Object.keys(loadedAnswers).length,
+            withActualAnswer: nonNullCount,
+            sampleIds: Object.keys(loadedAnswers).slice(0, 3).map(id => id.substring(0, 8)),
+          });
           setAnswers(loadedAnswers);
 
           const maxQuestionOrder = existingAnswers.reduce((max, answer) => {
@@ -859,21 +879,59 @@ export function useTestDataLoader(params: TestDataLoaderParams) {
           }
 
           if (restoredOrder.length > 0) {
-            // Append any questions not yet visited (future questions) using the normal
-            // prepared order, so the test can continue naturally after the resume point.
-            const remainingQuestions = initialQuestions.filter(q => !seenIds.has(q.id));
-            const fullRestoredOrder = [...restoredOrder, ...remainingQuestions];
-            setSelectedQuestions(fullRestoredOrder);
-            console.log(`🔄 [RESUME] Restored question order from DB: ${restoredOrder.length} answered + ${remainingQuestions.length} remaining`);
+            // Fix adaptive section mismatch on resume: detect which adaptive
+            // sections (e.g. RW2-Hard vs RW2-Easy) were actually used in the
+            // original session, and rebuild the sections list accordingly.
+            if (configData.section_adaptivity_config && Object.keys(configData.section_adaptivity_config).length > 0) {
+              const answeredSections = new Set(restoredOrder.map(q => getSectionField(q, configData)));
+              const correctedSections = sectionsToUse.map(s => {
+                const sConfig = configData.section_adaptivity_config![s];
+                if (sConfig?.type !== 'adaptive') return s;
+                // Check if the other variant was used instead
+                const groupPrefix = s.replace(/-Easy|-Hard$/i, '');
+                const usedVariant = [...answeredSections].find(
+                  as => as.startsWith(groupPrefix) && as !== s
+                );
+                if (usedVariant) {
+                  console.log(`🔄 [RESUME] Correcting section: ${s} → ${usedVariant} (from answered questions)`);
+                  return usedVariant;
+                }
+                return s;
+              });
+              setSections(correctedSections);
+
+              // Also fix remainingQuestions: use questions from the correct section variants
+              const correctedInitial = prepareInitialQuestions(
+                parsedQuestions.filter(q => {
+                  const qSection = getSectionField(q, configData);
+                  // Keep question if its section is in correctedSections OR is non-adaptive
+                  return correctedSections.includes(qSection) ||
+                    !configData.section_adaptivity_config![qSection];
+                }),
+                configData,
+                algorithmConfigData
+              );
+              const remainingQuestions = correctedInitial.filter(q => !seenIds.has(q.id));
+              const fullRestoredOrder = [...restoredOrder, ...remainingQuestions];
+              setSelectedQuestions(fullRestoredOrder);
+              console.log(`🔄 [RESUME] Restored question order from DB: ${restoredOrder.length} answered + ${remainingQuestions.length} remaining (sections corrected)`);
+            } else {
+              // No adaptive sections — use normal remaining
+              const remainingQuestions = initialQuestions.filter(q => !seenIds.has(q.id));
+              const fullRestoredOrder = [...restoredOrder, ...remainingQuestions];
+              setSelectedQuestions(fullRestoredOrder);
+              console.log(`🔄 [RESUME] Restored question order from DB: ${restoredOrder.length} answered + ${remainingQuestions.length} remaining`);
+            }
           }
         }
       }
 
     } catch (err) {
+      if (isStale()) return;
       alert('Failed to load test. Please try again.');
       navigate(-1);
     } finally {
-      setLoading(false);
+      if (!isStale()) setLoading(false);
     }
   }
 
@@ -882,12 +940,13 @@ export function useTestDataLoader(params: TestDataLoaderParams) {
   // ---------------------------------------------------------------------------
 
   useEffect(() => {
+    const loadId = ++loadCounterRef.current;
     if (isGmatMode) {
       loadGmatData();
     } else if (isPreviewMode) {
       loadPreviewData();
     } else {
-      loadTestData();
+      loadTestData(loadId);
     }
     return () => {
       setTimerActive(false);

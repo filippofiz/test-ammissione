@@ -227,6 +227,28 @@ function TakeTestPageInner() {
   // Get current section and questions
   const currentSection = sections[currentSectionIndex];
 
+  // DEBUG: section resume issue
+  if (sections.length > 0 && selectedQuestions.length > 0 && !loading) {
+    const firstFewSelected = selectedQuestions.slice(0, 3).map(q => ({
+      id: q.id.substring(0, 8),
+      section: q.section,
+      inAnswers: !!answers[q.id],
+    }));
+    const sectionQs = config?.section_order_mode === "no_sections"
+      ? selectedQuestions
+      : selectedQuestions.filter(q => getSectionField(q, config) === currentSection);
+    console.log('🔍 [DEBUG SECTIONS]', {
+      currentSection,
+      currentSectionIndex,
+      sections,
+      selectedQuestionsCount: selectedQuestions.length,
+      sectionQuestionsCount: sectionQs.length,
+      firstFewSelected,
+      firstSectionQ: sectionQs[0]?.id.substring(0, 8),
+      firstSectionQInAnswers: sectionQs[0] ? !!answers[sectionQs[0].id] : 'N/A',
+    });
+  }
+
   // Adaptive testing — base questions, algorithm selection, DI balancing, GMAT theta capture
   const { selectNextAdaptiveAction, prepareBaseQuestionsForSection } =
     useAdaptiveTesting({
@@ -2100,6 +2122,13 @@ function TakeTestPageInner() {
                     const rendererLanguage: "it" | "en" =
                       testLanguage === "en" || isEnglishSection ? "en" : "it";
 
+                    console.log('🎨 [RENDER] QuestionRenderer', {
+                      qId: currentQuestion.id.substring(0, 8),
+                      hasAnswer: !!answers[currentQuestion.id],
+                      answerValue: answers[currentQuestion.id]?.answer ?? 'NONE',
+                      totalAnswersInState: Object.keys(answers).length,
+                    });
+
                     return (
                       <QuestionRenderer
                         question={{
@@ -2220,106 +2249,6 @@ function TakeTestPageInner() {
         />
         <SubmittingOverlay visible={submitting} />
       </div>
-
-      {/* Navigation Controls with Question Numbers */}
-      <NavigationControls
-        currentSectionIndex={currentSectionIndex}
-        currentQuestionIndex={currentQuestionIndex}
-        expectedTotalSections={expectedTotalSections}
-        sectionQuestionLimit={sectionQuestionLimit}
-        totalQuestionsInSection={totalQuestionsInSection}
-        totalQuestions={allQuestions.length}
-        isInReviewMode={isInReviewMode}
-        isPreviewMode={isPreviewMode}
-        isTransitioning={isTransitioning}
-        submitting={submitting}
-        adaptivityMode={config?.adaptivity_mode}
-        timeRemaining={timeRemaining}
-        canGoBack={canGoBack()}
-        answeredQuestions={new Set(
-          sectionQuestions
-            .map((q, idx) => ({ idx, answered: !!(answers[q.id]?.answer || answers[q.id]?.msrAnswers?.length || answers[q.id]?.blank1 || answers[q.id]?.taAnswers || answers[q.id]?.column1) }))
-            .filter(x => x.answered)
-            .map(x => x.idx)
-        )}
-        onNavigateToQuestion={undefined}
-        questionsPerPage={questionsPerPage}
-        currentPageIndex={currentPageIndex}
-        onPrevious={goToPreviousQuestion}
-        onNext={goToNextQuestion}
-        onReturnToReview={returnToReviewScreen}
-      />
-
-      {/* Review Screen Overlay */}
-      <ReviewScreen
-        isOpen={showReviewScreen}
-        questions={sectionQuestions.map((q, idx) => ({
-          id: q.id,
-          questionNumber: idx + 1,
-          isAnswered: !!(answers[q.id]?.answer || answers[q.id]?.msrAnswers || answers[q.id]?.blank1 || answers[q.id]?.taAnswers || answers[q.id]?.column1),
-          isBookmarked: bookmarkedQuestions.has(q.id),
-        }))}
-        onQuestionClick={(index: number, _questionId: string) => goToQuestionFromReview(index)}
-        onComplete={completeReview}
-        isLastSection={currentSectionIndex >= expectedTotalSections - 1}
-        disabled={timeRemaining !== null && timeRemaining <= 1}
-        maxChanges={config?.max_answer_changes}
-        changesUsed={answerChangesUsed}
-      />
-
-      {/* Change Blocked Toast (when max changes reached) */}
-      {showChangeBlockedMessage && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
-          <div className="bg-red-100 border-2 border-red-400 text-red-700 px-6 py-3 rounded-xl shadow-lg flex items-center gap-3">
-            <span className="text-xl">⚠️</span>
-            <div>
-              <p className="font-semibold">{t('takeTest.maxChangesReached') || 'Maximum changes reached'}</p>
-              <p className="text-sm">
-                {t('takeTest.cannotChangeMore') || 'You cannot change any more answers in this section'}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Answer Required Modal Overlay */}
-      {showAnswerRequiredMessage && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md mx-4 text-center">
-            <div className="text-5xl mb-4">⚠️</div>
-            <h3 className="text-xl font-bold text-red-600 mb-4">
-              {t('takeTest.answerRequired')}
-            </h3>
-            <p className="text-gray-700 mb-6">
-              {isPartialAnswer
-                ? t('takeTest.mustCompleteAllParts')
-                : t('takeTest.mustAnswerQuestion')
-              }
-            </p>
-            <button
-              onClick={() => setShowAnswerRequiredMessage(false)}
-              className="px-8 py-3 bg-gradient-to-r from-brand-green to-green-600 text-white rounded-xl font-semibold hover:shadow-xl transition-all"
-            >
-              {t('common.close')}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Submitting Test Loading Overlay */}
-      {submitting && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md mx-4 text-center">
-            <FontAwesomeIcon icon={faClock} className="text-6xl text-brand-green animate-spin mb-4" />
-            <h3 className="text-xl font-bold text-brand-dark mb-2">
-              {t('takeTest.submittingTest') || 'Submitting Test...'}
-            </h3>
-            <p className="text-gray-600">
-              {t('takeTest.pleaseWait') || 'Please wait while we save your answers...'}
-            </p>
-          </div>
-        </div>
-      )}
     </MathJaxProvider>
   );
 }
