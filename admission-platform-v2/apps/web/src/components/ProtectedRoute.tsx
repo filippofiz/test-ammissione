@@ -28,7 +28,19 @@ export function ProtectedRoute({
       return;
     }
 
-    const profile = await getCurrentProfile();
+    let profile;
+    try {
+      profile = await getCurrentProfile();
+    } catch (err) {
+      navigate('/error', {
+        replace: true,
+        state: {
+          type: 'auth',
+          message: err instanceof Error ? err.message : String(err),
+        },
+      });
+      return;
+    }
 
     if (!profile) {
       // Not authenticated

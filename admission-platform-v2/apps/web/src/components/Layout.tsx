@@ -27,8 +27,12 @@ export function Layout({ children, noScroll = false, pageTitle, pageSubtitle }: 
   }, []);
 
   const loadProfile = async () => {
-    const userProfile = await getCurrentProfile();
-    setProfile(userProfile);
+    try {
+      const userProfile = await getCurrentProfile();
+      setProfile(userProfile);
+    } catch (err) {
+      console.error('❌ [Layout] Failed to load profile:', err);
+    }
   };
 
   const handleLogout = async () => {

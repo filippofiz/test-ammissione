@@ -218,14 +218,14 @@ export function useTestProgress({
     return new Set(bookmarks || []);
   }, []);
 
-  // Load progress on initial mount
+  // Load progress once all required values are ready (sessionId, userId, and not disabled)
   useEffect(() => {
-    if (!initialLoadDone.current && sessionId && userId) {
+    if (!initialLoadDone.current && !disabled && sessionId && userId) {
       const progress = loadProgress();
       setSavedProgress(progress);
       initialLoadDone.current = true;
     }
-  }, [sessionId, userId, loadProgress]);
+  }, [disabled, sessionId, userId, loadProgress]);
 
   return {
     hasSavedProgress: savedProgress !== null && savedProgress.testStarted,

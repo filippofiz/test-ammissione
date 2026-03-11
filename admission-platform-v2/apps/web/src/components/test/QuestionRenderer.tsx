@@ -9,14 +9,14 @@
  */
 
 import { useTranslation } from 'react-i18next';
-import { MathJaxRenderer } from '../MathJaxRenderer';
-import { DSQuestion } from '../questions/DSQuestion';
-import { MSRQuestion } from '../questions/MSRQuestion';
-import { GIQuestion } from '../questions/GIQuestion';
-import { TAQuestion } from '../questions/TAQuestion';
-import { TPAQuestion } from '../questions/TPAQuestion';
-import { MultipleChoiceQuestion } from '../questions/MultipleChoiceQuestion';
-import { QuestionImage } from './QuestionImage';
+import { MathJaxRenderer } from '@/components/MathJaxRenderer';
+import { DSQuestion } from '@/components/questions/DSQuestion';
+import { MSRQuestion } from '@/components/questions/MSRQuestion';
+import { GIQuestion } from '@/components/questions/GIQuestion';
+import { TAQuestion } from '@/components/questions/TAQuestion';
+import { TPAQuestion } from '@/components/questions/TPAQuestion';
+import { MultipleChoiceQuestion } from '@/components/questions/MultipleChoiceQuestion';
+import { QuestionImage } from '@/components/test/QuestionImage';
 
 /**
  * Question data structure from database
@@ -58,6 +58,9 @@ export interface QuestionData {
   table_data?: string[][];
   table_title?: string;
   column_headers?: string[];
+  stimulus_text?: string;
+  answer_col1_title?: string;
+  answer_col2_title?: string;
   statements?: Array<{
     text: string;
     is_true: boolean;
@@ -107,6 +110,15 @@ export interface Question {
     correct_answer: string | string[] | Record<string, unknown>;
     wrong_answers?: string[];
   } | string;
+
+  // Legacy top-level answer fields (answer_a/b/c/d/e format)
+  answer_a?: string | null;
+  answer_b?: string | null;
+  answer_c?: string | null;
+  answer_d?: string | null;
+  answer_e?: string | null;
+  // Legacy top-level question text
+  question_text?: string;
 }
 
 /**
@@ -486,6 +498,112 @@ export function QuestionRenderer({
           className="w-full h-48 p-4 border-2 border-gray-200 rounded-xl focus:border-brand-green focus:ring-2 focus:ring-brand-green focus:ring-opacity-20 outline-none resize-y text-gray-800"
           disabled={readOnly}
         />
+      </div>
+    );
+  }
+
+  // Legacy choices[] format — question_data.choices array with { label, text }
+  if (questionData.choices && questionData.choices.length > 0) {
+    const correctAnswer = Array.isArray(correctAnswerData)
+      ? (correctAnswerData as string[])[0]
+      : (correctAnswerData as string);
+
+    return (
+      <div className="space-y-3">
+        {questionData.choices.map(choice => {
+          const isSelected = currentAnswer.answer === choice.label;
+          const isCorrect = showResults && correctAnswer === choice.label;
+          const isWrong = showResults && isSelected && correctAnswer !== choice.label;
+
+          return (
+            <button
+              key={choice.label}
+              onClick={() => !readOnly && updateAnswer({ answer: choice.label })}
+              disabled={readOnly}
+              className={`w-full text-left p-4 rounded-xl border-2 transition-all disabled:cursor-default ${
+                isCorrect
+                  ? 'border-green-500 bg-green-100'
+                  : isWrong
+                  ? 'border-red-500 bg-red-50'
+                  : isSelected
+                  ? 'border-brand-green bg-green-50'
+                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-start gap-4">
+                <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold ${
+                  isCorrect ? 'bg-green-500 text-white'
+                  : isWrong ? 'bg-red-500 text-white'
+                  : isSelected ? 'bg-brand-green text-white'
+                  : 'bg-gray-200 text-gray-700'
+                }`}>
+                  {choice.label}
+                </div>
+                <div className="flex-1 text-gray-800">
+                  <MathJaxRenderer>{choice.text}</MathJaxRenderer>
+                </div>
+                {isCorrect && <span className="text-green-500 text-xl">✓</span>}
+                {isWrong && <span className="text-red-500 text-xl">✗</span>}
+                {isSelected && !isCorrect && !isWrong && <span className="text-brand-green text-xl">✓</span>}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // Legacy answer_a/b/c/d/e format — top-level fields on the question object
+  if (question.answer_a || question.answer_b || question.answer_c || question.answer_d || question.answer_e) {
+    const correctAnswer = Array.isArray(correctAnswerData)
+      ? (correctAnswerData as string[])[0]
+      : (correctAnswerData as string);
+
+    return (
+      <div className="space-y-3">
+        {(['A', 'B', 'C', 'D', 'E'] as const).map(option => {
+          const answerKey = `answer_${option.toLowerCase()}` as keyof Question;
+          const answerText = question[answerKey] as string | null | undefined;
+          if (!answerText) return null;
+
+          const isSelected = currentAnswer.answer === option;
+          const isCorrect = showResults && correctAnswer === option;
+          const isWrong = showResults && isSelected && correctAnswer !== option;
+
+          return (
+            <button
+              key={option}
+              onClick={() => !readOnly && updateAnswer({ answer: option })}
+              disabled={readOnly}
+              className={`w-full text-left p-4 rounded-xl border-2 transition-all disabled:cursor-default ${
+                isCorrect
+                  ? 'border-green-500 bg-green-100'
+                  : isWrong
+                  ? 'border-red-500 bg-red-50'
+                  : isSelected
+                  ? 'border-brand-green bg-green-50'
+                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-start gap-4">
+                <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold ${
+                  isCorrect ? 'bg-green-500 text-white'
+                  : isWrong ? 'bg-red-500 text-white'
+                  : isSelected ? 'bg-brand-green text-white'
+                  : 'bg-gray-200 text-gray-700'
+                }`}>
+                  {option}
+                </div>
+                <div className="flex-1 text-gray-800">
+                  <MathJaxRenderer>{answerText}</MathJaxRenderer>
+                </div>
+                {isCorrect && <span className="text-green-500 text-xl">✓</span>}
+                {isWrong && <span className="text-red-500 text-xl">✗</span>}
+                {isSelected && !isCorrect && !isWrong && <span className="text-brand-green text-xl">✓</span>}
+              </div>
+            </button>
+          );
+        })}
       </div>
     );
   }
