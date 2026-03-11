@@ -90,6 +90,7 @@ export interface UseAnswerManagementOptions {
   isTestMode: boolean;
   isGuidedMode: boolean;
   guidedTimed: boolean;
+  isGmatMode?: boolean;
   assignmentId: string | undefined;
   adaptiveAlgorithm: AdaptiveAlgorithm | null;
   db: SupabaseClient;
@@ -151,6 +152,7 @@ export function useAnswerManagement({
   isTestMode,
   isGuidedMode,
   guidedTimed,
+  isGmatMode,
   assignmentId,
   adaptiveAlgorithm,
   db,
@@ -327,6 +329,7 @@ export function useAnswerManagement({
     questionOrder?: number
   ): Promise<boolean> {
     if (isPreviewMode) return true;
+    if (isGmatMode) return true;
     if (!assignmentId || !studentId) return false;
 
     const existingSave = savingInProgressRef.current.get(questionId);

@@ -35,12 +35,13 @@ import GMATQuestionAllocationPage from './pages/GMATQuestionAllocationPage';
 import GMATConfigPage from './pages/GMATConfigPage';
 // GMATAssessmentResultsPage: kept for rollback, replaced by UnifiedResultsPage
 import GMATTrainingTestPage from './pages/GMATTrainingTestPage';
-import GMATSectionAssessmentPage from './pages/GMATSectionAssessmentPage';
-import GMATSimulationPage from './pages/GMATSimulationPage';
-import GMATPlacementAssessmentPage from './pages/GMATPlacementAssessmentPage';
+import GMATPlacementWrapper from './pages/GMATPlacementWrapper';
+import GMATSectionAssessmentWrapper from './pages/GMATSectionAssessmentWrapper';
+import GMATSimulationWrapper from './pages/GMATSimulationWrapper';
 import SemestreFiltroPage from './pages/SemestreFiltroPage';
 import TheoryManagementPage from './pages/TheoryManagementPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import ErrorPage from './pages/ErrorPage';
 
 function App() {
   return (
@@ -53,6 +54,22 @@ function App() {
       <Routes>
         {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/error" element={<ErrorPage />} />
+        <Route
+          path="/error-preview"
+          element={
+            <ErrorPage
+              previewState={{
+                type: 'crash',
+                errorName: 'TypeError',
+                message: 'Cannot read properties of undefined (reading "id")',
+                componentStack: '    at TakeTestPage (TakeTestPage.tsx:123)\n    at ProtectedRoute (ProtectedRoute.tsx:45)\n    at Routes\n    at App',
+                timestamp: new Date().toISOString(),
+              }}
+            />
+          }
+        />
+        <Route path="*" element={<ErrorPage />} />
 
         {/* Protected routes - require authentication */}
         <Route
@@ -115,7 +132,7 @@ function App() {
           path="/student/take-test/gmat-section-assessment/:section"
           element={
             <ProtectedRoute requiredRoles={['STUDENT']}>
-              <GMATSectionAssessmentPage />
+              <GMATSectionAssessmentWrapper />
             </ProtectedRoute>
           }
         />
@@ -123,7 +140,7 @@ function App() {
           path="/student/take-test/gmat-simulation"
           element={
             <ProtectedRoute requiredRoles={['STUDENT']}>
-              <GMATSimulationPage />
+              <GMATSimulationWrapper />
             </ProtectedRoute>
           }
         />
@@ -131,7 +148,7 @@ function App() {
           path="/student/take-test/gmat-placement-assessment"
           element={
             <ProtectedRoute requiredRoles={['STUDENT']}>
-              <GMATPlacementAssessmentPage />
+              <GMATPlacementWrapper />
             </ProtectedRoute>
           }
         />
@@ -229,7 +246,7 @@ function App() {
           path="/tutor/take-test/gmat-section-assessment/:section"
           element={
             <ProtectedRoute requiredRoles={['TUTOR', 'ADMIN']}>
-              <GMATSectionAssessmentPage />
+              <GMATSectionAssessmentWrapper />
             </ProtectedRoute>
           }
         />
@@ -237,7 +254,7 @@ function App() {
           path="/tutor/take-test/gmat-simulation"
           element={
             <ProtectedRoute requiredRoles={['TUTOR', 'ADMIN']}>
-              <GMATSimulationPage />
+              <GMATSimulationWrapper />
             </ProtectedRoute>
           }
         />
@@ -245,7 +262,7 @@ function App() {
           path="/tutor/take-test/gmat-placement-assessment"
           element={
             <ProtectedRoute requiredRoles={['TUTOR', 'ADMIN']}>
-              <GMATPlacementAssessmentPage />
+              <GMATPlacementWrapper />
             </ProtectedRoute>
           }
         />
@@ -414,6 +431,23 @@ function App() {
           element={
             <ProtectedRoute requiredRoles={['STUDENT']}>
               <SemestreFiltroPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* GMAT assessment fork — no assignmentId, identified by type+section */}
+        <Route
+          path="/take-test/gmat/:assessmentType/:section"
+          element={
+            <ProtectedRoute requiredRoles={['STUDENT', 'TUTOR', 'ADMIN']}>
+              <TakeTestPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/take-test/gmat/:assessmentType"
+          element={
+            <ProtectedRoute requiredRoles={['STUDENT', 'TUTOR', 'ADMIN']}>
+              <TakeTestPage />
             </ProtectedRoute>
           }
         />

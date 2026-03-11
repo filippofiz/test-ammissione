@@ -32,7 +32,6 @@ export interface NavigationControlsProps {
 
   // Question navigation
   answeredQuestions?: Set<number>; // Set of answered question indices (0-based)
-  onNavigateToQuestion?: (index: number) => void;
 
   // Multi-question page support
   questionsPerPage?: number; // If > 1, show page ranges instead of individual numbers
@@ -59,7 +58,6 @@ export function NavigationControls({
   timeRemaining,
   canGoBack,
   answeredQuestions = new Set(),
-  onNavigateToQuestion,
   questionsPerPage = 1,
   currentPageIndex,
   onPrevious,
@@ -72,21 +70,6 @@ export function NavigationControls({
   const effectiveQuestionsPerPage = questionsPerPage > 1 ? questionsPerPage : 1;
   const totalPages = Math.ceil(totalQuestionsInSection / effectiveQuestionsPerPage);
   const currentPage = currentPageIndex !== undefined ? currentPageIndex : Math.floor(currentQuestionIndex / effectiveQuestionsPerPage);
-
-  const handlePageClick = (pageIndex: number) => {
-    if (!onNavigateToQuestion) return;
-    const targetQuestionIndex = pageIndex * effectiveQuestionsPerPage;
-
-    // Can always go forward or stay on current
-    if (pageIndex >= currentPage) {
-      onNavigateToQuestion(targetQuestionIndex);
-      return;
-    }
-    // Going back - check if allowed
-    if (canGoBack) {
-      onNavigateToQuestion(targetQuestionIndex);
-    }
-  };
 
   // Check if all questions in a page are answered
   const isPageAnswered = (pageIndex: number): boolean => {
@@ -147,23 +130,19 @@ export function NavigationControls({
           )}
         </div>
 
-        {/* Question/Page numbers in center */}
+        {/* Question/Page numbers in center — display only, not clickable */}
         <div className="flex-1 flex justify-center">
           <div className="flex flex-wrap justify-center gap-1 max-w-[60vw] overflow-x-auto py-1">
             {Array.from({ length: totalPages }, (_, pageIndex) => {
               const isCurrent = pageIndex === currentPage;
-              const isPast = pageIndex < currentPage;
               const isFullyAnswered = isPageAnswered(pageIndex);
               const isPartiallyAnswered = isPagePartiallyAnswered(pageIndex);
-              const canClick = onNavigateToQuestion && (isCurrent || pageIndex > currentPage || (isPast && canGoBack));
 
               return (
-                <button
+                <span
                   key={pageIndex}
-                  onClick={() => handlePageClick(pageIndex)}
-                  disabled={!canClick || isTimeExpired}
                   className={`
-                    min-w-[2rem] h-8 px-2 rounded-lg text-xs font-bold transition-all
+                    inline-flex items-center justify-center min-w-[2rem] h-8 px-2 rounded-lg text-xs font-bold select-none
                     ${isCurrent
                       ? 'bg-blue-500 text-white ring-2 ring-blue-300'
                       : isFullyAnswered
@@ -172,12 +151,10 @@ export function NavigationControls({
                           ? 'bg-yellow-400 text-yellow-900'
                           : 'bg-gray-200 text-gray-600'
                     }
-                    ${canClick && !isTimeExpired ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}
-                    disabled:opacity-50
                   `}
                 >
                   {getPageLabel(pageIndex)}
-                </button>
+                </span>
               );
             })}
           </div>
