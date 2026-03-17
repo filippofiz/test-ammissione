@@ -12,7 +12,7 @@
  * - Layout matches GMATTrainingTestPage pattern
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -35,6 +35,7 @@ import {
   faList,
   faTrophy,
   faEye,
+  faCoffee,
 } from '@fortawesome/free-solid-svg-icons';
 import { supabase } from '../lib/supabase';
 import { checkAnswerCorrectness } from '../lib/gmat/answerChecking';
@@ -53,10 +54,11 @@ import {
 } from '../components/hooks/useTestProgress';
 import {
   getStudentGMATProgress,
-  getMockSimulationQuestions,
+  getMockSimulationPool,
   saveMockSimulationResult,
-  lockSimulation,
+  getSimulationSlots,
   MOCK_SIMULATION_CONFIG,
+  type GmatCycle,
   type GmatSection,
   type GmatAssessmentResult,
   type MockSimulationResult,
@@ -67,6 +69,7 @@ import {
   GmatScoringAlgorithm,
   type GmatScoreResult,
 } from '../lib/algorithms/gmatScoringAlgorithm';
+import { ComplexAdaptiveAlgorithm } from '../lib/algorithms/adaptiveAlgorithm';
 
 // ============================================
 // Types
@@ -98,6 +101,8 @@ export default function GMATSimulationPage() {
 
   // Check if this is preview mode (tutor/admin preview)
   const isPreviewMode = searchParams.get('preview') === 'true';
+  // Simulation slot ID — required in student mode, null in preview
+  const slotId = searchParams.get('slotId');
 
   // Section order — customizable before test starts
   const [sectionOrder, setSectionOrder] = useState<GmatSection[]>([...MOCK_SIMULATION_CONFIG.sectionOrder]);
@@ -106,11 +111,26 @@ export default function GMATSimulationPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [studentId, setStudentId] = useState<string | null>(null);
+  const [studentCycle, setStudentCycle] = useState<GmatCycle | null>(null);
 
   // Question state — all questions flat + split by section
   const [allQuestions, setAllQuestions] = useState<Question[]>([]);
   const [sectionQuestions, setSectionQuestions] = useState<Record<GmatSection, Question[]>>({
     QR: [], DI: [], VR: [],
+  });
+
+  // Adaptive CAT state — stored in refs so reads are always current inside async functions
+  // Pool: remaining candidate questions per section (shrinks as questions are served)
+  const sectionPoolsRef = useRef<Record<GmatSection, Array<{ id: string; section: GmatSection; difficulty: string }>>>({
+    QR: [], DI: [], VR: [],
+  });
+  // Served questions per section (grows as questions are served) — mirrors sectionQuestions state
+  const sectionQuestionsRef = useRef<Record<GmatSection, Question[]>>({ QR: [], DI: [], VR: [] });
+  // Full question data map (id → Question) — populated once on load
+  const questionDataMap = useRef<Map<string, Question>>(new Map());
+  // Per-section ComplexAdaptiveAlgorithm instances
+  const adaptiveAlgos = useRef<Record<GmatSection, ComplexAdaptiveAlgorithm | null>>({
+    QR: null, DI: null, VR: null,
   });
 
   // Navigation state
@@ -124,6 +144,8 @@ export default function GMATSimulationPage() {
   const [sectionCompleted, setSectionCompleted] = useState<boolean[]>([false, false, false]);
   const [showSectionTransition, setShowSectionTransition] = useState(false);
   const [showTimeUpModal, setShowTimeUpModal] = useState(false);
+  const [showBreakScreen, setShowBreakScreen] = useState(false);
+  const [breakTimeRemaining, setBreakTimeRemaining] = useState(0);
 
   // Answer & bookmark state (shared across all sections)
   const [answers, setAnswers] = useState<Map<string, Answer>>(new Map());
@@ -160,13 +182,13 @@ export default function GMATSimulationPage() {
   // Timer hook
   const { timeRemaining, setTimeRemaining } = useTestTimer({
     initialSeconds: initialTimeSeconds,
-    isActive: testStarted && !showSectionTransition && !testCompleted,
+    isActive: testStarted && !showSectionTransition && !showBreakScreen && !testCompleted,
     onTimeUp: handleTimeUp,
   });
 
-  // Crash recovery
+  // Crash recovery — scoped to the specific slot so separate attempts don't collide
   const testProgress = useTestProgress({
-    sessionId: 'gmat-simulation',
+    sessionId: slotId ? `gmat-simulation-${slotId}` : 'gmat-simulation-preview',
     userId: studentId || '',
     storageKeyPrefix: 'gmat_simulation_',
     disabled: isPreviewMode || !studentId,
@@ -188,6 +210,48 @@ export default function GMATSimulationPage() {
     }
   }, [hasSavedProgress, loading, testStarted, showResumeModal]);
 
+  // Break countdown interval
+  const breakIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => {
+    if (showBreakScreen && breakTimeRemaining > 0) {
+      breakIntervalRef.current = setInterval(() => {
+        setBreakTimeRemaining(prev => {
+          if (prev <= 1) {
+            clearInterval(breakIntervalRef.current!);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      if (breakIntervalRef.current) {
+        clearInterval(breakIntervalRef.current);
+        breakIntervalRef.current = null;
+      }
+    }
+    return () => {
+      if (breakIntervalRef.current) clearInterval(breakIntervalRef.current);
+    };
+  }, [showBreakScreen, breakTimeRemaining]);
+
+  /** Hardcoded CAT config matching our 3PL IRT defaults (no DB roundtrip needed). */
+  function createAlgoConfig() {
+    return {
+      test_type: 'GMAT',
+      track_type: 'mock_simulation',
+      algorithm_type: 'complex' as const,
+      irt_model: '3PL' as const,
+      initial_theta: 0,
+      theta_min: -4,
+      theta_max: 4,
+      se_threshold: 0.3,
+      exposure_control: true,
+      // No base-questions phase for full mock — start adaptive immediately
+      use_base_questions: false,
+      base_questions_count: 0,
+    };
+  }
+
   async function loadData() {
     try {
       const profile = await getCurrentProfile();
@@ -199,7 +263,13 @@ export default function GMATSimulationPage() {
       setStudentId(profile.id);
 
       if (!isPreviewMode) {
-        // Student mode: Check simulation is unlocked
+        // Student mode: validate that a specific pending slot was provided
+        if (!slotId) {
+          setError('No simulation slot specified. Please return to your preparation page and use "Start Simulation".');
+          setLoading(false);
+          return;
+        }
+
         const progress = await getStudentGMATProgress(profile.id);
         if (!progress) {
           setError('You have not been assigned a GMAT preparation cycle. Please contact your tutor.');
@@ -207,54 +277,99 @@ export default function GMATSimulationPage() {
           return;
         }
 
-        if (!progress.simulation_unlocked) {
-          setError('Simulations are currently locked. Your tutor will unlock them when you\'re ready.');
+        // Validate that the slot belongs to this student and is still pending
+        const slots = await getSimulationSlots(profile.id, progress.gmat_cycle);
+        const slot = slots.find(s => s.id === slotId);
+        if (!slot) {
+          setError('Simulation slot not found or does not belong to your account.');
           setLoading(false);
           return;
         }
+        if (slot.status !== 'pending') {
+          setError('This simulation slot has already been used. Please ask your tutor to unlock a new slot.');
+          setLoading(false);
+          return;
+        }
+
+        setStudentCycle(progress.gmat_cycle);
       }
 
-      // Get question IDs from pool (skip readiness check in preview mode)
-      const { questions: questionRefs, questionsBySection, error: selectionError } =
-        await getMockSimulationQuestions(profile.id, isPreviewMode);
-
-      if (selectionError || questionRefs.length === 0) {
-        setError(selectionError || 'No questions available for simulation. Please contact your tutor.');
+      // Fetch the full unseen question pool (adaptive selection will pick questions one-by-one)
+      const { poolBySection, error: poolError } = await getMockSimulationPool(profile.id);
+      if (poolError) {
+        setError(poolError);
         setLoading(false);
         return;
       }
 
-      // Fetch full question data in batches (64 questions, supabase .in() supports up to 200)
-      const allIds = questionRefs.map(q => q.id);
-      const { data: questionsData, error: questionsError } = await supabase
-        .from('2V_questions')
-        .select('id, question_number, question_type, section, difficulty, question_data, answers')
-        .in('id', allIds);
+      // Fetch full question data per section in separate batches to avoid URL-length limits
+      const qMap = new Map<string, Question>();
+      for (const sec of ['QR', 'DI', 'VR'] as GmatSection[]) {
+        const ids = poolBySection[sec].map(q => q.id);
+        if (ids.length === 0) continue;
 
-      if (questionsError || !questionsData) {
-        throw new Error(`Failed to load questions: ${questionsError?.message || 'No data'}`);
-      }
-
-      // Build ordered questions preserving the randomized order from getMockSimulationQuestions
-      const questionMap = new Map(questionsData.map(q => [q.id, q as Question]));
-
-      const orderedSectionQuestions: Record<GmatSection, Question[]> = { QR: [], DI: [], VR: [] };
-      const orderedAll: Question[] = [];
-
-      for (const sec of sectionOrder) {
-        const sectionRefs = questionsBySection[sec];
-        for (const ref of sectionRefs) {
-          const fullQ = questionMap.get(ref.id);
-          if (fullQ) {
-            orderedSectionQuestions[sec].push(fullQ);
-            orderedAll.push(fullQ);
+        // Supabase .in() can handle ~200 IDs per request safely; chunk if needed
+        const CHUNK = 150;
+        for (let i = 0; i < ids.length; i += CHUNK) {
+          const chunk = ids.slice(i, i + CHUNK);
+          const { data, error } = await supabase
+            .from('2V_questions')
+            .select('id, question_number, question_type, section, difficulty, question_data, answers')
+            .in('id', chunk);
+          if (error || !data) {
+            throw new Error(`Failed to load questions for ${sec}: ${error?.message || 'No data'}`);
+          }
+          for (const q of data) {
+            qMap.set(q.id, q as Question);
           }
         }
       }
 
-      setAllQuestions(orderedAll);
-      setSectionQuestions(orderedSectionQuestions);
-      setInitialTimeSeconds(MOCK_SIMULATION_CONFIG.sections[sectionOrder[0]].timeMinutes * 60);
+      // Populate the question data map (id → full Question)
+      questionDataMap.current = qMap;
+
+      // Initialise one ComplexAdaptiveAlgorithm per section
+      const cfg = createAlgoConfig();
+      adaptiveAlgos.current = {
+        QR: new ComplexAdaptiveAlgorithm(cfg),
+        DI: new ComplexAdaptiveAlgorithm(cfg),
+        VR: new ComplexAdaptiveAlgorithm(cfg),
+      };
+
+      // Initialise the pool ref
+      sectionPoolsRef.current = {
+        QR: [...poolBySection.QR],
+        DI: [...poolBySection.DI],
+        VR: [...poolBySection.VR],
+      };
+
+      // Serve the very first question for the first section via the adaptive algorithm
+      const firstSection = sectionOrder[0];
+      const algo = adaptiveAlgos.current[firstSection]!;
+      const firstRef = await algo.selectNextQuestion(sectionPoolsRef.current[firstSection]);
+      if (!firstRef) {
+        setError('Failed to select first question. Please contact your tutor.');
+        setLoading(false);
+        return;
+      }
+
+      const firstQ = qMap.get(firstRef.id);
+      if (!firstQ) {
+        throw new Error('First question data missing from pool fetch');
+      }
+
+      // Remove first question from the pool ref
+      sectionPoolsRef.current[firstSection] = sectionPoolsRef.current[firstSection].filter(q => q.id !== firstRef.id);
+
+      // Update served questions ref
+      sectionQuestionsRef.current = { QR: [], DI: [], VR: [], [firstSection]: [firstQ] };
+
+      const initialSectionQuestions: Record<GmatSection, Question[]> = { QR: [], DI: [], VR: [] };
+      initialSectionQuestions[firstSection] = [firstQ];
+      setSectionQuestions(initialSectionQuestions);
+      setAllQuestions([firstQ]);
+
+      setInitialTimeSeconds(MOCK_SIMULATION_CONFIG.sections[firstSection].timeMinutes * 60);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load simulation');
     } finally {
@@ -308,11 +423,36 @@ export default function GMATSimulationPage() {
     setQuestionStartTime(Date.now());
   }
 
-  function startTest() {
-    // Rebuild allQuestions in the custom section order
+  async function startTest() {
+    // If section order was customized (different from default), the first question was seeded
+    // for the original sectionOrder[0]. Re-seed for the new first section if needed.
+    const defaultFirst = MOCK_SIMULATION_CONFIG.sectionOrder[0];
+    const chosenFirst = sectionOrder[0];
+
+    let finalSectionQs = { ...sectionQuestions };
+
+    if (chosenFirst !== defaultFirst && (sectionQuestionsRef.current[chosenFirst] || []).length === 0) {
+      // Need to seed the first question for the chosen first section
+      const algo = adaptiveAlgos.current[chosenFirst];
+      const pool = sectionPoolsRef.current[chosenFirst];
+      if (algo && pool.length > 0) {
+        const firstRef = await algo.selectNextQuestion(pool);
+        if (firstRef) {
+          const firstQ = questionDataMap.current.get(firstRef.id);
+          if (firstQ) {
+            sectionPoolsRef.current[chosenFirst] = sectionPoolsRef.current[chosenFirst].filter(q => q.id !== firstRef.id);
+            sectionQuestionsRef.current[chosenFirst] = [firstQ];
+            finalSectionQs = { ...finalSectionQs, [chosenFirst]: [firstQ] };
+            setSectionQuestions(finalSectionQs);
+          }
+        }
+      }
+    }
+
+    // Rebuild allQuestions in the chosen section order
     const reorderedAll: Question[] = [];
     for (const sec of sectionOrder) {
-      reorderedAll.push(...(sectionQuestions[sec] || []));
+      reorderedAll.push(...(finalSectionQs[sec] || []));
     }
     setAllQuestions(reorderedAll);
 
@@ -324,9 +464,68 @@ export default function GMATSimulationPage() {
 
   function resumeTest() {
     if (!savedProgress) return;
-    const customData = savedProgress.customData as { currentSectionIndex?: number; sectionCompleted?: boolean[] } | undefined;
+    const customData = savedProgress.customData as {
+      currentSectionIndex?: number;
+      sectionCompleted?: boolean[];
+      sectionOrder?: GmatSection[];
+      servedBySection?: Record<string, string[]>;
+      poolsBySection?: Record<string, string[]>;
+      thetasBySection?: Record<string, number>;
+    } | undefined;
     const restoredSectionIndex = customData?.currentSectionIndex ?? 0;
     const restoredSectionCompleted = customData?.sectionCompleted ?? [false, false, false];
+    const restoredSectionOrder = customData?.sectionOrder ?? sectionOrder;
+    setSectionOrder(restoredSectionOrder);
+
+    const qMap = questionDataMap.current;
+
+    // Rebuild served questions per section from saved IDs
+    const restoredSectionQs: Record<GmatSection, Question[]> = { QR: [], DI: [], VR: [] };
+    if (customData?.servedBySection) {
+      for (const sec of ['QR', 'DI', 'VR'] as GmatSection[]) {
+        const ids = customData.servedBySection[sec] || [];
+        restoredSectionQs[sec] = ids.map(id => qMap.get(id)).filter(Boolean) as Question[];
+      }
+    } else {
+      // Legacy fallback: use whatever sectionQuestionsRef already has
+      for (const sec of ['QR', 'DI', 'VR'] as GmatSection[]) {
+        restoredSectionQs[sec] = sectionQuestionsRef.current[sec] || [];
+      }
+    }
+    sectionQuestionsRef.current = restoredSectionQs;
+    setSectionQuestions(restoredSectionQs);
+
+    const reorderedAll: Question[] = [];
+    for (const sec of restoredSectionOrder) {
+      reorderedAll.push(...restoredSectionQs[sec]);
+    }
+    setAllQuestions(reorderedAll);
+
+    // Rebuild remaining pools from saved IDs (pools contain full pool metadata)
+    if (customData?.poolsBySection) {
+      for (const sec of ['QR', 'DI', 'VR'] as GmatSection[]) {
+        const ids = new Set(customData.poolsBySection[sec] || []);
+        sectionPoolsRef.current[sec] = sectionPoolsRef.current[sec].filter(q => ids.has(q.id));
+      }
+    }
+
+    // Restore adaptive algo theta estimates
+    if (customData?.thetasBySection) {
+      const cfg = createAlgoConfig();
+      for (const sec of ['QR', 'DI', 'VR'] as GmatSection[]) {
+        const restoredTheta = customData.thetasBySection[sec] ?? 0;
+        adaptiveAlgos.current[sec] = new ComplexAdaptiveAlgorithm(
+          cfg,
+          {
+            theta: restoredTheta,
+            se: 999,
+            response_pattern: [],
+            questions_answered: restoredSectionQs[sec].length,
+            base_questions_completed: true,
+          }
+        );
+      }
+    }
 
     setCurrentSectionIndex(restoredSectionIndex);
     setCurrentQuestionIndex(savedProgress.currentIndex);
@@ -335,12 +534,11 @@ export default function GMATSimulationPage() {
     setSectionCompleted(restoredSectionCompleted);
     setInReviewPhase(savedProgress.inReviewPhase || false);
 
-    // Set timer for the current section
-    if (savedProgress.timeRemaining !== null) {
+    if (savedProgress.timeRemaining !== null && savedProgress.timeRemaining > 0) {
       setInitialTimeSeconds(savedProgress.timeRemaining);
       setTimeRemaining(savedProgress.timeRemaining);
     } else {
-      const sec = sectionOrder[restoredSectionIndex];
+      const sec = restoredSectionOrder[restoredSectionIndex];
       setInitialTimeSeconds(MOCK_SIMULATION_CONFIG.sections[sec].timeMinutes * 60);
     }
 
@@ -399,16 +597,74 @@ export default function GMATSimulationPage() {
     doSaveProgress(currentSectionIndex, index, updatedAnswers, bookmarkedQuestions, timeRemaining, inReviewPhase);
   }
 
-  function nextQuestion() {
+  async function nextQuestion() {
     const currentQ = currentSectionQs[currentQuestionIndex];
     const hasAnswer = currentQ && answers.has(currentQ.id) && answers.get(currentQ.id)!.answer !== '__UNANSWERED__';
 
     if (!inReviewPhase && !hasAnswer) return;
 
-    if (currentQuestionIndex < currentSectionQs.length - 1) {
-      goToQuestion(currentQuestionIndex + 1);
-    } else if (!inReviewPhase) {
-      enterReviewPhase();
+    // In review phase: simple navigation within already-served questions
+    if (inReviewPhase) {
+      if (currentQuestionIndex < currentSectionQs.length - 1) {
+        goToQuestion(currentQuestionIndex + 1);
+      }
+      return;
+    }
+
+    const sectionTarget = MOCK_SIMULATION_CONFIG.sections[currentSection].questions;
+    const alreadyServed = currentSectionQs.length;
+
+    // If we haven't served all questions for this section yet, pick next adaptively
+    if (alreadyServed < sectionTarget) {
+      const algo = adaptiveAlgos.current[currentSection];
+      if (algo && currentQ) {
+        // Record the student's response so the algorithm can update theta
+        const userAnswer = answers.get(currentQ.id);
+        const isUnanswered = !userAnswer || userAnswer.answer === '__UNANSWERED__';
+        if (!isUnanswered) {
+          const answersObj = typeof currentQ.answers === 'string' ? JSON.parse(currentQ.answers) : currentQ.answers;
+          const correctAnswer = answersObj?.correct_answer;
+          const qData = typeof currentQ.question_data === 'string' ? JSON.parse(currentQ.question_data) : currentQ.question_data;
+          const isCorrect = checkAnswerCorrectness(userAnswer!.answer, correctAnswer, qData?.di_type);
+          algo.recordResponse(
+            { id: currentQ.id, difficulty: currentQ.difficulty || 'medium' },
+            isCorrect
+          );
+        }
+
+        // Select next question from remaining pool (use ref — always current)
+        const pool = sectionPoolsRef.current[currentSection];
+        const nextRef = await algo.selectNextQuestion(pool);
+        if (nextRef) {
+          const nextQ = questionDataMap.current.get(nextRef.id);
+          if (nextQ) {
+            // Remove from pool ref immediately (sync, no stale state risk)
+            sectionPoolsRef.current[currentSection] = sectionPoolsRef.current[currentSection].filter(q => q.id !== nextRef.id);
+            // Add to served questions ref
+            const newServed = [...sectionQuestionsRef.current[currentSection], nextQ];
+            sectionQuestionsRef.current[currentSection] = newServed;
+            // Sync to React state for rendering
+            const newSectionQs = { ...sectionQuestions, [currentSection]: newServed };
+            setSectionQuestions(newSectionQs);
+            setAllQuestions(prev => [...prev, nextQ]);
+            goToQuestion(currentQuestionIndex + 1);
+            return;
+          }
+        }
+      }
+      // Fallback: if algo or pool failed, move forward if possible
+      if (currentQuestionIndex < currentSectionQs.length - 1) {
+        goToQuestion(currentQuestionIndex + 1);
+      } else {
+        enterReviewPhase();
+      }
+    } else {
+      // All questions for this section served — go to review or next question in already-served list
+      if (currentQuestionIndex < currentSectionQs.length - 1) {
+        goToQuestion(currentQuestionIndex + 1);
+      } else {
+        enterReviewPhase();
+      }
     }
   }
 
@@ -446,21 +702,62 @@ export default function GMATSimulationPage() {
     if (currentSectionIndex < sectionOrder.length - 1) {
       setShowSectionTransition(true);
       setShowTimeUpModal(false);
+      // Save with the updated sectionCompleted so resume reflects section completion
+      doSaveProgress(currentSectionIndex, currentQuestionIndex, answers, bookmarkedQuestions, 0, false, newCompleted);
     } else {
       setShowTimeUpModal(false);
       submitTest();
     }
   }
 
-  function proceedToNextSection() {
+  function startBreak() {
+    setShowSectionTransition(false);
+    setShowBreakScreen(true);
+    setBreakTimeRemaining(10 * 60); // 10 minutes
+  }
+
+  function endBreak() {
+    setShowBreakScreen(false);
+    setBreakTimeRemaining(0);
+    proceedToNextSectionAfterBreak();
+  }
+
+  async function proceedToNextSectionAfterBreak() {
     const nextIdx = currentSectionIndex + 1;
     const nextSection = sectionOrder[nextIdx];
     const nextTimeSeconds = MOCK_SIMULATION_CONFIG.sections[nextSection].timeMinutes * 60;
+
+    // Cross-section warm start: carry over 30% of current section's theta into next section's algo
+    const prevSection = sectionOrder[currentSectionIndex];
+    const prevAlgo = adaptiveAlgos.current[prevSection];
+    const nextAlgo = adaptiveAlgos.current[nextSection];
+    if (prevAlgo && nextAlgo) {
+      const prevTheta = prevAlgo.getFinalTheta();
+      const warmTheta = prevTheta * 0.3; // 30% carry-over factor
+      nextAlgo.getState().theta = warmTheta;
+      nextAlgo.resetForNewSection();
+    }
+
+    // Seed the first question of the next section
+    const pool = sectionPoolsRef.current[nextSection];
+    const firstRef = nextAlgo ? await nextAlgo.selectNextQuestion(pool) : null;
+
+    if (firstRef) {
+      const firstQ = questionDataMap.current.get(firstRef.id);
+      if (firstQ) {
+        sectionPoolsRef.current[nextSection] = sectionPoolsRef.current[nextSection].filter(q => q.id !== firstRef.id);
+        sectionQuestionsRef.current[nextSection] = [firstQ];
+        const newSectionQs = { ...sectionQuestions, [nextSection]: [firstQ] };
+        setSectionQuestions(newSectionQs);
+        setAllQuestions(prev => [...prev, firstQ]);
+      }
+    }
 
     setCurrentSectionIndex(nextIdx);
     setCurrentQuestionIndex(0);
     setInReviewPhase(false);
     setShowSectionTransition(false);
+    setShowBreakScreen(false);
     setShowCalculator(false);
     setInitialTimeSeconds(nextTimeSeconds);
     setTimeRemaining(nextTimeSeconds);
@@ -478,12 +775,33 @@ export default function GMATSimulationPage() {
     ans: Map<string, Answer>,
     bookmarks: Set<string>,
     timeRem: number | null,
-    review: boolean
+    review: boolean,
+    secCompleted?: boolean[]
   ) {
     const snapshot = createProgressSnapshot(qIdx, ans, bookmarks, timeRem, true, review);
+    // Save served question IDs per section so we can rebuild them on resume
+    const servedBySection: Record<string, string[]> = {};
+    for (const sec of ['QR', 'DI', 'VR'] as GmatSection[]) {
+      servedBySection[sec] = sectionQuestionsRef.current[sec].map(q => q.id);
+    }
+    // Save remaining pool IDs per section so adaptive selection can continue
+    const poolsBySection: Record<string, string[]> = {};
+    for (const sec of ['QR', 'DI', 'VR'] as GmatSection[]) {
+      poolsBySection[sec] = sectionPoolsRef.current[sec].map(q => q.id);
+    }
+    // Save per-section algo theta for warm-restart
+    const thetasBySection: Record<string, number> = {};
+    for (const sec of ['QR', 'DI', 'VR'] as GmatSection[]) {
+      thetasBySection[sec] = adaptiveAlgos.current[sec]?.getFinalTheta() ?? 0;
+    }
+
     snapshot.customData = {
       currentSectionIndex: secIdx,
-      sectionCompleted,
+      sectionCompleted: secCompleted ?? sectionCompleted,
+      sectionOrder,
+      servedBySection,
+      poolsBySection,
+      thetasBySection,
     };
     saveProgress(snapshot);
   }
@@ -669,10 +987,12 @@ export default function GMATSimulationPage() {
       } else {
         const savedResult = await saveMockSimulationResult(
           studentId,
+          slotId!,
           totalCorrect,
           totalQuestions,
           sectionScores,
           allQuestionIds,
+          studentCycle!,
           totalTimeSeconds,
           perQuestionAnswersData,
           bookmarkedIds
@@ -680,12 +1000,6 @@ export default function GMATSimulationPage() {
 
         setResult(savedResult);
         setTestCompleted(true);
-
-        try {
-          await lockSimulation(studentId);
-        } catch {
-          console.warn('Failed to lock simulation after completion');
-        }
 
         clearProgress();
       }
@@ -786,7 +1100,9 @@ export default function GMATSimulationPage() {
   }).length;
   const bookmarkedInSection = currentSectionQs.filter(q => bookmarkedQuestions.has(q.id)).length;
   const hasCurrentAnswer = currentQuestion && answers.has(currentQuestion.id) && answers.get(currentQuestion.id)!.answer !== '__UNANSWERED__';
-  const allSectionQuestionsAnswered = answeredInSection === currentSectionQs.length;
+  // In adaptive mode, "all answered" means all TARGET questions have been served AND answered
+  const sectionTarget = MOCK_SIMULATION_CONFIG.sections[currentSection]?.questions ?? currentSectionQs.length;
+  const allSectionQuestionsAnswered = currentSectionQs.length >= sectionTarget && answeredInSection === currentSectionQs.length;
   const isCurrentBookmarked = currentQuestion ? bookmarkedQuestions.has(currentQuestion.id) : false;
 
   // Passage detection for wider container
@@ -1485,12 +1801,91 @@ export default function GMATSimulationPage() {
             </div>
           </div>
 
+          {/* Break or continue buttons */}
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={startBreak}
+              className="w-full px-6 py-3 bg-amber-500 text-white rounded-xl font-semibold hover:bg-amber-600 transition-colors flex items-center justify-center gap-2"
+            >
+              <FontAwesomeIcon icon={faCoffee} />
+              Take a 10-Minute Break
+            </button>
+            <button
+              onClick={proceedToNextSectionAfterBreak}
+              className="w-full px-6 py-3 bg-brand-green text-white rounded-xl font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+            >
+              <FontAwesomeIcon icon={faArrowRight} />
+              Continue to {SECTION_LABELS[nextSection]}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================
+  // Break Screen
+  // ============================================
+  if (showBreakScreen) {
+    const nextSection = sectionOrder[currentSectionIndex + 1];
+    const breakMins = Math.floor(breakTimeRemaining / 60);
+    const breakSecs = breakTimeRemaining % 60;
+
+    return (
+      <div className="min-h-screen bg-amber-50 flex items-center justify-center p-4">
+        <div className="max-w-lg w-full bg-white rounded-2xl shadow-xl p-8 text-center">
+          <div className="w-20 h-20 mx-auto bg-amber-100 rounded-full flex items-center justify-center mb-4">
+            <FontAwesomeIcon icon={faCoffee} className="text-4xl text-amber-500" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Optional Break</h2>
+          <p className="text-gray-500 text-sm mb-6">
+            Take a moment to rest before continuing. Your timer is paused.
+          </p>
+
+          {/* Countdown */}
+          <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-6 mb-6">
+            <div className="text-5xl font-bold text-amber-600 font-mono tracking-wider">
+              {String(breakMins).padStart(2, '0')}:{String(breakSecs).padStart(2, '0')}
+            </div>
+            <div className="text-sm text-amber-700 mt-2">remaining in break</div>
+            {breakTimeRemaining === 0 && (
+              <p className="text-amber-800 font-semibold mt-2">Break time is up!</p>
+            )}
+          </div>
+
+          {/* Section progress */}
+          <div className="flex items-center justify-center gap-2 mb-6">
+            {sectionOrder.map((sec, i) => (
+              <div key={sec} className="flex items-center gap-2">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                  i <= currentSectionIndex
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-gray-200 text-gray-500'
+                }`}>
+                  {i + 1}
+                </div>
+                {i < sectionOrder.length - 1 && (
+                  <div className={`w-8 h-0.5 ${i < currentSectionIndex ? 'bg-emerald-500' : 'bg-gray-200'}`} />
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Up next info */}
+          <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-6">
+            <div className="text-sm font-medium text-indigo-700 mb-1">Up Next</div>
+            <div className="text-lg font-bold text-indigo-800">{SECTION_LABELS[nextSection]}</div>
+            <div className="text-xs text-indigo-600 mt-1">
+              {MOCK_SIMULATION_CONFIG.sections[nextSection].questions} questions • {MOCK_SIMULATION_CONFIG.sections[nextSection].timeMinutes} minutes
+            </div>
+          </div>
+
           <button
-            onClick={proceedToNextSection}
+            onClick={endBreak}
             className="w-full px-6 py-3 bg-brand-green text-white rounded-xl font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
           >
             <FontAwesomeIcon icon={faArrowRight} />
-            Continue to {SECTION_LABELS[nextSection]}
+            End Break & Continue to {SECTION_LABELS[nextSection]}
           </button>
         </div>
       </div>
@@ -1586,11 +1981,11 @@ export default function GMATSimulationPage() {
   // ============================================
   // Time's Up Modal
   // ============================================
-  const sectionUnansweredCount = currentSectionQs.length - answeredInSection;
+  const sectionUnansweredCount = sectionTarget - answeredInSection;
   const timeUpModal = showTimeUpModal && (
     <TimeUpModal
       isOpen={showTimeUpModal}
-      totalQuestions={currentSectionQs.length}
+      totalQuestions={sectionTarget}
       unansweredCount={sectionUnansweredCount}
       onSubmit={() => {
         setShowTimeUpModal(false);
@@ -1639,7 +2034,7 @@ export default function GMATSimulationPage() {
                         : 'bg-white text-gray-700 hover:bg-gray-100'
                     }`}
                   >
-                    All ({currentSectionQs.length})
+                    All ({sectionTarget})
                   </button>
                   <button
                     onClick={() => setReviewFilter('bookmarked')}
@@ -1757,7 +2152,7 @@ export default function GMATSimulationPage() {
                   className="px-2 py-1 rounded-lg text-sm font-semibold bg-gray-100"
                 />
                 <span className="text-xs text-gray-500">
-                  <span className="font-semibold text-gray-700">{answeredInSection}</span>/{currentSectionQs.length}
+                  <span className="font-semibold text-gray-700">{answeredInSection}</span>/{sectionTarget}
                 </span>
               </div>
 
@@ -1901,15 +2296,17 @@ export default function GMATSimulationPage() {
 
             {/* Center: Question Pills — horizontal scroll */}
             <div className="flex-1 flex items-center gap-1 overflow-x-auto py-1 scrollbar-thin">
-              {currentSectionQs.map((q, i) => {
-                const isAnswered = answers.has(q.id) && answers.get(q.id)!.answer !== '__UNANSWERED__';
+              {Array.from({ length: sectionTarget }, (_, i) => {
+                const q = currentSectionQs[i]; // undefined if not yet served
+                const isServed = !!q;
+                const isAnswered = isServed && answers.has(q.id) && answers.get(q.id)!.answer !== '__UNANSWERED__';
                 const isCurrent = i === currentQuestionIndex;
-                const isBookmarkedQ = bookmarkedQuestions.has(q.id);
-                const canAccess = i <= currentQuestionIndex || inReviewPhase;
+                const isBookmarkedQ = isServed && bookmarkedQuestions.has(q.id);
+                const canAccess = isServed && (i <= currentQuestionIndex || inReviewPhase);
 
                 return (
                   <div
-                    key={q.id}
+                    key={isServed ? q.id : `future-${i}`}
                     className={`relative w-7 h-7 rounded-md text-xs font-semibold transition-all flex items-center justify-center shrink-0 ${
                       isCurrent
                         ? 'bg-brand-green text-white'
@@ -1917,8 +2314,8 @@ export default function GMATSimulationPage() {
                         ? 'bg-green-100 text-green-700'
                         : canAccess
                         ? 'bg-gray-100 text-gray-400'
-                        : 'bg-gray-50 text-gray-300'
-                    } ${!canAccess ? 'cursor-not-allowed' : ''}`}
+                        : 'bg-gray-50 text-gray-300 cursor-not-allowed'
+                    }`}
                   >
                     {i + 1}
                     {isBookmarkedQ && (

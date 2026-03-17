@@ -144,7 +144,134 @@ export async function updateStudentGMATCycle(
   }
 }
 
+// ============================================================
+// Simulation Slots (migration 059)
+// Each row = one tutor-granted simulation attempt.
+// Replaces the single simulation_unlocked boolean.
+// ============================================================
+
+export interface GmatSimulationSlot {
+  id: string;
+  student_id: string;
+  gmat_cycle: GmatCycle;
+  status: 'pending' | 'completed';
+  result_id: string | null;
+  created_by: string | null;
+  created_at: string;
+  completed_at: string | null;
+  result?: GmatAssessmentResult | null; // joined on fetch for completed slots
+}
+
 /**
+ * Get all simulation slots for a student in a given cycle, ordered oldest-first.
+ * Completed slots include the joined assessment result for display.
+ */
+export async function getSimulationSlots(
+  studentId: string,
+  cycle: GmatCycle
+): Promise<GmatSimulationSlot[]> {
+  const { data, error } = await supabase
+    .from('2V_gmat_simulation_slots' as any)
+    .select(`
+      *,
+      result:result_id (
+        id, score_raw, score_total, score_percentage,
+        difficulty_breakdown, time_spent_seconds, completed_at,
+        metadata, answers_data, bookmarked_question_ids, question_ids
+      )
+    `)
+    .eq('student_id', studentId)
+    .eq('gmat_cycle', cycle)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching simulation slots:', error);
+    return [];
+  }
+
+  return ((data as any[]) || []).map((row: any) => ({
+    id: row.id,
+    student_id: row.student_id,
+    gmat_cycle: row.gmat_cycle as GmatCycle,
+    status: row.status as 'pending' | 'completed',
+    result_id: row.result_id,
+    created_by: row.created_by,
+    created_at: row.created_at,
+    completed_at: row.completed_at,
+    result: row.result
+      ? {
+          ...row.result,
+          assessment_type: 'mock' as GmatAssessmentType,
+          section: null,
+          topic: null,
+          suggested_cycle: null,
+          assigned_cycle: null,
+          tutor_validated: true,
+          validated_by: null,
+          validated_at: null,
+          tutor_notes: null,
+          created_at: row.result.completed_at,
+        } as GmatAssessmentResult
+      : null,
+  }));
+}
+
+/**
+ * Create a new pending simulation slot for a student (tutor action).
+ * One slot = one allowed attempt.
+ */
+export async function createSimulationSlot(
+  studentId: string,
+  cycle: GmatCycle,
+  tutorId?: string
+): Promise<GmatSimulationSlot> {
+  const { data, error } = await supabase
+    .from('2V_gmat_simulation_slots' as any)
+    .insert({
+      student_id: studentId,
+      gmat_cycle: cycle,
+      status: 'pending',
+      created_by: tutorId || null,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error creating simulation slot:', error);
+    throw new Error(`Failed to create simulation slot: ${error.message}`);
+  }
+
+  const row = data as any;
+  return {
+    id: row.id,
+    student_id: row.student_id,
+    gmat_cycle: row.gmat_cycle as GmatCycle,
+    status: 'pending',
+    result_id: null,
+    created_by: row.created_by,
+    created_at: row.created_at,
+    completed_at: null,
+    result: null,
+  };
+}
+
+/**
+ * Delete a pending simulation slot (tutor revokes an unused unlock).
+ */
+export async function deleteSimulationSlot(slotId: string): Promise<void> {
+  const { error } = await supabase
+    .from('2V_gmat_simulation_slots' as any)
+    .delete()
+    .eq('id', slotId);
+
+  if (error) {
+    console.error('Error deleting simulation slot:', error);
+    throw new Error(`Failed to delete simulation slot: ${error.message}`);
+  }
+}
+
+/**
+ * @deprecated Use createSimulationSlot / deleteSimulationSlot instead.
  * Unlock GMAT simulations for a student (tutor action)
  * This allows the student to access Mock Simulation tests
  *
@@ -168,6 +295,7 @@ export async function unlockSimulation(studentId: string): Promise<void> {
 }
 
 /**
+ * @deprecated Use simulation slots (createSimulationSlot / deleteSimulationSlot) instead.
  * Lock GMAT simulations for a student (tutor action)
  * This prevents the student from accessing Mock Simulation tests
  *
@@ -1610,6 +1738,83 @@ export async function getMockSimulationQuestions(
 }
 
 /**
+ * Fetch the full unseen question pool for an adaptive mock simulation.
+ * Returns ALL unseen questions per section — the adaptive algorithm will select
+ * one question at a time from this pool based on IRT Fisher information.
+ * No cycle-based difficulty pre-selection is applied here.
+ */
+export async function getMockSimulationPool(
+  studentId: string
+): Promise<{
+  poolBySection: Record<GmatSection, Array<{ id: string; section: GmatSection; difficulty: string }>>;
+  error?: string;
+}> {
+  const empty = { poolBySection: { QR: [], DI: [], VR: [] } };
+
+  // Get seen question IDs to exclude
+  const progress = await getStudentGMATProgress(studentId);
+  const seenIds = new Set(progress?.seen_question_ids || []);
+
+  // Fetch GMAT pool test
+  const { data: poolTest, error: poolError } = await supabase
+    .from('2V_tests')
+    .select('id')
+    .eq('test_type', 'GMAT')
+    .eq('exercise_type', 'Pool')
+    .maybeSingle();
+
+  if (poolError || !poolTest) {
+    return { ...empty, error: 'GMAT question pool not found' };
+  }
+
+  const sectionMapping: Record<GmatSection, string[]> = {
+    QR: ['QR', 'Quantitative Reasoning'],
+    DI: ['DI', 'Data Insights'],
+    VR: ['VR', 'Verbal Reasoning'],
+  };
+
+  const poolBySection: Record<GmatSection, Array<{ id: string; section: GmatSection; difficulty: string }>> = {
+    QR: [], DI: [], VR: [],
+  };
+
+  for (const section of ['QR', 'DI', 'VR'] as GmatSection[]) {
+    const { data: allQuestions, error: questionsError } = await supabase
+      .from('2V_questions')
+      .select('id, section, difficulty')
+      .eq('test_id', poolTest.id)
+      .eq('is_active', true)
+      .in('section', sectionMapping[section]);
+
+    if (questionsError || !allQuestions) {
+      return { ...empty, error: `Failed to fetch questions for ${section}` };
+    }
+
+    // Exclude already-seen questions and shuffle for randomness
+    poolBySection[section] = allQuestions
+      .filter(q => !seenIds.has(q.id))
+      .map(q => ({
+        id: q.id,
+        section,
+        difficulty: (q.difficulty || 'medium').toLowerCase(),
+      }))
+      .sort(() => Math.random() - 0.5);
+  }
+
+  // Verify we have enough questions (need at least the section target count)
+  const sectionTargets = MOCK_SIMULATION_CONFIG.sections;
+  for (const section of ['QR', 'DI', 'VR'] as GmatSection[]) {
+    if (poolBySection[section].length < sectionTargets[section].questions) {
+      return {
+        ...empty,
+        error: `Not enough unseen questions for ${section}. Need ${sectionTargets[section].questions}, have ${poolBySection[section].length}. Please contact your tutor.`,
+      };
+    }
+  }
+
+  return { poolBySection };
+}
+
+/**
  * Mock Simulation result with per-section breakdown
  */
 export interface MockSimulationResult extends GmatAssessmentResult {
@@ -1622,14 +1827,28 @@ export interface MockSimulationResult extends GmatAssessmentResult {
 }
 
 /**
- * Save mock simulation result
+ * Save mock simulation result via RPC.
+ * Atomically inserts the assessment result AND marks the simulation slot as completed.
+ *
+ * @param studentId - The student's profile ID
+ * @param slotId - The simulation slot being consumed (from 2V_gmat_simulation_slots)
+ * @param scoreRaw - Number of correct answers
+ * @param scoreTotal - Total number of questions
+ * @param sectionScores - Per-section score breakdown
+ * @param questionIds - IDs of all questions in this attempt
+ * @param studentCycle - The student's current GMAT cycle (stored in metadata)
+ * @param timeSpentSeconds - Total time spent in seconds
+ * @param answersData - Per-question answer data
+ * @param bookmarkedQuestionIds - IDs of bookmarked questions
  */
 export async function saveMockSimulationResult(
   studentId: string,
+  slotId: string,
   scoreRaw: number,
   scoreTotal: number,
   sectionScores: MockSimulationResult['section_scores'],
   questionIds: string[],
+  studentCycle: GmatCycle,
   timeSpentSeconds?: number,
   answersData?: Record<string, { answer: string | string[] | Record<string, string>; time_spent_seconds: number; is_correct: boolean; is_unanswered?: boolean }>,
   bookmarkedQuestionIds?: string[]
@@ -1655,32 +1874,47 @@ export async function saveMockSimulationResult(
     }
   }
 
-  const { data, error } = await supabase
-    .from('2V_gmat_assessment_results')
-    .insert({
-      student_id: studentId,
-      assessment_type: 'mock',
-      section: null, // Full test, not a single section
-      score_raw: scoreRaw,
-      score_total: scoreTotal,
-      score_percentage: scorePercentage,
-      difficulty_breakdown: {
+  const metadata = {
+    gmat_cycle: studentCycle,
+    section_scores: sectionScores,
+  };
+
+  // Call RPC which atomically saves result + marks slot completed
+  const { data: resultId, error: rpcError } = await supabase.rpc(
+    'save_gmat_mock_simulation_result' as any,
+    {
+      p_student_id: studentId,
+      p_slot_id: slotId,
+      p_score_raw: scoreRaw,
+      p_score_total: scoreTotal,
+      p_score_percentage: scorePercentage,
+      p_difficulty_breakdown: {
         ...overallDifficultyBreakdown,
-        section_scores: sectionScores, // Store per-section breakdown in the JSON
+        section_scores: sectionScores,
       },
-      time_spent_seconds: timeSpentSeconds || null,
-      tutor_validated: true, // Mock simulations don't require validation
-      question_ids: questionIds,
-      answers_data: answersData || null,
-      bookmarked_question_ids: bookmarkedQuestionIds || null,
-      completed_at: new Date().toISOString(),
-    })
-    .select()
+      p_time_spent_seconds: timeSpentSeconds || null,
+      p_question_ids: questionIds,
+      p_answers_data: answersData || null,
+      p_bookmarked_question_ids: bookmarkedQuestionIds || null,
+      p_metadata: metadata,
+    }
+  );
+
+  if (rpcError) {
+    console.error('Error saving mock simulation result:', rpcError);
+    throw new Error(`Failed to save mock simulation result: ${rpcError.message}`);
+  }
+
+  // Fetch the saved result row by ID
+  const { data, error: fetchError } = await supabase
+    .from('2V_gmat_assessment_results')
+    .select('*')
+    .eq('id', resultId as string)
     .single();
 
-  if (error) {
-    console.error('Error saving mock simulation result:', error);
-    throw new Error(`Failed to save mock simulation result: ${error.message}`);
+  if (fetchError || !data) {
+    console.error('Error fetching saved mock simulation result:', fetchError);
+    throw new Error('Failed to fetch saved simulation result');
   }
 
   // Add questions to student's seen list
@@ -1692,6 +1926,7 @@ export async function saveMockSimulationResult(
     suggested_cycle: data.suggested_cycle as GmatCycle | null,
     assigned_cycle: data.assigned_cycle as GmatCycle | null,
     difficulty_breakdown: data.difficulty_breakdown as GmatAssessmentResult['difficulty_breakdown'],
+    metadata: data.metadata as GmatAssessmentResult['metadata'],
   };
 }
 
@@ -1723,6 +1958,7 @@ export async function getMockSimulationHistory(
 }
 
 /**
+ * @deprecated Use getSimulationSlots instead. Kept for analytics/history use cases.
  * Get the latest mock simulation result
  */
 export async function getLatestMockSimulation(
