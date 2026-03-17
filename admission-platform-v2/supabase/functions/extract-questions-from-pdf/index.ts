@@ -231,29 +231,49 @@ serve(async (req) => {
       );
     }
 
-    // Helper function to call Claude API
+    // Helper function to call Claude API with retry logic for transient errors
     const callClaudeAPI = async (messages: any[], maxTokens: number = 64000) => {
-      const response = await fetch(CLAUDE_API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': CLAUDE_API_KEY,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-5',
-          max_tokens: maxTokens,
-          temperature: 0,
-          messages,
-        }),
-      });
+      const MAX_RETRIES = 3;
+      const BASE_DELAY_MS = 2000; // 2s, 4s, 8s
 
-      if (!response.ok) {
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        const response = await fetch(CLAUDE_API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': CLAUDE_API_KEY,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-5',
+            max_tokens: maxTokens,
+            temperature: 0,
+            messages,
+          }),
+        });
+
+        if (response.ok) {
+          return await response.json();
+        }
+
         const errorText = await response.text();
-        throw new Error(`Claude API error: ${errorText}`);
-      }
+        let errorData: any = {};
+        try { errorData = JSON.parse(errorText); } catch {}
 
-      return await response.json();
+        const errorType = errorData?.error?.type;
+        const isRetryable = response.status === 529 ||
+          response.status === 500 ||
+          errorType === 'overloaded_error' ||
+          errorType === 'api_error';
+
+        if (!isRetryable || attempt === MAX_RETRIES) {
+          throw new Error(`Claude API error: ${errorText}`);
+        }
+
+        const delay = BASE_DELAY_MS * Math.pow(2, attempt - 1);
+        console.log(`⚠️ Claude API ${errorType} on attempt ${attempt}/${MAX_RETRIES}, retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
     };
 
     // Prepare Claude API request
