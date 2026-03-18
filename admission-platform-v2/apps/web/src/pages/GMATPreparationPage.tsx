@@ -44,14 +44,14 @@ import {
   getLatestPlacementResult,
   getLatestSectionAssessments,
   getSectionAssessmentLocks,
-  getLatestMockSimulation,
+  getSimulationSlots,
+  createSimulationSlot,
+  deleteSimulationSlot,
   getTrainingTemplates,
   getTrainingCompletions,
   getGMATTrainingAssignments,
   lockGMATTrainingTest,
   unlockGMATTrainingTest,
-  unlockSimulation,
-  lockSimulation,
   lockSectionAssessment,
   unlockSectionAssessment,
   showInitialAssessment,
@@ -72,6 +72,7 @@ import {
   type TrainingCompletion,
   type GMATTrainingAssignment,
   type GmatAnalyticsData,
+  type GmatSimulationSlot,
 } from '../lib/api/gmat';
 import { useNavigate, useParams } from 'react-router-dom';
 import { MATERIAL_TYPE_LABELS, GMAT_STRUCTURE } from '../lib/gmat/questionAllocation';
@@ -161,7 +162,7 @@ export default function GMATPreparationPage() {
     DI: true,
     VR: true,
   });
-  const [mockSimulation, setMockSimulation] = useState<GmatAssessmentResult | null>(null);
+  const [simulationSlots, setSimulationSlots] = useState<GmatSimulationSlot[]>([]);
   const [trainingTemplates, setTrainingTemplates] = useState<TrainingTemplate[]>([]);
   const [trainingCompletions, setTrainingCompletions] = useState<Map<string, TrainingCompletion>>(new Map());
   const [expandedTrainingSections, setExpandedTrainingSections] = useState<Set<string>>(new Set());
@@ -211,16 +212,18 @@ export default function GMATPreparationPage() {
   async function handleCycleChange(cycle: GmatCycle) {
     setViewedCycle(cycle);
     if (!targetProfileId) return;
-    const [completions, assignments, sectionResults, secLocks] = await Promise.all([
+    const [completions, assignments, sectionResults, secLocks, slots] = await Promise.all([
       getTrainingCompletions(targetProfileId, cycle),
       getGMATTrainingAssignments(targetProfileId, cycle),
       getLatestSectionAssessments(targetProfileId, cycle),
       getSectionAssessmentLocks(targetProfileId, cycle),
+      getSimulationSlots(targetProfileId, cycle),
     ]);
     setTrainingCompletions(completions);
     setTrainingAssignments(assignments);
     setSectionAssessments(sectionResults);
     setSectionLocks(secLocks);
+    setSimulationSlots(slots);
   }
 
   async function loadMaterials() {
@@ -264,31 +267,31 @@ export default function GMATPreparationPage() {
       setTargetProfileId(targetProfileId);
 
       // Load progress and non-cycle data in parallel; cycle-dependent fetches come after
-      const [progress, legacyResult, placementRes, mockResult, templates] = await Promise.all([
+      const [progress, legacyResult, placementRes, templates] = await Promise.all([
         getStudentGMATProgress(targetProfileId),
         getLegacyInitialAssessment(targetProfileId),
         getLatestPlacementResult(targetProfileId),
-        getLatestMockSimulation(targetProfileId),
         getTrainingTemplates(),
       ]);
       setGmatProgress(progress);
       setLegacyAssessment(legacyResult);
       setPlacementResult(placementRes);
-      setMockSimulation(mockResult);
       setTrainingTemplates(templates);
 
       // Fetch all cycle-dependent data now that we know the student's cycle
       const cycle = progress?.gmat_cycle ?? 'Foundation' as GmatCycle;
-      const [completions, assignments, sectionResults, secLocks] = await Promise.all([
+      const [completions, assignments, sectionResults, secLocks, slots] = await Promise.all([
         getTrainingCompletions(targetProfileId, cycle),
         getGMATTrainingAssignments(targetProfileId, cycle),
         getLatestSectionAssessments(targetProfileId, cycle),
         getSectionAssessmentLocks(targetProfileId, cycle),
+        getSimulationSlots(targetProfileId, cycle),
       ]);
       setTrainingCompletions(completions);
       setTrainingAssignments(assignments);
       setSectionAssessments(sectionResults);
       setSectionLocks(secLocks);
+      setSimulationSlots(slots);
 
       // Reset viewed cycle to student's current cycle on (re)load
       if (progress?.gmat_cycle) {
@@ -495,6 +498,10 @@ export default function GMATPreparationPage() {
   const pageTitle = isTutorView ? `GMAT - ${studentInfo?.name || 'Student'}` : 'GMAT Preparation';
   const pageSubtitle = isTutorView ? studentInfo?.email || '' : 'Your personalized learning path';
 
+  // Derive latest completed simulation result for analytics/sidebar components
+  const latestCompletedSlot = [...simulationSlots].reverse().find(s => s.status === 'completed');
+  const latestMockSimulation = latestCompletedSlot?.result ?? null;
+
   return (
     <Layout pageTitle={pageTitle} pageSubtitle={pageSubtitle}>
       {/* Lock Animation Styles */}
@@ -535,7 +542,7 @@ export default function GMATPreparationPage() {
             gmatProgress={gmatProgress}
             placementResult={placementResult}
             sectionAssessments={sectionAssessments}
-            mockSimulation={mockSimulation}
+            mockSimulation={latestMockSimulation}
             trainingCompletions={trainingCompletions}
             totalTrainingTests={trainingTemplates.length}
             isTutorView={isTutorView}
@@ -578,7 +585,7 @@ export default function GMATPreparationPage() {
               gmatProgress={gmatProgress}
               placementResult={placementResult}
               sectionAssessments={sectionAssessments}
-              mockSimulation={mockSimulation}
+              mockSimulation={latestMockSimulation}
               trainingCompletions={trainingCompletions}
               totalTrainingTests={trainingTemplates.length}
               embedded={true}
@@ -1446,184 +1453,195 @@ export default function GMATPreparationPage() {
           )}
 
           {/* Simulations */}
-          {gmatProgress && (
-            <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-100 p-6 mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center">
-                    <FontAwesomeIcon icon={faGraduationCap} className="text-indigo-600 text-lg" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-gray-800">Simulations</h2>
-                    <p className="text-sm text-gray-500">Full GMAT practice test ({MOCK_SIMULATION_CONFIG.totalQuestions} questions, {Math.floor(MOCK_SIMULATION_CONFIG.timeMinutes / 60)}h {MOCK_SIMULATION_CONFIG.timeMinutes % 60}m)</p>
-                  </div>
-                </div>
+          {gmatProgress && (() => {
+            const isViewingPastCycle = viewedCycle !== gmatProgress.gmat_cycle;
+            const currentCycle = viewedCycle ?? gmatProgress.gmat_cycle;
+            const role = isTutorView ? 'tutor' : 'student';
+            const completedSlots = simulationSlots.filter(s => s.status === 'completed');
+            const pendingSlots = simulationSlots.filter(s => s.status === 'pending');
 
-                {/* Tutor Lock/Unlock Controls */}
-                {isTutorView && viewMode === 'tutor' && studentId && (
-                  <div className="flex items-center gap-2">
-                    {gmatProgress.simulation_unlocked ? (
+            return (
+              <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-100 p-6 mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center">
+                      <FontAwesomeIcon icon={faGraduationCap} className="text-indigo-600 text-lg" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-gray-800">Simulations</h2>
+                      <p className="text-sm text-gray-500">Full GMAT practice test ({MOCK_SIMULATION_CONFIG.totalQuestions} questions, {Math.floor(MOCK_SIMULATION_CONFIG.timeMinutes / 60)}h {MOCK_SIMULATION_CONFIG.timeMinutes % 60}m)</p>
+                    </div>
+                  </div>
+
+                  {/* Tutor Controls */}
+                  {isTutorView && viewMode === 'tutor' && studentId && !isViewingPastCycle && (
+                    <div className="flex items-center gap-2">
                       <button
                         onClick={async () => {
                           try {
-                            await lockSimulation(studentId);
-                            setGmatProgress(prev => prev ? { ...prev, simulation_unlocked: false } : null);
+                            const slot = await createSimulationSlot(studentId, currentCycle, currentUserId || undefined);
+                            setSimulationSlots(prev => [...prev, slot]);
                           } catch (err) {
-                            setError(err instanceof Error ? err.message : 'Failed to lock simulation');
-                          }
-                        }}
-                        className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 transition-colors flex items-center gap-2"
-                      >
-                        <FontAwesomeIcon icon={faLock} />
-                        Lock Simulations
-                      </button>
-                    ) : (
-                      <button
-                        onClick={async () => {
-                          try {
-                            await unlockSimulation(studentId);
-                            setGmatProgress(prev => prev ? { ...prev, simulation_unlocked: true } : null);
-                          } catch (err) {
-                            setError(err instanceof Error ? err.message : 'Failed to unlock simulation');
+                            setError(err instanceof Error ? err.message : 'Failed to create simulation slot');
                           }
                         }}
                         className="px-3 py-1.5 bg-brand-green text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors flex items-center gap-2"
                       >
                         <FontAwesomeIcon icon={faLockOpen} />
-                        Unlock Simulations
+                        Unlock New Simulation
                       </button>
-                    )}
-                    <button
-                      onClick={() => navigate('/tutor/take-test/gmat-simulation?preview=true')}
-                      className="px-2 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-200 transition-colors"
-                      title="Preview simulation"
-                    >
-                      Preview
-                    </button>
+                      <button
+                        onClick={() => navigate('/tutor/take-test/gmat-simulation?preview=true')}
+                        className="px-2 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-200 transition-colors"
+                        title="Preview simulation"
+                      >
+                        Preview
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Slot cards */}
+                {simulationSlots.length === 0 ? (
+                  <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-6 text-center">
+                    <FontAwesomeIcon icon={faLock} className="text-4xl text-gray-400 mb-3" />
+                    <h3 className="text-lg font-semibold text-gray-700 mb-2">No Simulations Unlocked</h3>
+                    <p className="text-sm text-gray-500">
+                      {isTutorView && viewMode === 'tutor'
+                        ? 'Use "Unlock New Simulation" to grant the student access to a simulation attempt.'
+                        : 'Your tutor will unlock simulations when you\'re ready.'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {simulationSlots.map((slot, index) => {
+                      const slotNumber = index + 1;
+                      if (slot.status === 'completed' && slot.result) {
+                        const res = slot.result;
+                        const resultUrl = `/${role}/gmat-results/${slot.result_id}`;
+                        return (
+                          <div key={slot.id} className="border-2 border-gray-100 rounded-xl p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-1">
+                                  <FontAwesomeIcon icon={faCheckCircle} className="text-xs" />
+                                  Simulation #{slotNumber} — Completed
+                                </span>
+                                <span className="px-2 py-1 bg-indigo-50 text-indigo-600 rounded-full text-xs font-medium">
+                                  {slot.gmat_cycle}
+                                </span>
+                                {res.completed_at && (
+                                  <span className="text-xs text-gray-400">
+                                    {new Date(res.completed_at).toLocaleDateString()}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                <div className="text-2xl font-bold text-indigo-600">
+                                  {calculateEstimatedGmatScore(res.score_percentage)}
+                                </div>
+                                <div className="text-xs text-gray-500">Est. GMAT Score</div>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                              <div className="flex items-center gap-4">
+                                <div className="text-center">
+                                  <div className="font-bold text-gray-800">{res.score_raw}/{res.score_total}</div>
+                                  <div className="text-xs text-gray-500">Raw Score</div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="font-bold text-gray-800">{res.score_percentage.toFixed(0)}%</div>
+                                  <div className="text-xs text-gray-500">Percentage</div>
+                                </div>
+                                {res.time_spent_seconds && (
+                                  <div className="text-center">
+                                    <div className="font-bold text-gray-800">{Math.floor(res.time_spent_seconds / 60)}m</div>
+                                    <div className="text-xs text-gray-500">Time</div>
+                                  </div>
+                                )}
+                              </div>
+                              <a
+                                href={resultUrl}
+                                className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors flex items-center gap-2"
+                              >
+                                <FontAwesomeIcon icon={faExternalLinkAlt} />
+                                View Results
+                              </a>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      if (slot.status === 'pending') {
+                        return (
+                          <div key={slot.id} className="border-2 border-indigo-200 bg-indigo-50 rounded-xl p-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium flex items-center gap-1">
+                                  <FontAwesomeIcon icon={faRocket} className="text-xs" />
+                                  Simulation #{slotNumber} — Ready to Start
+                                </span>
+                                <span className="px-2 py-1 bg-indigo-50 text-indigo-600 rounded-full text-xs font-medium border border-indigo-200">
+                                  {slot.gmat_cycle}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {/* Student: Start button */}
+                                {!(isTutorView && viewMode === 'tutor') && (
+                                  <button
+                                    onClick={() => navigate(`/student/take-test/gmat-simulation?slotId=${slot.id}`)}
+                                    className="px-4 py-2 bg-brand-green text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors flex items-center gap-2"
+                                  >
+                                    <FontAwesomeIcon icon={faRocket} />
+                                    Start Simulation
+                                  </button>
+                                )}
+                                {/* Tutor: Revoke button (current cycle only) */}
+                                {isTutorView && viewMode === 'tutor' && !isViewingPastCycle && (
+                                  <button
+                                    onClick={async () => {
+                                      try {
+                                        await deleteSimulationSlot(slot.id);
+                                        setSimulationSlots(prev => prev.filter(s => s.id !== slot.id));
+                                      } catch (err) {
+                                        setError(err instanceof Error ? err.message : 'Failed to revoke simulation slot');
+                                      }
+                                    }}
+                                    className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 transition-colors flex items-center gap-2"
+                                  >
+                                    <FontAwesomeIcon icon={faLock} />
+                                    Revoke
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                            {/* Show section breakdown for pending slots */}
+                            <div className="mt-3 bg-white rounded-lg p-3 border border-indigo-100">
+                              <div className="grid grid-cols-3 gap-3 text-center">
+                                {MOCK_SIMULATION_CONFIG.sectionOrder.map((section) => {
+                                  const sectionConfig = MOCK_SIMULATION_CONFIG.sections[section];
+                                  return (
+                                    <div key={section}>
+                                      <div className="font-semibold text-indigo-700 text-sm">{section}</div>
+                                      <div className="text-xs text-gray-500">
+                                        {sectionConfig.questions}q • {sectionConfig.timeMinutes}m
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      return null;
+                    })}
                   </div>
                 )}
               </div>
-
-              {(() => {
-                // Check if simulations are unlocked - now using manual flag instead of auto-unlock
-                const isUnlocked = gmatProgress.simulation_unlocked;
-
-                if (!isUnlocked) {
-                  // Locked state
-                  return (
-                    <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-6 text-center">
-                      <FontAwesomeIcon icon={faLock} className="text-4xl text-gray-400 mb-3" />
-                      <h3 className="text-lg font-semibold text-gray-700 mb-2">Simulations Locked</h3>
-                      <p className="text-sm text-gray-500 mb-4">
-                        {isTutorView && viewMode === 'tutor'
-                          ? 'Use the "Unlock Simulations" button above to grant access.'
-                          : 'Your tutor will unlock simulations when you\'re ready.'}
-                      </p>
-                    </div>
-                  );
-                }
-
-                // Unlocked state
-                return (
-                  <div className="space-y-4">
-                    {/* Mock test details */}
-                    <div className="bg-indigo-50 border-2 border-indigo-200 rounded-xl p-4">
-                      <div className="grid grid-cols-3 gap-4 text-center">
-                        {MOCK_SIMULATION_CONFIG.sectionOrder.map((section) => {
-                          const sectionConfig = MOCK_SIMULATION_CONFIG.sections[section];
-                          return (
-                            <div key={section}>
-                              <div className="font-semibold text-indigo-700">{section}</div>
-                              <div className="text-xs text-gray-600">
-                                {sectionConfig.questions} questions • {sectionConfig.timeMinutes} min
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Latest mock result or start button */}
-                    {mockSimulation ? (
-                      <div className="border-2 border-gray-100 rounded-xl p-4">
-                        <div className="flex items-center justify-between mb-4">
-                          <div>
-                            <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-1 w-fit mb-2">
-                              <FontAwesomeIcon icon={faCheckCircle} className="text-xs" />
-                              Completed
-                            </span>
-                            <div className="text-sm text-gray-500">
-                              {mockSimulation.completed_at && new Date(mockSimulation.completed_at).toLocaleDateString()}
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-3xl font-bold text-indigo-600">
-                              {calculateEstimatedGmatScore(mockSimulation.score_percentage)}
-                            </div>
-                            <div className="text-xs text-gray-500">Estimated GMAT Score</div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                          <div className="flex items-center gap-4">
-                            <div className="text-center">
-                              <div className="font-bold text-gray-800">
-                                {mockSimulation.score_raw}/{mockSimulation.score_total}
-                              </div>
-                              <div className="text-xs text-gray-500">Raw Score</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="font-bold text-gray-800">
-                                {mockSimulation.score_percentage.toFixed(0)}%
-                              </div>
-                              <div className="text-xs text-gray-500">Percentage</div>
-                            </div>
-                            {mockSimulation.time_spent_seconds && (
-                              <div className="text-center">
-                                <div className="font-bold text-gray-800">
-                                  {Math.floor(mockSimulation.time_spent_seconds / 60)}m
-                                </div>
-                                <div className="text-xs text-gray-500">Time</div>
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <a
-                              href={`/student/gmat-results/${mockSimulation.id}`}
-                              className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors flex items-center gap-2"
-                            >
-                              <FontAwesomeIcon icon={faExternalLinkAlt} />
-                              View Results
-                            </a>
-                            <button
-                              onClick={() => navigate('/student/take-test/gmat-simulation')}
-                              className="px-4 py-2 bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-sm font-medium hover:bg-indigo-200 transition-colors flex items-center gap-2"
-                            >
-                              <FontAwesomeIcon icon={faRocket} />
-                              New Simulation
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-center py-4">
-                        <p className="text-gray-600 mb-4">
-                          You're ready for your first simulation! This will give you an estimated GMAT score.
-                        </p>
-                        <button
-                          onClick={() => navigate('/student/take-test/gmat-simulation')}
-                          className="px-6 py-3 bg-brand-green text-white rounded-xl text-lg font-semibold hover:bg-green-700 transition-colors flex items-center gap-3 mx-auto"
-                        >
-                          <FontAwesomeIcon icon={faRocket} />
-                          Start Simulation
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
-            </div>
-          )}
+            );
+          })()}
             </>
           )}
 
@@ -1702,7 +1720,7 @@ export default function GMATPreparationPage() {
           gmatProgress={gmatProgress}
           placementResult={placementResult}
           sectionAssessments={sectionAssessments}
-          mockSimulation={mockSimulation}
+          mockSimulation={latestMockSimulation}
           trainingCompletions={trainingCompletions}
           totalTrainingTests={trainingTemplates.length}
           analyticsData={analyticsData}

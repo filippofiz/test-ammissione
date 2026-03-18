@@ -37,6 +37,7 @@ import RechartsRenderer from '../components/RechartsRenderer';
 import { FlaggedQuestionEditor } from '../components/FlaggedQuestionEditor';
 import { DataInsightsPreview } from '../components/questions/DataInsightsPreview';
 import { DataInsightsEditor } from '../components/questions/DataInsightsEditor';
+import { LaTeXEditor } from '../components/questions/editors/LaTeXEditor';
 import { QuestionImage } from '../components/test/QuestionImage';
 import { supabase } from '../lib/supabase';
 import { normalizeWhitespace } from '../lib/textUtils';
@@ -3042,19 +3043,48 @@ export default function ReviewQuestionsPage() {
                               )
                             ) : editingQuestionId === question.id && localEditingQuestion ? (
                               <div className="space-y-3">
-                                <textarea
-                                  value={
-                                    getQuestionLanguage(question.id) === 'en'
-                                      ? (localEditingQuestion.question_data?.question_text_eng || '')
-                                      : (localEditingQuestion.question_data?.question_text || '')
-                                  }
-                                  onChange={(e) => {
-                                    const field = getQuestionLanguage(question.id) === 'en' ? 'question_text_eng' : 'question_text';
-                                    handleEditQuestion(question.id, field, e.target.value);
-                                  }}
-                                  className="w-full p-3 border border-blue-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent min-h-[100px] font-mono text-sm"
-                                  placeholder="Enter question text (supports LaTeX)"
-                                />
+                                {/* Passage — shown read-only during edit; use 📖 button to edit */}
+                                {localEditingQuestion.question_data?.passage_text && (
+                                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                                    <div className="flex items-center justify-between mb-1">
+                                      <span className="text-xs font-semibold text-amber-700">
+                                        {localEditingQuestion.question_data?.questionSubtype === 'critical-reasoning'
+                                          ? 'Argument / Stimulus'
+                                          : 'Reading Passage'}
+                                      </span>
+                                      <span className="text-xs text-amber-600">Edit via 📖 button above</span>
+                                    </div>
+                                    <div className="text-xs text-amber-800 max-h-32 overflow-y-auto whitespace-pre-wrap font-mono">
+                                      {localEditingQuestion.question_data.passage_text}
+                                    </div>
+                                  </div>
+                                )}
+                                {/* Question text */}
+                                <div>
+                                  <label className="block text-xs font-semibold text-gray-500 mb-1">Question Text</label>
+                                  {selectedTest?.test_type === 'GMAT' ? (
+                                    <LaTeXEditor
+                                      value={localEditingQuestion.question_data?.question_text || ''}
+                                      onChange={(val) => handleEditQuestion(question.id, 'question_text', val)}
+                                      placeholder="Question text — supports LaTeX ($…$) and **bold**"
+                                      minHeight="80px"
+                                    />
+                                  ) : (
+                                    <textarea
+                                      value={
+                                        getQuestionLanguage(question.id) === 'en'
+                                          ? (localEditingQuestion.question_data?.question_text_eng || '')
+                                          : (localEditingQuestion.question_data?.question_text || '')
+                                      }
+                                      onChange={(e) => {
+                                        const field = getQuestionLanguage(question.id) === 'en' ? 'question_text_eng' : 'question_text';
+                                        handleEditQuestion(question.id, field, e.target.value);
+                                      }}
+                                      className="w-full p-3 border border-blue-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent min-h-[100px] font-mono text-sm"
+                                      placeholder="Enter question text (supports LaTeX)"
+                                    />
+                                  )}
+                                </div>
                                 {selectedTest?.test_type === 'GMAT' && (
                                   <div className="flex items-center gap-2">
                                     <label className="text-sm font-semibold text-gray-700">Difficulty:</label>
@@ -3328,24 +3358,35 @@ export default function ReviewQuestionsPage() {
                                         )}
                                       </div>
                                     ) : editingQuestionId === question.id && localEditingQuestion ? (
-                                      <div className="flex gap-2 items-center">
-                                        <input
-                                          type="text"
-                                          value={String(
-                                            getQuestionLanguage(question.id) === 'en'
-                                              ? (localEditingQuestion.question_data?.options_eng?.[key] || '')
-                                              : (localEditingQuestion.question_data?.options?.[key] || '')
-                                          )}
-                                          onChange={(e) => {
-                                            const isEnglish = getQuestionLanguage(question.id) === 'en';
-                                            handleEditQuestion(question.id, `option_${key}_${isEnglish ? 'eng' : 'it'}`, e.target.value);
-                                          }}
-                                          className="flex-1 p-2 border border-gray-300 rounded focus:ring-2 focus:ring-brand-green focus:border-transparent font-mono text-sm"
-                                          placeholder={`Option ${key.toUpperCase()}`}
-                                        />
+                                      <div className="flex gap-2 items-start">
+                                        {selectedTest?.test_type === 'GMAT' ? (
+                                          <div className="flex-1">
+                                            <LaTeXEditor
+                                              value={String(localEditingQuestion.question_data?.options?.[key] || '')}
+                                              onChange={(val) => handleEditQuestion(question.id, `option_${key}_it`, val)}
+                                              placeholder={`Option ${key.toUpperCase()}`}
+                                              minHeight="44px"
+                                            />
+                                          </div>
+                                        ) : (
+                                          <input
+                                            type="text"
+                                            value={String(
+                                              getQuestionLanguage(question.id) === 'en'
+                                                ? (localEditingQuestion.question_data?.options_eng?.[key] || '')
+                                                : (localEditingQuestion.question_data?.options?.[key] || '')
+                                            )}
+                                            onChange={(e) => {
+                                              const isEnglish = getQuestionLanguage(question.id) === 'en';
+                                              handleEditQuestion(question.id, `option_${key}_${isEnglish ? 'eng' : 'it'}`, e.target.value);
+                                            }}
+                                            className="flex-1 p-2 border border-gray-300 rounded focus:ring-2 focus:ring-brand-green focus:border-transparent font-mono text-sm"
+                                            placeholder={`Option ${key.toUpperCase()}`}
+                                          />
+                                        )}
                                         <button
                                           onClick={() => handleAddImage(question.id, key)}
-                                          className="px-3 py-2 bg-indigo-100 text-indigo-700 text-xs rounded hover:bg-indigo-200 whitespace-nowrap"
+                                          className="px-3 py-2 bg-indigo-100 text-indigo-700 text-xs rounded hover:bg-indigo-200 whitespace-nowrap mt-1"
                                           title="Add image for this option"
                                         >
                                           <FontAwesomeIcon icon={faImage} className="mr-1" />
@@ -3855,16 +3896,14 @@ export default function ReviewQuestionsPage() {
                         Passage Text (Italian)
                       </label>
                       <span className="text-xs text-gray-500">
-                        {(newPassageText || passages.find(p => p.passage_id === editingPassageId)?.passage_text || '').length} characters
+                        {newPassageText.length} characters
                       </span>
                     </div>
-                    <textarea
-                      value={newPassageText || (editingPassageId ? passages.find(p => p.passage_id === editingPassageId)?.passage_text : '')}
-                      onChange={(e) => setNewPassageText(e.target.value)}
-                      className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-mono text-sm"
-                      rows={6}
-                      placeholder="Enter the shared passage text or use AI detection above..."
-                      style={{ minHeight: '150px', maxHeight: '300px' }}
+                    <LaTeXEditor
+                      value={newPassageText}
+                      onChange={setNewPassageText}
+                      placeholder="Enter the shared passage text or use AI detection above…"
+                      minHeight="150px"
                     />
                   </div>
 
@@ -3875,16 +3914,14 @@ export default function ReviewQuestionsPage() {
                         Passage Text (English) - Optional
                       </label>
                       <span className="text-xs text-gray-500">
-                        {(newPassageTextEng || passages.find(p => p.passage_id === editingPassageId)?.passage_text_eng || '').length} characters
+                        {newPassageTextEng.length} characters
                       </span>
                     </div>
-                    <textarea
-                      value={newPassageTextEng || (editingPassageId ? passages.find(p => p.passage_id === editingPassageId)?.passage_text_eng : '')}
-                      onChange={(e) => setNewPassageTextEng(e.target.value)}
-                      className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-mono text-sm"
-                      rows={6}
-                      placeholder="Enter English translation of the passage (optional)"
-                      style={{ minHeight: '150px', maxHeight: '300px' }}
+                    <LaTeXEditor
+                      value={newPassageTextEng}
+                      onChange={setNewPassageTextEng}
+                      placeholder="Enter English translation of the passage (optional)…"
+                      minHeight="150px"
                     />
                   </div>
 
