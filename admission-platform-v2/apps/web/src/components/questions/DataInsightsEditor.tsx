@@ -8,6 +8,7 @@ import { TAQuestionEditor } from './editors/TAQuestionEditor';
 import { TPAQuestionEditor } from './editors/TPAQuestionEditor';
 import { GIQuestionEditor } from './editors/GIQuestionEditor';
 import { MSRQuestionEditor } from './editors/MSRQuestionEditor';
+import { LaTeXEditor } from './editors/LaTeXEditor';
 
 interface DataInsightsEditorProps {
   questionData: any;
@@ -15,6 +16,20 @@ interface DataInsightsEditorProps {
   onChange: (field: string, value: any) => void;
   difficulty?: 'easy' | 'medium' | 'hard' | null;
   onDifficultyChange?: (value: 'easy' | 'medium' | 'hard' | null) => void;
+}
+
+function ExplanationRow({ questionData, onChange }: { questionData: any; onChange: (field: string, value: any) => void }) {
+  return (
+    <div className="mt-4">
+      <label className="block text-xs font-semibold text-gray-500 mb-1">Explanation</label>
+      <LaTeXEditor
+        value={questionData?.explanation || ''}
+        onChange={(val) => onChange('question_data.explanation', val)}
+        placeholder="Explanation — supports LaTeX ($…$) and **bold**"
+        minHeight="80px"
+      />
+    </div>
+  );
 }
 
 export function DataInsightsEditor({
@@ -63,6 +78,7 @@ export function DataInsightsEditor({
           correctAnswer={answers?.correct_answer}
           onChange={onChange}
         />
+        <ExplanationRow questionData={questionData} onChange={onChange} />
       </>
     );
   }
@@ -77,6 +93,7 @@ export function DataInsightsEditor({
           correctAnswer={answers?.correct_answer}
           onChange={onChange}
         />
+        <ExplanationRow questionData={questionData} onChange={onChange} />
       </>
     );
   }
@@ -91,6 +108,7 @@ export function DataInsightsEditor({
           correctAnswer={answers?.correct_answer}
           onChange={onChange}
         />
+        <ExplanationRow questionData={questionData} onChange={onChange} />
       </>
     );
   }
@@ -105,6 +123,7 @@ export function DataInsightsEditor({
           correctAnswer={answers?.correct_answer}
           onChange={onChange}
         />
+        <ExplanationRow questionData={questionData} onChange={onChange} />
       </>
     );
   }
@@ -118,6 +137,7 @@ export function DataInsightsEditor({
           questionData={questionData}
           onChange={onChange}
         />
+        <ExplanationRow questionData={questionData} onChange={onChange} />
       </>
     );
   }

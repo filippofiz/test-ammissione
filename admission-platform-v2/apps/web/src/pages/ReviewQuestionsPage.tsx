@@ -3111,6 +3111,16 @@ export default function ReviewQuestionsPage() {
                                     </select>
                                   </div>
                                 )}
+                                {/* Explanation */}
+                                <div>
+                                  <label className="block text-xs font-semibold text-gray-500 mb-1">Explanation</label>
+                                  <LaTeXEditor
+                                    value={localEditingQuestion.question_data?.explanation || ''}
+                                    onChange={(val) => handleEditQuestion(question.id, 'question_data.explanation', val)}
+                                    placeholder="Explanation — supports LaTeX ($…$) and **bold**"
+                                    minHeight="80px"
+                                  />
+                                </div>
                               </div>
                             ) : (
                               <div className="overflow-x-auto">

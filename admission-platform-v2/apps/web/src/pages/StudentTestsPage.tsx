@@ -1891,9 +1891,9 @@ export default function StudentTestsPage() {
                                     )}
                                     <button
                                       onClick={() => navigate(`/tutor/test-results/${assignment.id}`)}
-                                      disabled={assignment.total_attempts === 0}
+                                      disabled={assignment.total_attempts === 0 && assignment.score_attempt === null}
                                       className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                                        assignment.total_attempts === 0
+                                        assignment.total_attempts === 0 && assignment.score_attempt === null
                                           ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
                                           : 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100'
                                       }`}

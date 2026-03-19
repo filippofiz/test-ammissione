@@ -240,10 +240,16 @@ export function QuestionRenderer({
   const { t } = useTranslation();
 
   // Parse question data if it's a string
-  const questionData: QuestionData =
-    typeof question.question_data === 'string'
-      ? JSON.parse(question.question_data)
-      : question.question_data;
+  const questionData: QuestionData = (() => {
+    if (typeof question.question_data === 'string') {
+      try {
+        return JSON.parse(question.question_data);
+      } catch {
+        return {} as QuestionData;
+      }
+    }
+    return question.question_data;
+  })();
 
   // Parse answers for correct answer extraction
   const answersData = parseAnswers(question.answers);
