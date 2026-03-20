@@ -38,6 +38,7 @@ import GMATTrainingTestPage from './pages/GMATTrainingTestPage';
 import GMATPlacementWrapper from './pages/GMATPlacementWrapper';
 import GMATSectionAssessmentWrapper from './pages/GMATSectionAssessmentWrapper';
 import GMATSimulationWrapper from './pages/GMATSimulationWrapper';
+import GMATSimulationPage from './pages/GMATSimulationPage';
 import SemestreFiltroPage from './pages/SemestreFiltroPage';
 import TheoryManagementPage from './pages/TheoryManagementPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -149,6 +150,14 @@ function App() {
           element={
             <ProtectedRoute requiredRoles={['STUDENT']}>
               <GMATPlacementWrapper />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/take-test/gmat-simulation"
+          element={
+            <ProtectedRoute requiredRoles={['STUDENT', 'TUTOR', 'ADMIN']}>
+              <GMATSimulationPage />
             </ProtectedRoute>
           }
         />

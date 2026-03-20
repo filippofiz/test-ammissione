@@ -6,12 +6,13 @@
  */
 
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getCurrentProfile } from '../lib/auth';
 import { getStudentGMATProgress } from '../lib/api/gmat';
 
 export default function GMATSimulationWrapper() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -22,18 +23,30 @@ export default function GMATSimulationWrapper() {
         return;
       }
 
-      const progress = await getStudentGMATProgress(profile.id).catch(() => null);
+      const slotId = searchParams.get('slotId');
+      const isPreview = searchParams.get('preview') === 'true';
 
-      if (!progress?.simulation_unlocked) {
-        setError('The mock simulation is not yet unlocked. Complete your section assessments first.');
+      // Slot-based access: the slot IS the authorization — bypass the legacy flag check
+      if (slotId || isPreview) {
+        const params = new URLSearchParams();
+        if (slotId) params.set('slotId', slotId);
+        if (isPreview) params.set('preview', 'true');
+        navigate(`/take-test/gmat-simulation?${params.toString()}`);
         return;
       }
 
-      navigate('/take-test/gmat/simulation');
+      // Legacy fallback: check the deprecated simulation_unlocked flag
+      const progress = await getStudentGMATProgress(profile.id).catch(() => null);
+      if (!progress?.simulation_unlocked) {
+        setError('The mock simulation is not yet unlocked. Please ask your tutor to unlock a simulation slot.');
+        return;
+      }
+
+      navigate('/take-test/gmat-simulation');
     }
 
     checkAndRedirect();
-  }, [navigate]);
+  }, [navigate, searchParams]);
 
   if (error) {
     return (

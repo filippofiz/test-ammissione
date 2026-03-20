@@ -497,7 +497,7 @@ export class ComplexAdaptiveAlgorithm {
   private calculateInformation(question: Question, theta: number): number {
     const model = this.config.irt_model || '2PL';
     const b = this.difficultyToB(normalizeDifficulty(question.difficulty)); // Difficulty (b parameter)
-    const a = question.discrimination || 1.0; // Discrimination
+    const a = question.discrimination || 1.2; // Discrimination — calibrated cross-type mean from Kingston et al. (1985)
     const c = model === '3PL' ? question.guessing || 0.25 : 0; // Guessing
 
     const p = this.probabilityCorrect(theta, a, b, c);
@@ -531,11 +531,22 @@ export class ComplexAdaptiveAlgorithm {
   }
 
   /**
-   * Convert difficulty level (1-5) to IRT b parameter (-3 to 3)
+   * Convert difficulty level (1-5) to IRT b parameter.
+   * Calibrated values from GMAT-SCORING-RESEARCH.md Section 9:
+   *   easy (2) → -1.0, medium (3) → 0.0, hard (4) → +1.5
+   * The asymmetric spacing (easy=-1.0, hard=+1.5) reflects that hard GMAT
+   * questions are substantially more discriminating than easy ones, matching
+   * Kingston et al. (1985) empirical data. The old symmetric mapping
+   * (difficulty-3)*0.8 placed hard at b=+0.8, which caused the algorithm to
+   * switch to hard questions after just one correct answer instead of 5-8.
    */
   private difficultyToB(difficulty: number): number {
-    // Map 1-5 scale to -2 to 2 scale
-    return (difficulty - 3) * 0.8;
+    // Piecewise linear interpolation through calibrated anchor points:
+    // 1 → -2.0, 2 → -1.0, 3 → 0.0, 4 → +1.5, 5 → +3.0
+    if (difficulty <= 2) return -1.0 + (difficulty - 2) * 1.0; // [1,2] → [-2.0, -1.0]
+    if (difficulty <= 3) return (difficulty - 3) * 1.0;         // [2,3] → [-1.0,  0.0]
+    if (difficulty <= 4) return (difficulty - 3) * 1.5;         // [3,4] → [ 0.0, +1.5]
+    return 1.5 + (difficulty - 4) * 1.5;                        // [4,5] → [+1.5, +3.0]
   }
 
   /**
@@ -569,7 +580,7 @@ export class ComplexAdaptiveAlgorithm {
       let secondDerivative = 0;
 
       for (const response of this.state.response_pattern) {
-        const a = response.discrimination || 1.0;
+        const a = response.discrimination || 1.2;
         const b = this.difficultyToB(response.difficulty || 3);
         const c = model === '3PL' ? response.guessing || 0.25 : 0;
 

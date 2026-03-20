@@ -36,6 +36,7 @@ import {
   faTrophy,
   faEye,
   faCoffee,
+  faFlask,
 } from '@fortawesome/free-solid-svg-icons';
 import { supabase } from '../lib/supabase';
 import { checkAnswerCorrectness } from '../lib/gmat/answerChecking';
@@ -92,6 +93,8 @@ const SECTION_LABELS: Record<GmatSection, string> = {
   VR: 'Verbal Reasoning',
 };
 
+const DEBUG_EMAIL = 'sat@mail.com';
+
 // ============================================
 // Main Component
 // ============================================
@@ -103,6 +106,10 @@ export default function GMATSimulationPage() {
   const isPreviewMode = searchParams.get('preview') === 'true';
   // Simulation slot ID — required in student mode, null in preview
   const slotId = searchParams.get('slotId');
+
+  // Debug mode — only for the testing account
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const isDebugMode = userEmail === DEBUG_EMAIL;
 
   // Section order — customizable before test starts
   const [sectionOrder, setSectionOrder] = useState<GmatSection[]>([...MOCK_SIMULATION_CONFIG.sectionOrder]);
@@ -261,6 +268,7 @@ export default function GMATSimulationPage() {
         return;
       }
       setStudentId(profile.id);
+      setUserEmail(profile.email ?? null);
 
       if (!isPreviewMode) {
         // Student mode: validate that a specific pending slot was provided
@@ -1085,11 +1093,31 @@ export default function GMATSimulationPage() {
     const unifiedAnswer = toUnifiedAnswer(unansweredFiltered, questionData);
 
     return (
-      <QuestionRenderer
-        question={{ ...question, question_data: questionData }}
-        currentAnswer={unifiedAnswer}
-        onAnswerChange={handleQuestionRendererAnswer}
-      />
+      <>
+        {isDebugMode && (() => {
+          const answersObj = typeof question.answers === 'string'
+            ? JSON.parse(question.answers)
+            : question.answers;
+          const correctAnswer = answersObj?.correct_answer;
+          const displayAnswer = Array.isArray(correctAnswer)
+            ? correctAnswer.map((a: unknown) => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(', ')
+            : typeof correctAnswer === 'object' && correctAnswer !== null
+              ? JSON.stringify(correctAnswer)
+              : String(correctAnswer ?? '—');
+          return (
+            <div className="mb-3 px-3 py-2 bg-purple-50 border border-purple-200 rounded-lg flex items-center gap-2 text-sm">
+              <FontAwesomeIcon icon={faFlask} className="text-purple-500 shrink-0" />
+              <span className="text-purple-700 font-medium">Correct answer:</span>
+              <span className="text-purple-900 font-mono font-bold">{displayAnswer}</span>
+            </div>
+          );
+        })()}
+        <QuestionRenderer
+          question={{ ...question, question_data: questionData }}
+          currentAnswer={unifiedAnswer}
+          onAnswerChange={handleQuestionRendererAnswer}
+        />
+      </>
     );
   }
 
@@ -2012,6 +2040,12 @@ export default function GMATSimulationPage() {
               Preview Mode
             </div>
           )}
+          {isDebugMode && (
+            <div className="bg-purple-500 text-white px-4 py-1.5 text-center text-xs font-medium flex items-center justify-center gap-2">
+              <FontAwesomeIcon icon={faFlask} />
+              Debug Mode — correct answers visible
+            </div>
+          )}
 
           {timeUpModal}
 
@@ -2218,6 +2252,12 @@ export default function GMATSimulationPage() {
           <div className="bg-amber-400 text-amber-900 px-4 py-1.5 text-center text-xs font-medium flex items-center justify-center gap-2">
             <FontAwesomeIcon icon={faEye} />
             Preview Mode
+          </div>
+        )}
+        {isDebugMode && (
+          <div className="bg-purple-500 text-white px-4 py-1.5 text-center text-xs font-medium flex items-center justify-center gap-2">
+            <FontAwesomeIcon icon={faFlask} />
+            Debug Mode — correct answers visible
           </div>
         )}
 
