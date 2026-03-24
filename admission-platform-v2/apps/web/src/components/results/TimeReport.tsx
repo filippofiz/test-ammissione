@@ -239,8 +239,11 @@ export function TimeReport({ questions, expectedTimePerSection }: TimeReportProp
             );
           })}
 
+          {/* ── Pace summary ── */}
+          <PaceSummary questions={seen} expectedTimePerSection={expectedTimePerSection} />
+
           {/* ── Legend ── */}
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-8 pt-4 border-t border-gray-100">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-4 pt-4 border-t border-gray-100">
             <LegendSwatch color="#22c55e" label="Correct" />
             <LegendSwatch color="#ef4444" label="Wrong" />
             <LegendSwatch color="#9ca3af" label="Skipped" dimmed />
@@ -321,6 +324,90 @@ function TimeLabelAndIcon({ t, p, state }: { t: number; p: Pace; state: Question
         {icon}
       </span>
     </>
+  );
+}
+
+// ─── Pace summary ────────────────────────────────────────────────────────────
+
+function PaceSummary({
+  questions,
+  expectedTimePerSection,
+}: {
+  questions: TimeReportQuestion[];
+  expectedTimePerSection: Record<string, number>;
+}) {
+  const answered = questions.filter(
+    q => q.timeSpentSeconds !== undefined && q.timeSpentSeconds > 0 && q.hasAnswer,
+  );
+  if (answered.length === 0) return null;
+
+  let fast = 0, ok = 0, slow = 0;
+  for (const q of answered) {
+    const exp = getExpected(q.section, expectedTimePerSection);
+    const p = getPace(q.timeSpentSeconds!, exp);
+    if (p === 'fast') fast++;
+    else if (p === 'slow') slow++;
+    else ok++;
+  }
+
+  const total = answered.length;
+  const fastPct  = Math.round((fast / total) * 100);
+  const okPct    = Math.round((ok   / total) * 100);
+  const slowPct  = Math.round((slow / total) * 100);
+
+  // bar widths — use raw counts to avoid rounding drift
+  const fastW  = (fast / total) * 100;
+  const okW    = (ok   / total) * 100;
+  const slowW  = (slow / total) * 100;
+
+  return (
+    <div className="mt-8 bg-gray-50 rounded-xl p-4 border border-gray-100">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Pacing summary</span>
+        <span className="text-xs text-gray-400">{total} answered questions</span>
+      </div>
+
+      {/* Segmented bar */}
+      <div className="flex h-3 rounded-full overflow-hidden mb-3 gap-px bg-white">
+        {fastW > 0 && (
+          <div className="h-full rounded-l-full" style={{ width: `${fastW}%`, backgroundColor: '#38bdf8' }} />
+        )}
+        {okW > 0 && (
+          <div className="h-full" style={{ width: `${okW}%`, backgroundColor: '#14b8a6' }} />
+        )}
+        {slowW > 0 && (
+          <div className="h-full rounded-r-full" style={{ width: `${slowW}%`, backgroundColor: '#f59e0b' }} />
+        )}
+      </div>
+
+      {/* Stats row */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="text-center">
+          <div className="text-lg font-bold text-sky-400">{fastPct}%</div>
+          <div className="text-xs text-gray-400 flex items-center justify-center gap-1">
+            <FontAwesomeIcon icon={faForward} className="text-sky-300 text-[9px]" />
+            Fast
+          </div>
+          <div className="text-xs text-gray-300">{fast} q</div>
+        </div>
+        <div className="text-center">
+          <div className="text-lg font-bold text-teal-500">{okPct}%</div>
+          <div className="text-xs text-gray-400 flex items-center justify-center gap-1">
+            <FontAwesomeIcon icon={faClock} className="text-teal-400 text-[9px]" />
+            On pace
+          </div>
+          <div className="text-xs text-gray-300">{ok} q</div>
+        </div>
+        <div className="text-center">
+          <div className="text-lg font-bold text-amber-400">{slowPct}%</div>
+          <div className="text-xs text-gray-400 flex items-center justify-center gap-1">
+            <FontAwesomeIcon icon={faExclamationTriangle} className="text-amber-400 text-[9px]" />
+            Slow
+          </div>
+          <div className="text-xs text-gray-300">{slow} q</div>
+        </div>
+      </div>
+    </div>
   );
 }
 
