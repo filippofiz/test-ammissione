@@ -29,8 +29,8 @@ import {
   type GmatAssessmentResult,
   type TrainingCompletion,
   type GmatSection,
-  calculateEstimatedGmatScore,
 } from '../lib/api/gmat';
+import { computeGmatScoreFromSections } from '../lib/gmat/scoreComputation';
 
 interface StudentInfo {
   id: string;
@@ -130,9 +130,9 @@ export function GMATSidebar({
     sectionAssessments.VR,
   ].filter(Boolean).length;
 
-  // Calculate estimated score if mock is completed
-  const estimatedScore = mockSimulation
-    ? calculateEstimatedGmatScore(mockSimulation.score_percentage)
+  // Compute IRT-based GMAT score from stored per-section metadata
+  const mockGmatScore = mockSimulation
+    ? computeGmatScoreFromSections((mockSimulation as any).metadata?.section_scores)
     : null;
 
   const cycleInfo = gmatProgress ? getCycleInfo(gmatProgress.gmat_cycle) : null;
@@ -209,14 +209,17 @@ export function GMATSidebar({
       )}
 
       {/* Estimated GMAT Score - If Mock Completed */}
-      {estimatedScore && (
+      {mockGmatScore && (
         <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl p-4 text-white">
           <div className="flex items-center gap-2 mb-2">
             <FontAwesomeIcon icon={faGraduationCap} />
             <span className="text-sm font-medium opacity-90">Estimated GMAT Score</span>
           </div>
-          <div className="text-4xl font-bold">{estimatedScore}</div>
-          <p className="text-xs opacity-75 mt-1">Based on latest mock simulation</p>
+          <div className="text-4xl font-bold">{mockGmatScore.totalScore}</div>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-xs opacity-75">{mockGmatScore.percentile}th percentile</p>
+            <p className="text-xs opacity-75">· {mockGmatScore.scoreBand}</p>
+          </div>
         </div>
       )}
 
@@ -326,7 +329,7 @@ export function GMATSidebar({
             </div>
             {mockSimulation ? (
               <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                {mockSimulation.score_percentage.toFixed(0)}%
+                {mockGmatScore ? mockGmatScore.totalScore : `${mockSimulation.score_percentage.toFixed(0)}%`}
               </span>
             ) : (
               <span className="text-xs text-gray-400">Not started</span>

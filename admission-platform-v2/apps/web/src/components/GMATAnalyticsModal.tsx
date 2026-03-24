@@ -41,8 +41,8 @@ import {
   type TrainingCompletion,
   type GmatSection,
   type GmatAnalyticsData,
-  calculateEstimatedGmatScore,
 } from '../lib/api/gmat';
+import { computeGmatScoreFromSections } from '../lib/gmat/scoreComputation';
 
 type AnalyticsTab = 'overview' | 'time' | 'categories' | 'progress';
 
@@ -548,9 +548,9 @@ export function GMATAnalyticsModal({
 
   const questionsSeenCount = gmatProgress?.seen_question_ids?.length || 0;
 
-  // Calculate estimated score if mock is completed
-  const estimatedScore = mockSimulation
-    ? calculateEstimatedGmatScore(mockSimulation.score_percentage)
+  // Compute IRT-based GMAT score from stored per-section metadata
+  const mockGmatScore = mockSimulation
+    ? computeGmatScoreFromSections((mockSimulation as any).metadata?.section_scores)
     : null;
 
   // Calculate performance statistics
@@ -591,7 +591,7 @@ export function GMATAnalyticsModal({
   const overviewContent = (
     <div className="space-y-6">
       {/* Estimated GMAT Score - If Mock Completed */}
-      {estimatedScore && (
+      {mockGmatScore && (
         <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
@@ -599,8 +599,11 @@ export function GMATAnalyticsModal({
                 <FontAwesomeIcon icon={faGraduationCap} />
                 <span className="text-sm font-medium opacity-90">Estimated GMAT Score</span>
               </div>
-              <div className="text-5xl font-bold">{estimatedScore}</div>
-              <p className="text-sm opacity-75 mt-2">Based on latest mock simulation</p>
+              <div className="text-5xl font-bold">{mockGmatScore.totalScore}</div>
+              <div className="flex items-center gap-3 mt-2">
+                <p className="text-sm opacity-75">{mockGmatScore.percentile}th percentile</p>
+                <p className="text-sm opacity-75">· {mockGmatScore.scoreBand}</p>
+              </div>
             </div>
             {mockSimulation && (
               <div className="text-right">
@@ -670,7 +673,7 @@ export function GMATAnalyticsModal({
           {mockSimulation ? (
             <>
               <div className="text-2xl font-bold text-indigo-600">
-                {mockSimulation.score_percentage.toFixed(0)}%
+                {mockGmatScore ? mockGmatScore.totalScore : `${mockSimulation.score_percentage.toFixed(0)}%`}
               </div>
               <div className="text-xs text-indigo-500 mt-1">Completed</div>
             </>
@@ -733,15 +736,25 @@ export function GMATAnalyticsModal({
                               style={{ width: `${score}%` }}
                             />
                           </div>
-                          <span className={`text-lg font-bold min-w-[4rem] text-right ${
-                            score >= 70 ? 'text-emerald-600' :
-                            score >= 50 ? 'text-amber-600' : 'text-red-600'
-                          }`}>
-                            {Math.round(score)}%
-                          </span>
-                          {irtScore != null && (
-                            <span className="text-sm font-bold text-indigo-600 min-w-[3rem] text-right" title="GMAT Section Score (60-90)">
-                              {irtScore}
+                          {irtScore != null ? (
+                            <div className="flex items-center gap-2 min-w-[7rem] justify-end">
+                              <span className="text-lg font-bold text-indigo-600" title="GMAT Section Score (60-90)">
+                                {irtScore}
+                                <span className="text-xs font-normal text-indigo-400 ml-0.5">/90</span>
+                              </span>
+                              <span className={`text-sm font-medium ${
+                                score >= 70 ? 'text-emerald-600' :
+                                score >= 50 ? 'text-amber-600' : 'text-red-600'
+                              }`}>
+                                ({Math.round(score)}%)
+                              </span>
+                            </div>
+                          ) : (
+                            <span className={`text-lg font-bold min-w-[4rem] text-right ${
+                              score >= 70 ? 'text-emerald-600' :
+                              score >= 50 ? 'text-amber-600' : 'text-red-600'
+                            }`}>
+                              {Math.round(score)}%
                             </span>
                           )}
                         </div>
