@@ -60,7 +60,6 @@ import {
   hideInitialAssessmentResults,
   SECTION_ASSESSMENT_CONFIG,
   MOCK_SIMULATION_CONFIG,
-  calculateEstimatedGmatScore,
   getAnalyticsData,
   GMAT_CYCLES,
   type GmatCycle,
@@ -81,6 +80,7 @@ import { GMATSidebar, type GMATViewSection } from '../components/GMATSidebar';
 import { GMATViewToggle } from '../components/GMATViewToggle';
 import { GMATAnalyticsModal } from '../components/GMATAnalyticsModal';
 import { GMATMaterialsContent } from '../components/GMATMaterialsContent';
+import { computeGmatScoreFromSections } from '../lib/gmat/scoreComputation';
 
 // Student info for tutor view
 interface StudentInfo {
@@ -1343,12 +1343,25 @@ export default function GMATPreparationPage() {
                           </div>
                           {assessment ? (
                             <div className="flex items-center gap-1.5">
-                              {assessment.metadata?.gmat_section_score != null && (
-                                <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold">
-                                  {assessment.metadata.gmat_section_score}
-                                </span>
-                              )}
-                              {isPassed ? (
+                              {assessment.metadata?.gmat_section_score != null ? (
+                                <>
+                                  {isPassed ? (
+                                    <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold flex items-center gap-1">
+                                      <FontAwesomeIcon icon={faCheckCircle} className="text-xs text-green-600" />
+                                      {assessment.metadata.gmat_section_score}
+                                      <span className="font-normal text-indigo-400">/90</span>
+                                    </span>
+                                  ) : (
+                                    <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold">
+                                      {assessment.metadata.gmat_section_score}
+                                      <span className="font-normal text-indigo-400">/90</span>
+                                    </span>
+                                  )}
+                                  <span className={`text-xs font-medium ${isPassed ? 'text-green-600' : 'text-amber-600'}`}>
+                                    ({Math.round(assessment.score_percentage)}%)
+                                  </span>
+                                </>
+                              ) : isPassed ? (
                                 <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-1">
                                   <FontAwesomeIcon icon={faCheckCircle} className="text-xs" />
                                   {Math.round(assessment.score_percentage)}%
@@ -1536,12 +1549,23 @@ export default function GMATPreparationPage() {
                                   </span>
                                 )}
                               </div>
-                              <div className="text-right">
-                                <div className="text-2xl font-bold text-indigo-600">
-                                  {calculateEstimatedGmatScore(res.score_percentage)}
-                                </div>
-                                <div className="text-xs text-gray-500">Est. GMAT Score</div>
-                              </div>
+                              {(() => {
+                                const irtScore = computeGmatScoreFromSections((res as any).metadata?.section_scores);
+                                return (
+                                  <div className="text-right">
+                                    <div className="text-2xl font-bold text-indigo-600">
+                                      {irtScore ? irtScore.totalScore : `${res.score_percentage.toFixed(0)}%`}
+                                    </div>
+                                    {irtScore ? (
+                                      <div className="text-xs text-gray-500">
+                                        Est. GMAT Score · {irtScore.percentile}th pct
+                                      </div>
+                                    ) : (
+                                      <div className="text-xs text-gray-500">Est. GMAT Score</div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </div>
                             <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                               <div className="flex items-center gap-4">

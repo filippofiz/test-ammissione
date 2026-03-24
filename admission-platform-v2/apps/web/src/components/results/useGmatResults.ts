@@ -15,7 +15,7 @@ import {
   type GmatAssessmentType,
   type GmatCycle,
 } from '../../lib/api/gmat';
-import { thetaToSectionScore, computeTotalScore, getTotalPercentile, getScoreBand } from '../../lib/algorithms/gmatScoringAlgorithm';
+import { computeGmatScoreFromSections } from '../../lib/gmat/scoreComputation';
 import type { UnifiedResultData, UnifiedQuestionResult } from './types';
 import { getAssessmentTypeLabel, formatTopicName } from './types';
 import { checkAnswerCorrectness } from '../../lib/gmat/answerChecking';
@@ -165,51 +165,38 @@ export function useGmatResults(assessmentId: string | undefined): UseGmatResults
       let gmatScoreBand: string | undefined;
 
       if (isMock) {
-        // Group questions by section to compute per-section scores
-        const sectionNameMap: Record<string, string> = {
-          QR: 'Quantitative Reasoning',
-          VR: 'Verbal Reasoning',
-          DI: 'Data Insights',
-        };
-        const sectionGroups: Record<string, { correct: number; total: number }> = {};
-        for (const q of questions) {
-          const section = q.question.section;
-          if (!sectionGroups[section]) {
-            sectionGroups[section] = { correct: 0, total: 0 };
-          }
-          sectionGroups[section].total++;
-          if (q.isCorrect) sectionGroups[section].correct++;
-        }
+        // Build per-section raw/total from questions for IRT computation.
+        // Use stored metadata.section_scores when available (avoids recomputing from
+        // question list which may be incomplete), otherwise fall back to live count.
+        const metadataSections = (result as any).metadata?.section_scores as
+          Record<string, { score_raw: number; score_total: number }> | undefined;
 
-        // Compute per-section theta from percentage (inverse logistic / 2)
-        const perSectionScores: Record<string, number> = {};
-        for (const [sectionKey, stats] of Object.entries(sectionGroups)) {
-          const pct = stats.total > 0 ? stats.correct / stats.total : 0;
-          const p = Math.max(0.01, Math.min(0.99, pct));
-          const theta = Math.log(p / (1 - p)) / 2;
-          const fullName = sectionNameMap[sectionKey] || sectionKey;
-          perSectionScores[fullName] = thetaToSectionScore(theta);
-        }
+        let sectionsForComputation: Record<string, { score_raw: number; score_total: number }>;
 
-        const qr = perSectionScores['Quantitative Reasoning'] ?? 60;
-        const vr = perSectionScores['Verbal Reasoning'] ?? 60;
-        const di = perSectionScores['Data Insights'] ?? 60;
-
-        // Use only sections that exist in the test
-        const sectionKeys = Object.keys(sectionGroups);
-        const hasAllSections = sectionKeys.some(k => k === 'QR' || k === 'Quantitative Reasoning')
-          && sectionKeys.some(k => k === 'VR' || k === 'Verbal Reasoning')
-          && sectionKeys.some(k => k === 'DI' || k === 'Data Insights');
-
-        if (hasAllSections) {
-          estimatedGmatScore = computeTotalScore(qr, vr, di);
-          gmatPercentile = getTotalPercentile(estimatedGmatScore);
-          gmatScoreBand = getScoreBand(estimatedGmatScore).label;
+        if (metadataSections && Object.keys(metadataSections).length > 0) {
+          sectionsForComputation = metadataSections;
         } else {
-          // Single section or partial — fall back to overall percentage
+          // Fall back: count from recomputed question results
+          const sectionGroups: Record<string, { score_raw: number; score_total: number }> = {};
+          for (const q of questions) {
+            const section = q.question.section;
+            if (!sectionGroups[section]) sectionGroups[section] = { score_raw: 0, score_total: 0 };
+            sectionGroups[section].score_total++;
+            if (q.isCorrect) sectionGroups[section].score_raw++;
+          }
+          sectionsForComputation = sectionGroups;
+        }
+
+        const computed = computeGmatScoreFromSections(sectionsForComputation);
+        if (computed) {
+          estimatedGmatScore = computed.totalScore;
+          gmatSectionScores = computed.sectionScores;
+          gmatPercentile = computed.percentile;
+          gmatScoreBand = computed.scoreBand;
+        } else {
+          // Partial mock (not all 3 sections) — fall back to percentage-based estimate
           estimatedGmatScore = calculateEstimatedGmatScore(result.score_percentage);
         }
-        gmatSectionScores = perSectionScores;
       }
 
       // Recompute scoreRaw from per-question isCorrect values when question data is available.
