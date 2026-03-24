@@ -129,6 +129,7 @@ export default function UnifiedResultsPage() {
         order: q.order,
         section: q.question.section,
         isCorrect: q.isCorrect,
+        hasAnswer: q.hasAnswer,
         isBookmarked: q.isBookmarked,
         timeSpentSeconds: q.timeSpentSeconds,
         category: getQuestionCategory(qData),
@@ -136,20 +137,46 @@ export default function UnifiedResultsPage() {
     });
   }, [data]);
 
-  // Expected time per question
-  const expectedTimePerQuestion = useMemo(() => {
-    if (!data) return 120;
-    if (isGmat) return 120;
-    // Regular tests: derive from test type
-    const testType = data.assignment?.['2V_tests']?.test_type?.toUpperCase() || '';
-    if (testType === 'GMAT') return 120;
-    if (testType === 'SAT') return 75;
-    if (testType === 'BOCCONI' || testType === 'BOCCONI LAW' || testType === 'CATTOLICA') return 60;
-    // Fallback: use actual average
-    if (data.totalTimeSeconds && data.questions.length > 0) {
-      return Math.round(data.totalTimeSeconds / data.questions.length);
+  // Per-section expected time (seconds per question).
+  // Priority: trackConfig.time_per_section / trackConfig.questions_per_section
+  //         → trackConfig.total_time_minutes / total questions
+  //         → test-type hardcoded defaults
+  //         → global fallback
+  const expectedTimePerSection = useMemo<Record<string, number>>(() => {
+    if (!data) return { __global__: 120 };
+    if (isGmat) return { __global__: 120 };
+
+    const tc = data.trackConfig;
+
+    // Build per-section map from time_per_section + questions_per_section
+    if (tc?.time_per_section && typeof tc.time_per_section === 'object') {
+      const result: Record<string, number> = {};
+      for (const [section, minutes] of Object.entries(tc.time_per_section as Record<string, number>)) {
+        const qCount = tc.questions_per_section?.[section];
+        result[section] = qCount && qCount > 0
+          ? Math.round((minutes * 60) / qCount)
+          : Math.round((minutes * 60) / 10); // fallback: assume 10 questions if count unknown
+      }
+      if (Object.keys(result).length > 0) return result;
     }
-    return 90;
+
+    // Fallback: total_time_minutes / total questions → uniform per section
+    if (tc?.total_time_minutes && data.questions.length > 0) {
+      const secPerQ = Math.round((tc.total_time_minutes * 60) / data.questions.length);
+      return { __global__: secPerQ };
+    }
+
+    // Hardcoded test-type defaults
+    const testType = data.assignment?.['2V_tests']?.test_type?.toUpperCase() || '';
+    if (testType === 'GMAT') return { __global__: 120 };
+    if (testType === 'SAT') return { __global__: 75 };
+    if (testType === 'BOCCONI' || testType === 'BOCCONI LAW' || testType === 'CATTOLICA') return { __global__: 60 };
+
+    // Last resort: actual average
+    if (data.totalTimeSeconds && data.questions.length > 0) {
+      return { __global__: Math.round(data.totalTimeSeconds / data.questions.length) };
+    }
+    return { __global__: 90 };
   }, [data, isGmat]);
 
   // Section results for IRT score report
@@ -279,7 +306,7 @@ export default function UnifiedResultsPage() {
           {/* Time Report */}
           <TimeReport
             questions={timeReportQuestions}
-            expectedTimePerQuestion={expectedTimePerQuestion}
+            expectedTimePerSection={expectedTimePerSection}
             totalTimeSeconds={data.totalTimeSeconds}
           />
 

@@ -711,6 +711,7 @@ export function useRegularTestResults(
         sections,
         difficultyBreakdown: hasDifficultyData ? diffBreakdown : undefined,
         algorithmConfig,
+        trackConfig: trackConfig ?? undefined,
         scaledScores: scaledScores ?? undefined,
         totalAttempts: assignmentData.total_attempts ?? 1,
         currentAttempt: attemptToLoad,

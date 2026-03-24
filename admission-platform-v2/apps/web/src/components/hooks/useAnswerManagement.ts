@@ -119,7 +119,7 @@ export interface UseAnswerManagementReturn {
 
   // Operations
   updateAnswer: (questionId: string, updater: (prev: AnswerManagementStudentAnswer | undefined) => AnswerManagementStudentAnswer) => void;
-  saveAnswer: (questionId: string, answerData: AnswerManagementStudentAnswer, isFlagged?: boolean, _retryCount?: number, questionOrder?: number) => Promise<boolean>;
+  saveAnswer: (questionId: string, answerData: AnswerManagementStudentAnswer, isFlagged?: boolean, _retryCount?: number, questionOrder?: number, isNavigating?: boolean) => Promise<boolean>;
   handleAnswerSelect: (answer: string) => void;
   handleRendererAnswerChange: (questionId: string, unified: UnifiedAnswer) => void;
   toUnifiedAnswer: (sa: AnswerManagementStudentAnswer | undefined) => UnifiedAnswer;
@@ -326,7 +326,8 @@ export function useAnswerManagement({
     answerData: AnswerManagementStudentAnswer,
     isFlagged: boolean = false,
     _retryCount: number = 0,
-    questionOrder?: number
+    questionOrder?: number,
+    isNavigating: boolean = false
   ): Promise<boolean> {
     if (isPreviewMode) return true;
     if (isGmatMode) return true;
@@ -381,13 +382,30 @@ export function useAnswerManagement({
           }
 
           const startTime = actualQuestionStartTimes[questionId];
-          const newTimeSpentSeconds = startTime
+          const elapsedSinceStart = startTime
             ? Math.floor((new Date().getTime() - startTime.getTime()) / 1000)
             : 0;
 
-          const finalTimeSpentSeconds = (existingAnswer && !selectError)
-            ? (existingAnswer.time_spent_seconds || 0) + newTimeSpentSeconds
-            : newTimeSpentSeconds;
+          // Time strategy:
+          // - During auto-saves (isNavigating=false): startTime is never reset, so elapsedSinceStart
+          //   is the full time spent on this visit. We overwrite the DB value with the larger of the
+          //   existing value or the current elapsed, so we never go backwards.
+          // - On navigation (isNavigating=true): we write the final elapsed for this visit
+          //   (accumulated on top of any prior visits), then reset startTime so a future revisit
+          //   accumulates on top.
+          let finalTimeSpentSeconds: number;
+          if (isNavigating) {
+            // Accumulate: prior visits + this visit
+            finalTimeSpentSeconds = (existingAnswer && !selectError)
+              ? (existingAnswer.time_spent_seconds || 0) + elapsedSinceStart
+              : elapsedSinceStart;
+          } else {
+            // Auto-save: overwrite with full elapsed since question arrival (never go below existing)
+            finalTimeSpentSeconds = Math.max(
+              elapsedSinceStart,
+              (existingAnswer && !selectError) ? (existingAnswer.time_spent_seconds || 0) : 0
+            );
+          }
 
           const finalQuestionOrder = (existingAnswer && !selectError)
             ? existingAnswer.question_order
@@ -396,7 +414,8 @@ export function useAnswerManagement({
           console.log('⏱️ [SAVE] Time calculation', {
             questionId: questionId.substring(0, 8),
             hasStartTime: !!startTime,
-            newTimeSpent: newTimeSpentSeconds,
+            elapsedSinceStart,
+            isNavigating,
             existingTimeSpent: existingAnswer?.time_spent_seconds || 0,
             finalTimeSpent: finalTimeSpentSeconds,
             questionOrder: finalQuestionOrder,
@@ -504,12 +523,16 @@ export function useAnswerManagement({
 
           await Promise.race([statusQueryPromise, statusTimeoutPromise]) as any;
 
-          // FIX: Reset start time to now (not delete) so subsequent auto-saves
-          // still record accurate time for the current visit to this question.
-          setQuestionStartTimes(prev => ({
-            ...prev,
-            [questionId]: new Date()
-          }));
+          // On navigation: reset the start time so a future revisit to this question
+          // accumulates on top of the time already stored in the DB.
+          // On auto-save: leave start time unchanged so the elapsed keeps growing correctly.
+          if (isNavigating) {
+            setQuestionStartTimes(prev => {
+              const next = { ...prev };
+              delete next[questionId];
+              return next;
+            });
+          }
 
           consecutiveSaveFailuresRef.current = 0;
           return true;

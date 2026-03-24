@@ -165,6 +165,8 @@ export interface UnifiedResultData {
 
   // Regular-test-specific
   algorithmConfig?: any;
+  /** Raw track config row from 2V_test_track_config (time_per_section, questions_per_section, etc.) */
+  trackConfig?: any;
   scaledScores?: ScaledScoreData | null;
   totalAttempts?: number;
   currentAttempt?: number;

@@ -925,6 +925,7 @@ function TakeTestPageInner() {
           answers[currentQuestion.id]?.flagged || false,
           0,
           globalQuestionOrder + 1,
+          true,
         );
       }
 
@@ -986,6 +987,7 @@ function TakeTestPageInner() {
           answers[currentQuestion.id]?.flagged || false,
           0,
           globalQuestionOrder + 1,
+          true,
         );
 
         // Block navigation if save failed
@@ -1009,6 +1011,7 @@ function TakeTestPageInner() {
         if (!currentAnswer?.answer) {
           setIsPartialAnswer(false);
           setShowAnswerRequiredMessage(true);
+          setIsTransitioning(false);
           return;
         }
 
@@ -1028,6 +1031,7 @@ function TakeTestPageInner() {
             const hasAnyAnswer = msrAnswers.some((a) => a);
             setIsPartialAnswer(hasAnyAnswer);
             setShowAnswerRequiredMessage(true);
+            setIsTransitioning(false);
             return;
           }
         }
@@ -1041,6 +1045,7 @@ function TakeTestPageInner() {
             );
             setIsPartialAnswer(hasAnyAnswer);
             setShowAnswerRequiredMessage(true);
+            setIsTransitioning(false);
             return;
           }
         }
@@ -1054,6 +1059,7 @@ function TakeTestPageInner() {
             // Has partial answer if any statements are answered
             setIsPartialAnswer(Object.keys(taAnswers).length > 0);
             setShowAnswerRequiredMessage(true);
+            setIsTransitioning(false);
             return;
           }
 
@@ -1063,6 +1069,7 @@ function TakeTestPageInner() {
               // Has partial answer
               setIsPartialAnswer(true);
               setShowAnswerRequiredMessage(true);
+              setIsTransitioning(false);
               return;
             }
           }
@@ -1077,6 +1084,7 @@ function TakeTestPageInner() {
             );
             setIsPartialAnswer(hasAnyAnswer);
             setShowAnswerRequiredMessage(true);
+            setIsTransitioning(false);
             return;
           }
         }

@@ -137,9 +137,7 @@ export function selectWithDISubtypeRepresentation(
   );
 
   if (!isDataInsightsSection) {
-    const selected = shouldRandomize
-      ? [...questions].sort(() => Math.random() - 0.5)
-      : [...questions];
+    const selected = [...questions];
     console.log(`📋 [DI SELECTION] Not a DI section, returning ${Math.min(selected.length, limit)} questions`);
     return selected.slice(0, limit);
   }
@@ -235,7 +233,7 @@ export function selectWithDISubtypeRepresentation(
     const minRequired = MIN_PER_TYPE[type] || 1;
 
     if (type === 'MSR') {
-      const groups = shouldRandomize ? [...msrGroups].sort(() => Math.random() - 0.5) : msrGroups;
+      const groups = msrGroups;
       let typeCount = usedGroupKeys.has(islandMuseumKey || '') && islandMuseumKey?.includes('MSR') ? 1 : 0;
 
       for (const { key, questions: groupQs } of groups) {
@@ -250,7 +248,7 @@ export function selectWithDISubtypeRepresentation(
         console.log(`✅ Added MSR set (${groupQs.length} questions) - effective count now: ${effectiveQuestionCount}`);
       }
     } else if (type === 'TA') {
-      const groups = shouldRandomize ? [...taGroups].sort(() => Math.random() - 0.5) : taGroups;
+      const groups = taGroups;
       let typeCount = 0;
 
       for (const { key, questions: groupQs } of groups) {
@@ -266,7 +264,7 @@ export function selectWithDISubtypeRepresentation(
       }
     } else {
       const typeQuestions = byType[type] || [];
-      const pool = shouldRandomize ? [...typeQuestions].sort(() => Math.random() - 0.5) : [...typeQuestions];
+      const pool = [...typeQuestions];
       let typeCount = 0;
 
       for (const q of pool) {
@@ -286,7 +284,7 @@ export function selectWithDISubtypeRepresentation(
   // Phase 2: Fill remaining slots — individual questions first, then more MSR/TA sets
   if (effectiveQuestionCount < limit) {
     const remainingIndividual = nonGroupedQuestions.filter(q => !usedIds.has(q.id));
-    const pool = shouldRandomize ? [...remainingIndividual].sort(() => Math.random() - 0.5) : [...remainingIndividual];
+    const pool = [...remainingIndividual];
 
     for (const q of pool) {
       if (effectiveQuestionCount >= limit) break;
@@ -300,7 +298,7 @@ export function selectWithDISubtypeRepresentation(
 
   if (effectiveQuestionCount < limit) {
     const remainingGroups = [...msrGroups, ...taGroups].filter(g => !usedGroupKeys.has(g.key));
-    const shuffled = shouldRandomize ? remainingGroups.sort(() => Math.random() - 0.5) : remainingGroups;
+    const shuffled = remainingGroups;
 
     for (const { key, questions: groupQs } of shuffled) {
       if (effectiveQuestionCount >= limit) break;
@@ -359,9 +357,6 @@ export function prepareInitialQuestions(
   if (config.adaptivity_mode !== 'adaptive') {
     // Single-section test with total_questions limit
     if (config.section_order_mode === 'no_sections' && config.total_questions) {
-      if (config.question_order === 'random') {
-        processedQuestions = [...processedQuestions].sort(() => Math.random() - 0.5);
-      }
       return processedQuestions.slice(0, config.total_questions);
     }
 
@@ -389,26 +384,8 @@ export function prepareInitialQuestions(
       return limitedQuestions;
     }
 
-    // No limits — return all, optionally randomized
-    if (config.question_order === 'random') {
-      processedQuestions = [...processedQuestions].sort(() => Math.random() - 0.5);
-    }
+    // No limits — return all in original order
     return processedQuestions;
-  }
-
-  // ADAPTIVE MODE: randomize pool first if configured
-  if (config.question_order === 'random') {
-    if (config.base_questions_scope === 'per_section') {
-      const sections = Array.from(new Set(processedQuestions.map(q => getSection(q, config))));
-      const randomized: Question[] = [];
-      sections.forEach(section => {
-        const sectionQs = processedQuestions.filter(q => getSection(q, config) === section);
-        randomized.push(...[...sectionQs].sort(() => Math.random() - 0.5));
-      });
-      processedQuestions = randomized;
-    } else {
-      processedQuestions = [...processedQuestions].sort(() => Math.random() - 0.5);
-    }
   }
 
   // ADAPTIVE MODE: select baseline questions
@@ -447,10 +424,6 @@ export function prepareInitialQuestions(
 
       if (candidates.length < count) {
         candidates = allSectionQuestions;
-      }
-
-      if (config.question_order === 'random') {
-        candidates = [...candidates].sort(() => Math.random() - 0.5);
       }
 
       const selected = candidates.slice(0, count);
