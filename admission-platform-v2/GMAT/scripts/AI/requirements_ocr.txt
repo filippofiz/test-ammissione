@@ -1,0 +1,16 @@
+# GLM-OCR pipeline dependencies
+# torch and transformers are likely already installed.
+# Verify with: pip show torch transformers
+
+transformers>=4.48.0
+torch>=2.6.0
+Pillow>=11.1.0
+requests>=2.32.0
+tqdm>=4.65.0
+
+# Optional: accelerate speeds up transformers inference (recommended for CPU)
+# pip install accelerate
+
+# Optional: for Ollama backend, no extra Python package is needed (uses urllib)
+# Install Ollama from https://ollama.com/download/windows
+# Then: ollama pull glm-ocr
