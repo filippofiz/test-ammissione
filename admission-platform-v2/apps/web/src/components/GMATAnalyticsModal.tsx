@@ -42,7 +42,7 @@ import {
   type GmatSection,
   type GmatAnalyticsData,
 } from '../lib/api/gmat';
-import { computeGmatScoreFromSections } from '../lib/gmat/scoreComputation';
+import { computeGmatScoreFromSections, readIrtSnapshotFromMetadata } from '../lib/gmat/scoreComputation';
 
 type AnalyticsTab = 'overview' | 'time' | 'categories' | 'progress';
 
@@ -548,9 +548,11 @@ export function GMATAnalyticsModal({
 
   const questionsSeenCount = gmatProgress?.seen_question_ids?.length || 0;
 
-  // Compute IRT-based GMAT score from stored per-section metadata
+  // Prefer the IRT snapshot saved at test time (real adaptive thetas) over
+  // re-deriving from raw counts, which uses an approximated logit theta.
   const mockGmatScore = mockSimulation
-    ? computeGmatScoreFromSections((mockSimulation as any).metadata?.section_scores)
+    ? (readIrtSnapshotFromMetadata((mockSimulation as any).metadata) ??
+       computeGmatScoreFromSections((mockSimulation as any).metadata?.section_scores))
     : null;
 
   // Calculate performance statistics

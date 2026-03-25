@@ -1851,7 +1851,8 @@ export async function saveMockSimulationResult(
   studentCycle: GmatCycle,
   timeSpentSeconds?: number,
   answersData?: Record<string, { answer: string | string[] | Record<string, string>; time_spent_seconds: number; is_correct: boolean; is_unanswered?: boolean }>,
-  bookmarkedQuestionIds?: string[]
+  bookmarkedQuestionIds?: string[],
+  irtScoreResult?: GmatScoreResult
 ): Promise<GmatAssessmentResult> {
   const scorePercentage = (scoreRaw / scoreTotal) * 100;
 
@@ -1874,9 +1875,27 @@ export async function saveMockSimulationResult(
     }
   }
 
+  // Build a compact IRT result snapshot for consistent display across all pages.
+  // Storing it in metadata avoids re-deriving from raw counts (which uses an
+  // approximated logit theta and diverges from the real adaptive theta).
+  const irtSnapshot = irtScoreResult
+    ? {
+        totalScore: irtScoreResult.totalScore,
+        percentile: irtScoreResult.totalPercentile,
+        scoreBand: irtScoreResult.scoreBand,
+        sections: irtScoreResult.sections.map(s => ({
+          section: s.section,
+          sectionScore: s.sectionScore,
+          theta: s.adjustedTheta,
+          percentile: s.percentile,
+        })),
+      }
+    : undefined;
+
   const metadata = {
     gmat_cycle: studentCycle,
     section_scores: sectionScores,
+    ...(irtSnapshot ? { gmat_irt_result: irtSnapshot } : {}),
   };
 
   // Call RPC which atomically saves result + marks slot completed

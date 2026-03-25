@@ -30,12 +30,48 @@ const SECTION_NAME_MAP: Record<string, string> = {
   DI: 'Data Insights',
 };
 
+interface IrtSnapshot {
+  totalScore: number;
+  percentile: number;
+  scoreBand: string;
+  sections: Array<{ section: string; sectionScore: number; theta: number; percentile: number }>;
+}
+
+/**
+ * Read a saved IRT snapshot from simulation metadata.
+ * This is the authoritative score computed from real adaptive thetas at test time.
+ */
+export function readIrtSnapshotFromMetadata(
+  metadata: Record<string, unknown> | null | undefined
+): GmatScoreFromSections | null {
+  if (!metadata) return null;
+  const snap = metadata.gmat_irt_result as IrtSnapshot | undefined;
+  if (!snap || !snap.totalScore || !snap.sections?.length) return null;
+
+  const sectionScores: Record<string, number> = {};
+  for (const s of snap.sections) {
+    const fullName = SECTION_NAME_MAP[s.section] || s.section;
+    sectionScores[fullName] = s.sectionScore;
+  }
+
+  return {
+    sectionScores,
+    totalScore: snap.totalScore,
+    percentile: snap.percentile,
+    scoreBand: snap.scoreBand,
+  };
+}
+
 /**
  * Compute IRT-based GMAT scores from per-section raw/total counts.
  *
  * Accepts the `section_scores` stored in mock simulation metadata
  * (keyed by QR/DI/VR), computes per-section theta → section score (60-90),
  * then derives total score (205-805), percentile, and score band.
+ *
+ * NOTE: Prefer readIrtSnapshotFromMetadata() when the metadata.gmat_irt_result
+ * field is present — it stores the real adaptive theta from test time and is
+ * more accurate than re-deriving theta from raw/total counts.
  *
  * Returns null if any of the three sections is missing.
  */

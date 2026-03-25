@@ -1003,7 +1003,8 @@ export default function GMATSimulationPage() {
           studentCycle!,
           totalTimeSeconds,
           perQuestionAnswersData,
-          bookmarkedIds
+          bookmarkedIds,
+          fullScoreResult
         );
 
         setResult(savedResult);
