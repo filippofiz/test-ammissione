@@ -15,7 +15,7 @@ import {
   type GmatAssessmentType,
   type GmatCycle,
 } from '../../lib/api/gmat';
-import { computeGmatScoreFromSections } from '../../lib/gmat/scoreComputation';
+import { computeGmatScoreFromSections, readIrtSnapshotFromMetadata } from '../../lib/gmat/scoreComputation';
 import type { UnifiedResultData, UnifiedQuestionResult } from './types';
 import { getAssessmentTypeLabel, formatTopicName } from './types';
 import { checkAnswerCorrectness } from '../../lib/gmat/answerChecking';
@@ -69,6 +69,17 @@ export function useGmatResults(assessmentId: string | undefined): UseGmatResults
       };
 
       setAssessment(result);
+
+      // Fetch student name for display in comparison view
+      let gmatStudentName: string | undefined;
+      if (result.student_id) {
+        const { data: profileData } = await supabase
+          .from('2V_profiles')
+          .select('name')
+          .eq('id', result.student_id)
+          .single();
+        gmatStudentName = profileData?.name ?? undefined;
+      }
 
       // Parse answers_data and bookmarks
       const answersData = assessmentData.answers_data as Record<string, {
@@ -165,37 +176,48 @@ export function useGmatResults(assessmentId: string | undefined): UseGmatResults
       let gmatScoreBand: string | undefined;
 
       if (isMock) {
-        // Build per-section raw/total from questions for IRT computation.
-        // Use stored metadata.section_scores when available (avoids recomputing from
-        // question list which may be incomplete), otherwise fall back to live count.
-        const metadataSections = (result as any).metadata?.section_scores as
-          Record<string, { score_raw: number; score_total: number }> | undefined;
+        const meta = (result as any).metadata;
 
-        let sectionsForComputation: Record<string, { score_raw: number; score_total: number }>;
+        // 1. Prefer the IRT snapshot saved at test time — uses real adaptive thetas,
+        //    so it exactly matches the score shown at the end of the simulation.
+        const irtSnapshot = readIrtSnapshotFromMetadata(meta);
 
-        if (metadataSections && Object.keys(metadataSections).length > 0) {
-          sectionsForComputation = metadataSections;
+        if (irtSnapshot) {
+          estimatedGmatScore = irtSnapshot.totalScore;
+          gmatSectionScores = irtSnapshot.sectionScores;
+          gmatPercentile = irtSnapshot.percentile;
+          gmatScoreBand = irtSnapshot.scoreBand;
         } else {
-          // Fall back: count from recomputed question results
-          const sectionGroups: Record<string, { score_raw: number; score_total: number }> = {};
-          for (const q of questions) {
-            const section = q.question.section;
-            if (!sectionGroups[section]) sectionGroups[section] = { score_raw: 0, score_total: 0 };
-            sectionGroups[section].score_total++;
-            if (q.isCorrect) sectionGroups[section].score_raw++;
+          // 2. Fallback for older records without gmat_irt_result: re-derive from
+          //    per-section raw/total in metadata, or from live recomputed correctness.
+          const metadataSections = meta?.section_scores as
+            Record<string, { score_raw: number; score_total: number }> | undefined;
+
+          let sectionsForComputation: Record<string, { score_raw: number; score_total: number }>;
+          if (metadataSections && Object.keys(metadataSections).length > 0) {
+            sectionsForComputation = metadataSections;
+          } else {
+            // Count from recomputed question results
+            const sectionGroups: Record<string, { score_raw: number; score_total: number }> = {};
+            for (const q of questions) {
+              const section = q.question.section;
+              if (!sectionGroups[section]) sectionGroups[section] = { score_raw: 0, score_total: 0 };
+              sectionGroups[section].score_total++;
+              if (q.isCorrect) sectionGroups[section].score_raw++;
+            }
+            sectionsForComputation = sectionGroups;
           }
-          sectionsForComputation = sectionGroups;
-        }
 
-        const computed = computeGmatScoreFromSections(sectionsForComputation);
-        if (computed) {
-          estimatedGmatScore = computed.totalScore;
-          gmatSectionScores = computed.sectionScores;
-          gmatPercentile = computed.percentile;
-          gmatScoreBand = computed.scoreBand;
-        } else {
-          // Partial mock (not all 3 sections) — fall back to percentage-based estimate
-          estimatedGmatScore = calculateEstimatedGmatScore(result.score_percentage);
+          const computed = computeGmatScoreFromSections(sectionsForComputation);
+          if (computed) {
+            estimatedGmatScore = computed.totalScore;
+            gmatSectionScores = computed.sectionScores;
+            gmatPercentile = computed.percentile;
+            gmatScoreBand = computed.scoreBand;
+          } else {
+            // Partial mock (not all 3 sections) — fall back to percentage-based estimate
+            estimatedGmatScore = calculateEstimatedGmatScore(result.score_percentage);
+          }
         }
       }
 
@@ -232,6 +254,7 @@ export function useGmatResults(assessmentId: string | undefined): UseGmatResults
         assessmentType: result.assessment_type,
         gmatSection: result.section ?? undefined,
         topicName: result.topic ? formatTopicName(result.topic) : undefined,
+        studentName: gmatStudentName,
       };
 
       setData(unified);

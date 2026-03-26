@@ -10,6 +10,7 @@ import { Chart } from '../Chart';
 import { normalizeWhitespace, normalizeOptionText } from '../../lib/textUtils';
 import { ExplanationDisplay } from './ExplanationDisplay';
 import { QuestionImage } from '../test/QuestionImage';
+import { ComparisonChips, type ComparisonSlots } from './ComparisonChips';
 
 interface GIQuestionProps {
   chartConfig: any; // Chart.js config or image URL
@@ -27,6 +28,8 @@ interface GIQuestionProps {
   correctBlank2?: any; // For results view - can be string or array from DB
   showResults?: boolean; // For results view - displays answer feedback
   explanation?: string; // For results view - shows explanation after answer
+  /** Comparison chips keyed by "blank1" or "blank2" */
+  comparisonSlots?: ComparisonSlots;
 }
 
 export function GIQuestion({
@@ -45,6 +48,7 @@ export function GIQuestion({
   correctBlank2,
   showResults = false,
   explanation,
+  comparisonSlots,
 }: GIQuestionProps) {
   // Normalize correct answers
   // Database stores as array: ["value1", "value2"]
@@ -197,6 +201,22 @@ export function GIQuestion({
           })}
         </p>
       </div>
+
+      {/* Comparison chips for blank1 and blank2 */}
+      {comparisonSlots && (
+        <div className="flex flex-wrap gap-4">
+          {['blank1', 'blank2'].map((blankKey, bi) => {
+            const entries = comparisonSlots[blankKey];
+            if (!entries || entries.length === 0) return null;
+            return (
+              <div key={blankKey} className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs text-gray-500 font-medium">Blank {bi + 1}:</span>
+                <ComparisonChips slotKey={blankKey} comparisonSlots={comparisonSlots} />
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Instructions and Feedback */}
       {!showResults && (

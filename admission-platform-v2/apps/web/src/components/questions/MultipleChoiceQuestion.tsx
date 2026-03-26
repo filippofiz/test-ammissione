@@ -5,11 +5,11 @@
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheckCircle, faTimesCircle } from '@fortawesome/free-solid-svg-icons';
-import { useTranslation } from 'react-i18next';
 import { MathJaxRenderer } from '../MathJaxRenderer';
 import { normalizeWhitespace, normalizeOptionText } from '../../lib/textUtils';
 import { ExplanationDisplay } from './ExplanationDisplay';
 import { QuestionImage } from '../test/QuestionImage';
+import { ComparisonChips, type ComparisonSlots } from './ComparisonChips';
 
 interface MultipleChoiceQuestionProps {
   questionText: string;
@@ -29,6 +29,8 @@ interface MultipleChoiceQuestionProps {
   showResults?: boolean; // For results view - displays answer feedback
   explanation?: string; // For results view - shows explanation after answer
   hideQuestionText?: boolean; // Hide question text box (for multi-question view)
+  /** Comparison student chips keyed by option key (e.g. "a", "b") */
+  comparisonSlots?: ComparisonSlots;
 }
 
 export function MultipleChoiceQuestion({
@@ -46,9 +48,8 @@ export function MultipleChoiceQuestion({
   showResults = false,
   explanation,
   hideQuestionText = false,
+  comparisonSlots,
 }: MultipleChoiceQuestionProps) {
-  const { t } = useTranslation();
-
   /**
    * Render passage text with line numbers in the left margin.
    * `lineOffsets` maps 1-based line number → char offset in `text`.
@@ -100,6 +101,8 @@ export function MultipleChoiceQuestion({
     );
   };
 
+  const comparisonMode = !!comparisonSlots;
+
   // Helper to render answer options (shared between passage and non-passage layouts)
   const renderOptions = () => (
     <div className="space-y-3">
@@ -112,73 +115,104 @@ export function MultipleChoiceQuestion({
         let bgClass = 'bg-white';
         let borderStyle = 'border-2';
 
-        if (isSelected && isCorrectOption) {
-          borderClass = 'border-green-600';
-          bgClass = 'bg-green-50';
-        } else if (isWrongSelection) {
-          borderClass = 'border-red-600';
-          bgClass = 'bg-red-50';
-        } else if (isCorrectOption) {
-          borderClass = 'border-green-600';
-          bgClass = 'bg-green-50/70';
-          borderStyle = 'border-2 border-dashed';
-        } else if (isSelected && !showResults) {
-          borderClass = 'border-brand-green';
-          bgClass = 'bg-green-50';
+        if (comparisonMode) {
+          // In comparison mode: neutral for all options, only correct gets green highlight
+          if (isCorrectOption) {
+            borderClass = 'border-green-500';
+            bgClass = 'bg-green-50';
+            borderStyle = 'border-2';
+          } else {
+            borderClass = 'border-gray-200';
+            bgClass = 'bg-gray-50';
+          }
+        } else {
+          if (isSelected && isCorrectOption) {
+            borderClass = 'border-green-600';
+            bgClass = 'bg-green-50';
+          } else if (isWrongSelection) {
+            borderClass = 'border-red-600';
+            bgClass = 'bg-red-50';
+          } else if (isCorrectOption) {
+            borderClass = 'border-green-600';
+            bgClass = 'bg-green-50/70';
+            borderStyle = 'border-2 border-dashed';
+          } else if (isSelected && !showResults) {
+            borderClass = 'border-brand-green';
+            bgClass = 'bg-green-50';
+          }
         }
 
         return (
           <button
             key={key}
             onClick={() => !readOnly && onAnswerChange(key)}
-            className={`w-full text-left p-4 rounded-xl ${borderStyle} transition-all ${borderClass} ${bgClass} ${
+            className={`w-full text-left p-2 rounded-xl ${borderStyle} transition-all ${borderClass} ${bgClass} ${
               readOnly ? 'cursor-default pointer-events-none' : 'cursor-pointer hover:border-gray-300'
             }`}
           >
-            <div className="flex items-start gap-4">
-              <div
-                className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold ${
-                  isWrongSelection
-                    ? 'bg-red-600 text-white'
-                    : isCorrectOption
-                      ? 'bg-green-600 text-white'
-                      : isSelected
-                        ? 'bg-brand-green text-white'
-                        : 'bg-gray-200 text-gray-700'
-                }`}
-              >
-                {key.toUpperCase()}
+            {comparisonMode ? (
+              /* Comparison layout: letter + text on the left, isolated bento cards on the right */
+              <div className="flex items-center gap-3 w-full min-h-[48px]">
+                {/* Letter badge */}
+                <div
+                  className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold ${
+                    isCorrectOption ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700'
+                  }`}
+                >
+                  {key.toUpperCase()}
+                </div>
+                {/* Option text */}
+                <div className="flex-1 min-w-0">
+                  {imageOptions?.[key] ? (
+                    <QuestionImage
+                      src={imageOptions[key]}
+                      alt={`Option ${key.toUpperCase()}`}
+                      className="max-w-full h-auto rounded"
+                    />
+                  ) : (
+                    text && <MathJaxRenderer>{normalizeOptionText(text)}</MathJaxRenderer>
+                  )}
+                </div>
+                {/* Bento cards — isolated cards anchored from the right */}
+                <ComparisonChips slotKey={key} comparisonSlots={comparisonSlots} bentoBasis />
               </div>
-              <div className="flex-1">
-                {imageOptions?.[key] ? (
-                  <QuestionImage
-                    src={imageOptions[key]}
-                    alt={`Option ${key.toUpperCase()}`}
-                    className="max-w-full h-auto rounded"
-                  />
-                ) : (
-                  text && <MathJaxRenderer>{normalizeOptionText(text)}</MathJaxRenderer>
-                )}
-                {showResults && isSelected && isCorrectOption && (
-                  <div className="text-xs text-green-700 font-semibold mt-1">{t('testResults.yourAnswerCorrect')}</div>
-                )}
+            ) : (
+              <div className="flex items-start gap-4">
+                <div
+                  className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold ${
+                    isWrongSelection
+                      ? 'bg-red-600 text-white'
+                      : isCorrectOption
+                        ? 'bg-green-600 text-white'
+                        : isSelected
+                          ? 'bg-brand-green text-white'
+                          : 'bg-gray-200 text-gray-700'
+                  }`}
+                >
+                  {key.toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  {imageOptions?.[key] ? (
+                    <QuestionImage
+                      src={imageOptions[key]}
+                      alt={`Option ${key.toUpperCase()}`}
+                      className="max-w-full h-auto rounded"
+                    />
+                  ) : (
+                    text && <MathJaxRenderer>{normalizeOptionText(text)}</MathJaxRenderer>
+                  )}
+                </div>
                 {isWrongSelection && (
-                  <div className="text-xs text-red-700 font-semibold mt-1">{t('testResults.yourAnswerLabel')}</div>
+                  <FontAwesomeIcon icon={faTimesCircle} className="text-red-600 text-xl flex-shrink-0" />
                 )}
-                {isCorrectOption && !isSelected && (
-                  <div className="text-xs text-green-700 font-semibold mt-1">{t('testResults.correctAnswerLabel')}</div>
+                {isCorrectOption && (
+                  <FontAwesomeIcon icon={faCheckCircle} className="text-green-600 text-xl flex-shrink-0" />
+                )}
+                {isSelected && !showResults && (
+                  <FontAwesomeIcon icon={faCheckCircle} className="text-brand-green text-xl flex-shrink-0" />
                 )}
               </div>
-              {isWrongSelection && (
-                <FontAwesomeIcon icon={faTimesCircle} className="text-red-600 text-xl" />
-              )}
-              {isCorrectOption && (
-                <FontAwesomeIcon icon={faCheckCircle} className="text-green-600 text-xl" />
-              )}
-              {isSelected && !showResults && (
-                <FontAwesomeIcon icon={faCheckCircle} className="text-brand-green text-xl" />
-              )}
-            </div>
+            )}
           </button>
         );
       })}

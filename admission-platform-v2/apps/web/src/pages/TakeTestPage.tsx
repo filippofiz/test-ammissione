@@ -410,6 +410,7 @@ function TakeTestPageInner() {
     isInReviewMode,
     answerChangesUsed,
     setAnswerChangesUsed,
+    showPauseScreen,
   });
   const {
     isSaving,
@@ -619,40 +620,79 @@ function TakeTestPageInner() {
 
           setCurrentAttempt(currentAttempt);
         } else {
-        const newAttempt = (assignment.current_attempt || 1) + 1;
-        const newTotalAttempts =
-          assignment.total_attempts || assignment.current_attempt || 1;
+          // Only increment the attempt number if the student has actually saved
+          // answers for the current attempt. If the assignment went incomplete
+          // due to a stale-session detection (not a real failed attempt), no
+          // answers will exist yet and we should reuse the same attempt number.
+          const currentAttemptNum = assignment.current_attempt || 1;
+          const { count: answerCount } = await supabase
+            .from("2V_student_answers")
+            .select("id", { count: "exact", head: true })
+            .eq("assignment_id", assignmentId!)
+            .eq("attempt_number", currentAttemptNum);
 
-        const updateData1: {
-          current_attempt: number;
-          total_attempts: number;
-          status: string;
-          completion_status: string;
-          start_time: string;
-        } = {
-          current_attempt: newAttempt,
-          total_attempts: newTotalAttempts,
-          status: "in_progress",
-          completion_status: "in_progress",
-          start_time: new Date().toISOString(),
-        };
-        const { error: updateError } = await supabase
-          .from("2V_test_assignments")
-          .update(updateData1)
-          .eq("id", assignmentId!);
+          const prevAttemptHasAnswers = (answerCount ?? 0) > 0;
 
-        if (updateError) {
-          console.error(
-            "❌ [startTest] Failed to update attempt number:",
-            updateError,
-          );
-          alert(
-            "Unable to start the test. Please reload the page and try again.",
-          );
-          return;
-        }
+          if (prevAttemptHasAnswers) {
+            // Genuine new attempt — increment
+            const newAttempt = currentAttemptNum + 1;
+            const newTotalAttempts =
+              assignment.total_attempts || currentAttemptNum;
 
-        setCurrentAttempt(newAttempt);
+            const updateData1: {
+              current_attempt: number;
+              total_attempts: number;
+              status: string;
+              completion_status: string;
+              start_time: string;
+            } = {
+              current_attempt: newAttempt,
+              total_attempts: newTotalAttempts,
+              status: "in_progress",
+              completion_status: "in_progress",
+              start_time: new Date().toISOString(),
+            };
+            const { error: updateError } = await supabase
+              .from("2V_test_assignments")
+              .update(updateData1)
+              .eq("id", assignmentId!);
+
+            if (updateError) {
+              console.error(
+                "❌ [startTest] Failed to update attempt number:",
+                updateError,
+              );
+              alert(
+                "Unable to start the test. Please reload the page and try again.",
+              );
+              return;
+            }
+
+            setCurrentAttempt(newAttempt);
+          } else {
+            // No answers saved — stale session, reuse the same attempt number
+            const { error: updateError } = await supabase
+              .from("2V_test_assignments")
+              .update({
+                status: "in_progress",
+                completion_status: "in_progress",
+                start_time: new Date().toISOString(),
+              })
+              .eq("id", assignmentId!);
+
+            if (updateError) {
+              console.error(
+                "❌ [startTest] Failed to restore in_progress status:",
+                updateError,
+              );
+              alert(
+                "Unable to start the test. Please reload the page and try again.",
+              );
+              return;
+            }
+
+            setCurrentAttempt(currentAttemptNum);
+          }
         }
       } else if (assignment.status === "unlocked") {
         // First time starting this test

@@ -30,7 +30,7 @@ import {
   type TrainingCompletion,
   type GmatSection,
 } from '../lib/api/gmat';
-import { computeGmatScoreFromSections } from '../lib/gmat/scoreComputation';
+import { computeGmatScoreFromSections, readIrtSnapshotFromMetadata } from '../lib/gmat/scoreComputation';
 
 interface StudentInfo {
   id: string;
@@ -130,9 +130,11 @@ export function GMATSidebar({
     sectionAssessments.VR,
   ].filter(Boolean).length;
 
-  // Compute IRT-based GMAT score from stored per-section metadata
+  // Prefer the IRT snapshot saved at test time (real adaptive thetas) over
+  // re-deriving from raw counts, which uses an approximated logit theta.
   const mockGmatScore = mockSimulation
-    ? computeGmatScoreFromSections((mockSimulation as any).metadata?.section_scores)
+    ? (readIrtSnapshotFromMetadata((mockSimulation as any).metadata) ??
+       computeGmatScoreFromSections((mockSimulation as any).metadata?.section_scores))
     : null;
 
   const cycleInfo = gmatProgress ? getCycleInfo(gmatProgress.gmat_cycle) : null;

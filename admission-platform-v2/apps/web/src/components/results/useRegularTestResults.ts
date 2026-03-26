@@ -23,7 +23,7 @@ import type {
 /*  Internal interfaces mirroring TestResultsPage originals            */
 /* ------------------------------------------------------------------ */
 
-interface Question {
+export interface RegularQuestion {
   id: string;
   section: string;
   materia?: string;
@@ -44,7 +44,7 @@ interface Question {
   } | null;
 }
 
-interface StudentAnswer {
+export interface RegularStudentAnswer {
   id: string;
   question_id: string;
   answer: any;
@@ -56,12 +56,16 @@ interface StudentAnswer {
   tutor_feedback: string | null;
 }
 
+// Keep internal aliases for the existing hook code
+type Question = RegularQuestion;
+type StudentAnswer = RegularStudentAnswer;
+
 /* ------------------------------------------------------------------ */
 /*  Pure helper functions (no React state)                             */
 /* ------------------------------------------------------------------ */
 
 /** Flexible answer comparison: numeric, fraction, percentage equivalence */
-function compareAnswersFlexibly(studentValue: any, correctValue: any): boolean {
+export function compareAnswersFlexibly(studentValue: any, correctValue: any): boolean {
   const studentStr = String(studentValue || '').trim();
   const correctStr = String(correctValue || '').trim();
 
@@ -100,7 +104,7 @@ function compareAnswersFlexibly(studentValue: any, correctValue: any): boolean {
 }
 
 /** Check if a student answer is correct, handling all question types */
-function checkIfCorrect(question: Question, studentAnswer: StudentAnswer | null): boolean {
+export function checkIfCorrect(question: Question, studentAnswer: StudentAnswer | null): boolean {
   if (!studentAnswer || !studentAnswer.answer) return false;
 
   const studentAns = studentAnswer.answer;
@@ -702,6 +706,7 @@ export function useRegularTestResults(
         sourceId: id,
         title,
         subtitle,
+        studentName: studentData?.name ?? undefined,
         completedAt: assignmentData.completed_at ?? undefined,
         scoreRaw: correctCount,
         scoreTotal: totalCount,

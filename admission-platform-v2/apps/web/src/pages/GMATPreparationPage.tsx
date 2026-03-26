@@ -80,7 +80,7 @@ import { GMATSidebar, type GMATViewSection } from '../components/GMATSidebar';
 import { GMATViewToggle } from '../components/GMATViewToggle';
 import { GMATAnalyticsModal } from '../components/GMATAnalyticsModal';
 import { GMATMaterialsContent } from '../components/GMATMaterialsContent';
-import { computeGmatScoreFromSections } from '../lib/gmat/scoreComputation';
+import { computeGmatScoreFromSections, readIrtSnapshotFromMetadata } from '../lib/gmat/scoreComputation';
 
 // Student info for tutor view
 interface StudentInfo {
@@ -1550,7 +1550,10 @@ export default function GMATPreparationPage() {
                                 )}
                               </div>
                               {(() => {
-                                const irtScore = computeGmatScoreFromSections((res as any).metadata?.section_scores);
+                                const meta = (res as any).metadata;
+                                const irtScore =
+                                  readIrtSnapshotFromMetadata(meta) ??
+                                  computeGmatScoreFromSections(meta?.section_scores);
                                 return (
                                   <div className="text-right">
                                     <div className="text-2xl font-bold text-indigo-600">
