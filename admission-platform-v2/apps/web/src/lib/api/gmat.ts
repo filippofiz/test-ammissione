@@ -457,24 +457,12 @@ export async function addSeenQuestions(
     return;
   }
 
-  // Get current seen questions
-  const progress = await getStudentGMATProgress(studentId);
-  if (!progress) {
-    console.warn('Cannot add seen questions: student has no GMAT progress record');
-    return;
-  }
-
-  // Merge new question IDs with existing ones (avoid duplicates)
-  const existingIds = new Set(progress.seen_question_ids);
-  questionIds.forEach(id => existingIds.add(id));
-  const updatedIds = Array.from(existingIds);
-
-  const { error } = await supabase
-    .from('2V_gmat_student_progress')
-    .update({
-      seen_question_ids: updatedIds,
-    })
-    .eq('student_id', studentId);
+  // Use SECURITY DEFINER RPC — the UPDATE policy on 2V_gmat_student_progress
+  // is tutor-only, so a direct .update() from a student session is silently ignored.
+  const { error } = await supabase.rpc('add_gmat_seen_questions', {
+    p_student_id: studentId,
+    p_question_ids: questionIds,
+  });
 
   if (error) {
     console.error('Error adding seen questions:', error);
@@ -913,11 +901,12 @@ export async function getPlacementAssessmentQuestions(
     return { questions: [], error: 'Failed to fetch questions' };
   }
 
-  // Group questions by section and difficulty, excluding seen questions
-  const questionsBySection: Record<string, Record<string, Array<{ id: string; section: string; difficulty: string }>>> = {
-    QR: { easy: [], medium: [], hard: [] },
-    DI: { easy: [], medium: [], hard: [] },
-    VR: { easy: [], medium: [], hard: [] },
+  // Group questions by section and difficulty — two buckets: unseen and seen (fallback)
+  type QItem = { id: string; section: string; difficulty: string };
+  const questionsBySection: Record<string, Record<string, { unseen: QItem[]; seen: QItem[] }>> = {
+    QR: { easy: { unseen: [], seen: [] }, medium: { unseen: [], seen: [] }, hard: { unseen: [], seen: [] } },
+    DI: { easy: { unseen: [], seen: [] }, medium: { unseen: [], seen: [] }, hard: { unseen: [], seen: [] } },
+    VR: { easy: { unseen: [], seen: [] }, medium: { unseen: [], seen: [] }, hard: { unseen: [], seen: [] } },
   };
 
   // Map section names to codes
@@ -931,38 +920,43 @@ export async function getPlacementAssessmentQuestions(
   };
 
   for (const q of allQuestions) {
-    if (seenIds.has(q.id)) continue;
-
     const sectionCode = sectionMapping[q.section] || q.section;
     const difficulty = (q.difficulty || 'medium').toLowerCase();
 
     if (questionsBySection[sectionCode] && questionsBySection[sectionCode][difficulty]) {
-      questionsBySection[sectionCode][difficulty].push({
-        id: q.id,
-        section: sectionCode,
-        difficulty,
-      });
+      const item = { id: q.id, section: sectionCode, difficulty };
+      if (seenIds.has(q.id)) {
+        questionsBySection[sectionCode][difficulty].seen.push(item);
+      } else {
+        questionsBySection[sectionCode][difficulty].unseen.push(item);
+      }
     }
   }
 
   // Select questions: 5 easy + 5 medium + 5 hard per section
+  // If unseen pool is short for a bucket, fill remaining slots from seen questions (fallback)
   const selectedQuestions: Array<{ id: string; section: string; difficulty: string }> = [];
 
   for (const section of PLACEMENT_CONFIG.sections) {
     for (const difficulty of ['easy', 'medium', 'hard'] as const) {
-      const available = questionsBySection[section][difficulty];
+      const { unseen, seen } = questionsBySection[section][difficulty];
       const needed = PLACEMENT_CONFIG.difficultyDistribution[difficulty];
 
-      if (available.length < needed) {
+      const shuffledUnseen = [...unseen].sort(() => Math.random() - 0.5);
+      const fromUnseen = shuffledUnseen.slice(0, needed);
+      const stillNeeded = needed - fromUnseen.length;
+
+      const shuffledSeen = [...seen].sort(() => Math.random() - 0.5);
+      const fromSeen = shuffledSeen.slice(0, stillNeeded);
+
+      if (fromUnseen.length + fromSeen.length < needed) {
         return {
           questions: [],
-          error: `Not enough ${difficulty} questions for ${section}. Need ${needed}, have ${available.length}`,
+          error: `Not enough ${difficulty} questions for ${section}. Need ${needed}, have ${fromUnseen.length + fromSeen.length}`,
         };
       }
 
-      // Shuffle and select
-      const shuffled = [...available].sort(() => Math.random() - 0.5);
-      selectedQuestions.push(...shuffled.slice(0, needed));
+      selectedQuestions.push(...fromUnseen, ...fromSeen);
     }
   }
 
@@ -1207,43 +1201,48 @@ export async function getSectionAssessmentQuestions(
     return { questions: [], error: 'Failed to fetch questions' };
   }
 
-  // Group questions by difficulty, excluding seen questions
-  const questionsByDifficulty: Record<string, Array<{ id: string; section: string; difficulty: string }>> = {
-    easy: [],
-    medium: [],
-    hard: [],
+  // Group questions by difficulty — two buckets: unseen and seen (fallback)
+  const questionsByDifficulty: Record<string, { unseen: Array<{ id: string; section: string; difficulty: string }>; seen: Array<{ id: string; section: string; difficulty: string }> }> = {
+    easy: { unseen: [], seen: [] },
+    medium: { unseen: [], seen: [] },
+    hard: { unseen: [], seen: [] },
   };
 
   for (const q of allQuestions) {
-    if (seenIds.has(q.id)) continue;
-
     const difficulty = (q.difficulty || 'medium').toLowerCase();
     if (questionsByDifficulty[difficulty]) {
-      questionsByDifficulty[difficulty].push({
-        id: q.id,
-        section: section,
-        difficulty,
-      });
+      const item = { id: q.id, section: section, difficulty };
+      if (seenIds.has(q.id)) {
+        questionsByDifficulty[difficulty].seen.push(item);
+      } else {
+        questionsByDifficulty[difficulty].unseen.push(item);
+      }
     }
   }
 
   // Select questions according to cycle distribution
+  // If unseen pool is short for a bucket, fill remaining slots from seen questions (fallback)
   const selectedQuestions: Array<{ id: string; section: string; difficulty: string }> = [];
 
   for (const difficulty of ['easy', 'medium', 'hard'] as const) {
-    const available = questionsByDifficulty[difficulty];
+    const { unseen, seen } = questionsByDifficulty[difficulty];
     const needed = distribution[difficulty];
 
-    if (available.length < needed) {
+    const shuffledUnseen = [...unseen].sort(() => Math.random() - 0.5);
+    const fromUnseen = shuffledUnseen.slice(0, needed);
+    const stillNeeded = needed - fromUnseen.length;
+
+    const shuffledSeen = [...seen].sort(() => Math.random() - 0.5);
+    const fromSeen = shuffledSeen.slice(0, stillNeeded);
+
+    if (fromUnseen.length + fromSeen.length < needed) {
       return {
         questions: [],
-        error: `Not enough ${difficulty} questions for ${config.fullName}. Need ${needed}, have ${available.length}`,
+        error: `Not enough ${difficulty} questions for ${config.fullName}. Need ${needed}, have ${fromUnseen.length + fromSeen.length}`,
       };
     }
 
-    // Shuffle and select
-    const shuffled = [...available].sort(() => Math.random() - 0.5);
-    selectedQuestions.push(...shuffled.slice(0, needed));
+    selectedQuestions.push(...fromUnseen, ...fromSeen);
   }
 
   // Verify total count
@@ -1662,44 +1661,49 @@ export async function getMockSimulationQuestions(
       };
     }
 
-    // Group questions by difficulty, excluding seen questions
-    const questionsByDifficulty: Record<string, Array<{ id: string; section: GmatSection; difficulty: string }>> = {
-      easy: [],
-      medium: [],
-      hard: [],
+    // Group questions by difficulty — two buckets: unseen and seen (fallback)
+    const questionsByDifficulty: Record<string, { unseen: Array<{ id: string; section: GmatSection; difficulty: string }>; seen: Array<{ id: string; section: GmatSection; difficulty: string }> }> = {
+      easy: { unseen: [], seen: [] },
+      medium: { unseen: [], seen: [] },
+      hard: { unseen: [], seen: [] },
     };
 
     for (const q of allQuestions) {
-      if (seenIds.has(q.id)) continue;
-
       const difficulty = (q.difficulty || 'medium').toLowerCase();
       if (questionsByDifficulty[difficulty]) {
-        questionsByDifficulty[difficulty].push({
-          id: q.id,
-          section: section,
-          difficulty,
-        });
+        const item = { id: q.id, section: section, difficulty };
+        if (seenIds.has(q.id)) {
+          questionsByDifficulty[difficulty].seen.push(item);
+        } else {
+          questionsByDifficulty[difficulty].unseen.push(item);
+        }
       }
     }
 
     // Select questions according to cycle distribution
+    // If unseen pool is short for a bucket, fill remaining slots from seen questions (fallback)
     const selectedQuestions: Array<{ id: string; section: GmatSection; difficulty: string }> = [];
 
     for (const difficulty of ['easy', 'medium', 'hard'] as const) {
-      const available = questionsByDifficulty[difficulty];
+      const { unseen, seen } = questionsByDifficulty[difficulty];
       const needed = distribution[difficulty];
 
-      if (available.length < needed) {
+      const shuffledUnseen = [...unseen].sort(() => Math.random() - 0.5);
+      const fromUnseen = shuffledUnseen.slice(0, needed);
+      const stillNeeded = needed - fromUnseen.length;
+
+      const shuffledSeen = [...seen].sort(() => Math.random() - 0.5);
+      const fromSeen = shuffledSeen.slice(0, stillNeeded);
+
+      if (fromUnseen.length + fromSeen.length < needed) {
         return {
           questions: [],
           questionsBySection: { QR: [], DI: [], VR: [] },
-          error: `Not enough ${difficulty} questions for ${section}. Need ${needed}, have ${available.length}`,
+          error: `Not enough ${difficulty} questions for ${section}. Need ${needed}, have ${fromUnseen.length + fromSeen.length}`,
         };
       }
 
-      // Shuffle and select
-      const shuffled = [...available].sort(() => Math.random() - 0.5);
-      selectedQuestions.push(...shuffled.slice(0, needed));
+      selectedQuestions.push(...fromUnseen, ...fromSeen);
     }
 
     // Verify section count
@@ -1789,24 +1793,24 @@ export async function getMockSimulationPool(
       return { ...empty, error: `Failed to fetch questions for ${section}` };
     }
 
-    // Exclude already-seen questions and shuffle for randomness
-    poolBySection[section] = allQuestions
+    // Prefer unseen questions; fall back to seen ones if the unseen pool is too small
+    const unseen = allQuestions
       .filter(q => !seenIds.has(q.id))
-      .map(q => ({
-        id: q.id,
-        section,
-        difficulty: (q.difficulty || 'medium').toLowerCase(),
-      }))
-      .sort(() => Math.random() - 0.5);
+      .map(q => ({ id: q.id, section, difficulty: (q.difficulty || 'medium').toLowerCase() }));
+    const seen = allQuestions
+      .filter(q => seenIds.has(q.id))
+      .map(q => ({ id: q.id, section, difficulty: (q.difficulty || 'medium').toLowerCase() }));
+
+    poolBySection[section] = [...unseen, ...seen].sort(() => Math.random() - 0.5);
   }
 
-  // Verify we have enough questions (need at least the section target count)
+  // Verify we have enough questions in total (unseen + fallback seen)
   const sectionTargets = MOCK_SIMULATION_CONFIG.sections;
   for (const section of ['QR', 'DI', 'VR'] as GmatSection[]) {
     if (poolBySection[section].length < sectionTargets[section].questions) {
       return {
         ...empty,
-        error: `Not enough unseen questions for ${section}. Need ${sectionTargets[section].questions}, have ${poolBySection[section].length}. Please contact your tutor.`,
+        error: `Not enough questions for ${section}. Need ${sectionTargets[section].questions}, have ${poolBySection[section].length}. Please contact your tutor.`,
       };
     }
   }
