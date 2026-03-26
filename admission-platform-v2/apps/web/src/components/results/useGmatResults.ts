@@ -70,6 +70,17 @@ export function useGmatResults(assessmentId: string | undefined): UseGmatResults
 
       setAssessment(result);
 
+      // Fetch student name for display in comparison view
+      let gmatStudentName: string | undefined;
+      if (result.student_id) {
+        const { data: profileData } = await supabase
+          .from('2V_profiles')
+          .select('name')
+          .eq('id', result.student_id)
+          .single();
+        gmatStudentName = profileData?.name ?? undefined;
+      }
+
       // Parse answers_data and bookmarks
       const answersData = assessmentData.answers_data as Record<string, {
         answer: any;
@@ -243,6 +254,7 @@ export function useGmatResults(assessmentId: string | undefined): UseGmatResults
         assessmentType: result.assessment_type,
         gmatSection: result.section ?? undefined,
         topicName: result.topic ? formatTopicName(result.topic) : undefined,
+        studentName: gmatStudentName,
       };
 
       setData(unified);

@@ -15,6 +15,7 @@ import { MathJaxRenderer } from '../MathJaxRenderer';
 import { normalizeWhitespace, normalizeOptionText } from '../../lib/textUtils';
 import { ExplanationDisplay } from './ExplanationDisplay';
 import { ImageWithFallback } from '../ImageWithFallback';
+import { ComparisonChips, type ComparisonSlots } from './ComparisonChips';
 
 interface MSRSource {
   content?: string;
@@ -43,6 +44,8 @@ interface MSRQuestionProps {
   correctAnswers?: string[];
   showResults?: boolean;
   explanation?: string;
+  /** Comparison chips keyed by "q<subIndex>_<optionKey>" e.g. "q0_a", "q1_b" */
+  comparisonSlots?: ComparisonSlots;
 }
 
 export function MSRQuestion({
@@ -55,6 +58,7 @@ export function MSRQuestion({
   correctAnswers = [],
   showResults = false,
   explanation,
+  comparisonSlots,
 }: MSRQuestionProps) {
   const [activeTab, setActiveTab] = useState(0);
 
@@ -128,6 +132,7 @@ export function MSRQuestion({
           correctAnswers={correctAnswers}
           showResults={showResults}
           readOnly={readOnly}
+          comparisonSlots={comparisonSlots}
         />
       ) : (
         <CardQuestions
@@ -137,6 +142,7 @@ export function MSRQuestion({
           correctAnswers={correctAnswers}
           showResults={showResults}
           readOnly={readOnly}
+          comparisonSlots={comparisonSlots}
         />
       )}
 
@@ -157,6 +163,7 @@ interface SubQuestionsProps {
   correctAnswers: string[];
   showResults: boolean;
   readOnly: boolean;
+  comparisonSlots?: ComparisonSlots;
 }
 
 function TabularQuestions({
@@ -167,6 +174,7 @@ function TabularQuestions({
   correctAnswers,
   showResults,
   readOnly,
+  comparisonSlots,
 }: SubQuestionsProps) {
   const optionKeys = Object.keys(questions[0].options);
   const optionLabels = Object.values(questions[0].options);
@@ -231,13 +239,16 @@ function TabularQuestions({
 
                     return (
                       <td key={key} className="px-6 py-3 text-center">
-                        <button
-                          onClick={() => !readOnly && onAnswerChange(qIndex, key)}
-                          className={btnClass + (readOnly ? ' cursor-default pointer-events-none' : ' cursor-pointer')}
-                          title={optionLabels[optionKeys.indexOf(key)]}
-                        >
-                          {icon}
-                        </button>
+                        <div className="flex flex-col items-center gap-1">
+                          <button
+                            onClick={() => !readOnly && onAnswerChange(qIndex, key)}
+                            className={btnClass + (readOnly ? ' cursor-default pointer-events-none' : ' cursor-pointer')}
+                            title={optionLabels[optionKeys.indexOf(key)]}
+                          >
+                            {icon}
+                          </button>
+                          <ComparisonChips slotKey={`q${qIndex}_${key}`} comparisonSlots={comparisonSlots} />
+                        </div>
                       </td>
                     );
                   })}
@@ -260,6 +271,7 @@ function CardQuestions({
   correctAnswers,
   showResults,
   readOnly,
+  comparisonSlots,
 }: SubQuestionsProps) {
   return (
     <div className="space-y-6">
@@ -334,15 +346,7 @@ function CardQuestions({
                         ) : (
                           value && <MathJaxRenderer>{normalizeOptionText(value)}</MathJaxRenderer>
                         )}
-                        {showResults && isSelected && isCorrect && (
-                          <div className="text-xs text-green-700 font-semibold mt-1">Your answer - Correct!</div>
-                        )}
-                        {isWrongSelection && (
-                          <div className="text-xs text-red-700 font-semibold mt-1">Your answer</div>
-                        )}
-                        {isCorrectOption && !isSelected && (
-                          <div className="text-xs text-green-700 font-semibold mt-1">Correct answer</div>
-                        )}
+                        <ComparisonChips slotKey={`q${qIndex}_${key}`} comparisonSlots={comparisonSlots} />
                       </div>
                       {isSelected && isCorrect && (
                         <FontAwesomeIcon icon={faCheckCircle} className="text-green-600 text-xl" />

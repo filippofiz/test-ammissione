@@ -9,6 +9,7 @@ import { MathJaxRenderer } from '../MathJaxRenderer';
 import { SortableTable } from '../SortableTable';
 import { normalizeWhitespace } from '../../lib/textUtils';
 import { ExplanationDisplay } from './ExplanationDisplay';
+import { ComparisonChips, type ComparisonSlots } from './ComparisonChips';
 
 interface TAStatement {
   text: string;
@@ -30,6 +31,8 @@ interface TAQuestionProps {
   correctAnswers?: Record<number, 'true' | 'false'>; // For results view - shows correct answers
   showResults?: boolean; // For results view - displays answer feedback
   explanation?: string; // For results view - shows explanation after answer
+  /** Comparison chips keyed by "stmt<index>_true" or "stmt<index>_false" */
+  comparisonSlots?: ComparisonSlots;
 }
 
 export function TAQuestion({
@@ -47,6 +50,7 @@ export function TAQuestion({
   correctAnswers = {},
   showResults = false,
   explanation,
+  comparisonSlots,
 }: TAQuestionProps) {
   // Transform correctAnswers if needed
   // Database stores as: {stmt0: "col1", stmt1: "col2"} where col1=true, col2=false
@@ -168,15 +172,7 @@ export function TAQuestion({
                         <FontAwesomeIcon icon={faCheckCircle} className="text-brand-green" />
                       )}
                     </div>
-                    {showResults && isTrue && trueIsCorrect && (
-                      <div className="text-xs text-green-700 font-semibold">Your answer - Correct!</div>
-                    )}
-                    {selectedTrueIsWrong && (
-                      <div className="text-xs text-red-700 font-semibold">Your answer</div>
-                    )}
-                    {trueIsCorrect && !isTrue && (
-                      <div className="text-xs text-green-700 font-semibold">Correct answer</div>
-                    )}
+                    <ComparisonChips slotKey={`stmt${index}_true`} comparisonSlots={comparisonSlots} />
                   </div>
                 </button>
 
@@ -222,15 +218,7 @@ export function TAQuestion({
                         <FontAwesomeIcon icon={faCheckCircle} className="text-brand-green" />
                       )}
                     </div>
-                    {showResults && isFalse && falseIsCorrect && (
-                      <div className="text-xs text-green-700 font-semibold">Your answer - Correct!</div>
-                    )}
-                    {selectedFalseIsWrong && (
-                      <div className="text-xs text-red-700 font-semibold">Your answer</div>
-                    )}
-                    {falseIsCorrect && !isFalse && (
-                      <div className="text-xs text-green-700 font-semibold">Correct answer</div>
-                    )}
+                    <ComparisonChips slotKey={`stmt${index}_false`} comparisonSlots={comparisonSlots} />
                   </div>
                 </button>
               </div>

@@ -17,6 +17,7 @@ import { TAQuestion } from '@/components/questions/TAQuestion';
 import { TPAQuestion } from '@/components/questions/TPAQuestion';
 import { MultipleChoiceQuestion } from '@/components/questions/MultipleChoiceQuestion';
 import { QuestionImage } from '@/components/test/QuestionImage';
+import type { ComparisonSlots } from '@/components/questions/ComparisonChips';
 
 /**
  * Question data structure from database
@@ -156,6 +157,8 @@ export interface QuestionRendererProps {
   explanation?: string;
   /** Hide question text (for multi-question view where text is shown separately) */
   hideQuestionText?: boolean;
+  /** Comparison student chips to render inline on answer slots (results view, tutor only) */
+  comparisonSlots?: ComparisonSlots;
 }
 
 /**
@@ -236,6 +239,7 @@ export function QuestionRenderer({
   readOnly = false,
   explanation,
   hideQuestionText = false,
+  comparisonSlots,
 }: QuestionRendererProps) {
   const { t } = useTranslation();
 
@@ -277,6 +281,7 @@ export function QuestionRenderer({
         showResults={showResults}
         readOnly={readOnly}
         explanation={explanation}
+        comparisonSlots={comparisonSlots}
       />
     );
   }
@@ -304,6 +309,7 @@ export function QuestionRenderer({
         correctAnswers={correctMSRAnswers}
         showResults={showResults}
         readOnly={readOnly}
+        comparisonSlots={comparisonSlots}
       />
     );
   }
@@ -336,6 +342,7 @@ export function QuestionRenderer({
         correctBlank2={correctAnswerData}
         showResults={showResults}
         readOnly={readOnly}
+        comparisonSlots={comparisonSlots}
       />
     );
   }
@@ -370,6 +377,7 @@ export function QuestionRenderer({
         correctAnswers={correctTAAnswers}
         showResults={showResults}
         readOnly={readOnly}
+        comparisonSlots={comparisonSlots}
       />
     );
   }
@@ -405,6 +413,7 @@ export function QuestionRenderer({
         correctColumn2={correctTPAAnswers}
         showResults={showResults}
         readOnly={readOnly}
+        comparisonSlots={comparisonSlots}
       />
     );
   }
@@ -431,6 +440,7 @@ export function QuestionRenderer({
         readOnly={readOnly}
         explanation={explanation}
         hideQuestionText={hideQuestionText}
+        comparisonSlots={comparisonSlots}
       />
     );
   }

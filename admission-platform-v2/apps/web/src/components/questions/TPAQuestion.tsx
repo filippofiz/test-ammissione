@@ -8,6 +8,7 @@ import { faCheckCircle, faTimesCircle } from '@fortawesome/free-solid-svg-icons'
 import { MathJaxRenderer } from '../MathJaxRenderer';
 import { normalizeWhitespace, normalizeOptionText } from '../../lib/textUtils';
 import { ExplanationDisplay } from './ExplanationDisplay';
+import { ComparisonChips, type ComparisonSlots } from './ComparisonChips';
 
 interface TPAQuestionProps {
   scenario: string;
@@ -24,6 +25,8 @@ interface TPAQuestionProps {
   correctColumn2?: any; // For results view - can be string or object from DB
   showResults?: boolean; // For results view - displays answer feedback
   explanation?: string; // For results view - shows explanation after answer
+  /** Comparison chips keyed by "col1_<optionValue>" or "col2_<optionValue>" */
+  comparisonSlots?: ComparisonSlots;
 }
 
 export function TPAQuestion({
@@ -40,6 +43,7 @@ export function TPAQuestion({
   correctColumn2,
   showResults = false,
   explanation,
+  comparisonSlots,
 }: TPAQuestionProps) {
   // Normalize correct answers
   // Database stores as object: {col1: "option1", col2: "option2"}
@@ -109,20 +113,11 @@ export function TPAQuestion({
                 }`}>
                   <div>
                     <MathJaxRenderer>{normalizeOptionText(option)}</MathJaxRenderer>
-                    {showResults && ((isSelectedCol1 && isCorrectCol1) || (isSelectedCol2 && isCorrectCol2)) && (
-                      <div className="text-xs text-green-700 font-semibold mt-1">Your answer - Correct!</div>
-                    )}
-                    {(isWrongCol1 || isWrongCol2) && (
-                      <div className="text-xs text-red-700 font-semibold mt-1">Your answer</div>
-                    )}
-                    {((isCorrectCol1 && !isSelectedCol1) || (isCorrectCol2 && !isSelectedCol2)) && (
-                      <div className="text-xs text-green-700 font-semibold mt-1">Correct answer</div>
-                    )}
                   </div>
                 </div>
 
                 {/* Column 1 Selection */}
-                <div className={`px-4 py-4 flex items-center justify-center border-r-2 border-gray-200 ${
+                <div className={`px-4 py-4 flex flex-col items-center justify-center gap-1 border-r-2 border-gray-200 ${
                   isCorrectCol1 && !isSelectedCol1 ? 'bg-green-50/30' : ''
                 }`}>
                   <button
@@ -151,10 +146,11 @@ export function TPAQuestion({
                       <FontAwesomeIcon icon={faCheckCircle} className="text-white text-xl" />
                     )}
                   </button>
+                  <ComparisonChips slotKey={`col1_${option}`} comparisonSlots={comparisonSlots} />
                 </div>
 
                 {/* Column 2 Selection */}
-                <div className={`px-4 py-4 flex items-center justify-center ${
+                <div className={`px-4 py-4 flex flex-col items-center justify-center gap-1 ${
                   isCorrectCol2 && !isSelectedCol2 ? 'bg-green-50/30' : ''
                 }`}>
                   <button
@@ -183,6 +179,7 @@ export function TPAQuestion({
                       <FontAwesomeIcon icon={faCheckCircle} className="text-white text-xl" />
                     )}
                   </button>
+                  <ComparisonChips slotKey={`col2_${option}`} comparisonSlots={comparisonSlots} />
                 </div>
               </div>
             );

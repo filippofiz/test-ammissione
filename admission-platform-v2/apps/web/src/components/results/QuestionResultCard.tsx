@@ -7,7 +7,7 @@
  * - Footer: tutor review section (regular tests, tutor only)
  */
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useMemo } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faCheckCircle,
@@ -19,7 +19,9 @@ import {
   faEyeSlash,
 } from '@fortawesome/free-solid-svg-icons';
 import { QuestionRenderer, type UnifiedAnswer } from '../test/QuestionRenderer';
-import { type UnifiedQuestionResult, getSectionFullName, getQuestionCategory } from './types';
+import { type UnifiedQuestionResult, getSectionFullName, getQuestionCategory, type ComparisonIndicator } from './types';
+import { NoAnswerCards, STUDENT_NAME_COLORS } from '../questions/ComparisonChips';
+import type { ComparisonSlots, NoAnswerEntry } from '../questions/ComparisonChips';
 
 export interface QuestionResultCardProps {
   result: UnifiedQuestionResult;
@@ -31,6 +33,10 @@ export interface QuestionResultCardProps {
   isStudentView?: boolean;
   /** Callback for saving question review (tutor only) */
   onReviewSave?: (questionId: string, needsReview: boolean, notes: string) => void;
+  /** Comparison indicators for additional students (tutor view, multi-student comparison) */
+  comparisonIndicators?: ComparisonIndicator[];
+  /** Name of the primary student — shown as a chip alongside comparison students */
+  primaryStudentName?: string | null;
 }
 
 /**
@@ -106,12 +112,163 @@ function toRendererAnswer(
 // Noop answer change handler for read-only mode
 const noopAnswerChange = () => {};
 
+/**
+ * Build a ComparisonSlots map from comparison indicators for a given question.
+ * Each indicator's studentAnswer is mapped to the correct slot key(s) based on
+ * the question's di_type.
+ *
+ * Primary student uses colorIndex 4 (blue); comparison students use 0-3.
+ */
+function buildComparisonSlots(
+  indicators: ComparisonIndicator[],
+  questionData: any,
+  primaryStudentName: string | null | undefined,
+  primaryStudentAnswer: any,
+  primaryHasAnswer: boolean,
+  primaryIsCorrect: boolean,
+  primaryTimeSpentSeconds: number | undefined,
+): { slots: ComparisonSlots; noAnswerEntries: NoAnswerEntry[] } {
+  const slots: ComparisonSlots = {};
+  const noAnswerEntries: NoAnswerEntry[] = [];
+
+  const addToSlot = (
+    key: string,
+    studentName: string | null,
+    colorIndex: number,
+    isCorrect?: boolean,
+    timeSpentSeconds?: number,
+  ) => {
+    if (!slots[key]) slots[key] = [];
+    slots[key].push({ studentName, colorIndex, isCorrect, timeSpentSeconds });
+  };
+
+  const diType = questionData?.di_type as string | undefined;
+
+  // Build unified list: primary student first (colorIndex 4 = blue), then comparison students (0-3)
+  const allIndicators: Array<{
+    ind: ComparisonIndicator;
+    colorIndex: number;
+    timeSpentSeconds?: number;
+  }> = [];
+
+  if (primaryHasAnswer && primaryStudentAnswer !== null && primaryStudentAnswer !== undefined) {
+    allIndicators.push({
+      ind: {
+        studentName: primaryStudentName ?? null,
+        isCorrect: primaryIsCorrect,
+        hasAnswer: primaryHasAnswer,
+        studentAnswer: primaryStudentAnswer,
+      },
+      colorIndex: 4,
+      timeSpentSeconds: primaryTimeSpentSeconds,
+    });
+  } else {
+    // Primary student didn't answer — add to no-answer list
+    noAnswerEntries.push({
+      studentName: primaryStudentName ?? null,
+      colorIndex: 4,
+      timeSpentSeconds: primaryTimeSpentSeconds,
+      // Primary always "saw" the question (it's their own result page)
+      state: 'skipped',
+    });
+  }
+
+  indicators.forEach((ind, i) => {
+    allIndicators.push({ ind, colorIndex: i, timeSpentSeconds: ind.timeSpentSeconds });
+  });
+
+  allIndicators.forEach(({ ind, colorIndex, timeSpentSeconds }) => {
+    if (!ind.hasAnswer || ind.studentAnswer === null || ind.studentAnswer === undefined) {
+      // Unreached = never got to this question (no time at all); skipped = saw it but didn't answer
+      const state: 'skipped' | 'unreached' = timeSpentSeconds === undefined ? 'unreached' : 'skipped';
+      noAnswerEntries.push({
+        studentName: ind.studentName,
+        colorIndex,
+        timeSpentSeconds,
+        state,
+      });
+      return;
+    }
+
+    let val = ind.studentAnswer;
+    if (!diType && typeof val === 'object' && val !== null && 'answer' in val) {
+      val = val.answer;
+    }
+
+    switch (diType) {
+      case 'DS': {
+        const key = typeof val === 'string' ? val.toUpperCase() : String(val).toUpperCase();
+        addToSlot(key, ind.studentName, colorIndex, ind.isCorrect, timeSpentSeconds);
+        break;
+      }
+      case 'MSR': {
+        const arr = Array.isArray(val) ? val : [];
+        arr.forEach((answer: any, qi: number) => {
+          if (answer !== null && answer !== undefined && answer !== '') {
+            addToSlot(`q${qi}_${String(answer)}`, ind.studentName, colorIndex, ind.isCorrect, timeSpentSeconds);
+          }
+        });
+        break;
+      }
+      case 'GI': {
+        let b1: string | undefined;
+        let b2: string | undefined;
+        if (Array.isArray(val)) {
+          b1 = val[0]; b2 = val[1];
+        } else if (typeof val === 'object' && val !== null) {
+          b1 = val.part1 ?? val[0];
+          b2 = val.part2 ?? val[1];
+        }
+        if (b1) addToSlot('blank1', ind.studentName, colorIndex, ind.isCorrect, timeSpentSeconds);
+        if (b2) addToSlot('blank2', ind.studentName, colorIndex, ind.isCorrect, timeSpentSeconds);
+        break;
+      }
+      case 'TA': {
+        const answers = val?.answers ?? val;
+        if (typeof answers === 'object' && answers !== null) {
+          Object.entries(answers).forEach(([k, v]) => {
+            const idx = typeof k === 'string' && k.startsWith('stmt')
+              ? parseInt(k.replace('stmt', ''), 10)
+              : parseInt(String(k), 10);
+            const boolVal = String(v) === 'true' || String(v) === 'col1' ? 'true' : 'false';
+            addToSlot(`stmt${idx}_${boolVal}`, ind.studentName, colorIndex, ind.isCorrect, timeSpentSeconds);
+          });
+        }
+        break;
+      }
+      case 'TPA': {
+        const tpaVal = val?.answers ?? val;
+        if (typeof tpaVal === 'object' && tpaVal !== null) {
+          const c1 = tpaVal.col1 ?? tpaVal.column1 ?? tpaVal.part1;
+          const c2 = tpaVal.col2 ?? tpaVal.column2 ?? tpaVal.part2;
+          if (c1) addToSlot(`col1_${c1}`, ind.studentName, colorIndex, ind.isCorrect, timeSpentSeconds);
+          if (c2) addToSlot(`col2_${c2}`, ind.studentName, colorIndex, ind.isCorrect, timeSpentSeconds);
+        }
+        break;
+      }
+      default: {
+        let key = typeof val === 'string' ? val : String(val);
+        if (typeof val === 'object' && val !== null && 'answer' in val) {
+          key = String(val.answer);
+        }
+        addToSlot(key.toLowerCase(), ind.studentName, colorIndex, ind.isCorrect, timeSpentSeconds);
+        addToSlot(key.toUpperCase(), ind.studentName, colorIndex, ind.isCorrect, timeSpentSeconds);
+        break;
+      }
+    }
+  });
+
+  return { slots, noAnswerEntries };
+}
+
 export function QuestionResultCard({
   result,
   hasAnswersData = true,
   language = 'it',
   isStudentView = false,
   onReviewSave,
+  comparisonIndicators,
+  primaryStudentName,
 }: QuestionResultCardProps) {
   const questionData = typeof result.question.question_data === 'string'
     ? JSON.parse(result.question.question_data)
@@ -120,23 +277,47 @@ export function QuestionResultCard({
   const category = getQuestionCategory(questionData);
   const unifiedAnswer = toRendererAnswer(result.studentAnswer, questionData);
 
-  // Border color based on correctness
-  const borderClass = !hasAnswersData
-    ? 'border-gray-100'
-    : !result.hasAnswer
-      ? 'border-purple-200'
-      : result.isCorrect
-        ? 'border-green-200'
-        : 'border-red-200';
+  const { comparisonSlots, noAnswerEntries } = useMemo(() => {
+    // Only build slots when there are comparison students
+    if (!comparisonIndicators || comparisonIndicators.length === 0) {
+      return { comparisonSlots: undefined as ComparisonSlots | undefined, noAnswerEntries: [] as NoAnswerEntry[] };
+    }
+    const { slots, noAnswerEntries } = buildComparisonSlots(
+      comparisonIndicators,
+      questionData,
+      primaryStudentName,
+      result.studentAnswer,
+      result.hasAnswer,
+      result.isCorrect,
+      result.timeSpentSeconds,
+    );
+    return { comparisonSlots: slots, noAnswerEntries };
+  }, [comparisonIndicators, questionData, primaryStudentName, result.studentAnswer, result.hasAnswer, result.isCorrect, result.timeSpentSeconds]);
 
-  // Header bg color
-  const headerClass = !hasAnswersData
+  // In comparison mode, neutralize header — correctness is conveyed by the answer cards
+  const comparisonMode = !!comparisonSlots;
+
+  // Border color based on correctness (neutral in comparison mode)
+  const borderClass = comparisonMode
+    ? 'border-gray-200'
+    : !hasAnswersData
+      ? 'border-gray-100'
+      : !result.hasAnswer
+        ? 'border-purple-200'
+        : result.isCorrect
+          ? 'border-green-200'
+          : 'border-red-200';
+
+  // Header bg color (neutral in comparison mode)
+  const headerClass = comparisonMode
     ? 'bg-gray-50 border-gray-100'
-    : !result.hasAnswer
-      ? 'bg-purple-50 border-purple-100'
-      : result.isCorrect
-        ? 'bg-green-50 border-green-100'
-        : 'bg-red-50 border-red-100';
+    : !hasAnswersData
+      ? 'bg-gray-50 border-gray-100'
+      : !result.hasAnswer
+        ? 'bg-purple-50 border-purple-100'
+        : result.isCorrect
+          ? 'bg-green-50 border-green-100'
+          : 'bg-red-50 border-red-100';
 
   return (
     <div className={`bg-white rounded-2xl shadow-lg border-2 overflow-hidden ${borderClass}`}>
@@ -145,16 +326,16 @@ export function QuestionResultCard({
         <div className="flex items-center gap-3 flex-wrap">
           <span className="text-lg font-bold text-gray-800">Q{result.order}</span>
 
-          {/* Correctness icon */}
-          {hasAnswersData && result.hasAnswer && (
+          {/* Correctness icon — hidden in comparison mode (no single student owns this header) */}
+          {!comparisonMode && hasAnswersData && result.hasAnswer && (
             <FontAwesomeIcon
               icon={result.isCorrect ? faCheckCircle : faTimesCircle}
               className={result.isCorrect ? 'text-green-600' : 'text-red-600'}
             />
           )}
 
-          {/* Not answered indicator */}
-          {hasAnswersData && !result.hasAnswer && (
+          {/* Not answered indicator — hidden in comparison mode */}
+          {!comparisonMode && hasAnswersData && !result.hasAnswer && (
             <FontAwesomeIcon icon={faEyeSlash} className="text-purple-600" title="Not Answered" />
           )}
 
@@ -205,16 +386,41 @@ export function QuestionResultCard({
           )}
         </div>
 
-        {/* Time spent */}
-        {result.timeSpentSeconds != null && result.timeSpentSeconds > 0 && (
-          <div className="flex items-center gap-1.5 text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-lg">
-            <FontAwesomeIcon icon={faClock} className="text-xs" />
-            <span className="font-medium">
-              {result.timeSpentSeconds >= 60
-                ? `${Math.floor(result.timeSpentSeconds / 60)}m ${result.timeSpentSeconds % 60}s`
-                : `${result.timeSpentSeconds}s`
-              }
-            </span>
+        {comparisonMode ? (
+          /* In comparison mode: show skipped/unreached student cards on the right of the header */
+          noAnswerEntries.length > 0 ? (
+            <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+              {noAnswerEntries.map((entry, i) => {
+                const colorIdx = entry.colorIndex === 4 ? 4 : entry.colorIndex % 4;
+                const name = entry.studentName ?? 'Student';
+                const isUnreached = entry.state === 'unreached';
+                return (
+                  <div
+                    key={i}
+                    className="inline-flex flex-col items-center justify-center gap-0.5 bg-white border border-gray-200 rounded-lg px-3 py-1.5 select-none opacity-75"
+                  >
+                    <span className={`text-xs font-bold leading-tight ${STUDENT_NAME_COLORS[colorIdx]}`}>{name}</span>
+                    <span className="text-[10px] text-gray-400 italic leading-none">
+                      {isUnreached ? 'not reached' : 'skipped'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null
+        ) : (
+          <div className="flex items-center gap-2 shrink-0">
+            {result.timeSpentSeconds != null && result.timeSpentSeconds > 0 && (
+              <div className="flex items-center gap-1.5 text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-lg">
+                <FontAwesomeIcon icon={faClock} className="text-xs" />
+                <span className="font-medium">
+                  {result.timeSpentSeconds >= 60
+                    ? `${Math.floor(result.timeSpentSeconds / 60)}m ${result.timeSpentSeconds % 60}s`
+                    : `${result.timeSpentSeconds}s`
+                  }
+                </span>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -235,6 +441,7 @@ export function QuestionResultCard({
           language={language}
           showResults={true}
           readOnly={true}
+          comparisonSlots={comparisonSlots}
         />
       </div>
 

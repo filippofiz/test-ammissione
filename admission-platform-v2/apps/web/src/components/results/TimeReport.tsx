@@ -9,7 +9,7 @@
  *  - never reached              → hatched slot (time expired before this question)
  */
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faStopwatch,
@@ -33,10 +33,24 @@ export interface TimeReportQuestion {
   category?: string | null;
 }
 
+/** A single comparison student's timing data for the TimeReport */
+export interface TimeReportComparisonStudent {
+  studentName: string | null;
+  colorIndex: number;
+  /** Map from question id → time spent in seconds (undefined = not reached) */
+  timeByQuestionId: Record<string, number | undefined>;
+  /** Map from question id → whether the student answered correctly (undefined = no answer) */
+  correctByQuestionId: Record<string, boolean | undefined>;
+}
+
 export interface TimeReportProps {
   questions: TimeReportQuestion[];
   expectedTimePerSection: Record<string, number>;
   totalTimeSeconds?: number;
+  /** Optional comparison students for the student selector */
+  comparisonStudents?: TimeReportComparisonStudent[];
+  /** Name of the primary student shown in the selector */
+  primaryStudentName?: string | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -71,17 +85,33 @@ function getState(q: TimeReportQuestion): QuestionState {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function TimeReport({ questions, expectedTimePerSection }: TimeReportProps) {
+/** Palette matching ComparisonChips */
+const COMPARISON_TICK_COLORS = ['#8b5cf6', '#f97316', '#14b8a6', '#ec4899'] as const;
+
+export function TimeReport({ questions, expectedTimePerSection, comparisonStudents, primaryStudentName }: TimeReportProps) {
   const [open, setOpen] = useState(false);
+  const [selectedStudentIdx, setSelectedStudentIdx] = useState<number | null>(null);
 
   // Count how many questions have any timing data at all
   const seen = questions.filter(q => q.timeSpentSeconds !== undefined);
   const unreachedCount = questions.length - seen.length;
 
-  // Don't render if literally nothing was tracked
-  if (seen.length === 0) return null;
+  // Active comparison student (null = primary)
+  const activeStudent = selectedStudentIdx !== null ? (comparisonStudents?.[selectedStudentIdx] ?? null) : null;
 
-  // Group into sections preserving display order
+  // Chart scale: 95th-percentile of the *active* student's times only, so each tab is self-consistent.
+  // Primary student uses their own seen times; comparison student uses their own time map.
+  const chartMax = useMemo(() => {
+    const activeTimes = activeStudent
+      ? (Object.values(activeStudent.timeByQuestionId) as (number | undefined)[])
+          .filter((t): t is number => t !== undefined && t > 0)
+          .sort((a, b) => a - b)
+      : seen.map(q => q.timeSpentSeconds!).filter(t => t > 0).sort((a, b) => a - b);
+    const p95 = activeTimes[Math.min(Math.floor(activeTimes.length * 0.95), activeTimes.length - 1)] ?? 0;
+    return Math.max(p95, ...Object.values(expectedTimePerSection), 60);
+  }, [seen, activeStudent, expectedTimePerSection]);
+
+  // Group into sections preserving display order (must be before early return for stable hook order)
   const sectionOrder: string[] = [];
   const bySection: Record<string, TimeReportQuestion[]> = {};
   for (const q of questions) {
@@ -92,13 +122,8 @@ export function TimeReport({ questions, expectedTimePerSection }: TimeReportProp
     bySection[q.section].push(q);
   }
 
-  // Chart scale: 95th-percentile of seen times so one outlier doesn't crush everything
-  const seenTimes = seen
-    .map(q => q.timeSpentSeconds!)
-    .filter(t => t > 0)
-    .sort((a, b) => a - b);
-  const p95 = seenTimes[Math.min(Math.floor(seenTimes.length * 0.95), seenTimes.length - 1)] ?? 0;
-  const chartMax = Math.max(p95, ...Object.values(expectedTimePerSection), 60);
+  // Don't render if literally nothing was tracked
+  if (seen.length === 0) return null;
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
@@ -132,8 +157,48 @@ export function TimeReport({ questions, expectedTimePerSection }: TimeReportProp
 
       {/* ── Chart body ── */}
       {open && (
-        <div className="px-6 pb-6">
+        <div className="pb-6">
+          {/* Student selector */}
+          {comparisonStudents && comparisonStudents.length > 0 && (
+            <div className="px-6 pb-4 flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-gray-400 font-medium">Viewing:</span>
+              {/* Primary student tab */}
+              <button
+                onClick={() => setSelectedStudentIdx(null)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${
+                  selectedStudentIdx === null
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-current opacity-70" />
+                {primaryStudentName ?? 'Primary student'}
+              </button>
+              {/* Comparison student tabs */}
+              {comparisonStudents.map((cs, i) => {
+                const color = COMPARISON_TICK_COLORS[cs.colorIndex % COMPARISON_TICK_COLORS.length];
+                const isSelected = selectedStudentIdx === i;
+                return (
+                  <button
+                    key={i}
+                    onClick={() => setSelectedStudentIdx(i)}
+                    style={isSelected ? { backgroundColor: color, borderColor: color, color: '#fff' } : { borderColor: '#e5e7eb' }}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${
+                      isSelected ? '' : 'bg-white text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    <span
+                      className="w-2 h-2 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: isSelected ? '#fff' : color, opacity: 0.8 }}
+                    />
+                    {cs.studentName ?? 'Student'}
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
+          <div className="px-6">
           {sectionOrder.map((section, si) => {
             const sqs = bySection[section];
             const exp = getExpected(section, expectedTimePerSection);
@@ -183,13 +248,35 @@ export function TimeReport({ questions, expectedTimePerSection }: TimeReportProp
                 {/* Bars */}
                 <div className="space-y-2">
                   {sqs.map(q => {
-                    const state = getState(q);
-                    const t = q.timeSpentSeconds ?? 0;
+                    const primaryState = getState(q);
+                    // Time displayed is from whichever student is selected
+                    const t = activeStudent
+                      ? (activeStudent.timeByQuestionId[q.id] ?? 0)
+                      : (q.timeSpentSeconds ?? 0);
                     const hasTime = t > 0;
                     const barPct = hasTime ? Math.min((t / chartMax) * 100, 100) : 0;
-                    const p: Pace = (state === 'correct' || state === 'wrong') && hasTime
-                      ? getPace(t, exp)
-                      : 'ok';
+                    const p: Pace = hasTime ? getPace(t, exp) : 'ok';
+
+                    // Bar color: always use correctness-based coloring (green/red/gray).
+                    // For comparison students derive their state from the correctness map.
+                    const comparisonState: QuestionState | null = activeStudent
+                      ? activeStudent.timeByQuestionId[q.id] === undefined
+                        ? 'unreached'
+                        : activeStudent.correctByQuestionId[q.id] === undefined
+                          ? 'skipped'
+                          : activeStudent.correctByQuestionId[q.id]
+                            ? 'correct'
+                            : 'wrong'
+                      : null;
+                    const computedBarColor = activeStudent
+                      ? barColor(comparisonState!, p)
+                      : barColor(primaryState, p);
+                    const barOpacity = hasTime ? 1 : 0.25;
+
+                    // Unreached: for primary use their state; for comparison check if they have no time
+                    const isUnreached = activeStudent
+                      ? activeStudent.timeByQuestionId[q.id] === undefined
+                      : primaryState === 'unreached';
 
                     return (
                       <div key={q.id} className="flex items-center gap-2">
@@ -201,7 +288,7 @@ export function TimeReport({ questions, expectedTimePerSection }: TimeReportProp
 
                         {/* Bar track */}
                         <div className="relative flex-1">
-                          {state === 'unreached' ? (
+                          {isUnreached ? (
                             <UnreachedTrack />
                           ) : (
                             <>
@@ -210,12 +297,12 @@ export function TimeReport({ questions, expectedTimePerSection }: TimeReportProp
                                   className="h-full rounded-full transition-all duration-300"
                                   style={{
                                     width: hasTime ? `${barPct}%` : '100%',
-                                    backgroundColor: barColor(state, p),
-                                    opacity: hasTime ? 1 : 0.25,
+                                    backgroundColor: computedBarColor,
+                                    opacity: barOpacity,
                                   }}
                                 />
                               </div>
-                              {/* Target marker — sits on top of track, outside overflow:hidden */}
+                              {/* Target marker */}
                               <div
                                 className="absolute top-0 h-4 w-0.5 bg-indigo-300 rounded-full"
                                 style={{ left: `${expPct}%`, transform: 'translateX(-50%)', opacity: 0.7 }}
@@ -225,10 +312,14 @@ export function TimeReport({ questions, expectedTimePerSection }: TimeReportProp
                         </div>
 
                         {/* Right-side info */}
-                        {state === 'unreached' ? (
+                        {isUnreached ? (
                           <UnreachedLabel />
                         ) : (
-                          <TimeLabelAndIcon t={t} p={p} state={state} />
+                          <TimeLabelAndIcon
+                            t={t}
+                            p={p}
+                            state={activeStudent ? (comparisonState ?? 'skipped') : primaryState}
+                          />
                         )}
 
                       </div>
@@ -240,22 +331,34 @@ export function TimeReport({ questions, expectedTimePerSection }: TimeReportProp
           })}
 
           {/* ── Pace summary ── */}
-          <PaceSummary questions={seen} expectedTimePerSection={expectedTimePerSection} />
+          {!activeStudent && <PaceSummary questions={seen} expectedTimePerSection={expectedTimePerSection} />}
+          {activeStudent && (() => {
+            // Build synthetic question list for the active comparison student so PaceSummary can be reused
+            const synthQuestions: TimeReportQuestion[] = questions.map(q => ({
+              ...q,
+              timeSpentSeconds: activeStudent.timeByQuestionId[q.id],
+              isCorrect: activeStudent.correctByQuestionId[q.id] ?? false,
+              hasAnswer: activeStudent.correctByQuestionId[q.id] !== undefined,
+            }));
+            const synthSeen = synthQuestions.filter(q => q.timeSpentSeconds !== undefined);
+            return <PaceSummary questions={synthSeen} expectedTimePerSection={expectedTimePerSection} />;
+          })()}
 
-          {/* ── Legend ── */}
+          {/* ── Legend ── (same palette for all student tabs: correctness + pace icons) */}
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-4 pt-4 border-t border-gray-100">
             <LegendSwatch color="#22c55e" label="Correct" />
             <LegendSwatch color="#ef4444" label="Wrong" />
             <LegendSwatch color="#9ca3af" label="Skipped" dimmed />
             <LegendSwatch hatched label="Not reached" />
             <span className="flex items-center gap-1.5 text-xs text-gray-400">
-              <FontAwesomeIcon icon={faForward} className="text-gray-300 text-[10px]" />
+              <FontAwesomeIcon icon={faForward} className="text-sky-400 text-[10px]" />
               Fast (&lt;50% target)
             </span>
             <span className="flex items-center gap-1.5 text-xs text-gray-400">
-              <FontAwesomeIcon icon={faExclamationTriangle} className="text-orange-400 text-[10px]" />
+              <FontAwesomeIcon icon={faExclamationTriangle} className="text-amber-400 text-[10px]" />
               Slow (&gt;150% target)
             </span>
+          </div>
           </div>
 
         </div>
@@ -270,6 +373,14 @@ function barColor(state: QuestionState, p: Pace): string {
   if (state === 'correct') return p === 'fast' ? '#86efac' : '#22c55e'; // green-300 / green-500
   if (state === 'wrong')   return p === 'fast' ? '#fca5a5' : '#ef4444'; // red-300   / red-500
   return '#9ca3af'; // gray-400 for skipped
+}
+
+/** Pace-only bar color used for comparison students (no correctness data) */
+function paceBarColor(p: Pace, hasTime: boolean): string {
+  if (!hasTime) return '#9ca3af';
+  if (p === 'fast') return '#38bdf8'; // sky-400
+  if (p === 'slow') return '#f59e0b'; // amber-400
+  return '#14b8a6'; // teal-500 for ok
 }
 
 // ─── Unreached track ─────────────────────────────────────────────────────────
@@ -303,17 +414,18 @@ function UnreachedLabel() {
 
 // ─── Time label + pace icon ───────────────────────────────────────────────────
 
-function TimeLabelAndIcon({ t, p, state }: { t: number; p: Pace; state: QuestionState }) {
-  const timeClass =
-    state === 'skipped'  ? 'text-gray-400 italic' :
-    p === 'slow'         ? 'text-orange-500 font-semibold' :
-    p === 'fast'         ? 'text-gray-300' :
-                           'text-gray-500';
+function TimeLabelAndIcon({ t, p, state }: { t: number; p: Pace; state: QuestionState | 'answered' }) {
+  const isSkipped = state === 'skipped';
+  const timeClass = !t || isSkipped
+    ? 'text-gray-400 italic'
+    : p === 'slow' ? 'text-amber-500 font-semibold'
+    : p === 'fast' ? 'text-sky-400'
+    : 'text-gray-500';
 
-  const icon =
-    p === 'slow' ? <FontAwesomeIcon icon={faExclamationTriangle} className="text-orange-400 text-[9px]" /> :
-    p === 'fast' ? <FontAwesomeIcon icon={faForward}             className="text-gray-300 text-[9px]"  /> :
-    null;
+  const icon = !t ? null
+    : p === 'slow' ? <FontAwesomeIcon icon={faExclamationTriangle} className="text-amber-400 text-[9px]" />
+    : p === 'fast' ? <FontAwesomeIcon icon={faForward}             className="text-sky-400 text-[9px]"   />
+    : null;
 
   return (
     <>
@@ -326,6 +438,7 @@ function TimeLabelAndIcon({ t, p, state }: { t: number; p: Pace; state: Question
     </>
   );
 }
+
 
 // ─── Pace summary ────────────────────────────────────────────────────────────
 

@@ -27,9 +27,6 @@ import {
   faClock,
   faEye,
   faEyeSlash,
-  faLock,
-  faLockOpen,
-  faCheckCircle,
   faChevronDown,
   faChevronUp,
   faTrophy,
@@ -43,15 +40,17 @@ import { MathJaxProvider } from '../components/MathJaxRenderer';
 // Shared results components
 import { ScoreSummary } from '../components/results/ScoreSummary';
 import { DifficultyBreakdown } from '../components/results/DifficultyBreakdown';
-import { TimeReport, type TimeReportQuestion } from '../components/results/TimeReport';
+import { TimeReport, type TimeReportQuestion, type TimeReportComparisonStudent } from '../components/results/TimeReport';
 import { ResultsFilterBar, type CorrectnessFilter } from '../components/results/ResultsFilterBar';
 import { QuestionResultCard } from '../components/results/QuestionResultCard';
 import { getQuestionCategory, getSectionFullName } from '../components/results/types';
-import type { UnifiedResultData, AttemptComparisonData } from '../components/results/types';
+import type { UnifiedResultData, AttemptComparisonData, ComparisonIndicator } from '../components/results/types';
 
 // Data hooks
 import { useGmatResults } from '../components/results/useGmatResults';
 import { useRegularTestResults } from '../components/results/useRegularTestResults';
+import { useCompareStudents } from '../components/results/useCompareStudents';
+import { StudentComparisonPanel } from '../components/results/StudentComparisonPanel';
 
 export default function UnifiedResultsPage() {
   const { assessmentId, assignmentId } = useParams<{
@@ -74,6 +73,14 @@ export default function UnifiedResultsPage() {
   const data: UnifiedResultData | null = isGmat ? gmat.data : regular.data;
   const loading = isGmat ? gmat.loading : regular.loading;
   const error = isGmat ? gmat.error : regular.error;
+
+  // Multi-student comparison (tutor only)
+  const compare = useCompareStudents({
+    primaryData: data,
+    isGmat,
+    primaryAssessment: isGmat ? gmat.assessment ?? null : null,
+    enabled: !isStudentView,
+  });
 
   // Filter state
   const [filterSection, setFilterSection] = useState('all');
@@ -179,6 +186,25 @@ export default function UnifiedResultsPage() {
     return { __global__: 90 };
   }, [data, isGmat]);
 
+  // TimeReport comparison students — lightweight time overlay per comparison student
+  const timeReportComparisonStudents = useMemo<TimeReportComparisonStudent[]>(() => {
+    if (isStudentView || compare.comparisonResults.length === 0) return [];
+    return compare.comparisonResults.map((cr, i) => {
+      const timeByQuestionId: Record<string, number | undefined> = {};
+      const correctByQuestionId: Record<string, boolean | undefined> = {};
+      cr.questionResults.forEach((qr, questionId) => {
+        timeByQuestionId[questionId] = qr.timeSpentSeconds;
+        correctByQuestionId[questionId] = qr.hasAnswer ? qr.isCorrect : undefined;
+      });
+      return {
+        studentName: cr.studentName,
+        colorIndex: i,
+        timeByQuestionId,
+        correctByQuestionId,
+      };
+    });
+  }, [compare.comparisonResults, isStudentView]);
+
   // Section results for IRT score report
   const sectionResults = useMemo(() => {
     if (!data) return undefined;
@@ -191,6 +217,45 @@ export default function UnifiedResultsPage() {
     });
     return result;
   }, [data]);
+
+  // Build question-level comparison indicator map.
+  // For questions a comparison student never reached, insert an explicit unreached indicator
+  // (timeSpentSeconds: undefined, hasAnswer: false) so the header card renders correctly.
+  const questionComparisonMap = useMemo(() => {
+    const map = new Map<string, ComparisonIndicator[]>();
+    for (const cr of compare.comparisonResults) {
+      // First pass: fill in what we have
+      cr.questionResults.forEach((qr, questionId) => {
+        const arr = map.get(questionId) ?? [];
+        arr.push({
+          studentName: cr.studentName,
+          isCorrect: qr.isCorrect,
+          hasAnswer: qr.hasAnswer,
+          studentAnswer: qr.studentAnswer,
+          timeSpentSeconds: qr.timeSpentSeconds,
+        });
+        map.set(questionId, arr);
+      });
+      // Second pass: for every primary question not in questionResults → unreached
+      if (data) {
+        for (const q of data.questions) {
+          const qid = q.questionId;
+          if (!cr.questionResults.has(qid)) {
+            const arr = map.get(qid) ?? [];
+            arr.push({
+              studentName: cr.studentName,
+              isCorrect: false,
+              hasAnswer: false,
+              studentAnswer: null,
+              timeSpentSeconds: undefined,
+            });
+            map.set(qid, arr);
+          }
+        }
+      }
+    }
+    return map;
+  }, [compare.comparisonResults, data]);
 
   /* ---- Loading & Error states ---- */
 
@@ -308,6 +373,8 @@ export default function UnifiedResultsPage() {
             questions={timeReportQuestions}
             expectedTimePerSection={expectedTimePerSection}
             totalTimeSeconds={data.totalTimeSeconds}
+            comparisonStudents={timeReportComparisonStudents.length > 0 ? timeReportComparisonStudents : undefined}
+            primaryStudentName={!isStudentView ? (data.studentName ?? null) : undefined}
           />
 
           {/* Results Visibility Toggle (regular tests, tutor only) */}
@@ -330,6 +397,20 @@ export default function UnifiedResultsPage() {
                 onToggle={() => setShowComparison(!showComparison)}
               />
             )}
+
+          {/* Multi-student comparison panel (tutor only) */}
+          {!isStudentView && (
+            <StudentComparisonPanel
+              availableStudents={compare.availableStudents}
+              availableLoading={compare.availableLoading}
+              comparisonResults={compare.comparisonResults}
+              loadingIds={compare.loadingIds}
+              errorIds={compare.errorIds}
+              onAdd={compare.addStudent}
+              onRemove={compare.removeStudent}
+              primaryData={data}
+            />
+          )}
 
           {/* Filter Bar */}
           <ResultsFilterBar
@@ -363,6 +444,8 @@ export default function UnifiedResultsPage() {
                 language={language}
                 isStudentView={isStudentView}
                 onReviewSave={!isGmat && !isStudentView ? regular.saveQuestionReview : undefined}
+                comparisonIndicators={!isStudentView ? questionComparisonMap.get(result.questionId) : undefined}
+                primaryStudentName={!isStudentView ? (data.studentName ?? null) : undefined}
               />
             ))}
 
@@ -393,80 +476,53 @@ function ResultsVisibilityToggle({
   onToggle: () => void;
 }) {
   return (
-    <div className="bg-white rounded-xl shadow-md p-6 mb-6 border-2 border-blue-200">
-      <div className="flex items-center justify-between">
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
+      <div className="flex items-center justify-between px-6 py-4">
+        {/* Icon + label */}
         <div className="flex items-center gap-3">
-          <div
-            className={`w-12 h-12 rounded-full flex items-center justify-center ${
-              resultsViewable ? 'bg-green-100' : 'bg-gray-100'
-            }`}
-          >
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
+            resultsViewable ? 'bg-green-50' : 'bg-gray-100'
+          }`}>
             <FontAwesomeIcon
               icon={resultsViewable ? faEye : faEyeSlash}
-              className={`text-2xl ${resultsViewable ? 'text-green-600' : 'text-gray-500'}`}
+              className={`text-sm ${resultsViewable ? 'text-green-600' : 'text-gray-400'}`}
             />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-gray-800">
-              {resultsViewable ? 'Results visible to student' : 'Results hidden from student'}
-            </h3>
-            <p className="text-sm text-gray-600">
+            <span className="font-semibold text-gray-800 text-sm leading-tight block">
+              Student results visibility
+            </span>
+            <span className="text-xs text-gray-400 leading-tight mt-0.5 block">
               {resultsViewable
-                ? 'The student can view their detailed results'
-                : 'The student cannot see results yet'}
-            </p>
+                ? 'Student can view their detailed results'
+                : 'Results are hidden — student cannot see them yet'}
+            </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-medium text-gray-700">
+        {/* Status badge + toggle */}
+        <div className="flex items-center gap-3 shrink-0">
+          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+            resultsViewable ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+          }`}>
             {resultsViewable ? 'Visible' : 'Hidden'}
           </span>
           <button
             onClick={onToggle}
             disabled={togglingViewability}
-            className={`relative inline-flex h-8 w-16 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand-green focus:ring-offset-2 ${
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
               togglingViewability ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-            } ${resultsViewable ? 'bg-green-600' : 'bg-gray-300'}`}
+            } ${resultsViewable ? 'bg-green-500' : 'bg-gray-300'}`}
           >
-            <span
-              className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition-transform ${
-                resultsViewable ? 'translate-x-9' : 'translate-x-1'
-              } flex items-center justify-center`}
-            >
-              {togglingViewability ? (
-                <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <FontAwesomeIcon
-                  icon={resultsViewable ? faLockOpen : faLock}
-                  className={`text-xs ${resultsViewable ? 'text-green-600' : 'text-gray-500'}`}
-                />
+            <span className={`inline-flex h-4 w-4 items-center justify-center transform rounded-full bg-white shadow transition-transform ${
+              resultsViewable ? 'translate-x-6' : 'translate-x-1'
+            }`}>
+              {togglingViewability && (
+                <div className="w-2.5 h-2.5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
               )}
             </span>
           </button>
         </div>
-      </div>
-
-      <div
-        className={`mt-4 p-3 rounded-lg ${
-          resultsViewable
-            ? 'bg-green-50 border border-green-200'
-            : 'bg-amber-50 border border-amber-200'
-        }`}
-      >
-        <p className={`text-sm ${resultsViewable ? 'text-green-700' : 'text-amber-700'}`}>
-          {resultsViewable ? (
-            <>
-              <FontAwesomeIcon icon={faCheckCircle} className="mr-2" />
-              The student can now view their test results, correct answers, and detailed feedback.
-            </>
-          ) : (
-            <>
-              <FontAwesomeIcon icon={faLock} className="mr-2" />
-              Toggle this to allow the student to see their results. You can review first before sharing.
-            </>
-          )}
-        </p>
       </div>
     </div>
   );

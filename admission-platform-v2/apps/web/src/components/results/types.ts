@@ -179,6 +179,44 @@ export interface UnifiedResultData {
 }
 
 /**
+ * A comparison indicator showing how a second student answered a specific question.
+ * Passed down to QuestionResultCard for rich per-question comparison display.
+ */
+export interface ComparisonIndicator {
+  studentName: string | null;
+  isCorrect: boolean;
+  hasAnswer: boolean;
+  /** Raw stored answer value (any format — passed through toRendererAnswer for display) */
+  studentAnswer: any;
+  timeSpentSeconds?: number;
+}
+
+/**
+ * Lightweight result summary for a comparison student.
+ * Loaded on-demand when a tutor adds a student to the comparison panel.
+ */
+export interface ComparisonStudentResult {
+  sourceId: string;
+  studentName: string | null;
+  completedAt: string | null;
+  scoreRaw: number;
+  scoreTotal: number;
+  scorePercentage: number;
+  /** Map from questionId → correctness state + raw answer + time */
+  questionResults: Map<string, { isCorrect: boolean; hasAnswer: boolean; studentAnswer: any; timeSpentSeconds?: number }>;
+}
+
+/**
+ * A student available to be added to the comparison panel.
+ */
+export interface AvailableComparisonStudent {
+  sourceId: string;
+  studentName: string | null;
+  completedAt: string | null;
+  alreadyAdded: boolean;
+}
+
+/**
  * Helper: Get a human-readable section name.
  */
 export function getSectionFullName(section: string): string {
