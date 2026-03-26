@@ -99,6 +99,10 @@ export interface UseAnswerManagementOptions {
   isInReviewMode: boolean;
   answerChangesUsed: number;
   setAnswerChangesUsed: React.Dispatch<React.SetStateAction<number>>;
+
+  // Pause state — when true, question start times are frozen so pause duration
+  // is not counted toward time_spent_seconds
+  showPauseScreen: boolean;
 }
 
 export interface UseAnswerManagementReturn {
@@ -159,6 +163,7 @@ export function useAnswerManagement({
   isInReviewMode,
   answerChangesUsed,
   setAnswerChangesUsed,
+  showPauseScreen,
 }: UseAnswerManagementOptions): UseAnswerManagementReturn {
   // ─── UI State (owned by this hook) ─────────────────────────────────────────
   const [questionStartTimes, setQuestionStartTimes] = useState<Record<string, Date>>({});
@@ -201,6 +206,51 @@ export function useAnswerManagement({
       consecutiveSaveFailuresRef.current = 0;
     }
   }, [currentQuestion?.id, currentQuestionIndex]);
+
+  // ─── Pause freeze — shift start times when test is paused ─────────────────
+  // When showPauseScreen becomes true we record the pause start. When it
+  // becomes false (resume) we shift every existing question start time forward
+  // by the pause duration so the elapsed time calculation excludes it.
+  const pauseStartRef = useRef<Date | null>(null);
+  useEffect(() => {
+    if (showPauseScreen) {
+      pauseStartRef.current = new Date();
+    } else if (pauseStartRef.current) {
+      const pauseDuration = new Date().getTime() - pauseStartRef.current.getTime();
+      pauseStartRef.current = null;
+      setQuestionStartTimes(prev => {
+        const updated: Record<string, Date> = {};
+        for (const [qid, t] of Object.entries(prev)) {
+          updated[qid] = new Date(t.getTime() + pauseDuration);
+        }
+        return updated;
+      });
+    }
+  }, [showPauseScreen]);
+
+  // ─── Tab visibility freeze — shift start times when tab is hidden ──────────
+  // Uses document.visibilitychange so that time spent with the tab in the
+  // background is not counted toward time_spent_seconds.
+  useEffect(() => {
+    let hiddenAt: Date | null = null;
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        hiddenAt = new Date();
+      } else if (hiddenAt) {
+        const hiddenDuration = new Date().getTime() - hiddenAt.getTime();
+        hiddenAt = null;
+        setQuestionStartTimes(prev => {
+          const updated: Record<string, Date> = {};
+          for (const [qid, t] of Object.entries(prev)) {
+            updated[qid] = new Date(t.getTime() + hiddenDuration);
+          }
+          return updated;
+        });
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
 
   // ─── Network connection monitor ───────────────────────────────────────────
   useEffect(() => {
