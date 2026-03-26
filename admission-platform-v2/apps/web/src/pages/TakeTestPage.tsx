@@ -37,6 +37,7 @@ import { ExitWarningScreen } from "../components/test/ExitWarningScreen";
 import ChangeBlockedToast from "../components/test/ChangeBlockedToast";
 import AnswerRequiredModal from "../components/test/AnswerRequiredModal";
 import SubmittingOverlay from "../components/test/SubmittingOverlay";
+import { DevPanel } from "../components/test/DevPanel";
 import { useTestProctoring } from "../components/hooks/useTestProctoring";
 import { useReviewMode } from "../components/hooks/useReviewMode";
 import { useAnswerManagement } from "../components/hooks/useAnswerManagement";
@@ -2296,6 +2297,30 @@ function TakeTestPageInner() {
           onClose={() => setShowAnswerRequiredMessage(false)}
         />
         <SubmittingOverlay visible={submitting} />
+
+        {/* Dev panel — only rendered in dev mode or with ?devPanel=true */}
+        {(() => { if ((window as any).__devThrowError) throw new Error('[DevPanel] Intentional render crash'); return null; })()}
+        <DevPanel
+          currentQuestionIndex={currentQuestionIndex}
+          totalQuestionsInSection={totalQuestionsInSection}
+          currentSectionIndex={currentSectionIndex}
+          totalSections={expectedTotalSections}
+          currentSection={currentSection}
+          globalQuestionOrder={globalQuestionOrder}
+          timeRemaining={timeRemaining}
+          isTransitioning={isTransitioning}
+          submitting={submitting}
+          answersCount={Object.keys(answers).length}
+          isSaving={isSaving}
+          setCurrentQuestionIndex={setCurrentQuestionIndex}
+          setGlobalQuestionOrder={setGlobalQuestionOrder}
+          handleTimeUp={handleTimeUp}
+          completeSection={completeSection}
+          submitTest={submitTest}
+          goToNextQuestion={goToNextQuestion}
+          autoSaveTimeoutRef={autoSaveTimeoutRef}
+          answersRef={answersRef}
+        />
       </div>
     </MathJaxProvider>
   );
