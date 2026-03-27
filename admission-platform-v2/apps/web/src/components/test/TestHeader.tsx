@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faClock } from '@fortawesome/free-solid-svg-icons';
 import { formatTime } from '../hooks/useTestTimer';
+import { CalculatorButton, type CalculatorType } from '@/components/Calculator';
 
 export interface DeviceDiagnostics {
   overall: string;
@@ -62,6 +63,10 @@ export interface TestHeaderProps {
 
   // Multi-question page
   questionsPerPage?: number;
+
+  // Calculator
+  calculatorType?: CalculatorType;
+  onToggleCalculator?: () => void;
 }
 
 export function TestHeader({
@@ -89,6 +94,8 @@ export function TestHeader({
   showCorrectAnswers,
   onToggleCorrectAnswers,
   questionsPerPage,
+  calculatorType,
+  onToggleCalculator,
 }: TestHeaderProps) {
   const { t } = useTranslation();
 
@@ -214,6 +221,14 @@ export function TestHeader({
         </div>
       )}
 
+      <div className="flex items-center gap-3">
+        {/* Calculator Button */}
+        {calculatorType && calculatorType !== 'none' && onToggleCalculator && (
+          <CalculatorButton
+            onClick={onToggleCalculator}
+            calculatorType={calculatorType}
+          />
+        )}
       <div className="flex flex-col items-end gap-1">
         {/* Timer */}
         {timeRemaining !== null && (
@@ -230,6 +245,7 @@ export function TestHeader({
             {t('takeTest.section')} {currentSectionIndex + 1} {t('takeTest.of')} {expectedTotalSections}
           </div>
         )}
+      </div>
       </div>
       {/* Guided Mode Indicator */}
       {isGuidedMode && (
