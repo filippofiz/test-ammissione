@@ -475,9 +475,13 @@ export default function StudentTestsPage() {
           assignedBy = profile?.id;
         }
 
+        // Use upsert with ignoreDuplicates to handle races where a parallel
+        // call (e.g. React StrictMode double-invoke, navigation between tabs)
+        // already inserted the same (student_id, test_id) row. The DB has a
+        // UNIQUE(student_id, test_id) constraint that would otherwise error.
         const { error: assignError } = await supabase
           .from('2V_test_assignments')
-          .insert(
+          .upsert(
             availableTests.map(test => ({
               student_id: studentId,
               test_id: test.id,
@@ -486,7 +490,8 @@ export default function StudentTestsPage() {
               total_attempts: 0,
               assigned_by: assignedBy,
               assigned_at: new Date().toISOString(),
-            }))
+            })),
+            { onConflict: 'student_id,test_id', ignoreDuplicates: true }
           );
 
         if (assignError) {

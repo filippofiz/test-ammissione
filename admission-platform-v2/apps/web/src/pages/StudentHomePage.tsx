@@ -322,16 +322,21 @@ export default function StudentHomePage() {
       if (availableTests && availableTests.length > 0) {
         console.log(`🔄 Auto-assigning ${availableTests.length} new tests to student ${profile.id}`);
 
+        // Use upsert with ignoreDuplicates to handle races where a parallel
+        // call (e.g. React StrictMode double-invoke, navigation between tabs)
+        // already inserted the same (student_id, test_id) row. The DB has a
+        // UNIQUE(student_id, test_id) constraint that would otherwise error.
         const { error: assignError } = await supabase
           .from('2V_test_assignments')
-          .insert(
+          .upsert(
             availableTests.map(test => ({
               student_id: profile.id,
               test_id: test.id,
               status: 'locked',
               current_attempt: 1,
               total_attempts: 0,
-            }))
+            })),
+            { onConflict: 'student_id,test_id', ignoreDuplicates: true }
           );
 
         if (assignError) {

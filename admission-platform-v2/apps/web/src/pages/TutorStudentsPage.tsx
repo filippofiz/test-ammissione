@@ -252,9 +252,15 @@ export default function TutorStudentsPage() {
           assigned_at: new Date().toISOString(),
         }));
 
+        // Use upsert with ignoreDuplicates so re-assigning a test type the
+        // student already partially has doesn't fail on the UNIQUE
+        // (student_id, test_id) constraint.
         const { error: assignError } = await supabase
           .from('2V_test_assignments')
-          .insert(assignments);
+          .upsert(assignments, {
+            onConflict: 'student_id,test_id',
+            ignoreDuplicates: true,
+          });
 
         if (assignError) {
           console.error(`Error creating assignments for ${testType}:`, assignError);

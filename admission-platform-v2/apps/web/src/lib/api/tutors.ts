@@ -255,15 +255,21 @@ export async function assignTestToStudent(
     throw new Error('No tutor ID found');
   }
 
+  // Use upsert with ignoreDuplicates so double-clicking "assign" or
+  // assigning a test the student already has doesn't fail on the UNIQUE
+  // (student_id, test_id) constraint.
   const { error } = await supabase
     .from('2V_test_assignments')
-    .insert({
-      student_id: studentId,
-      test_id: testId,
-      status: 'locked',
-      assigned_by: tutorId,
-      assigned_at: new Date().toISOString(),
-    });
+    .upsert(
+      {
+        student_id: studentId,
+        test_id: testId,
+        status: 'locked',
+        assigned_by: tutorId,
+        assigned_at: new Date().toISOString(),
+      },
+      { onConflict: 'student_id,test_id', ignoreDuplicates: true }
+    );
 
   if (error) {
     console.error('Assign test error:', error);
