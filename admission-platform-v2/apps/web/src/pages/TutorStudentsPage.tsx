@@ -376,8 +376,16 @@ export default function TutorStudentsPage() {
       // Use selected tutor ID
       const tutorId = newStudentTutorId;
 
+      // Create a throwaway Supabase client for signUp so we don't swap the tutor's session
+      const { createClient } = await import('@supabase/supabase-js');
+      const signUpClient = createClient(
+        import.meta.env.VITE_SUPABASE_URL,
+        import.meta.env.VITE_SUPABASE_ANON_KEY,
+        { auth: { persistSession: false, autoRefreshToken: false } }
+      );
+
       // Create auth user with default password 123456
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const { data: authData, error: authError } = await signUpClient.auth.signUp({
         email: newStudentEmail,
         password: '123456',
         options: {
