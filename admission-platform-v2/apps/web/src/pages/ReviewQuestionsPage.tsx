@@ -125,6 +125,7 @@ export default function ReviewQuestionsPage() {
   // Flagged questions state
   const [flaggedQuestions, setFlaggedQuestions] = useState<any[]>([]);
   const [loadingFlagged, setLoadingFlagged] = useState(false);
+  const [flaggedSubTab, setFlaggedSubTab] = useState<'open' | 'archived'>('open');
 
   // Filters - trackFilter defaults to first available test type (set in useEffect after loading)
   const [searchTerm, setSearchTerm] = useState('');
@@ -472,61 +473,42 @@ export default function ReviewQuestionsPage() {
 
       const { data: currentProfile } = await supabase
         .from('2V_profiles')
-        .select('id, email')
+        .select('id, email, roles')
         .eq('auth_uid', user.id)
         .single();
 
+      const profileRoles = (currentProfile as any)?.roles;
+      const isAdmin = Array.isArray(profileRoles) && profileRoles.includes('ADMIN');
+
+      if (!isAdmin) {
+        setFlaggedQuestions([]);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('2V_questions')
-        .select(`
-          *,
-          2V_tests!inner(id, test_type, section, exercise_type, test_number)
-        `)
+        .select('*')
         .not('Questions_toReview', 'is', null)
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
 
-      // Filter based on user and test type
-      const ANDREA_ID = 'ed3865f5-9207-4a1e-9534-d57b0f8f15f3';
-      const KLAUDIO_ID = 'ca0a06db-0b50-4edf-a26d-8b5213690413';
+      const questionsRaw = data || [];
 
-      // Get Filippo's ID dynamically by email
-      let FILIPPO_ID: string | null = null;
-      const { data: filippoProfile } = await supabase
-        .from('2V_profiles')
-        .select('id')
-        .ilike('email', 'filippo.fiz%')
-        .single();
-
-      if (filippoProfile) {
-        FILIPPO_ID = filippoProfile.id;
+      const testIds = Array.from(new Set(questionsRaw.map((q: any) => q.test_id).filter(Boolean)));
+      const testMap = new Map<string, any>();
+      if (testIds.length > 0) {
+        const { data: testsData } = await supabase
+          .from('2V_tests')
+          .select('id, test_type, section, exercise_type, test_number')
+          .in('id', testIds);
+        (testsData || []).forEach((t: any) => testMap.set(t.id, t));
       }
 
-      let filteredData = data || [];
-
-      if (currentProfile) {
-        if (currentProfile.id === FILIPPO_ID) {
-          // Filippo sees ALL flagged questions (no filtering)
-          // filteredData remains unchanged
-        } else if (currentProfile.id === ANDREA_ID) {
-          // Andrea sees everything EXCEPT SAT and GMAT
-          filteredData = filteredData.filter((q: any) => {
-            const testType = q['2V_tests']?.test_type?.toUpperCase();
-            return testType !== 'SAT' && testType !== 'GMAT';
-          });
-        } else if (currentProfile.id === KLAUDIO_ID) {
-          // Klaudio sees ONLY SAT and GMAT
-          filteredData = filteredData.filter((q: any) => {
-            const testType = q['2V_tests']?.test_type?.toUpperCase();
-            return testType === 'SAT' || testType === 'GMAT';
-          });
-        }
-        // Other users see nothing (empty list)
-        else {
-          filteredData = [];
-        }
-      }
+      const filteredData = questionsRaw.map((q: any) => ({
+        ...q,
+        '2V_tests': q.test_id ? testMap.get(q.test_id) ?? null : null,
+      }));
 
       // Collect unique flagged_by IDs for bulk profile fetch
       const flaggedByIds = new Set<string>();
@@ -2297,9 +2279,9 @@ export default function ReviewQuestionsPage() {
               >
                 <FontAwesomeIcon icon={faExclamationTriangle} className="mr-2" />
                 Flagged Questions
-                {flaggedQuestions.length > 0 && (
+                {flaggedQuestions.filter((q: any) => q.Questions_toReview?.status !== 'fixed').length > 0 && (
                   <span className="ml-2 bg-white text-orange-600 text-xs font-bold px-2 py-1 rounded-full">
-                    {flaggedQuestions.length}
+                    {flaggedQuestions.filter((q: any) => q.Questions_toReview?.status !== 'fixed').length}
                   </span>
                 )}
               </button>
@@ -3460,27 +3442,63 @@ export default function ReviewQuestionsPage() {
                 </div>
               </div>
             ) : viewMode === 'flaggedQuestions' ? (
-              /* Flagged Questions List View */
+              (() => {
+                const openFlagged = flaggedQuestions.filter((q: any) => q.Questions_toReview?.status !== 'fixed');
+                const archivedFlagged = flaggedQuestions.filter((q: any) => q.Questions_toReview?.status === 'fixed');
+                const visibleFlagged = flaggedSubTab === 'open' ? openFlagged : archivedFlagged;
+                return (
               <div className="bg-white rounded-xl shadow-xl p-6">
-                <h2 className="text-2xl font-bold text-orange-600 mb-6 flex items-center gap-3">
+                <h2 className="text-2xl font-bold text-orange-600 mb-4 flex items-center gap-3">
                   <FontAwesomeIcon icon={faExclamationTriangle} />
                   Flagged Questions for Review
-                  <span className="text-sm font-normal text-gray-500">({flaggedQuestions.length} total)</span>
                 </h2>
+
+                <div className="flex gap-2 mb-6 border-b border-gray-200">
+                  <button
+                    onClick={() => setFlaggedSubTab('open')}
+                    className={`px-4 py-2 font-semibold text-sm border-b-2 -mb-px transition-colors ${
+                      flaggedSubTab === 'open'
+                        ? 'border-orange-500 text-orange-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    Open
+                    <span className="ml-2 px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-xs">
+                      {openFlagged.length}
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setFlaggedSubTab('archived')}
+                    className={`px-4 py-2 font-semibold text-sm border-b-2 -mb-px transition-colors ${
+                      flaggedSubTab === 'archived'
+                        ? 'border-green-500 text-green-700'
+                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    Archived
+                    <span className="ml-2 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs">
+                      {archivedFlagged.length}
+                    </span>
+                  </button>
+                </div>
 
                 {loadingFlagged ? (
                   <div className="flex items-center justify-center py-12">
                     <FontAwesomeIcon icon={faSpinner} className="text-4xl text-gray-400 animate-spin" />
                   </div>
-                ) : flaggedQuestions.length === 0 ? (
+                ) : visibleFlagged.length === 0 ? (
                   <div className="text-center py-12">
                     <FontAwesomeIcon icon={faCheckCircle} className="text-6xl text-green-500 mb-4" />
-                    <p className="text-xl text-gray-600">No flagged questions!</p>
-                    <p className="text-sm text-gray-500 mt-2">All questions are good to go.</p>
+                    <p className="text-xl text-gray-600">
+                      {flaggedSubTab === 'open' ? 'No open flagged questions.' : 'No archived questions yet.'}
+                    </p>
+                    <p className="text-sm text-gray-500 mt-2">
+                      {flaggedSubTab === 'open' ? 'All flagged questions have been fixed.' : 'Mark a flagged question as fixed to archive it.'}
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    {flaggedQuestions.map((question: any) => {
+                    {visibleFlagged.map((question: any) => {
                       // Find passage for this question if it has one
                       const passageId = question.question_data?.passage_id;
                       const passage = passageId ? passages.find(p => p.passage_id === passageId) : null;
@@ -3490,6 +3508,7 @@ export default function ReviewQuestionsPage() {
                           key={question.id}
                           question={question}
                           passage={passage}
+                          isArchived={flaggedSubTab === 'archived'}
                           onUpdate={loadFlaggedQuestions}
                           onClearFlag={(questionId) => {
                             setFlaggedQuestions(prev => prev.filter(q => q.id !== questionId));
@@ -3515,6 +3534,8 @@ export default function ReviewQuestionsPage() {
                   </div>
                 )}
               </div>
+                );
+              })()
             ) : null}
 
             {/* AI Check Modal */}
