@@ -32,9 +32,10 @@ interface FlaggedQuestionEditorProps {
     passage_title_eng?: string;
     question_numbers: number[];
   } | null;
+  isArchived?: boolean;
 }
 
-export function FlaggedQuestionEditor({ question, onUpdate, onClearFlag, onGoToTest, passage }: FlaggedQuestionEditorProps) {
+export function FlaggedQuestionEditor({ question, onUpdate, onClearFlag, onGoToTest, passage, isArchived = false }: FlaggedQuestionEditorProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editedData, setEditedData] = useState({
@@ -244,11 +245,28 @@ export function FlaggedQuestionEditor({ question, onUpdate, onClearFlag, onGoToT
   }
 
   async function markAsFixed() {
-    if (!confirm('Mark this question as fixed and remove from flagged list?')) return;
+    if (!confirm('Mark this question as fixed and move to archive?')) return;
 
     setSaving(true);
     try {
-      // First save any pending changes
+      const { data: { user } } = await supabase.auth.getUser();
+      let fixedBy: string | null = null;
+      if (user) {
+        const { data: profile } = await supabase
+          .from('2V_profiles')
+          .select('id')
+          .eq('auth_uid', user.id)
+          .single();
+        fixedBy = profile?.id ?? null;
+      }
+
+      const archivedReview = {
+        ...(reviewData || {}),
+        status: 'fixed',
+        fixed_at: new Date().toISOString(),
+        fixed_by: fixedBy,
+      };
+
       const { error: updateError } = await supabase
         .from('2V_questions')
         .update({
@@ -271,7 +289,7 @@ export function FlaggedQuestionEditor({ question, onUpdate, onClearFlag, onGoToT
             ...question.answers,
             correct_answer: editedData.correct_answer,
           },
-          Questions_toReview: null, // Clear the flag
+          Questions_toReview: archivedReview,
         })
         .eq('id', question.id);
 
@@ -305,8 +323,8 @@ export function FlaggedQuestionEditor({ question, onUpdate, onClearFlag, onGoToT
         }
       }
 
-      alert('Question marked as fixed!');
-      onClearFlag(question.id); // Remove from flagged list
+      alert('Question marked as fixed and moved to archive.');
+      onClearFlag(question.id);
     } catch (err) {
       console.error('Error marking as fixed:', err);
       alert('Failed to mark as fixed');
@@ -315,13 +333,53 @@ export function FlaggedQuestionEditor({ question, onUpdate, onClearFlag, onGoToT
     }
   }
 
+  async function reopenFromArchive() {
+    if (!confirm('Move this question back to the open flagged list?')) return;
+    setSaving(true);
+    try {
+      const reopened = { ...(reviewData || {}), status: 'open' };
+      delete (reopened as any).fixed_at;
+      delete (reopened as any).fixed_by;
+
+      const { error } = await supabase
+        .from('2V_questions')
+        .update({ Questions_toReview: reopened })
+        .eq('id', question.id);
+
+      if (error) throw error;
+      onClearFlag(question.id);
+    } catch (err) {
+      console.error('Error re-opening question:', err);
+      alert('Failed to re-open question');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const containerClass = isArchived
+    ? 'bg-gray-50 border-2 border-gray-300 rounded-xl p-6 hover:shadow-lg transition-shadow'
+    : 'bg-orange-50 border-2 border-orange-200 rounded-xl p-6 hover:shadow-lg transition-shadow';
+  const headerBorderClass = isArchived ? 'border-gray-300' : 'border-orange-200';
+  const badgeClass = isArchived ? 'bg-gray-500' : 'bg-orange-500';
+
   return (
-    <div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-6 hover:shadow-lg transition-shadow">
+    <div className={containerClass}>
+      {isArchived && (
+        <div className="mb-4 inline-flex items-center gap-2 bg-green-100 border border-green-300 text-green-800 text-xs font-semibold px-3 py-1 rounded-full">
+          <FontAwesomeIcon icon={faCheckCircle} />
+          Archived
+          {reviewData?.fixed_at && (
+            <span className="font-normal text-green-700">
+              · fixed {new Date(reviewData.fixed_at).toLocaleDateString()}
+            </span>
+          )}
+        </div>
+      )}
       {/* Header with Test Info */}
-      <div className="flex items-start justify-between mb-4 pb-4 border-b-2 border-orange-200">
+      <div className={`flex items-start justify-between mb-4 pb-4 border-b-2 ${headerBorderClass}`}>
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
-            <span className="bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-bold">
+            <span className={`${badgeClass} text-white px-3 py-1 rounded-full text-sm font-bold`}>
               Q{question.question_number}
             </span>
             <span className="bg-gray-600 text-white px-3 py-1 rounded text-xs font-semibold">
@@ -373,14 +431,27 @@ export function FlaggedQuestionEditor({ question, onUpdate, onClearFlag, onGoToT
                 <FontAwesomeIcon icon={faEdit} />
                 Edit
               </button>
-              <button
-                onClick={markAsFixed}
-                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2 font-semibold text-sm"
-                title="Save changes and mark as fixed"
-              >
-                <FontAwesomeIcon icon={faCheckCircle} />
-                Mark as Fixed
-              </button>
+              {isArchived ? (
+                <button
+                  onClick={reopenFromArchive}
+                  disabled={saving}
+                  className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors flex items-center gap-2 font-semibold text-sm disabled:opacity-50"
+                  title="Move back to open flagged list"
+                >
+                  <FontAwesomeIcon icon={faExclamationTriangle} />
+                  Re-open
+                </button>
+              ) : (
+                <button
+                  onClick={markAsFixed}
+                  disabled={saving}
+                  className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2 font-semibold text-sm disabled:opacity-50"
+                  title="Save changes and move to archive"
+                >
+                  <FontAwesomeIcon icon={faCheckCircle} />
+                  Mark as Fixed
+                </button>
+              )}
             </>
           )}
         </div>

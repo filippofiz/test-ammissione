@@ -4,7 +4,7 @@
  * Based on test_track_config settings
  */
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -37,6 +37,8 @@ import { ExitWarningScreen } from "../components/test/ExitWarningScreen";
 import ChangeBlockedToast from "../components/test/ChangeBlockedToast";
 import AnswerRequiredModal from "../components/test/AnswerRequiredModal";
 import SubmittingOverlay from "../components/test/SubmittingOverlay";
+import { Calculator, type CalculatorType, type DesmosHandle } from "@/components/Calculator";
+import { DevPanel } from "../components/test/DevPanel";
 import { useTestProctoring } from "../components/hooks/useTestProctoring";
 import { useReviewMode } from "../components/hooks/useReviewMode";
 import { useAnswerManagement } from "../components/hooks/useAnswerManagement";
@@ -58,6 +60,7 @@ import {
   calculateSectionQuestionLimit,
   calculateExpectedTotalSections,
 } from "@/lib/utils/sectionUtils";
+
 
 function TakeTestPageInner() {
   const { assignmentId, testId, startQuestionNumber, assessmentType, section: gmatSectionParam } = useParams<{
@@ -107,6 +110,7 @@ function TakeTestPageInner() {
   const [showResumeModal, setShowResumeModal] = useState(false);
 
   // State
+  const [showCalculator, setShowCalculator] = useState(false);
   const [submitting, setSubmitting] = useState(false); // Submitting test state
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [currentPageGroup, setCurrentPageGroup] = useState(0); // For PDF tests: current page group
@@ -227,6 +231,14 @@ function TakeTestPageInner() {
   // Get current section and questions
   const currentSection = sections[currentSectionIndex];
 
+  // Calculator — derived from config, auto-closed on section change
+  const calculatorType: CalculatorType = config?.calculator_type ?? 'none';
+  const calculatorAvailable = calculatorType !== 'none';
+  const desmosRef = useRef<DesmosHandle>(null);
+  useEffect(() => {
+    setShowCalculator(false);
+  }, [currentSection]);
+
   // DEBUG: section resume issue
   if (sections.length > 0 && selectedQuestions.length > 0 && !loading) {
     const firstFewSelected = selectedQuestions.slice(0, 3).map(q => ({
@@ -344,6 +356,62 @@ function TakeTestPageInner() {
 
   const currentQuestion = sectionQuestions[currentQuestionIndex];
   const totalQuestionsInSection = sectionQuestions.length;
+
+  /** True if the current question contains any LaTeX math expressions */
+  const currentQuestionHasLatex = useMemo(() => {
+    if (!currentQuestion) return false;
+    const qd = currentQuestion.question_data ?? {};
+    const candidates = [
+      qd.question_text, qd.question_text_eng, qd.question,
+      qd.passage_text, qd.passage_text_eng, qd.statement_text, qd.scenario,
+      currentQuestion.question_text,
+      currentQuestion.answer_a, currentQuestion.answer_b,
+      currentQuestion.answer_c, currentQuestion.answer_d, currentQuestion.answer_e,
+    ].filter((s): s is string => typeof s === 'string' && s.length > 0);
+    const latexPattern = /\$[\s\S]+?\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)/;
+    return candidates.some(s => latexPattern.test(s));
+  }, [currentQuestion]);
+
+  /** Extract all LaTeX expressions from the current question text and send them to Desmos */
+  const sendQuestionMathToDesmos = useCallback(() => {
+    if (!desmosRef.current || !currentQuestion) return;
+
+    // Collect all text strings from the question — question_data fields take priority
+    // as SAT questions store their text there, not in the legacy top-level question_text
+    const qd = currentQuestion.question_data ?? {};
+    const candidates: string[] = [
+      qd.question_text, qd.question_text_eng,
+      qd.question, qd.passage_text, qd.passage_text_eng,
+      qd.statement_text, qd.scenario,
+      // legacy top-level fallback
+      currentQuestion.question_text,
+      // answer choices
+      currentQuestion.answer_a, currentQuestion.answer_b,
+      currentQuestion.answer_c, currentQuestion.answer_d,
+      currentQuestion.answer_e,
+    ].filter((s): s is string => typeof s === 'string' && s.length > 0);
+
+    const patterns = [
+      /\$\$([\s\S]+?)\$\$/g,
+      /\$([^$\n]+?)\$/g,
+      /\\\[([\s\S]+?)\\\]/g,
+      /\\\(([^)]+?)\\\)/g,
+    ];
+    const seen = new Set<string>();
+    for (const raw of candidates) {
+      for (const pattern of patterns) {
+        pattern.lastIndex = 0; // reset regex state between strings
+        let match;
+        while ((match = pattern.exec(raw)) !== null) {
+          const latex = match[1].trim();
+          if (latex && !seen.has(latex)) {
+            seen.add(latex);
+            desmosRef.current.sendExpression(latex);
+          }
+        }
+      }
+    }
+  }, [currentQuestion]);
 
   // Multi-question page support
   const questionsPerPage =
@@ -2103,6 +2171,8 @@ function TakeTestPageInner() {
             setShowCorrectAnswers(!showCorrectAnswers)
           }
           questionsPerPage={config?.questions_per_page}
+          calculatorType={calculatorType}
+          onToggleCalculator={calculatorAvailable ? () => setShowCalculator(prev => !prev) : undefined}
         />
 
         {/* Question Content */}
@@ -2296,6 +2366,41 @@ function TakeTestPageInner() {
           onClose={() => setShowAnswerRequiredMessage(false)}
         />
         <SubmittingOverlay visible={submitting} />
+        {calculatorAvailable && (
+          <Calculator
+            ref={desmosRef}
+            isOpen={showCalculator}
+            onClose={() => setShowCalculator(false)}
+            calculatorType={calculatorType}
+            draggable={true}
+            onSendFromQuestion={sendQuestionMathToDesmos}
+            questionHasMath={currentQuestionHasLatex}
+          />
+        )}
+
+        {/* Dev panel — only rendered in dev mode or with ?devPanel=true */}
+        {(() => { if ((window as any).__devThrowError) throw new Error('[DevPanel] Intentional render crash'); return null; })()}
+        <DevPanel
+          currentQuestionIndex={currentQuestionIndex}
+          totalQuestionsInSection={totalQuestionsInSection}
+          currentSectionIndex={currentSectionIndex}
+          totalSections={expectedTotalSections}
+          currentSection={currentSection}
+          globalQuestionOrder={globalQuestionOrder}
+          timeRemaining={timeRemaining}
+          isTransitioning={isTransitioning}
+          submitting={submitting}
+          answersCount={Object.keys(answers).length}
+          isSaving={isSaving}
+          setCurrentQuestionIndex={setCurrentQuestionIndex}
+          setGlobalQuestionOrder={setGlobalQuestionOrder}
+          handleTimeUp={handleTimeUp}
+          completeSection={completeSection}
+          submitTest={submitTest}
+          goToNextQuestion={goToNextQuestion}
+          autoSaveTimeoutRef={autoSaveTimeoutRef}
+          answersRef={answersRef}
+        />
       </div>
     </MathJaxProvider>
   );

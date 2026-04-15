@@ -6,35 +6,40 @@
  * - 'scientific': Desmos scientific calculator (complete/SAT mode)
  */
 
+import { forwardRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCalculator } from '@fortawesome/free-solid-svg-icons';
 import { GMATCalculator } from './GMATCalculator';
-import { DesmosCalculator, DesmosCalculatorType } from './DesmosCalculator';
+import { DesmosCalculator, DesmosCalculatorType, type DesmosHandle } from './DesmosCalculator';
 
 export type CalculatorType = 'regular' | 'graphing' | 'scientific' | 'none';
+export type { DesmosHandle };
 
 interface CalculatorProps {
   isOpen: boolean;
   onClose: () => void;
   calculatorType?: CalculatorType;
   draggable?: boolean;
+  onSendFromQuestion?: () => void;
+  questionHasMath?: boolean;
 }
 
 /**
- * Main Calculator component that switches between different calculator types
+ * Main Calculator component that switches between different calculator types.
+ * Forwards a ref exposing `sendExpression(latex)` for Desmos types.
  */
-export function Calculator({
+export const Calculator = forwardRef<DesmosHandle, CalculatorProps>(function Calculator({
   isOpen,
   onClose,
   calculatorType = 'regular',
-  draggable = true
-}: CalculatorProps) {
-  // If no calculator is allowed
+  draggable = true,
+  onSendFromQuestion,
+  questionHasMath,
+}, ref) {
   if (calculatorType === 'none' || !isOpen) {
     return null;
   }
 
-  // Regular GMAT-style calculator
   if (calculatorType === 'regular') {
     return (
       <GMATCalculator
@@ -45,22 +50,23 @@ export function Calculator({
     );
   }
 
-  // Desmos calculators (graphing or scientific)
   const desmosType: DesmosCalculatorType = calculatorType === 'graphing' ? 'graphing' : 'scientific';
 
   return (
     <DesmosCalculator
+      ref={ref}
       isOpen={isOpen}
       onClose={onClose}
       calculatorType={desmosType}
       draggable={draggable}
+      onSendFromQuestion={onSendFromQuestion}
+      questionHasMath={questionHasMath}
     />
   );
-}
+});
 
 /**
  * Calculator button component for use in test interface
- * Displays appropriate icon/text based on calculator type
  */
 export function CalculatorButton({
   onClick,
